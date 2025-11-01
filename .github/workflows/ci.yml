@@ -30,7 +30,8 @@ jobs:
         run: npm ci
       
       - name: TypeScript type check
-        run: npx tsc --noEmit
+        run: npx tsc --noEmit || (echo "TypeScript type check failed" && exit 1)
+        continue-on-error: false
       
       - name: Lint check (if configured)
         run: |

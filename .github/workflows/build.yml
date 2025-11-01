@@ -55,6 +55,7 @@ jobs:
       
       - name: Build frontend
         run: npm run build
+        continue-on-error: false
       
       - name: Build Tauri (Windows)
         run: npm run tauri:build:windows

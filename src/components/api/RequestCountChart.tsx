@@ -31,8 +31,9 @@ interface PerformanceMetricInfo {
  * リクエスト数グラフコンポーネントのプロパティ
  */
 interface RequestCountChartProps {
-  apiId: string | null;
-  period: '1h' | '24h' | '7d';
+  apiId: string;
+  startDate?: string | null;
+  endDate?: string | null;
   autoRefresh?: boolean;
   refreshInterval?: number; // ミリ秒
 }
@@ -43,38 +44,14 @@ interface RequestCountChartProps {
  */
 export const RequestCountChart: React.FC<RequestCountChartProps> = ({
   apiId,
-  period,
+  startDate = null,
+  endDate = null,
   autoRefresh = true,
   refreshInterval = 30000,
 }) => {
   const [data, setData] = useState<Array<{ time: string; value: number }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-
-  // 期間を日時に変換
-  const getDateRange = useCallback((period: '1h' | '24h' | '7d') => {
-    const now = new Date();
-    let startDate: Date;
-    
-    switch (period) {
-      case '1h':
-        startDate = new Date(now.getTime() - 60 * 60 * 1000);
-        break;
-      case '24h':
-        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-        break;
-      case '7d':
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      default:
-        startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000);
-    }
-    
-    return {
-      start: startDate.toISOString(),
-      end: now.toISOString(),
-    };
-  }, []);
 
   // データを取得
   const loadData = useCallback(async () => {
@@ -88,12 +65,11 @@ export const RequestCountChart: React.FC<RequestCountChartProps> = ({
       setLoading(true);
       setError(null);
 
-      const dateRange = getDateRange(period);
       const request = {
         api_id: apiId,
         metric_type: 'request_count',
-        start_date: dateRange.start,
-        end_date: dateRange.end,
+        start_date: startDate || null,
+        end_date: endDate || null,
       };
 
       const result = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', { request });
@@ -117,7 +93,7 @@ export const RequestCountChart: React.FC<RequestCountChartProps> = ({
     } finally {
       setLoading(false);
     }
-  }, [apiId, period, getDateRange]);
+  }, [apiId, startDate, endDate]);
 
   // 初回読み込み
   useEffect(() => {
@@ -144,7 +120,7 @@ export const RequestCountChart: React.FC<RequestCountChartProps> = ({
 
   if (loading && data.length === 0) {
     return (
-      <div className="request-count-chart">
+      <div className="request-count-chart-container">
         <div className="chart-loading">
           <div className="loading-spinner"></div>
           <p>リクエスト数データを読み込んでいます...</p>
@@ -155,7 +131,7 @@ export const RequestCountChart: React.FC<RequestCountChartProps> = ({
 
   if (error) {
     return (
-      <div className="request-count-chart">
+      <div className="request-count-chart-container">
         <div className="chart-error">
           <p>⚠️ {error}</p>
           <button className="retry-button" onClick={loadData}>
@@ -168,7 +144,7 @@ export const RequestCountChart: React.FC<RequestCountChartProps> = ({
 
   if (data.length === 0) {
     return (
-      <div className="request-count-chart">
+      <div className="request-count-chart-container">
         <div className="chart-empty">
           <p>リクエスト数データがありません</p>
         </div>
@@ -177,9 +153,10 @@ export const RequestCountChart: React.FC<RequestCountChartProps> = ({
   }
 
   return (
-    <div className="request-count-chart">
+    <div className="request-count-chart-container">
       <h3 className="chart-title">リクエスト数</h3>
-      <ResponsiveContainer width="100%" height={300}>
+      <div className="chart-wrapper">
+        <ResponsiveContainer width="100%" height={300}>
         <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis 
@@ -206,6 +183,7 @@ export const RequestCountChart: React.FC<RequestCountChartProps> = ({
           />
         </LineChart>
       </ResponsiveContainer>
+      </div>
     </div>
   );
 };
