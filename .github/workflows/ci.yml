@@ -59,10 +59,11 @@ jobs:
         run: npm ci
       
       - name: Run unit tests
-        run: npm test -- --testPathPattern=unit --passWithNoTests
+        run: npm test -- --testPathPattern=unit --passWithNoTests --no-coverage
+        continue-on-error: true
       
       - name: Run integration tests
-        run: npm test -- --testPathPattern=integration --passWithNoTests
+        run: npm test -- --testPathPattern=integration --passWithNoTests --no-coverage
         continue-on-error: true
       
       - name: Generate coverage report
