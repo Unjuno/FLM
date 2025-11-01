@@ -1,0 +1,60 @@
+# FLM - GitHub Pagesデプロイ自動化
+# フェーズ5: 統合エージェント (DEVOPS) 実装
+# 公式Webサイトの自動デプロイ
+
+name: Deploy to GitHub Pages
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'WEB/**'
+      - '.github/workflows/deploy-pages.yml'
+  workflow_dispatch:
+
+# GITHUB_TOKENの権限設定
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# 同時デプロイを1つに制限
+concurrency:
+  group: "pages"
+  cancel-in-progress: false
+
+jobs:
+  build-and-deploy:
+    name: Build and Deploy
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+      
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+      
+      - name: Build website
+        run: |
+          # WEBディレクトリの内容を確認
+          echo "Building website from WEB directory..."
+          ls -la WEB/
+          
+          # WEBディレクトリの内容を一時ディレクトリにコピー（将来的にビルド処理がある場合の準備）
+          mkdir -p _site
+          cp -r WEB/* _site/ || true
+      
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: './WEB'
+      
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4
+

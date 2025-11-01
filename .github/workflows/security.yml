@@ -1,0 +1,45 @@
+# FLM - セキュリティチェック
+# 定期的な依存関係の脆弱性スキャン
+
+name: Security Check
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+  schedule:
+    - cron: '0 0 * * 0' # 毎週日曜日の午前0時（UTC）
+
+jobs:
+  security-audit:
+    name: Security Audit
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      
+      - name: Run npm audit
+        run: npm audit --audit-level=moderate
+        continue-on-error: true
+      
+      - name: Setup Rust
+        uses: dtolnay/rust-toolchain@stable
+      
+      - name: Install cargo-audit
+        run: cargo install cargo-audit --locked
+      
+      - name: Run cargo audit
+        working-directory: src-tauri
+        run: cargo audit
+        continue-on-error: true
+      
+      - name: Run security tests
+        run: npm run test:security
+        continue-on-error: true

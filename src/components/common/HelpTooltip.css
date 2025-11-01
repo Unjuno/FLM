@@ -1,0 +1,148 @@
+/* Help Tooltip Component Styles */
+
+.help-tooltip-container {
+  position: relative;
+  display: inline-block;
+}
+
+.help-tooltip-trigger {
+  background: transparent;
+  border: none;
+  color: #396cd8;
+  cursor: help;
+  font-size: 1rem;
+  padding: 0.25rem;
+  border-radius: 50%;
+  width: 1.5rem;
+  height: 1.5rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+
+.help-tooltip-trigger:hover {
+  background-color: rgba(57, 108, 216, 0.1);
+  color: #2851a3;
+}
+
+.help-tooltip-trigger:focus {
+  outline: 2px solid #396cd8;
+  outline-offset: 2px;
+}
+
+.help-tooltip {
+  position: absolute;
+  z-index: 1000;
+  padding: 0.75rem;
+  background-color: #333;
+  color: white;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  line-height: 1.5;
+  max-width: 250px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  white-space: normal;
+}
+
+.help-tooltip::before {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-style: solid;
+}
+
+.help-tooltip-top {
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 0.5rem;
+}
+
+.help-tooltip-top::before {
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px 6px 0 6px;
+  border-color: #333 transparent transparent transparent;
+}
+
+.help-tooltip-bottom {
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 0.5rem;
+}
+
+.help-tooltip-bottom::before {
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 0 6px 6px 6px;
+  border-color: transparent transparent #333 transparent;
+}
+
+.help-tooltip-left {
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-right: 0.5rem;
+}
+
+.help-tooltip-left::before {
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 6px 0 6px 6px;
+  border-color: transparent transparent transparent #333;
+}
+
+.help-tooltip-right {
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 0.5rem;
+}
+
+.help-tooltip-right::before {
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 6px 6px 6px 0;
+  border-color: transparent #333 transparent transparent;
+}
+
+.help-tooltip-title {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #fff;
+}
+
+.help-tooltip-content {
+  color: #e0e0e0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .help-tooltip {
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+  }
+
+  .help-tooltip-top::before {
+    border-color: #2a2a2a transparent transparent transparent;
+  }
+
+  .help-tooltip-bottom::before {
+    border-color: transparent transparent #2a2a2a transparent;
+  }
+
+  .help-tooltip-left::before {
+    border-color: transparent transparent transparent #2a2a2a;
+  }
+
+  .help-tooltip-right::before {
+    border-color: transparent #2a2a2a transparent transparent;
+  }
+}
+

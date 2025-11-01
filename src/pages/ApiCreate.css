@@ -1,0 +1,61 @@
+/* FLM - API作成ページのスタイル */
+
+.api-create-page {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  padding: 2rem;
+}
+
+.api-create-container {
+  max-width: 900px;
+  margin: 0 auto;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+}
+
+.api-create-header {
+  margin-bottom: 2rem;
+  text-align: center;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 1.5rem;
+}
+
+.api-create-header h1 {
+  margin: 0 0 0.5rem 0;
+  font-size: 2rem;
+  color: #333;
+}
+
+.api-create-subtitle {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.api-create-error {
+  text-align: center;
+  padding: 3rem 2rem;
+}
+
+.api-create-error .error-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.api-create-error h2 {
+  margin: 0 0 1rem 0;
+  color: #e74c3c;
+}
+
+.error-message {
+  margin: 0 0 2rem 0;
+  color: #666;
+}
+
+.error-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+}

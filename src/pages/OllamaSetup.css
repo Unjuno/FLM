@@ -1,0 +1,135 @@
+/* Ollamaセットアップページのスタイル */
+
+.ollama-setup-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #f6f6f6;
+  padding: 2rem;
+}
+
+.setup-container {
+  width: 100%;
+  max-width: 800px;
+  background-color: #ffffff;
+  border-radius: 12px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+}
+
+.ollama-setup-page h1 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+  color: #0f0f0f;
+  text-align: center;
+}
+
+.setup-description {
+  text-align: center;
+  color: #666;
+  margin-bottom: 2rem;
+}
+
+.setup-content {
+  margin: 2rem 0;
+}
+
+.setup-actions {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.action-button {
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  font-weight: 500;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s;
+}
+
+.action-button.primary {
+  color: #ffffff;
+  background-color: #396cd8;
+}
+
+.action-button.primary:hover {
+  background-color: #2851a3;
+}
+
+.action-button.secondary {
+  color: #396cd8;
+  background-color: transparent;
+  border: 1px solid #396cd8;
+}
+
+.action-button.secondary:hover {
+  background-color: rgba(57, 108, 216, 0.1);
+}
+
+.setup-success {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 2rem;
+  text-align: center;
+}
+
+.setup-success .success-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.setup-success h2 {
+  margin: 0.5rem 0;
+  color: #2e7d32;
+}
+
+.setup-success p {
+  color: #666;
+  margin-bottom: 2rem;
+}
+
+.setup-error {
+  margin-top: 2rem;
+  padding: 1.5rem;
+  background-color: rgba(211, 47, 47, 0.1);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.error-text {
+  color: #d32f2f;
+  margin-bottom: 1rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .ollama-setup-page {
+    background-color: #2f2f2f;
+  }
+
+  .setup-container {
+    background-color: #1f1f1f;
+  }
+
+  .ollama-setup-page h1 {
+    color: #f6f6f6;
+  }
+
+  .setup-description {
+    color: #aaa;
+  }
+
+  .setup-success h2 {
+    color: #4caf50;
+  }
+
+  .setup-success p {
+    color: #aaa;
+  }
+}
+

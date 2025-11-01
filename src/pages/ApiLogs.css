@@ -1,0 +1,495 @@
+/* FLM - APIログ一覧ページのスタイル */
+
+.api-logs-page {
+  min-height: 100vh;
+  background-color: #f5f5f5;
+  padding: 2rem;
+}
+
+.api-logs-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  background-color: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  padding: 2rem;
+}
+
+.api-logs-header {
+  margin-bottom: 2rem;
+  border-bottom: 1px solid #e0e0e0;
+  padding-bottom: 1.5rem;
+}
+
+.header-top {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.back-button {
+  background: none;
+  border: none;
+  color: #667eea;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: 0.5rem 0;
+  transition: color 0.2s;
+}
+
+.back-button:hover {
+  color: #764ba2;
+}
+
+.api-logs-header h1 {
+  margin: 0;
+  font-size: 2rem;
+  color: #333;
+}
+
+.header-actions {
+  display: flex;
+  gap: 1rem;
+  justify-content: flex-end;
+}
+
+.refresh-button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #e0e0e0;
+}
+
+.refresh-button:hover {
+  background: #e0e0e0;
+}
+
+.auto-refresh-toggle {
+  padding: 0.75rem 1.5rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #f5f5f5;
+  color: #333;
+}
+
+.auto-refresh-toggle:hover {
+  background: #e0e0e0;
+}
+
+.auto-refresh-toggle.active {
+  background: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.auto-refresh-toggle.active:hover {
+  background: #5568d3;
+}
+
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e0e0e0;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.api-logs-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* API選択 */
+.api-selector {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.api-selector label {
+  font-weight: bold;
+  color: #333;
+  min-width: 120px;
+}
+
+.api-select {
+  flex: 1;
+  padding: 0.75rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 1rem;
+  background-color: white;
+  cursor: pointer;
+  transition: border-color 0.2s;
+}
+
+.api-select:hover {
+  border-color: #667eea;
+}
+
+.api-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.selected-api-info {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background-color: #e3f2fd;
+  border-radius: 6px;
+  font-size: 0.875rem;
+}
+
+.info-label {
+  font-weight: bold;
+  color: #666;
+}
+
+.info-value {
+  color: #333;
+}
+
+/* ログ情報 */
+.logs-info {
+  padding: 0.5rem 0;
+  color: #666;
+  font-size: 0.875rem;
+}
+
+/* ログテーブル */
+.logs-table-container {
+  overflow-x: auto;
+  border: 1px solid #e0e0e0;
+  border-radius: 8px;
+}
+
+.logs-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+}
+
+.logs-table thead {
+  background-color: #f5f5f5;
+}
+
+.logs-table th {
+  padding: 1rem;
+  text-align: left;
+  font-weight: bold;
+  color: #333;
+  border-bottom: 2px solid #e0e0e0;
+  white-space: nowrap;
+}
+
+.logs-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #f0f0f0;
+  color: #333;
+}
+
+.logs-table tbody tr:hover {
+  background-color: #f9f9f9;
+}
+
+.log-row {
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.log-row:hover {
+  background-color: #f0f0f0 !important;
+}
+
+.log-row-new {
+  animation: highlightNewLog 0.5s ease-in-out;
+  background-color: #fff9c4 !important;
+}
+
+@keyframes highlightNewLog {
+  0% {
+    background-color: #fff9c4;
+  }
+  100% {
+    background-color: transparent;
+  }
+}
+
+.log-row-new:hover {
+  background-color: #fff59d !important;
+}
+
+.logs-table tbody tr:last-child td {
+  border-bottom: none;
+}
+
+/* ログ行のスタイル */
+.log-id {
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.method-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: white;
+}
+
+.method-badge.method-blue {
+  background-color: #2196f3;
+}
+
+.method-badge.method-green {
+  background-color: #4caf50;
+}
+
+.method-badge.method-orange {
+  background-color: #ff9800;
+}
+
+.method-badge.method-red {
+  background-color: #f44336;
+}
+
+.method-badge.method-purple {
+  background-color: #9c27b0;
+}
+
+.method-badge.method-gray {
+  background-color: #9e9e9e;
+}
+
+.log-path {
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  color: #333;
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: bold;
+  color: white;
+}
+
+.status-badge.status-green {
+  background-color: #4caf50;
+}
+
+.status-badge.status-blue {
+  background-color: #2196f3;
+}
+
+.status-badge.status-orange {
+  background-color: #ff9800;
+}
+
+.status-badge.status-red {
+  background-color: #f44336;
+}
+
+.status-badge.status-gray {
+  background-color: #9e9e9e;
+}
+
+.log-response-time {
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.log-error {
+  max-width: 200px;
+}
+
+.error-indicator {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  background-color: #ffebee;
+  color: #c62828;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  cursor: help;
+}
+
+.log-datetime {
+  font-family: 'Courier New', monospace;
+  font-size: 0.875rem;
+  color: #666;
+  white-space: nowrap;
+}
+
+/* 空の状態 */
+.empty-state {
+  text-align: center;
+  padding: 4rem 2rem;
+}
+
+.empty-icon {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+}
+
+.empty-state h2 {
+  margin: 0 0 0.5rem 0;
+  color: #333;
+}
+
+.empty-state p {
+  margin: 0;
+  color: #666;
+}
+
+/* ログ統計情報セクション */
+.log-statistics-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+/* ログフィルタセクション */
+.log-filter-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+/* ページネーション */
+.pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.5rem 0;
+}
+
+.pagination-button {
+  padding: 0.5rem 1rem;
+  border: 1px solid #e0e0e0;
+  border-radius: 6px;
+  background-color: white;
+  color: #333;
+  cursor: pointer;
+  font-size: 0.875rem;
+  transition: all 0.2s;
+  min-width: 40px;
+}
+
+.pagination-button:hover:not(:disabled) {
+  background-color: #f5f5f5;
+  border-color: #667eea;
+}
+
+.pagination-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pagination-button.active {
+  background-color: #667eea;
+  color: white;
+  border-color: #667eea;
+}
+
+.pagination-pages {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.pagination-ellipsis {
+  padding: 0 0.5rem;
+  color: #666;
+}
+
+.statistics-section {
+  margin-bottom: 2rem;
+}
+
+.filter-section {
+  margin-bottom: 2rem;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .api-logs-page {
+    padding: 1rem;
+  }
+
+  .api-logs-container {
+    padding: 1rem;
+  }
+
+  .api-selector {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .api-select {
+    width: 100%;
+  }
+
+  .logs-table-container {
+    overflow-x: auto;
+  }
+
+  .logs-table {
+    font-size: 0.875rem;
+  }
+
+  .logs-table th,
+  .logs-table td {
+    padding: 0.5rem;
+  }
+
+  .pagination {
+    flex-wrap: wrap;
+  }
+}

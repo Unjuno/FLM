@@ -1,0 +1,112 @@
+/* Ollama検出画面のスタイル */
+
+.ollama-detection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  min-height: 300px;
+}
+
+.detection-spinner {
+  margin-bottom: 1.5rem;
+}
+
+.spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid rgba(0, 0, 0, 0.1);
+  border-left-color: #396cd8;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.detection-message {
+  font-size: 1.2rem;
+  font-weight: 500;
+  color: #0f0f0f;
+  margin-bottom: 0.5rem;
+}
+
+.detection-submessage {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0;
+}
+
+.detection-error,
+.detection-success,
+.detection-not-found {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.1);
+  text-align: center;
+}
+
+.error-icon,
+.success-icon,
+.not-found-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.error-message,
+.success-message,
+.not-found-message {
+  font-size: 1.1rem;
+  font-weight: 500;
+  margin-bottom: 0.5rem;
+}
+
+.detection-error .error-message {
+  color: #d32f2f;
+}
+
+.detection-success .success-message {
+  color: #2e7d32;
+}
+
+.detection-not-found .not-found-message {
+  color: #666;
+}
+
+.version-info,
+.path-info,
+.running-info {
+  font-size: 0.9rem;
+  color: #666;
+  margin: 0.25rem 0;
+}
+
+.not-found-submessage {
+  font-size: 0.9rem;
+  color: #999;
+  margin: 0.5rem 0 0 0;
+}
+
+@media (prefers-color-scheme: dark) {
+  .detection-message {
+    color: #f6f6f6;
+  }
+
+  .detection-submessage {
+    color: #aaa;
+  }
+
+  .version-info,
+  .path-info,
+  .not-found-submessage {
+    color: #aaa;
+  }
+}
+

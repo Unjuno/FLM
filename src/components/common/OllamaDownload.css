@@ -1,0 +1,170 @@
+/* Ollamaダウンロード画面のスタイル */
+
+.ollama-download {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  min-height: 300px;
+}
+
+.download-prompt,
+.download-progress-container,
+.download-success,
+.download-error {
+  width: 100%;
+  max-width: 600px;
+  padding: 2rem;
+  border-radius: 8px;
+  background-color: rgba(255, 255, 255, 0.05);
+  text-align: center;
+}
+
+.download-prompt h3,
+.download-progress-container h3,
+.download-success h3,
+.download-error h3 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: #0f0f0f;
+}
+
+.download-prompt p {
+  margin-bottom: 1.5rem;
+  color: #666;
+}
+
+.download-button,
+.retry-button {
+  padding: 0.75rem 2rem;
+  font-size: 1rem;
+  font-weight: 500;
+  color: #ffffff;
+  background-color: #396cd8;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: background-color 0.25s;
+}
+
+.download-button:hover,
+.retry-button:hover {
+  background-color: #2851a3;
+}
+
+.download-button:active,
+.retry-button:active {
+  background-color: #1f3e7a;
+}
+
+/* プログレスバー */
+.progress-bar-container {
+  width: 100%;
+  height: 24px;
+  background-color: rgba(0, 0, 0, 0.1);
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 1.5rem 0;
+  --progress: 0;
+}
+
+.progress-bar {
+  height: 100%;
+  background-color: #396cd8;
+  border-radius: 12px;
+  transition: width 0.3s ease;
+  width: calc(var(--progress) * 1%);
+}
+
+.progress-percentage {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: #0f0f0f;
+  margin-bottom: 1rem;
+}
+
+.progress-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-top: 1.5rem;
+  text-align: left;
+}
+
+.progress-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem;
+  background-color: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+}
+
+.progress-label {
+  font-weight: 500;
+  color: #666;
+}
+
+.progress-value {
+  font-family: 'Courier New', monospace;
+  color: #0f0f0f;
+}
+
+/* 成功・エラー表示 */
+.download-success,
+.download-error {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.success-icon,
+.error-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+.download-success p {
+  color: #2e7d32;
+  margin: 0.5rem 0;
+}
+
+.error-message {
+  color: #d32f2f;
+  margin: 1rem 0;
+  padding: 1rem;
+  background-color: rgba(211, 47, 47, 0.1);
+  border-radius: 4px;
+  width: 100%;
+}
+
+.retry-button {
+  margin-top: 1rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .download-prompt h3,
+  .download-progress-container h3,
+  .download-success h3,
+  .download-error h3 {
+    color: #f6f6f6;
+  }
+
+  .download-prompt p {
+    color: #aaa;
+  }
+
+  .progress-percentage {
+    color: #f6f6f6;
+  }
+
+  .progress-label {
+    color: #aaa;
+  }
+
+  .progress-value {
+    color: #f6f6f6;
+  }
+}
+

@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FLMの使い方ガイド。非開発者向けに、ステップバイステップでFLMの基本的な使い方を説明します。">
+  <meta name="keywords" content="FLM,使い方,ガイド,チュートリアル,初心者">
+  <title>使い方ガイド - FLM</title>
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    .quick-start {
+      background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%);
+      color: white;
+      padding: 3rem 2rem;
+      border-radius: var(--border-radius);
+      margin: 2rem 0;
+      text-align: center;
+    }
+
+    .quick-start h2 {
+      font-size: 2rem;
+      margin-bottom: 1rem;
+    }
+
+    .quick-start ol {
+      text-align: left;
+      max-width: 600px;
+      margin: 1.5rem auto;
+      padding-left: 1.5rem;
+    }
+
+    .quick-start li {
+      margin-bottom: 0.75rem;
+      line-height: 1.8;
+    }
+
+    .step-section {
+      margin: 3rem 0;
+      padding: 2rem;
+      background-color: var(--bg-light);
+      border-radius: var(--border-radius);
+    }
+
+    .step-section h3 {
+      font-size: 1.75rem;
+      color: var(--primary-color);
+      margin-bottom: 1rem;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .step-number {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 2.5rem;
+      height: 2.5rem;
+      background-color: var(--primary-color);
+      color: white;
+      border-radius: 50%;
+      font-weight: bold;
+      font-size: 1.25rem;
+    }
+
+    .step-content {
+      margin-left: 3.5rem;
+    }
+
+    .step-content p {
+      line-height: 1.8;
+      color: var(--text-color);
+      margin-bottom: 1rem;
+    }
+
+    .step-content ul {
+      list-style: disc;
+      padding-left: 1.5rem;
+      margin: 1rem 0;
+    }
+
+    .step-content li {
+      margin-bottom: 0.5rem;
+      color: var(--text-light);
+    }
+
+    .common-operations {
+      margin: 3rem 0;
+    }
+
+    .operation-card {
+      background-color: white;
+      padding: 1.5rem;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 1.5rem;
+    }
+
+    .operation-card h4 {
+      font-size: 1.25rem;
+      color: var(--primary-color);
+      margin-bottom: 0.75rem;
+    }
+
+    .operation-card p {
+      color: var(--text-light);
+      line-height: 1.6;
+    }
+
+    .troubleshooting {
+      margin: 3rem 0;
+      padding: 2rem;
+      background-color: #fff3cd;
+      border-left: 4px solid var(--warning-color);
+      border-radius: var(--border-radius);
+    }
+
+    .troubleshooting h3 {
+      color: var(--warning-color);
+      margin-bottom: 1rem;
+    }
+
+    .troubleshooting-item {
+      margin-bottom: 1.5rem;
+    }
+
+    .troubleshooting-item h4 {
+      font-size: 1.125rem;
+      margin-bottom: 0.5rem;
+      color: var(--text-color);
+    }
+
+    .troubleshooting-item p {
+      color: var(--text-light);
+      line-height: 1.6;
+    }
+
+    code {
+      background-color: var(--bg-light);
+      padding: 0.25rem 0.5rem;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+
+    @media (max-width: 768px) {
+      .step-content {
+        margin-left: 0;
+        margin-top: 1rem;
+      }
+
+      .step-section h3 {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+    }
+  </style>
+</head>
+<body>
+  <!-- ヘッダー -->
+  <header>
+    <nav class="container">
+      <div class="logo">
+        <span>🚀</span>
+        <a href="index.html" style="color: inherit;">FLM</a>
+      </div>
+      <button class="mobile-menu-toggle" aria-label="メニューを開く" aria-expanded="false">☰</button>
+      <ul class="nav-links">
+        <li><a href="index.html">ホーム</a></li>
+        <li><a href="features.html">機能</a></li>
+        <li><a href="guide.html" class="active">使い方</a></li>
+        <li><a href="download.html">ダウンロード</a></li>
+        <li><a href="faq.html">FAQ</a></li>
+        <li><a href="contact.html">お問い合わせ</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main>
+    <section class="section">
+      <div class="container">
+        <h1 class="section-title">FLMの使い方</h1>
+        <p class="section-subtitle">
+          非開発者向けに、FLMの基本的な使い方をステップバイステップで説明します。
+          プログラミングの知識は一切必要ありません。
+        </p>
+
+        <!-- クイックスタート -->
+        <div class="quick-start">
+          <h2>5分で始めるFLM</h2>
+          <ol>
+            <li>FLMをダウンロードしてインストール（約1分）</li>
+            <li>FLMを起動し、Ollamaのセットアップを完了（約2分）</li>
+            <li>モデルを選択してAPIを作成（約1分）</li>
+            <li>作成したAPIを使ってみる（約1分）</li>
+          </ol>
+        </div>
+
+        <!-- ステップ1: インストール -->
+        <div class="step-section">
+          <h3>
+            <span class="step-number">1</span>
+            インストール
+          </h3>
+          <div class="step-content">
+            <p>
+              お使いのOS向けのインストーラーを<a href="download.html">ダウンロードページ</a>からダウンロードします。
+            </p>
+            <ul>
+              <li><strong>Windows:</strong> ダウンロードした <code>.exe</code> ファイルを実行し、インストールウィザードに従って進めます。</li>
+              <li><strong>macOS:</strong> ダウンロードした <code>.dmg</code> ファイルを開き、アプリケーションフォルダにFLMをドラッグ&ドロップします。</li>
+              <li><strong>Linux:</strong> ダウンロードした <code>.AppImage</code> ファイルに実行権限を付与して実行します。</li>
+            </ul>
+            <p>
+              インストールが完了すると、FLMがデスクトップアプリケーションとして利用可能になります。
+            </p>
+          </div>
+        </div>
+
+        <!-- ステップ2: 起動 -->
+        <div class="step-section">
+          <h3>
+            <span class="step-number">2</span>
+            起動とセットアップ
+          </h3>
+          <div class="step-content">
+            <p>
+              FLMを初めて起動すると、Ollamaのセットアップが自動で開始されます。
+            </p>
+            <ul>
+              <li>Ollamaが既にインストールされている場合、自動で検出されます。</li>
+              <li>Ollamaがインストールされていない場合、自動でダウンロード・インストールされます（数分かかることがあります）。</li>
+              <li>セットアップが完了すると、ホーム画面が表示されます。</li>
+            </ul>
+            <p>
+              <strong>注意:</strong> インターネット接続が必要です。セットアップ中はインターネットに接続されていることを確認してください。
+            </p>
+          </div>
+        </div>
+
+        <!-- ステップ3: モデル選択 -->
+        <div class="step-section">
+          <h3>
+            <span class="step-number">3</span>
+            モデル選択
+          </h3>
+          <div class="step-content">
+            <p>
+              ホーム画面から「新しいAPIを作成」ボタンをクリックすると、モデル選択画面が表示されます。
+            </p>
+            <ul>
+              <li><strong>推奨モデル（⭐マーク）:</strong> 初めての方は推奨モデルから始めることをおすすめします。</li>
+              <li><strong>チャット用途:</strong> <code>llama3</code> や <code>mistral</code> が適しています。</li>
+              <li><strong>コード生成:</strong> <code>codellama</code> が適しています。</li>
+              <li>モデル名をクリックすると、詳細情報が表示されます。</li>
+            </ul>
+            <p>
+              モデルを選択したら、「次へ」ボタンをクリックします。
+            </p>
+          </div>
+        </div>
+
+        <!-- ステップ4: API作成 -->
+        <div class="step-section">
+          <h3>
+            <span class="step-number">4</span>
+            API作成
+          </h3>
+          <div class="step-content">
+            <p>
+              設定画面で、以下の項目を入力します（すべて任意の変更が可能です）。
+            </p>
+            <ul>
+              <li><strong>API名:</strong> 作成するAPIの名前（デフォルト: "LocalAI API"）</li>
+              <li><strong>ポート番号:</strong> APIの接続先番号（デフォルト: 8080）</li>
+              <li><strong>認証を有効にする:</strong> セキュリティのため、チェックを推奨します</li>
+            </ul>
+            <p>
+              「作成」ボタンをクリックすると、APIの作成が開始されます。
+              進行状況が表示されるので、完了まで待ちます（通常は数十秒で完了します）。
+            </p>
+            <p>
+              作成が完了すると、エンドポイントURLとAPIキーが表示されます。
+              <strong>重要:</strong> APIキーはこの時点で一度だけ表示されます。安全な場所にコピーして保存してください。
+            </p>
+          </div>
+        </div>
+
+        <!-- ステップ5: API利用 -->
+        <div class="step-section">
+          <h3>
+            <span class="step-number">5</span>
+            API利用
+          </h3>
+          <div class="step-content">
+            <p>
+              API作成完了後、以下の方法でAPIを利用できます。
+            </p>
+            <ul>
+              <li><strong>テスト画面:</strong> 作成直後に表示される「テスト」ボタンで、チャット形式でAPIをテストできます。</li>
+              <li><strong>詳細画面:</strong> 「詳細」ボタンで、エンドポイントURLやサンプルコードを確認できます。</li>
+              <li><strong>他のアプリから利用:</strong> 詳細画面に表示されるサンプルコード（curl、Python、JavaScript）を参考に、他のアプリケーションからAPIを呼び出せます。</li>
+            </ul>
+            <p>
+              APIは自動で起動しますが、停止した場合はAPI一覧画面から「起動」ボタンをクリックして再起動できます。
+            </p>
+          </div>
+        </div>
+
+        <!-- よくある操作 -->
+        <div class="common-operations">
+          <h2 class="section-title" style="font-size: 2rem; margin-bottom: 2rem;">よくある操作</h2>
+          
+          <div class="operation-card">
+            <h4>🔄 APIの起動/停止</h4>
+            <p>
+              API一覧画面から、各APIの「起動」または「停止」ボタンをクリックします。
+              ステータスが「実行中」または「停止中」で表示されます。
+            </p>
+          </div>
+
+          <div class="operation-card">
+            <h4>📦 モデルの追加</h4>
+            <p>
+              ホーム画面から「モデル管理」を選択し、「モデル検索・ダウンロード」タブで
+              必要なモデルを検索してダウンロードします。
+            </p>
+          </div>
+
+          <div class="operation-card">
+            <h4>🔑 APIキーの確認</h4>
+            <p>
+              API一覧画面から「詳細」ボタンをクリックし、APIキー表示ボタンで
+              APIキーを表示・コピーできます。表示/非表示の切り替えも可能です。
+            </p>
+          </div>
+
+          <div class="operation-card">
+            <h4>⚙️ 設定の変更</h4>
+            <p>
+              API一覧画面から「設定」ボタンをクリックし、ポート番号や認証設定を変更できます。
+              変更後、APIが自動で再起動されます。
+            </p>
+          </div>
+
+          <div class="operation-card">
+            <h4>🗑️ APIの削除</h4>
+            <p>
+              設定画面の下部にある「APIを削除」ボタンで、不要になったAPIを削除できます。
+              削除すると、関連するAPIキーも自動で削除されます。
+            </p>
+          </div>
+        </div>
+
+        <!-- トラブルシューティング -->
+        <div class="troubleshooting">
+          <h3>⚠️ トラブルシューティング</h3>
+          <p style="margin-bottom: 2rem; color: var(--text-light);">
+            FLMで問題が発生した場合、以下の解決方法をお試しください。解決しない場合は、<a href="contact.html">お問い合わせ</a>からご連絡ください。
+          </p>
+
+          <!-- Ollama関連の問題 -->
+          <div class="troubleshooting-item">
+            <h4>🔧 Ollamaが起動しない</h4>
+            <p>
+              <strong>症状:</strong> 「Ollamaが実行されていません」というエラーが表示される、API作成時に失敗する
+            </p>
+            <p>
+              <strong>解決方法:</strong>
+            </p>
+            <ul>
+              <li>アプリケーションを再起動して、Ollamaの状態を確認してください</li>
+              <li>手動でOllamaを起動してみてください（コマンドプロンプトで<code>ollama serve</code>を実行）</li>
+              <li>ポート11434が他のアプリケーションで使用されていないか確認してください</li>
+              <li>Ollamaの自動ダウンロードを再試行してください</li>
+            </ul>
+          </div>
+
+          <div class="troubleshooting-item">
+            <h4>🔧 Ollamaのダウンロードが遅い・失敗する</h4>
+            <p>
+              <strong>症状:</strong> ダウンロード進捗が進まない、ダウンロードが途中で失敗する
+            </p>
+            <p>
+              <strong>解決方法:</strong>
+            </p>
+            <ul>
+              <li>インターネット接続が安定しているか確認してください</li>
+              <li>プロキシ設定を確認してください</li>
+              <li>ダウンロードを再試行してください</li>
+              <li>十分なディスク容量があるか確認してください（最低10GB）</li>
+            </ul>
+          </div>
+
+          <!-- API関連の問題 -->
+          <div class="troubleshooting-item">
+            <h4>🔧 APIが起動しません</h4>
+            <p>
+              <strong>症状:</strong> 「起動」ボタンをクリックしても起動しない、ステータスが「停止中」のまま
+            </p>
+            <p>
+              <strong>解決方法:</strong>
+            </p>
+            <ul>
+              <li>Ollamaが起動しているか確認してください（ホーム画面で確認）</li>
+              <li>ポート番号が他のアプリケーションと重複していないか確認してください</li>
+              <li>モデルが正しくダウンロードされているか確認してください（モデル管理画面で確認）</li>
+              <li>エラーメッセージの内容を確認してください</li>
+            </ul>
+          </div>
+
+          <div class="troubleshooting-item">
+            <h4>🔧 APIがすぐに停止する</h4>
+            <p>
+              <strong>症状:</strong> APIを起動してもすぐに停止する、ステータスが「error」になる
+            </p>
+            <p>
+              <strong>解決方法:</strong>
+            </p>
+            <ul>
+              <li>指定したモデルがダウンロードされているか確認してください</li>
+              <li>ポート番号が使用されていないか確認してください</li>
+              <li>一度APIを削除して、再度作成してみてください</li>
+            </ul>
+          </div>
+
+          <div class="troubleshooting-item">
+            <h4>🔧 ポート番号エラー</h4>
+            <p>
+              <strong>症状:</strong> 「ポート番号が既に使用されています」というエラー
+            </p>
+            <p>
+              <strong>解決方法:</strong>
+            </p>
+            <ul>
+              <li>別のポート番号を選択してください（8081、8082など）</li>
+              <li>実行中のAPIがないか確認してください（API一覧画面で確認）</li>
+              <li>使用中のポートを確認するには、タスクマネージャー（Windows）またはコマンドラインで確認できます</li>
+            </ul>
+          </div>
+
+          <!-- モデル関連の問題 -->
+          <div class="troubleshooting-item">
+            <h4>🔧 モデルのダウンロードに失敗する</h4>
+            <p>
+              <strong>症状:</strong> ダウンロードが途中で停止する、エラーメッセージが表示される
+            </p>
+            <p>
+              <strong>解決方法:</strong>
+            </p>
+            <ul>
+              <li>インターネット接続が安定しているか確認してください</li>
+              <li>ディスク容量が十分にあるか確認してください（モデルは数GBになることがあります）</li>
+              <li>ダウンロードを再試行してください</li>
+              <li>ファイアウォールがダウンロードをブロックしていないか確認してください</li>
+              <li>数回試しても失敗する場合、別のモデルを試してみてください</li>
+            </ul>
+          </div>
+
+          <div class="troubleshooting-item">
+            <h4>🔧 モデル一覧が表示されない</h4>
+            <p>
+              <strong>症状:</strong> モデル一覧が空、「モデルが見つかりません」というメッセージ
+            </p>
+            <p>
+              <strong>解決方法:</strong>
+            </p>
+            <ul>
+              <li>Ollamaが起動しているか確認してください</li>
+              <li>手動でモデルをインストールしてみてください（コマンドプロンプトで<code>ollama pull llama3:8b</code>を実行）</li>
+              <li>アプリケーションを再起動してみてください</li>
+            </ul>
+          </div>
+
+          <!-- 認証関連の問題 -->
+          <div class="troubleshooting-item">
+            <h4>🔧 APIキーが表示されない</h4>
+            <p>
+              <strong>症状:</strong> API作成後、APIキーが表示されない、API詳細画面でAPIキーが表示されない
+            </p>
+            <p>
+              <strong>解決方法:</strong>
+            </p>
+            <ul>
+              <li>API作成時に認証設定が有効になっていたか確認してください</li>
+              <li>設定変更画面でAPIキーを再生成してください</li>
+              <li>認証設定を有効にしてAPIを再作成してください</li>
+            </ul>
+          </div>
+
+          <div class="troubleshooting-item">
+            <h4>🔧 APIキーで認証が失敗する</h4>
+            <p>
+              <strong>症状:</strong> APIキーを使用しても認証が失敗する、401エラーが返される
+            </p>
+            <p>
+              <strong>解決方法:</strong>
+            </p>
+            <ul>
+              <li>正しいAPIキーを使用しているか確認してください</li>
+              <li>コピー＆ペースト時に余分なスペースが含まれていないか確認してください</li>
+              <li>APIキーを再生成して、新しいAPIキーを使用してください</li>
+              <li>認証プロキシを再起動してください（APIを停止してから再起動）</li>
+            </ul>
+          </div>
+
+          <!-- パフォーマンスの問題 -->
+          <div class="troubleshooting-item">
+            <h4>🔧 APIの応答が遅い</h4>
+            <p>
+              <strong>症状:</strong> APIのレスポンスに時間がかかる、タイムアウトエラーが発生する
+            </p>
+            <p>
+              <strong>解決方法:</strong>
+            </p>
+            <ul>
+              <li>より小さなモデルを試してください（軽量モデルを使用）</li>
+              <li>CPU/メモリの使用率を確認してください</li>
+              <li>他のアプリケーションを終了してリソースを確保してください</li>
+              <li>同時リクエストの数を減らしてください</li>
+              <li>GPU（NVIDIA GPU）を使用すると応答速度が向上します</li>
+            </ul>
+          </div>
+
+          <div class="troubleshooting-item">
+            <h4>🔧 メモリ使用量が高い</h4>
+            <p>
+              <strong>症状:</strong> システムのメモリ使用量が高い、アプリケーションが重い
+            </p>
+            <p>
+              <strong>解決方法:</strong>
+            </p>
+            <ul>
+              <li>より小さなモデルを使用してください</li>
+              <li>実行中のAPIの数を減らしてください</li>
+              <li>他のアプリケーションのメモリ使用量を確認してください</li>
+              <li>システムのメモリ容量を確認してください（推奨: 16GB以上）</li>
+            </ul>
+          </div>
+
+          <!-- データベース関連の問題 -->
+          <div class="troubleshooting-item">
+            <h4>🔧 データベース接続エラー</h4>
+            <p>
+              <strong>症状:</strong> 「データベース接続エラー」が表示される、API一覧が表示されない
+            </p>
+            <p>
+              <strong>解決方法:</strong>
+            </p>
+            <ul>
+              <li>アプリケーションを再起動してください（一時的な問題の可能性）</li>
+              <li>アプリケーションデータディレクトリのアクセス権限を確認してください</li>
+              <li>データベースファイルが存在するか確認してください</li>
+              <li>問題が解決しない場合、アプリケーションを再インストールしてください（注意: 既存のデータは削除されます）</li>
+            </ul>
+          </div>
+
+          <div class="troubleshooting-item">
+            <h4>🔧 API設定が保存されない</h4>
+            <p>
+              <strong>症状:</strong> APIを作成しても一覧に表示されない、設定変更が反映されない
+            </p>
+            <p>
+              <strong>解決方法:</strong>
+            </p>
+            <ul>
+              <li>アプリケーションを再起動してください（データベースのロックを解除）</li>
+              <li>アプリケーションデータディレクトリの書き込み権限を確認してください</li>
+            </ul>
+          </div>
+
+          <!-- その他の問題 -->
+          <div class="troubleshooting-item">
+            <h4>🔧 アプリケーションが起動しない</h4>
+            <p>
+              <strong>症状:</strong> アプリケーションが起動しない、エラーダイアログが表示される
+            </p>
+            <p>
+              <strong>解決方法:</strong>
+            </p>
+            <ul>
+              <li>システム要件を満たしているか確認してください</li>
+              <li>アプリケーションを再インストールしてください</li>
+              <li>エラーログを確認してください（アプリケーションデータディレクトリ）</li>
+            </ul>
+          </div>
+
+          <div class="troubleshooting-item">
+            <h4>🔧 アップデート後にエラーが発生</h4>
+            <p>
+              <strong>症状:</strong> アップデート後に機能が動作しない、データが表示されない
+            </p>
+            <p>
+              <strong>解決方法:</strong>
+            </p>
+            <ul>
+              <li>アプリケーションを再起動してください</li>
+              <li>データベースのマイグレーションが自動実行されます。エラーが発生する場合、アプリケーションを再インストールしてください</li>
+            </ul>
+          </div>
+
+          <p style="margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--border-color);">
+            <strong>💡 ヒント:</strong> 問題を報告する際は、エラーメッセージ、操作手順、環境情報（OSのバージョン、FLMのバージョン、Ollamaのバージョン）を含めてご連絡ください。
+            <a href="contact.html">お問い合わせページ</a>からご連絡いただけます。
+          </p>
+        </div>
+
+        <!-- CTAセクション -->
+        <section class="section" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%); color: white; text-align: center; margin-top: 4rem;">
+          <div class="container">
+            <h2 style="font-size: 2.5rem; margin-bottom: 1rem;">準備できましたか？</h2>
+            <p style="font-size: 1.25rem; margin-bottom: 2rem; opacity: 0.95;">
+              今すぐFLMをダウンロードして、AI APIを作成しましょう
+            </p>
+            <a href="download.html" class="btn btn-primary btn-large" style="background-color: white; color: var(--primary-color);">
+              今すぐダウンロード
+            </a>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <!-- フッター -->
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>プロジェクト</h3>
+          <ul>
+            <li><a href="features.html">機能</a></li>
+            <li><a href="guide.html">使い方</a></li>
+            <li><a href="download.html">ダウンロード</a></li>
+          </ul>
+        </div>
+        
+        <div class="footer-section">
+          <h3>サポート</h3>
+          <ul>
+            <li><a href="faq.html">FAQ</a></li>
+            <li><a href="contact.html">お問い合わせ</a></li>
+            <li><a href="guide.html">使い方ガイド</a></li>
+          </ul>
+        </div>
+        
+        <div class="footer-section">
+          <h3>リンク</h3>
+          <ul>
+            <li><a href="#">GitHub（準備中）</a></li>
+            <li><a href="#">Steam（配布予定）</a></li>
+            <li><a href="#">プライバシーポリシー（準備中）</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="footer-bottom">
+        <p>&copy; 2024 FLM. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JavaScript -->
+  <script src="js/main.js"></script>
+  <script src="js/navigation.js"></script>
+</body>
+</html>
+

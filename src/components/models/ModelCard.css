@@ -1,0 +1,170 @@
+/* FLM - モデルカードコンポーネントのスタイル */
+
+.model-card {
+  position: relative;
+  padding: 1.5rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  background: white;
+  transition: all 0.2s;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.model-card:hover {
+  border-color: #667eea;
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+  transform: translateY(-2px);
+}
+
+.model-card.recommended {
+  border-color: #ffc107;
+}
+
+.recommended-badge {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: #ffc107;
+  color: #333;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.model-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 0.5rem;
+}
+
+.model-name {
+  margin: 0;
+  font-size: 1.25rem;
+  color: #333;
+  word-break: break-word;
+  flex: 1;
+}
+
+.category-badge {
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: bold;
+  white-space: nowrap;
+}
+
+.category-badge.category-chat {
+  background-color: #2196f3;
+}
+
+.category-badge.category-code {
+  background-color: #4caf50;
+}
+
+.category-badge.category-translation {
+  background-color: #ff9800;
+}
+
+.category-badge.category-summarization {
+  background-color: #9c27b0;
+}
+
+.category-badge.category-qa {
+  background-color: #f44336;
+}
+
+.category-badge.category-other {
+  background-color: #999;
+}
+
+.model-description {
+  margin: 0;
+  color: #666;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.model-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.info-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.info-icon {
+  font-size: 1rem;
+}
+
+.info-label {
+  color: #666;
+  flex: 1;
+}
+
+.info-value {
+  color: #333;
+  font-weight: bold;
+}
+
+.model-card-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.action-button {
+  flex: 1;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.action-button.details {
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #e0e0e0;
+}
+
+.action-button.details:hover {
+  background: #e0e0e0;
+}
+
+.action-button.use {
+  background: #667eea;
+  color: white;
+}
+
+.action-button.use:hover {
+  background: #764ba2;
+}
+
+.action-button.download {
+  background: #4caf50;
+  color: white;
+}
+
+.action-button.download:hover:not(:disabled) {
+  background: #45a049;
+}
+
+.action-button.download:disabled,
+.action-button.download.downloading {
+  background: #ccc;
+  cursor: not-allowed;
+}
+

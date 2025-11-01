@@ -1,0 +1,160 @@
+/* FLM - モデル検索コンポーネントのスタイル */
+
+.model-search {
+  padding: 1rem 0;
+}
+
+.search-filters {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.search-bar {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.search-input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.refresh-button {
+  padding: 0.75rem 1.5rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.2s;
+}
+
+.refresh-button:hover {
+  background: #764ba2;
+}
+
+.filters-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-group label {
+  font-size: 0.875rem;
+  font-weight: bold;
+  color: #333;
+}
+
+.filter-group select {
+  padding: 0.5rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  transition: border-color 0.2s;
+}
+
+.filter-group select:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.model-search-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e0e0e0;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.error-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: #ffebee;
+  border-left: 4px solid #f44336;
+  border-radius: 4px;
+  color: #c62828;
+  margin-bottom: 1rem;
+}
+
+.error-icon {
+  font-size: 1.2rem;
+}
+
+.guidance-section {
+  padding: 2rem;
+  background: #e3f2fd;
+  border-radius: 8px;
+  margin-bottom: 2rem;
+}
+
+.guidance-section h3 {
+  margin: 0 0 0.5rem 0;
+  color: #1976d2;
+}
+
+.guidance-section p {
+  margin: 0 0 1rem 0;
+  color: #333;
+}
+
+.guidance-section details {
+  margin-top: 1rem;
+}
+
+.guidance-section summary {
+  cursor: pointer;
+  font-weight: bold;
+  color: #1976d2;
+  margin-bottom: 0.5rem;
+}
+
+.guidance-section ul {
+  margin: 0.5rem 0 0 1.5rem;
+  padding: 0;
+}
+
+.guidance-section li {
+  margin-bottom: 0.5rem;
+  color: #333;
+}
+
+.model-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 1.5rem;
+}

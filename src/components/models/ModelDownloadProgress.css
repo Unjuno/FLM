@@ -1,0 +1,163 @@
+/* Model Download Progress Styles */
+
+.model-download-progress {
+  position: fixed;
+  bottom: 2rem;
+  right: 2rem;
+  z-index: 1000;
+  max-width: 400px;
+  width: 100%;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    transform: translateY(100%);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+.progress-card {
+  background: white;
+  border-radius: 12px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem;
+  background: linear-gradient(135deg, #396cd8 0%, #764ba2 100%);
+  color: white;
+}
+
+.progress-header h3 {
+  margin: 0;
+  font-size: 1rem;
+  font-weight: 500;
+}
+
+.close-button {
+  background: transparent;
+  border: none;
+  color: white;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.close-button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.progress-content {
+  padding: 1.5rem;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 8px;
+  background-color: #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 1rem;
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #396cd8 0%, #764ba2 100%);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.progress-percentage {
+  text-align: center;
+  font-size: 1.5rem;
+  font-weight: bold;
+  color: #396cd8;
+  margin-bottom: 1rem;
+}
+
+.progress-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.info-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.info-label {
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.info-value {
+  color: #0f0f0f;
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.progress-actions {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: flex-end;
+}
+
+.action-button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s;
+}
+
+.action-button.pause-resume {
+  background-color: #ff9800;
+  color: white;
+}
+
+.action-button.pause-resume:hover {
+  background-color: #f57c00;
+}
+
+.action-button.cancel {
+  background-color: #f44336;
+  color: white;
+}
+
+.action-button.cancel:hover {
+  background-color: #da190b;
+}
+
+@media (prefers-color-scheme: dark) {
+  .progress-card {
+    background: #1f1f1f;
+  }
+
+  .progress-bar-container {
+    background-color: #333;
+  }
+
+  .info-value {
+    color: #f6f6f6;
+  }
+
+  .info-label {
+    color: #aaa;
+  }
+}

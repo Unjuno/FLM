@@ -1,0 +1,127 @@
+/* FLM - レスポンシブデザイン
+   モバイル・タブレット・デスクトップ対応 */
+
+/* ===== タブレット（768px以下） ===== */
+@media (max-width: 768px) {
+  :root {
+    --spacing-md: 1.5rem;
+    --spacing-lg: 2rem;
+    --spacing-xl: 3rem;
+  }
+
+  .hero h1 {
+    font-size: 2rem;
+  }
+
+  .hero p {
+    font-size: 1.125rem;
+  }
+
+  .section-title {
+    font-size: 2rem;
+  }
+
+  .nav-links {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background-color: var(--bg-color);
+    box-shadow: var(--shadow-md);
+    flex-direction: column;
+    padding: var(--spacing-md);
+    gap: var(--spacing-sm);
+  }
+
+  .nav-links.active {
+    display: flex;
+  }
+
+  .mobile-menu-toggle {
+    display: block;
+  }
+
+  .grid-2,
+  .grid-3 {
+    grid-template-columns: 1fr;
+  }
+
+  .footer-content {
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  }
+}
+
+/* ===== モバイル（480px以下） ===== */
+@media (max-width: 480px) {
+  :root {
+    --spacing-md: 1rem;
+    --spacing-lg: 1.5rem;
+    --spacing-xl: 2rem;
+  }
+
+  .container {
+    padding: 0 var(--spacing-sm);
+  }
+
+  .hero {
+    padding: var(--spacing-lg) var(--spacing-sm);
+  }
+
+  .hero h1 {
+    font-size: 1.75rem;
+  }
+
+  .hero p {
+    font-size: 1rem;
+  }
+
+  .section {
+    padding: var(--spacing-lg) var(--spacing-sm);
+  }
+
+  .section-title {
+    font-size: 1.75rem;
+  }
+
+  .btn-large {
+    padding: 0.875rem 2rem;
+    font-size: 1rem;
+    width: 100%;
+  }
+
+  nav {
+    padding: var(--spacing-sm);
+  }
+
+  .logo {
+    font-size: 1.25rem;
+  }
+}
+
+/* ===== 大画面（1400px以上） ===== */
+@media (min-width: 1400px) {
+  :root {
+    --max-width: 1400px;
+  }
+}
+
+/* ===== 印刷用 ===== */
+@media print {
+  header,
+  footer,
+  .btn,
+  .mobile-menu-toggle {
+    display: none;
+  }
+
+  .section {
+    page-break-inside: avoid;
+  }
+}
+
+/* ===== ダークモード対応（将来用） ===== */
+@media (prefers-color-scheme: dark) {
+  /* 将来的にダークモード対応を追加可能 */
+}
+

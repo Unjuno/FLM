@@ -1,0 +1,238 @@
+// FLM - ログ詳細表示コンポーネント
+// フロントエンドエージェント (FE) 実装
+// F006: ログ表示機能 - ログ詳細表示コンポーネント実装
+
+import React, { useState, useMemo } from 'react';
+import './LogDetail.css';
+
+/**
+ * リクエストログ情報
+ */
+export interface RequestLogInfo {
+  id: string;
+  api_id: string;
+  method: string;
+  path: string;
+  request_body: string | null;
+  response_status: number | null;
+  response_time_ms: number | null;
+  error_message: string | null;
+  created_at: string;
+}
+
+/**
+ * ログ詳細モーダルコンポーネントのプロパティ
+ */
+interface LogDetailProps {
+  log: RequestLogInfo | null;
+  onClose: () => void;
+}
+
+/**
+ * JSONをフォーマット（読みやすく）
+ */
+const formatJSON = (jsonString: string | null): string => {
+  if (!jsonString) return '';
+  
+  try {
+    const parsed = JSON.parse(jsonString);
+    return JSON.stringify(parsed, null, 2);
+  } catch {
+    return jsonString;
+  }
+};
+
+/**
+ * ステータスコードに応じたクラス名を取得
+ */
+const getStatusClass = (status: number | null): string => {
+  if (status === null) return 'status-unknown';
+  if (status >= 200 && status < 300) return 'status-success';
+  if (status >= 300 && status < 400) return 'status-redirect';
+  if (status >= 400 && status < 500) return 'status-client-error';
+  if (status >= 500) return 'status-server-error';
+  return 'status-unknown';
+};
+
+/**
+ * 日時をフォーマット
+ */
+const formatDateTime = (dateString: string): string => {
+  try {
+    const date = new Date(dateString);
+    return date.toLocaleString('ja-JP', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit',
+      second: '2-digit',
+    });
+  } catch {
+    return dateString;
+  }
+};
+
+/**
+ * レスポンス時間をフォーマット
+ */
+const formatResponseTime = (ms: number | null): string => {
+  if (!ms) return 'N/A';
+  if (ms < 1000) return `${ms}ms`;
+  return `${(ms / 1000).toFixed(2)}s`;
+};
+
+/**
+ * ログ詳細モーダルコンポーネント
+ * リクエストログの詳細情報を表示します
+ */
+export const LogDetail: React.FC<LogDetailProps> = ({ log, onClose }) => {
+  const [activeTab, setActiveTab] = useState<'request' | 'response'>('request');
+  const [copiedField, setCopiedField] = useState<string | null>(null);
+
+  // JSONをフォーマット（メモ化）
+  const formattedRequestBody = useMemo(
+    () => formatJSON(log?.request_body || null),
+    [log?.request_body]
+  );
+
+  // コピー機能
+  const handleCopy = async (text: string, fieldName: string) => {
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopiedField(fieldName);
+      setTimeout(() => setCopiedField(null), 2000);
+    } catch (err) {
+      console.error('コピーに失敗しました:', err);
+    }
+  };
+
+  if (!log) return null;
+
+  return (
+    <div className="log-detail-overlay" onClick={onClose}>
+      <div className="log-detail-modal" onClick={(e) => e.stopPropagation()}>
+        <div className="modal-header">
+          <h2>ログ詳細</h2>
+          <button className="close-button" onClick={onClose} aria-label="閉じる">
+            ✕
+          </button>
+        </div>
+
+        <div className="modal-content">
+          {/* 基本情報 */}
+          <section className="detail-section">
+            <h3>基本情報</h3>
+            <div className="detail-grid">
+              <div className="detail-item">
+                <span className="detail-label">ID:</span>
+                <span className="detail-value detail-id">{log.id}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">メソッド:</span>
+                <span className={`method-badge method-${log.method.toLowerCase()}`}>
+                  {log.method}
+                </span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">パス:</span>
+                <span className="detail-value detail-path">{log.path}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">ステータス:</span>
+                <span className={`status-badge ${getStatusClass(log.response_status)}`}>
+                  {log.response_status || 'N/A'}
+                </span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">レスポンス時間:</span>
+                <span className="detail-value">{formatResponseTime(log.response_time_ms)}</span>
+              </div>
+              <div className="detail-item">
+                <span className="detail-label">日時:</span>
+                <span className="detail-value">{formatDateTime(log.created_at)}</span>
+              </div>
+            </div>
+            {log.error_message && (
+              <div className="error-message-box">
+                <span className="error-icon">⚠️</span>
+                <span className="error-text">{log.error_message}</span>
+              </div>
+            )}
+          </section>
+
+          {/* タブ切り替え */}
+          <div className="tab-container">
+            <button
+              className={`tab-button ${activeTab === 'request' ? 'active' : ''}`}
+              onClick={() => setActiveTab('request')}
+            >
+              リクエスト
+            </button>
+            <button
+              className={`tab-button ${activeTab === 'response' ? 'active' : ''}`}
+              onClick={() => setActiveTab('response')}
+            >
+              レスポンス
+            </button>
+          </div>
+
+          {/* リクエスト情報 */}
+          {activeTab === 'request' && (
+            <section className="detail-section">
+              <div className="section-header">
+                <h3>リクエストボディ</h3>
+                {formattedRequestBody && (
+                  <button
+                    className="copy-button"
+                    onClick={() => handleCopy(formattedRequestBody, 'request')}
+                  >
+                    {copiedField === 'request' ? '✓ コピーしました' : '📋 コピー'}
+                  </button>
+                )}
+              </div>
+              {formattedRequestBody ? (
+                <pre className="json-viewer">{formattedRequestBody}</pre>
+              ) : (
+                <p className="empty-content">リクエストボディがありません</p>
+              )}
+            </section>
+          )}
+
+          {/* レスポンス情報 */}
+          {activeTab === 'response' && (
+            <section className="detail-section">
+              <div className="section-header">
+                <h3>レスポンス情報</h3>
+              </div>
+              <div className="response-info">
+                <div className="info-row">
+                  <span className="info-label">ステータスコード:</span>
+                  <span className={`status-badge ${getStatusClass(log.response_status)}`}>
+                    {log.response_status || 'N/A'}
+                  </span>
+                </div>
+                <div className="info-row">
+                  <span className="info-label">レスポンス時間:</span>
+                  <span className="info-value">{formatResponseTime(log.response_time_ms)}</span>
+                </div>
+                {log.error_message && (
+                  <div className="info-row">
+                    <span className="info-label">エラーメッセージ:</span>
+                    <span className="info-value error-text">{log.error_message}</span>
+                  </div>
+                )}
+              </div>
+            </section>
+          )}
+        </div>
+
+        <div className="modal-actions">
+          <button className="button-secondary" onClick={onClose}>
+            閉じる
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+};

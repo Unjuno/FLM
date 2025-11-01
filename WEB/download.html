@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FLM - Windows、macOS、Linux向けインストーラーをダウンロード。OS自動検出機能で、お使いのOSに最適なバージョンを提供。">
+  <meta name="keywords" content="FLM,ダウンロード,Windows,macOS,Linux,インストーラー">
+  <title>ダウンロード - FLM</title>
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    /* ダウンロードページ専用スタイル */
+    .os-selector {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin: 2rem 0;
+    }
+
+    .os-card {
+      background-color: var(--bg-color);
+      border: 2px solid var(--border-color);
+      border-radius: var(--border-radius);
+      padding: 2rem;
+      text-align: center;
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+    }
+
+    .os-card:hover {
+      border-color: var(--primary-color);
+      box-shadow: var(--shadow-md);
+      transform: translateY(-4px);
+    }
+
+    .os-card.selected {
+      border-color: var(--primary-color);
+      background-color: rgba(102, 126, 234, 0.05);
+      box-shadow: var(--shadow-md);
+    }
+
+    .os-card-icon {
+      font-size: 4rem;
+      margin-bottom: 1rem;
+    }
+
+    .os-card-title {
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 0.5rem;
+      color: var(--text-color);
+    }
+
+    .os-details {
+      display: none;
+      margin-top: 3rem;
+      padding: 2rem;
+      background-color: var(--bg-light);
+      border-radius: var(--border-radius);
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .os-details.active {
+      display: block;
+    }
+
+    .os-details h3 {
+      font-size: 2rem;
+      margin-bottom: 1.5rem;
+      color: var(--text-color);
+    }
+
+    .download-info {
+      display: grid;
+      gap: 1.5rem;
+      margin-bottom: 2rem;
+    }
+
+    .info-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1rem;
+      background-color: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .info-label {
+      font-weight: 600;
+      color: var(--text-color);
+    }
+
+    .info-value {
+      color: var(--text-light);
+    }
+
+    .checksum {
+      font-family: 'Courier New', monospace;
+      font-size: 0.875rem;
+      word-break: break-all;
+      background-color: var(--bg-color);
+      padding: 0.5rem;
+      border-radius: 4px;
+    }
+
+    .install-steps {
+      margin-top: 2rem;
+      padding: 1.5rem;
+      background-color: white;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .install-steps ol {
+      list-style: decimal;
+      padding-left: 1.5rem;
+      margin-top: 1rem;
+    }
+
+    .install-steps li {
+      margin-bottom: 0.75rem;
+      line-height: 1.6;
+    }
+
+    .system-requirements {
+      margin-top: 3rem;
+      padding: 2rem;
+      background-color: var(--bg-light);
+      border-radius: var(--border-radius);
+    }
+
+    .requirements-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 1.5rem;
+      margin-top: 1.5rem;
+    }
+
+    .requirement-card {
+      background-color: white;
+      padding: 1.5rem;
+      border-radius: var(--border-radius);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .requirement-card h4 {
+      font-size: 1.25rem;
+      margin-bottom: 1rem;
+      color: var(--primary-color);
+    }
+
+    .requirement-card ul {
+      list-style: disc;
+      padding-left: 1.5rem;
+      color: var(--text-light);
+    }
+
+    .requirement-card li {
+      margin-bottom: 0.5rem;
+    }
+  </style>
+</head>
+<body>
+  <!-- ヘッダー -->
+  <header>
+    <nav class="container">
+      <div class="logo">
+        <span>🚀</span>
+        <a href="index.html" style="color: inherit;">FLM</a>
+      </div>
+      <button class="mobile-menu-toggle" aria-label="メニューを開く" aria-expanded="false">☰</button>
+      <ul class="nav-links">
+        <li><a href="index.html">ホーム</a></li>
+        <li><a href="features.html">機能</a></li>
+        <li><a href="guide.html">使い方</a></li>
+        <li><a href="download.html" class="active">ダウンロード</a></li>
+        <li><a href="faq.html">FAQ</a></li>
+        <li><a href="contact.html">お問い合わせ</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main>
+    <section class="section">
+      <div class="container">
+        <h1 class="section-title">ダウンロード</h1>
+        <p class="section-subtitle">
+          お使いのOSを選択して、FLMをダウンロードしてください。OSが自動検出された場合は、該当するOSが強調表示されます。
+        </p>
+
+        <!-- OS選択セクション -->
+        <div class="os-selector">
+          <div class="os-card" data-os="windows" onclick="selectOS('windows')">
+            <div class="os-card-icon">🪟</div>
+            <h3 class="os-card-title">Windows</h3>
+            <p style="color: var(--text-light);">Windows 10/11 (64-bit)</p>
+          </div>
+
+          <div class="os-card" data-os="macos" onclick="selectOS('macos')">
+            <div class="os-card-icon">🍎</div>
+            <h3 class="os-card-title">macOS</h3>
+            <p style="color: var(--text-light);">macOS 11.0+ (Intel & Apple Silicon)</p>
+          </div>
+
+          <div class="os-card" data-os="linux" onclick="selectOS('linux')">
+            <div class="os-card-icon">🐧</div>
+            <h3 class="os-card-title">Linux</h3>
+            <p style="color: var(--text-light);">Ubuntu 20.04+ / Debian 11+ / Fedora 34+</p>
+          </div>
+        </div>
+
+        <!-- OS詳細セクション（Windows） -->
+        <div class="os-details" id="windows-details">
+          <h3>Windows版</h3>
+          <div class="download-info">
+            <div class="info-item">
+              <span class="info-label">ファイル名:</span>
+              <span class="info-value">FLM-Setup-1.0.0.exe</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">バージョン:</span>
+              <span class="info-value">1.0.0</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">ファイルサイズ:</span>
+              <span class="info-value">約 50 MB</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">SHA256:</span>
+              <span class="info-value">
+                <code class="checksum">計算中...</code>
+              </span>
+            </div>
+          </div>
+          <div style="text-align: center; margin: 2rem 0;">
+            <a href="#" class="btn btn-primary btn-large download-button" data-download="windows" data-os="windows">
+              Windows版をダウンロード
+            </a>
+          </div>
+          <div class="install-steps">
+            <h4>インストール手順:</h4>
+            <ol>
+              <li>ダウンロードした <code>FLM-Setup-1.0.0.exe</code> を実行します</li>
+              <li>インストールウィザードに従って進めます</li>
+              <li>インストール完了後、FLMを起動します</li>
+              <li>初回起動時にOllamaのセットアップが自動で開始されます</li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- OS詳細セクション（macOS） -->
+        <div class="os-details" id="macos-details">
+          <h3>macOS版</h3>
+          <div class="download-info">
+            <div class="info-item">
+              <span class="info-label">ファイル名:</span>
+              <span class="info-value">FLM-1.0.0.dmg</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">バージョン:</span>
+              <span class="info-value">1.0.0</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">ファイルサイズ:</span>
+              <span class="info-value">約 55 MB</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">SHA256:</span>
+              <span class="info-value">
+                <code class="checksum">計算中...</code>
+              </span>
+            </div>
+          </div>
+          <div style="text-align: center; margin: 2rem 0;">
+            <a href="#" class="btn btn-primary btn-large download-button" data-download="macos" data-os="macos">
+              macOS版をダウンロード
+            </a>
+          </div>
+          <div class="install-steps">
+            <h4>インストール手順:</h4>
+            <ol>
+              <li>ダウンロードした <code>FLM-1.0.0.dmg</code> を開きます</li>
+              <li>アプリケーションフォルダにFLMをドラッグ&ドロップします</li>
+              <li>初回起動時、「不明な開発者」の警告が出た場合は、システム環境設定で許可します</li>
+              <li>FLMを起動し、初回起動時にOllamaのセットアップが自動で開始されます</li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- OS詳細セクション（Linux） -->
+        <div class="os-details" id="linux-details">
+          <h3>Linux版</h3>
+          <div class="download-info">
+            <div class="info-item">
+              <span class="info-label">ファイル名:</span>
+              <span class="info-value">FLM-1.0.0.AppImage</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">バージョン:</span>
+              <span class="info-value">1.0.0</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">ファイルサイズ:</span>
+              <span class="info-value">約 52 MB</span>
+            </div>
+            <div class="info-item">
+              <span class="info-label">SHA256:</span>
+              <span class="info-value">
+                <code class="checksum">計算中...</code>
+              </span>
+            </div>
+          </div>
+          <div style="text-align: center; margin: 2rem 0;">
+            <a href="#" class="btn btn-primary btn-large download-button" data-download="linux" data-os="linux">
+              Linux版をダウンロード
+            </a>
+          </div>
+          <div class="install-steps">
+            <h4>インストール手順:</h4>
+            <ol>
+              <li>ダウンロードした <code>FLM-1.0.0.AppImage</code> に実行権限を付与します:
+                <code style="background-color: var(--bg-light); padding: 0.25rem 0.5rem; border-radius: 4px; display: block; margin-top: 0.5rem;">chmod +x FLM-1.0.0.AppImage</code>
+              </li>
+              <li>AppImageをダブルクリックするか、コマンドラインから実行します:
+                <code style="background-color: var(--bg-light); padding: 0.25rem 0.5rem; border-radius: 4px; display: block; margin-top: 0.5rem;">./FLM-1.0.0.AppImage</code>
+              </li>
+              <li>初回起動時にOllamaのセットアップが自動で開始されます</li>
+            </ol>
+          </div>
+        </div>
+
+        <!-- システム要件セクション -->
+        <div class="system-requirements">
+          <h2 class="section-title" style="font-size: 2rem;">システム要件</h2>
+          <div class="requirements-grid">
+            <div class="requirement-card">
+              <h4>最小要件</h4>
+              <ul>
+                <li>OS: Windows 10/11, macOS 11.0+, Ubuntu 20.04+</li>
+                <li>RAM: 8GB</li>
+                <li>ストレージ: 10GB（モデル含む）</li>
+                <li>CPU: 64-bit プロセッサ</li>
+              </ul>
+            </div>
+            <div class="requirement-card">
+              <h4>推奨要件</h4>
+              <ul>
+                <li>OS: 最新バージョン</li>
+                <li>RAM: 16GB以上</li>
+                <li>ストレージ: 20GB以上</li>
+                <li>GPU: NVIDIA GPU（オプション、高速化のため）</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- その他のプラットフォーム -->
+        <div class="section" style="background-color: var(--bg-light); margin-top: 3rem;">
+          <div class="container">
+            <h2 class="section-title" style="font-size: 2rem;">その他のプラットフォーム</h2>
+            <p class="section-subtitle">将来的に以下のプラットフォームでも利用可能になる予定です</p>
+            <div style="text-align: center; margin-top: 2rem;">
+              <p style="color: var(--text-light); margin-bottom: 1rem;">
+                <strong>Steam配布:</strong> 準備中<br>
+                <strong>パッケージマネージャー:</strong> 準備中
+              </p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- フッター -->
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>プロジェクト</h3>
+          <ul>
+            <li><a href="features.html">機能</a></li>
+            <li><a href="guide.html">使い方</a></li>
+            <li><a href="download.html">ダウンロード</a></li>
+          </ul>
+        </div>
+        
+        <div class="footer-section">
+          <h3>サポート</h3>
+          <ul>
+            <li><a href="faq.html">FAQ</a></li>
+            <li><a href="contact.html">お問い合わせ</a></li>
+            <li><a href="guide.html">使い方ガイド</a></li>
+          </ul>
+        </div>
+        
+        <div class="footer-section">
+          <h3>リンク</h3>
+          <ul>
+            <li><a href="#">GitHub（準備中）</a></li>
+            <li><a href="#">Steam（配布予定）</a></li>
+            <li><a href="#">プライバシーポリシー（準備中）</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="footer-bottom">
+        <p>&copy; 2024 FLM. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JavaScript -->
+  <script src="js/main.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/download.js"></script>
+  <script>
+    // OS選択機能
+    let selectedOS = null;
+
+    // OS自動検出
+    function autoDetectOS() {
+      const os = detectOS();
+      const osMapping = {
+        windows: 'windows',
+        macos: 'macos',
+        linux: 'linux'
+      };
+      
+      if (osMapping[os]) {
+        selectOS(osMapping[os]);
+      }
+    }
+
+    function selectOS(os) {
+      selectedOS = os;
+      
+      // すべてのOSカードからselectedクラスを削除
+      document.querySelectorAll('.os-card').forEach(card => {
+        card.classList.remove('selected');
+      });
+      
+      // すべてのOS詳細セクションを非表示
+      document.querySelectorAll('.os-details').forEach(details => {
+        details.classList.remove('active');
+      });
+      
+      // 選択したOSのカードと詳細セクションを表示
+      const selectedCard = document.querySelector(`[data-os="${os}"]`);
+      const selectedDetails = document.getElementById(`${os}-details`);
+      
+      if (selectedCard) {
+        selectedCard.classList.add('selected');
+      }
+      
+      if (selectedDetails) {
+        selectedDetails.classList.add('active');
+      }
+    }
+
+    // ページ読み込み時にOS自動検出
+    document.addEventListener('DOMContentLoaded', function() {
+      autoDetectOS();
+    });
+  </script>
+</body>
+</html>
+

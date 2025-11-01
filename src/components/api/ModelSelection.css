@@ -1,0 +1,214 @@
+/* FLM - モデル選択コンポーネントのスタイル */
+
+.model-selection {
+  padding: 1rem 0;
+}
+
+.model-selection-header {
+  margin-bottom: 2rem;
+}
+
+.model-selection-header h2 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.5rem;
+  color: #333;
+}
+
+.model-selection-description {
+  color: #666;
+  margin: 0 0 1rem 0;
+}
+
+.model-search {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.search-input {
+  flex: 1;
+  padding: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+.search-input:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.refresh-button {
+  padding: 0.75rem 1.5rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  transition: background 0.2s;
+}
+
+.refresh-button:hover {
+  background: #764ba2;
+}
+
+.model-selection-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+}
+
+.loading-spinner {
+  width: 48px;
+  height: 48px;
+  border: 4px solid #e0e0e0;
+  border-top-color: #667eea;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+.model-selection-error {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: #ffebee;
+  border-left: 4px solid #f44336;
+  border-radius: 4px;
+  color: #c62828;
+  margin-bottom: 1rem;
+}
+
+.error-icon {
+  font-size: 1.2rem;
+}
+
+.model-selection-empty {
+  text-align: center;
+  padding: 4rem 2rem;
+  color: #666;
+}
+
+.empty-hint {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #999;
+}
+
+.model-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.model-card {
+  position: relative;
+  padding: 1.5rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: white;
+}
+
+.model-card:hover {
+  border-color: #667eea;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.2);
+}
+
+.model-card.selected {
+  border-color: #667eea;
+  background: #f8f9ff;
+}
+
+.model-card.recommended {
+  border-color: #ffc107;
+}
+
+.recommended-badge {
+  position: absolute;
+  top: 0.75rem;
+  right: 0.75rem;
+  background: #ffc107;
+  color: #333;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-size: 0.75rem;
+  font-weight: bold;
+}
+
+.model-name {
+  margin: 0 0 1rem 0;
+  font-size: 1.1rem;
+  color: #333;
+  word-break: break-word;
+}
+
+.model-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+  color: #666;
+}
+
+.model-size,
+.model-params {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.select-button {
+  width: 100%;
+  padding: 0.75rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 1rem;
+  font-weight: bold;
+  transition: background 0.2s;
+}
+
+.select-button:hover {
+  background: #764ba2;
+}
+
+.model-card.selected .select-button {
+  background: #4caf50;
+}
+
+.model-selection-actions {
+  margin-top: 2rem;
+  display: flex;
+  justify-content: center;
+}
+
+.next-button {
+  padding: 1rem 2rem;
+  background: #667eea;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.next-button:hover {
+  background: #764ba2;
+}

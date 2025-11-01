@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FLM - 誰でも安全に簡単にAPIを作ることができ、使うことができる。技術知識なしで、コード不要で、ローカルLLMのAPIを数分で作成・利用。">
+  <meta name="keywords" content="FLM,ローカルLLM,API,AI,機械学習,Ollama">
+  <title>FLM - ローカルLLM API管理ツール</title>
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <!-- アクセシビリティ: スキップリンク -->
+  <style>
+    .skip-link {
+      position: absolute;
+      top: -40px;
+      left: 0;
+      background: var(--primary-color);
+      color: white;
+      padding: 8px;
+      text-decoration: none;
+      z-index: 100;
+    }
+    .skip-link:focus {
+      top: 0;
+    }
+  </style>
+</head>
+<body>
+  <!-- スキップリンク（アクセシビリティ対応） -->
+  <a href="#main-content" class="skip-link">メインコンテンツへスキップ</a>
+  
+  <!-- ヘッダー -->
+  <header>
+    <nav class="container">
+      <div class="logo">
+        <span aria-hidden="true">🚀</span>
+        <span>FLM</span>
+      </div>
+      <button class="mobile-menu-toggle" aria-label="メニューを開く" aria-expanded="false" aria-controls="main-navigation">☰</button>
+      <ul class="nav-links" id="main-navigation" role="menubar">
+        <li role="none"><a href="index.html" class="active" role="menuitem" aria-current="page">ホーム</a></li>
+        <li role="none"><a href="features.html" role="menuitem">機能</a></li>
+        <li role="none"><a href="guide.html" role="menuitem">使い方</a></li>
+        <li role="none"><a href="download.html" role="menuitem">ダウンロード</a></li>
+        <li role="none"><a href="faq.html" role="menuitem">FAQ</a></li>
+        <li role="none"><a href="contact.html" role="menuitem">お問い合わせ</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main id="main-content">
+  <!-- ヒーローセクション -->
+  <section class="hero" aria-label="メインビジュアル">
+    <div class="container">
+      <h1>誰でも安全に簡単に<br>APIを作ることができ、使うことができる</h1>
+      <p>技術知識なしで、コード不要で、ローカルLLMのAPIを数分で作成・利用。Ollamaと連携して、あなたのコンピューターで安全にAIを活用しましょう。</p>
+      <div style="margin-top: 2rem;">
+        <a href="download.html" class="btn btn-primary btn-large" data-os-detect>
+          <span class="btn-text">今すぐダウンロード</span>
+        </a>
+      </div>
+      <p style="margin-top: 1rem; font-size: 0.9rem; opacity: 0.8;">
+        <span data-os-display>あなたのOS</span>向けインストーラーを自動検出しました
+      </p>
+    </div>
+  </section>
+
+  <!-- 特徴セクション -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">FLMの特徴</h2>
+      <p class="section-subtitle">誰でも簡単に使える、安全で強力なローカルLLM API管理ツール</p>
+      
+      <div class="grid grid-3">
+        <div class="card fade-in">
+          <div class="card-icon" aria-hidden="true">✨</div>
+          <h3 class="card-title">ワンクリックでAPI作成</h3>
+          <p class="card-description">
+            複雑な設定は不要です。モデルを選んでクリックするだけで、すぐに使えるAPIが作成されます。
+            プログラミングの知識は一切必要ありません。
+          </p>
+        </div>
+        
+        <div class="card fade-in">
+          <div class="card-icon" aria-hidden="true">🔒</div>
+          <h3 class="card-title">セキュリティ自動設定</h3>
+          <p class="card-description">
+            APIキーや認証設定を自動で安全に設定します。データはすべてローカルで処理されるため、
+            プライバシーも完全に保護されます。
+          </p>
+        </div>
+        
+        <div class="card fade-in">
+          <div class="card-icon" aria-hidden="true">🌐</div>
+          <h3 class="card-title">Windows、macOS、Linux対応</h3>
+          <p class="card-description">
+            どのOSでも同じ簡単な操作を体験できます。クロスプラットフォーム対応で、
+            どこでも同じ機能を利用できます。
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 価値提案セクション -->
+  <section class="section" style="background-color: var(--bg-light);">
+    <div class="container">
+      <h2 class="section-title">なぜFLMを選ぶのか</h2>
+      
+      <div class="grid grid-3" style="margin-top: 3rem;">
+        <div class="card">
+          <h3 class="card-title"><span aria-hidden="true">👥</span> 誰でも使える</h3>
+          <p class="card-description">
+            非開発者向けに設計された直感的なUI。専門的な知識がなくても、
+            数分でAPIを作成して利用できます。
+          </p>
+        </div>
+        
+        <div class="card">
+          <h3 class="card-title"><span aria-hidden="true">📝</span> コード不要</h3>
+          <p class="card-description">
+            プログラミング知識は一切不要。GUIで全ての操作が完結するため、
+            コーディング経験がなくても問題ありません。
+          </p>
+        </div>
+        
+        <div class="card">
+          <h3 class="card-title"><span aria-hidden="true">🛡️</span> 安全に使える</h3>
+          <p class="card-description">
+            すべてのデータ処理はローカルで行われます。インターネットに
+            データを送信することはないため、プライバシーが完全に保護されます。
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ステップセクション -->
+  <section class="section">
+    <div class="container">
+      <h2 class="section-title">使い方は3ステップだけ</h2>
+      <p class="section-subtitle">数分で始められる、簡単なセットアップ手順</p>
+      
+      <div class="grid grid-3" style="margin-top: 3rem;">
+        <div class="card">
+          <div style="font-size: 3rem; margin-bottom: 1rem; text-align: center;" aria-hidden="true">1️⃣</div>
+          <h3 class="card-title text-center">ダウンロード</h3>
+          <p class="card-description text-center">
+            お使いのOS向けインストーラーをダウンロードします。
+            Windows、macOS、Linuxに対応しています。
+            インストールは数分で完了し、すぐに使い始められます。
+          </p>
+        </div>
+        
+        <div class="card">
+          <div style="font-size: 3rem; margin-bottom: 1rem; text-align: center;" aria-hidden="true">2️⃣</div>
+          <h3 class="card-title text-center">モデル選択</h3>
+          <p class="card-description text-center">
+            利用したいAIモデルをリストから選択します。
+            チャット用、コード生成用など、用途に合わせて選べます。
+            推奨モデルが表示されるので、初心者でも簡単に選べます。
+          </p>
+        </div>
+        
+        <div class="card">
+          <div style="font-size: 3rem; margin-bottom: 1rem; text-align: center;" aria-hidden="true">3️⃣</div>
+          <h3 class="card-title text-center">API作成</h3>
+          <p class="card-description text-center">
+            ボタン一つでAPIを作成し、すぐに使えます。
+            認証設定も自動で行われるため、追加の設定は不要です。
+            作成したAPIはOpenAI互換形式で利用できます。
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 使用例セクション -->
+  <section class="section" style="background-color: var(--bg-light);">
+    <div class="container">
+      <h2 class="section-title">FLMでできること</h2>
+      <p class="section-subtitle">ローカルLLMのAPIを活用した、さまざまなアプリケーション開発</p>
+      
+      <div class="grid grid-2" style="margin-top: 3rem; gap: 2rem;">
+        <div class="card">
+          <h3 class="card-title">💬 チャットボット開発</h3>
+          <p class="card-description">
+            FLMで作成したAPIを使って、カスタムチャットボットを開発できます。
+            すべての処理はローカルで行われるため、プライバシーを完全に保護しながら
+            AIを活用した対話システムを構築できます。
+          </p>
+        </div>
+        
+        <div class="card">
+          <h3 class="card-title">💻 コード生成支援</h3>
+          <p class="card-description">
+            コード生成に特化したモデルを使用して、プログラミング支援ツールを
+            作成できます。コード補完、説明生成、リファクタリングなど、
+            開発効率を向上させるアプリケーションを構築できます。
+          </p>
+        </div>
+        
+        <div class="card">
+          <h3 class="card-title">📝 テキスト処理自動化</h3>
+          <p class="card-description">
+            テキスト要約、翻訳、要約、校正など、さまざまなテキスト処理タスクを
+            自動化できます。ビジネス文書の処理、メールの自動返信、
+            コンテンツ生成などに活用できます。
+          </p>
+        </div>
+        
+        <div class="card">
+          <h3 class="card-title">🔒 プライベートAIサービス</h3>
+          <p class="card-description">
+            すべてのデータ処理がローカルで行われるため、機密情報を含む
+            データでも安全にAIを活用できます。企業内での利用、
+            個人情報を含むプロジェクトなど、セキュリティが重要な場面で
+            活用できます。
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTAセクション -->
+  <section class="section" style="background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-light) 100%); color: white; text-align: center;">
+    <div class="container">
+      <h2 style="font-size: 2.5rem; margin-bottom: 1rem;">今すぐFLMを始めましょう</h2>
+      <p style="font-size: 1.25rem; margin-bottom: 2rem; opacity: 0.95;">
+        無料でダウンロードして、数分でAPIを作成できます
+      </p>
+      <a href="download.html" class="btn btn-primary btn-large" style="background-color: white; color: var(--primary-color);">
+        今すぐダウンロード
+      </a>
+    </div>
+  </section>
+
+  <!-- フッター -->
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>プロジェクト</h3>
+          <ul>
+            <li><a href="features.html">機能</a></li>
+            <li><a href="guide.html">使い方</a></li>
+            <li><a href="download.html">ダウンロード</a></li>
+          </ul>
+        </div>
+        
+        <div class="footer-section">
+          <h3>サポート</h3>
+          <ul>
+            <li><a href="faq.html">FAQ</a></li>
+            <li><a href="contact.html">お問い合わせ</a></li>
+            <li><a href="guide.html">使い方ガイド</a></li>
+          </ul>
+        </div>
+        
+        <div class="footer-section">
+          <h3>リンク</h3>
+          <ul>
+            <li><a href="#">GitHub（準備中）</a></li>
+            <li><a href="#">Steam（配布予定）</a></li>
+            <li><a href="#">プライバシーポリシー（準備中）</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="footer-bottom">
+        <p>&copy; 2024 FLM. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+  </main>
+
+  <!-- JavaScript -->
+  <script src="js/main.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/download.js"></script>
+</body>
+</html>
+

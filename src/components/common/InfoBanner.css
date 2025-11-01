@@ -1,0 +1,166 @@
+/* Info Banner Component Styles */
+
+.info-banner {
+  padding: 1rem 1.5rem;
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  border-left: 4px solid;
+}
+
+.info-banner-content {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.info-banner-icon {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.info-banner-text {
+  flex: 1;
+}
+
+.info-banner-title {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  font-size: 1rem;
+}
+
+.info-banner-message {
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.info-banner-close {
+  background: transparent;
+  border: none;
+  font-size: 1.25rem;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+  flex-shrink: 0;
+  align-self: flex-start;
+}
+
+.info-banner-close:hover {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+/* 種類別のスタイル */
+.info-banner-info {
+  background-color: #e3f2fd;
+  border-left-color: #2196f3;
+  color: #1565c0;
+}
+
+.info-banner-info .info-banner-title {
+  color: #0d47a1;
+}
+
+.info-banner-info .info-banner-message {
+  color: #1565c0;
+}
+
+.info-banner-info .info-banner-close {
+  color: #1565c0;
+}
+
+.info-banner-tip {
+  background-color: #fff9c4;
+  border-left-color: #fbc02d;
+  color: #f57f17;
+}
+
+.info-banner-tip .info-banner-title {
+  color: #f57f17;
+}
+
+.info-banner-tip .info-banner-message {
+  color: #f57f17;
+}
+
+.info-banner-tip .info-banner-close {
+  color: #f57f17;
+}
+
+.info-banner-warning {
+  background-color: #fff3e0;
+  border-left-color: #ff9800;
+  color: #e65100;
+}
+
+.info-banner-warning .info-banner-title {
+  color: #e65100;
+}
+
+.info-banner-warning .info-banner-message {
+  color: #e65100;
+}
+
+.info-banner-warning .info-banner-close {
+  color: #e65100;
+}
+
+.info-banner-success {
+  background-color: #e8f5e9;
+  border-left-color: #4caf50;
+  color: #2e7d32;
+}
+
+.info-banner-success .info-banner-title {
+  color: #1b5e20;
+}
+
+.info-banner-success .info-banner-message {
+  color: #2e7d32;
+}
+
+.info-banner-success .info-banner-close {
+  color: #2e7d32;
+}
+
+@media (prefers-color-scheme: dark) {
+  .info-banner-info {
+    background-color: #1a237e;
+    border-left-color: #2196f3;
+    color: #90caf9;
+  }
+
+  .info-banner-info .info-banner-title {
+    color: #bbdefb;
+  }
+
+  .info-banner-tip {
+    background-color: #3e2723;
+    border-left-color: #ffc107;
+    color: #ffd54f;
+  }
+
+  .info-banner-tip .info-banner-title {
+    color: #fff176;
+  }
+
+  .info-banner-warning {
+    background-color: #3e2723;
+    border-left-color: #ff9800;
+    color: #ffb74d;
+  }
+
+  .info-banner-warning .info-banner-title {
+    color: #ffcc80;
+  }
+
+  .info-banner-success {
+    background-color: #1b5e20;
+    border-left-color: #4caf50;
+    color: #81c784;
+  }
+
+  .info-banner-success .info-banner-title {
+    color: #a5d6a7;
+  }
+}
+
