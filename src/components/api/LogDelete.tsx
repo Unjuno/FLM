@@ -61,14 +61,13 @@ export const LogDelete: React.FC<LogDeleteProps> = ({
       setSuccessMessage(null);
 
       // delete_logs IPCコマンドを呼び出し
+      const request = {
+        api_id: apiId,
+        before_date: beforeDate,
+      };
       const response = await invoke<{
         deleted_count: number;
-      }>('delete_logs', {
-        request: {
-          api_id: apiId,
-          before_date: beforeDate,
-        },
-      });
+      }>('delete_logs', { request });
 
       setSuccessMessage(`${response.deleted_count}件のログを削除しました`);
       setTimeout(() => setSuccessMessage(null), 5000);

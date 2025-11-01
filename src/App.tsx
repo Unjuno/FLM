@@ -14,6 +14,7 @@ import { ApiKeys } from "./pages/ApiKeys";
 import { ModelManagement } from "./pages/ModelManagement";
 import { ApiLogs } from "./pages/ApiLogs";
 import { PerformanceDashboard } from "./pages/PerformanceDashboard";
+import { Help } from "./pages/Help";
 import "./App.css";
 
 /**
@@ -57,6 +58,9 @@ function App() {
         
         {/* パフォーマンスダッシュボード画面 */}
         <Route path="/performance" element={<PerformanceDashboard />} />
+        
+        {/* ヘルプ画面 */}
+        <Route path="/help" element={<Help />} />
         
         {/* デフォルトルートはホームにリダイレクト */}
         <Route path="*" element={<Navigate to="/" replace />} />

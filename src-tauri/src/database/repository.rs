@@ -926,6 +926,7 @@ impl<'a> RequestLogRepository<'a> {
     /// 
     /// # 注意
     /// 安全のため、api_idとbefore_dateの両方がNoneの場合はエラーを返します。
+    /// トランザクション内で実行されるため、エラー時は自動的にロールバックされます。
     pub fn delete_by_date_range(
         &self,
         api_id: Option<&str>,
