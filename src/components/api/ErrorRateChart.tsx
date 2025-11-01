@@ -4,7 +4,7 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import './ErrorRateChart.css';
 
 /**
@@ -32,24 +32,24 @@ interface ErrorRateChartProps {
 
 /**
  * エラー率グラフコンポーネント
- * エラー率の時系列データを表示します
+ * エラー率の時系列グラフを表示します
  */
 export const ErrorRateChart: React.FC<ErrorRateChartProps> = ({
   apiId,
-  startDate = null,
-  endDate = null,
+  startDate,
+  endDate,
   autoRefresh = true,
   refreshInterval = 30000,
-  alertThreshold = 5,
+  alertThreshold = 5.0,
 }) => {
-  const [metrics, setMetrics] = useState<PerformanceMetricInfo[]>([]);
+  const [data, setData] = useState<Array<{ time: string; value: number }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // メトリクスを取得
-  const loadMetrics = useCallback(async () => {
+  // データを取得
+  const loadData = useCallback(async () => {
     if (!apiId) {
-      setMetrics([]);
+      setData([]);
       setLoading(false);
       return;
     }
@@ -64,15 +64,26 @@ export const ErrorRateChart: React.FC<ErrorRateChartProps> = ({
         start_date: startDate || null,
         end_date: endDate || null,
       };
-      const result = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', request);
 
-      // 時系列でソート
-      const sorted = result.sort((a, b) => 
-        new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-      );
-      setMetrics(sorted);
+      const result = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', { request });
+
+      // データを時間順にソートし、グラフ用フォーマットに変換
+      // error_rateは0-1の値なので、100倍してパーセンテージに変換
+      const sortedData = result
+        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
+        .map((metric) => ({
+          time: new Date(metric.timestamp).toLocaleTimeString('ja-JP', {
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+          }),
+          value: Math.round(metric.value * 100 * 100) / 100, // パーセンテージ（小数点以下2桁）
+        }));
+
+      setData(sortedData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'メトリクスの取得に失敗しました');
+      setError(err instanceof Error ? err.message : 'データの取得に失敗しました');
+      setData([]);
     } finally {
       setLoading(false);
     }
@@ -80,8 +91,8 @@ export const ErrorRateChart: React.FC<ErrorRateChartProps> = ({
 
   // 初回読み込み
   useEffect(() => {
-    loadMetrics();
-  }, [loadMetrics]);
+    loadData();
+  }, [loadData]);
 
   // 自動更新
   useEffect(() => {
@@ -90,27 +101,21 @@ export const ErrorRateChart: React.FC<ErrorRateChartProps> = ({
     }
 
     const interval = setInterval(() => {
-      loadMetrics();
+      loadData();
     }, refreshInterval);
 
     return () => clearInterval(interval);
-  }, [autoRefresh, apiId, refreshInterval, loadMetrics]);
+  }, [autoRefresh, apiId, refreshInterval, loadData]);
 
-  // グラフ用データの準備（時刻フォーマット: HH:mm）
-  // エラー率は0-100%の範囲
-  const chartData = metrics.map((metric) => ({
-    time: new Date(metric.timestamp).toLocaleTimeString('ja-JP', { 
-      hour: '2-digit', 
-      minute: '2-digit' 
-    }),
-    timestamp: metric.timestamp,
-    value: Math.min(100, Math.max(0, Math.round(metric.value * 100) / 100)), // 0-100%にクランプ
-  }));
+  // 値フォーマット関数
+  const formatValue = (value: number): string => {
+    return `${value.toFixed(2)}%`;
+  };
 
-  // アラート状態の確認（閾値を超えているデータポイントがあるか）
-  const hasHighErrorRate = chartData.some((data) => data.value >= alertThreshold);
+  // アラート閾値を超えているかチェック
+  const hasHighErrorRate = data.some((item) => item.value > alertThreshold);
 
-  if (loading && metrics.length === 0) {
+  if (loading && data.length === 0) {
     return (
       <div className="error-rate-chart">
         <div className="loading-container">
@@ -125,8 +130,8 @@ export const ErrorRateChart: React.FC<ErrorRateChartProps> = ({
     return (
       <div className="error-rate-chart">
         <div className="error-container">
-          <p className="error-message">{error}</p>
-          <button className="retry-button" onClick={loadMetrics}>
+          <p className="error-message">⚠️ {error}</p>
+          <button className="retry-button" onClick={loadData}>
             再試行
           </button>
         </div>
@@ -134,12 +139,11 @@ export const ErrorRateChart: React.FC<ErrorRateChartProps> = ({
     );
   }
 
-  if (chartData.length === 0) {
+  if (data.length === 0) {
     return (
       <div className="error-rate-chart">
-        <h3 className="chart-title">エラー率</h3>
         <div className="empty-container">
-          <p>データがありません</p>
+          <p>エラー率データがありません</p>
         </div>
       </div>
     );
@@ -154,41 +158,50 @@ export const ErrorRateChart: React.FC<ErrorRateChartProps> = ({
         )}
       </div>
       <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={chartData} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+        <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis 
             dataKey="time" 
-            tick={{ fontSize: 12 }}
             angle={-45}
             textAnchor="end"
-            height={60}
+            height={80}
           />
           <YAxis 
-            domain={[0, 100]}
             label={{ value: 'エラー率 (%)', angle: -90, position: 'insideLeft' }}
-            tick={{ fontSize: 12 }}
           />
+          {alertThreshold > 0 && (
+            <YAxis 
+              yAxisId="threshold"
+              orientation="right"
+              domain={[0, 100]}
+              hide
+            />
+          )}
           <Tooltip 
-            contentStyle={{ backgroundColor: 'rgba(255, 255, 255, 0.95)', border: '1px solid #ccc' }}
-            formatter={(value: number) => [`${value}%`, 'エラー率']}
-            labelFormatter={(label) => `時刻: ${label}`}
+            formatter={(value: number) => formatValue(value)}
+            labelFormatter={(label) => `時間: ${label}`}
           />
           <Legend />
-          <ReferenceLine 
-            y={alertThreshold} 
-            stroke="#f44336" 
-            strokeDasharray="5 5" 
-            label={{ value: `閾値: ${alertThreshold}%`, position: 'top' }}
-          />
           <Line 
             type="monotone" 
             dataKey="value" 
-            stroke={hasHighErrorRate ? "#f44336" : "#ff9800"} 
+            stroke="#f44336" 
             strokeWidth={2}
-            dot={{ r: 4 }}
-            activeDot={{ r: 6 }}
+            dot={{ r: 3 }}
             name="エラー率"
           />
+          {alertThreshold > 0 && (
+            <Line
+              yAxisId="threshold"
+              type="monotone"
+              dataKey={() => alertThreshold}
+              stroke="#ff9800"
+              strokeWidth={1}
+              strokeDasharray="5 5"
+              dot={false}
+              name={`アラート閾値 (${alertThreshold}%)`}
+            />
+          )}
         </LineChart>
       </ResponsiveContainer>
       {autoRefresh && (
@@ -199,3 +212,4 @@ export const ErrorRateChart: React.FC<ErrorRateChartProps> = ({
     </div>
   );
 };
+

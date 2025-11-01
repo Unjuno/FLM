@@ -111,6 +111,21 @@ impl<'a> ApiRepository<'a> {
         Ok(())
     }
     
+    /// API名でAPI設定を取得（BE-008-02で追加）
+    pub fn find_by_name(&self, name: &str) -> Result<Option<Api>, DatabaseError> {
+        let mut stmt = self.conn.prepare(
+            "SELECT id, name, model, port, enable_auth, status, created_at, updated_at FROM apis WHERE name = ?1"
+        )?;
+        
+        match stmt.query_row(params![name], |row| {
+            Ok(Self::row_to_api(row)?)
+        }) {
+            Ok(api) => Ok(Some(api)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(DatabaseError::QueryFailed(e.to_string())),
+        }
+    }
+    
     /// ポート番号でAPI設定を取得
     #[allow(dead_code)] // 将来使用予定
     pub fn find_by_port(&self, port: i32) -> Result<Option<Api>, DatabaseError> {
@@ -539,6 +554,10 @@ impl<'a> RequestLogRepository<'a> {
     }
     
     /// API IDでリクエストログを取得（最新順）
+    /// 
+    /// # 注意
+    /// このメソッドは`find_with_filters`で置き換え可能ですが、後方互換性のため保持されています。
+    #[allow(dead_code)]
     pub fn find_by_api_id(&self, api_id: &str, limit: Option<i32>) -> Result<Vec<RequestLog>, DatabaseError> {
         let limit_value = limit.unwrap_or(100);
         let mut stmt = self.conn.prepare(
@@ -569,6 +588,10 @@ impl<'a> RequestLogRepository<'a> {
     }
     
     /// 全てのリクエストログを取得（最新順、ページネーション対応）
+    /// 
+    /// # 注意
+    /// このメソッドは`find_with_filters`で置き換え可能ですが、後方互換性のため保持されています。
+    #[allow(dead_code)]
     pub fn find_all(&self, limit: Option<i32>, offset: Option<i32>) -> Result<Vec<RequestLog>, DatabaseError> {
         let limit_value = limit.unwrap_or(100);
         let offset_value = offset.unwrap_or(0);
@@ -599,7 +622,26 @@ impl<'a> RequestLogRepository<'a> {
         Ok(result)
     }
 
-    /// フィルタ条件を使用してリクエストログを取得（BE-006-01で追加）
+    /// フィルタ条件を使用してリクエストログを取得（BE-006-01で追加、BE-006-03で最適化）
+    /// 
+    /// # パフォーマンス最適化
+    /// - インデックス使用: `idx_request_logs_api_id`, `idx_request_logs_created_at`, 
+    ///   `idx_request_logs_response_status`, `idx_request_logs_path`, 
+    ///   `idx_request_logs_api_created` (複合インデックス)
+    /// - LIMIT/OFFSETでページネーション実装
+    /// - 動的WHERE句構築で不要な条件を除外
+    /// 
+    /// # パラメータ
+    /// - `api_id`: フィルタ対象のAPI ID（オプション）
+    /// - `limit`: 取得件数の上限（デフォルト: 100）
+    /// - `offset`: スキップする件数（デフォルト: 0）
+    /// - `start_date`: 開始日時（ISO 8601形式、オプション）
+    /// - `end_date`: 終了日時（ISO 8601形式、オプション）
+    /// - `status_codes`: ステータスコード配列（オプション、IN句で使用）
+    /// - `path_filter`: パス検索文字列（LIKE検索、オプション）
+    /// 
+    /// # 返り値
+    /// フィルタ条件に一致するリクエストログのベクタ（作成日時降順）
     pub fn find_with_filters(
         &self,
         api_id: Option<&str>,
@@ -744,7 +786,24 @@ impl<'a> RequestLogRepository<'a> {
         Ok(result)
     }
     
-    /// ログ統計情報を取得（BE-006-02で追加）
+    /// ログ統計情報を取得（BE-006-02で追加、BE-006-03で最適化）
+    /// 
+    /// # パフォーマンス最適化
+    /// - インデックス使用: `idx_request_logs_api_id`, `idx_request_logs_created_at`,
+    ///   `idx_request_logs_api_created` (複合インデックス)
+    /// - COUNT, AVG, GROUP BYを個別クエリで実行（将来的にUNIONやCTEで統合可能）
+    /// 
+    /// # パラメータ
+    /// - `api_id`: 対象のAPI ID（オプション）
+    /// - `start_date`: 開始日時（ISO 8601形式、オプション）
+    /// - `end_date`: 終了日時（ISO 8601形式、オプション）
+    /// 
+    /// # 返り値
+    /// `(total_requests, avg_response_time_ms, error_rate, status_code_distribution)`
+    /// - `total_requests`: 総リクエスト数
+    /// - `avg_response_time_ms`: 平均レスポンス時間（ミリ秒）
+    /// - `error_rate`: エラー率（0.0-1.0、4xx/5xxステータスの割合）
+    /// - `status_code_distribution`: ステータスコード分布 `Vec<(status_code, count)>`
     pub fn get_statistics(
         &self,
         api_id: Option<&str>,
@@ -854,6 +913,61 @@ impl<'a> RequestLogRepository<'a> {
         }
         
         Ok((total_requests, avg_response_time_ms, error_rate, status_code_distribution))
+    }
+    
+    /// 日付範囲指定でログを削除（BE-008-03）
+    /// 
+    /// # パラメータ
+    /// - `api_id`: 削除対象のAPI ID（オプション、Noneの場合は全API）
+    /// - `before_date`: この日時より前のログを削除（ISO 8601形式、オプション）
+    /// 
+    /// # 返り値
+    /// 削除されたログの件数
+    /// 
+    /// # 注意
+    /// 安全のため、api_idとbefore_dateの両方がNoneの場合はエラーを返します。
+    pub fn delete_by_date_range(
+        &self,
+        api_id: Option<&str>,
+        before_date: Option<&str>,
+    ) -> Result<usize, DatabaseError> {
+        // 条件がない場合は全件削除を防ぐ（安全のため）
+        if api_id.is_none() && before_date.is_none() {
+            return Err(DatabaseError::QueryFailed(
+                "全ログの削除は許可されていません。API IDまたは日付条件を指定してください。".to_string()
+            ));
+        }
+        
+        // 条件に応じてクエリを実行
+        let rows_affected = match (api_id, before_date) {
+            (Some(api_id_val), Some(before_date_val)) => {
+                // API IDと日付の両方を指定
+                self.conn.execute(
+                    "DELETE FROM request_logs WHERE api_id = ?1 AND created_at < ?2",
+                    params![api_id_val, before_date_val],
+                )?
+            },
+            (Some(api_id_val), None) => {
+                // API IDのみ指定
+                self.conn.execute(
+                    "DELETE FROM request_logs WHERE api_id = ?1",
+                    params![api_id_val],
+                )?
+            },
+            (None, Some(before_date_val)) => {
+                // 日付のみ指定
+                self.conn.execute(
+                    "DELETE FROM request_logs WHERE created_at < ?1",
+                    params![before_date_val],
+                )?
+            },
+            (None, None) => {
+                // このパターンは既に上でエラーになっているはず
+                unreachable!()
+            },
+        };
+        
+        Ok(rows_affected)
     }
 }
 
@@ -1024,7 +1138,9 @@ impl<'a> PerformanceMetricRepository<'a> {
         if let Some(ed) = end_date {
             query.push_str(&format!(" AND timestamp <= ?{}", param_idx));
             params_vec.push(Box::new(ed.to_string()));
-            param_idx += 1;
+            // param_idxは次のパラメータ用にインクリメント済み（将来の拡張用）
+            // 警告回避のため明示的に使用
+            let _next_idx = param_idx + 1;
         }
         
         query.push_str(" ORDER BY timestamp ASC");
@@ -1055,6 +1171,11 @@ impl<'a> PerformanceMetricRepository<'a> {
     }
     
     /// 古いメトリクスを削除（オプション、30日以上古いデータ等）
+    /// 
+    /// # 注意
+    /// このメソッドは定期メンテナンス用に実装されていますが、現在は自動実行されていません。
+    /// 将来的にバックグラウンドジョブとして実行される予定です。
+    #[allow(dead_code)]
     pub fn delete_old_metrics(&self, days: i32) -> Result<usize, DatabaseError> {
         let cutoff_date = Utc::now() - chrono::Duration::days(days as i64);
         let cutoff_str = cutoff_date.to_rfc3339();

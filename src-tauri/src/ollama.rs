@@ -56,7 +56,9 @@ pub async fn detect_ollama() -> Result<OllamaDetectionResult, AppError> {
                 result.version = Some(version);
             }
         }
-        Ok(None) => {}
+        Ok(None) => {
+            // ポータブル版Ollamaが見つからない場合はスキップ
+        }
         Err(e) => {
             eprintln!("システムパス上のOllama検出エラー: {}", e);
         }
@@ -90,7 +92,9 @@ pub async fn detect_ollama() -> Result<OllamaDetectionResult, AppError> {
                 }
             }
         }
-        Ok(None) => {}
+        Ok(None) => {
+            // ポータブル版Ollamaが見つからない場合はスキップ
+        }
         Err(e) => {
             eprintln!("ポータブル版Ollama検出エラー: {}", e);
         }

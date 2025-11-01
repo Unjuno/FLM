@@ -2,7 +2,7 @@
 // フロントエンドエージェント (FE) 実装
 // F007: パフォーマンス監視機能 - FE-007-03
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import {
   LineChart,
@@ -32,8 +32,8 @@ interface PerformanceMetricInfo {
  */
 interface ResponseTimeChartProps {
   apiId: string;
-  startDate?: string;
-  endDate?: string;
+  startDate?: string | null;
+  endDate?: string | null;
   autoRefresh?: boolean;
   refreshInterval?: number; // ミリ秒
 }
@@ -72,7 +72,7 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({
         end_date: endDate || null,
       };
 
-      const result = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', request);
+      const result = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', { request });
       
       // データを時間順にソートし、グラフ用フォーマットに変換
       const sortedData = result
@@ -123,6 +123,15 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({
     return `${value}ms`;
   };
 
+  if (!apiId) {
+    return (
+      <div className="response-time-chart-container">
+        <div className="chart-empty">
+          <p>APIを選択してください</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading && data.length === 0) {
     return (

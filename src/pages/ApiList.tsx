@@ -6,6 +6,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { SettingsExport } from '../components/api/SettingsExport';
 import './ApiList.css';
 
 /**
@@ -30,6 +31,7 @@ export const ApiList: React.FC = () => {
   const [apis, setApis] = useState<ApiInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedApiIds, setSelectedApiIds] = useState<string[]>([]);
 
   // API一覧を取得（useCallbackでメモ化してパフォーマンス最適化）
   const loadApis = useCallback(async () => {
@@ -169,6 +171,18 @@ export const ApiList: React.FC = () => {
             </button>
           </div>
         </header>
+
+        <div className="settings-export-section">
+          <SettingsExport
+            selectedApiIds={selectedApiIds.length > 0 ? selectedApiIds : undefined}
+            onImportComplete={(result) => {
+              // インポート完了後に一覧を再読み込み
+              if (result.imported > 0 || result.renamed > 0) {
+                loadApis();
+              }
+            }}
+          />
+        </div>
 
         {error && (
           <ErrorMessage

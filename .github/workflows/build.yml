@@ -76,11 +76,11 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
-  # macOSビルド（将来用）
+  # macOSビルド
   build-macos:
     name: Build macOS
     runs-on: macos-latest
-    if: false  # 将来的に有効化
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'push'
     
     steps:
       - name: Checkout code
@@ -133,11 +133,11 @@ jobs:
           retention-days: 30
           if-no-files-found: warn
 
-  # Linuxビルド（将来用）
+  # Linuxビルド
   build-linux:
     name: Build Linux
     runs-on: ubuntu-latest
-    if: false  # 将来的に有効化
+    if: startsWith(github.ref, 'refs/tags/v') || github.event_name == 'push'
     
     steps:
       - name: Checkout code
@@ -202,7 +202,7 @@ jobs:
   create-release:
     name: Create Release
     runs-on: ubuntu-latest
-    needs: [build-windows]
+    needs: [build-windows, build-macos, build-linux]
     if: startsWith(github.ref, 'refs/tags/v')
     permissions:
       contents: write
@@ -218,6 +218,21 @@ jobs:
         with:
           name: windows-build
           path: ./artifacts/windows
+          continue-on-error: true
+      
+      - name: Download macOS artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: macos-build
+          path: ./artifacts/macos
+          continue-on-error: true
+      
+      - name: Download Linux artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: linux-build
+          path: ./artifacts/linux
+          continue-on-error: true
       
       - name: Generate release notes
         id: release_notes
@@ -226,18 +241,30 @@ jobs:
           echo "## FLM $TAG_NAME" > release_notes.md
           echo "" >> release_notes.md
           echo "### ダウンロード" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "#### Windows" >> release_notes.md
           echo "- Windows用インストーラー (.msi)" >> release_notes.md
           echo "- Windows用実行ファイル (.exe)" >> release_notes.md
           echo "" >> release_notes.md
+          echo "#### macOS" >> release_notes.md
+          echo "- macOS用ディスクイメージ (.dmg)" >> release_notes.md
+          echo "- macOS用アプリケーションバンドル (.app)" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "#### Linux" >> release_notes.md
+          echo "- Linux用AppImage (.AppImage)" >> release_notes.md
+          echo "- Debian/Ubuntu用パッケージ (.deb)" >> release_notes.md
+          echo "" >> release_notes.md
           echo "### インストール方法" >> release_notes.md
-          echo "1. .msiファイルをダウンロードして実行" >> release_notes.md
-          echo "2. インストールウィザードに従ってインストール" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "詳細は公式サイトのダウンロードページをご覧ください: https://unjuno.github.io/FLM/download.html" >> release_notes.md
       
       - name: Create Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
             artifacts/windows/**
+            artifacts/macos/**
+            artifacts/linux/**
           body_path: release_notes.md
           draft: false
           prerelease: false

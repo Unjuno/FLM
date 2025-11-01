@@ -176,7 +176,8 @@ pub async fn get_performance_summary(request: GetPerformanceSummaryRequest) -> R
     
     // 統計を計算
     let avg_response_time = if !filtered_response_time.is_empty() {
-        filtered_response_time.iter().map(|m| m.value).sum::<f64>() / filtered_response_time.len() as f64
+        let len = filtered_response_time.len() as f64;
+        filtered_response_time.iter().map(|m| m.value).sum::<f64>() / len
     } else {
         0.0
     };
@@ -198,19 +199,22 @@ pub async fn get_performance_summary(request: GetPerformanceSummaryRequest) -> R
         .sum();
     
     let error_rate = if !filtered_error_rate.is_empty() {
-        filtered_error_rate.iter().map(|m| m.value).sum::<f64>() / filtered_error_rate.len() as f64
+        let len = filtered_error_rate.len() as f64;
+        filtered_error_rate.iter().map(|m| m.value).sum::<f64>() / len
     } else {
         0.0
     };
     
     let avg_cpu_usage = if !filtered_cpu.is_empty() {
-        filtered_cpu.iter().map(|m| m.value).sum::<f64>() / filtered_cpu.len() as f64
+        let len = filtered_cpu.len() as f64;
+        filtered_cpu.iter().map(|m| m.value).sum::<f64>() / len
     } else {
         0.0
     };
     
     let avg_memory_usage = if !filtered_memory.is_empty() {
-        filtered_memory.iter().map(|m| m.value).sum::<f64>() / filtered_memory.len() as f64
+        let len = filtered_memory.len() as f64;
+        filtered_memory.iter().map(|m| m.value).sum::<f64>() / len
     } else {
         0.0
     };

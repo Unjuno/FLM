@@ -188,12 +188,22 @@
 
   <!-- メインコンテンツ -->
   <main>
-    <section class="section">
+    <section class="section download-section">
       <div class="container">
         <h1 class="section-title">ダウンロード</h1>
         <p class="section-subtitle">
           お使いのOSを選択して、FLMをダウンロードしてください。OSが自動検出された場合は、該当するOSが強調表示されます。
         </p>
+
+        <!-- リリース情報表示（動的更新） -->
+        <div id="release-info" style="margin: 2rem 0; padding: 1.5rem; background-color: var(--bg-light); border-radius: var(--border-radius); text-align: center;">
+          <p style="margin: 0.5rem 0;">
+            <strong>最新バージョン:</strong> <span id="latest-version">読み込み中...</span>
+          </p>
+          <p style="margin: 0.5rem 0; color: var(--text-light);">
+            リリース日: <span id="release-date">-</span>
+          </p>
+        </div>
 
         <!-- OS選択セクション -->
         <div class="os-selector">

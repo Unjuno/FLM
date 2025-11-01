@@ -1,0 +1,152 @@
+/* FLM - 設定エクスポート・インポートコンポーネントスタイル */
+/* フロントエンドエージェント (FE) 実装 */
+
+.settings-export {
+  margin: 16px 0;
+  padding: 20px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.settings-export-header {
+  margin-bottom: 20px;
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 12px;
+}
+
+.settings-export-header h3 {
+  margin: 0;
+  font-size: 18px;
+  color: #333;
+  font-weight: 600;
+}
+
+.settings-export-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.export-section,
+.import-section {
+  padding: 16px;
+  background-color: #fff;
+  border-radius: 6px;
+  border: 1px solid #e0e0e0;
+}
+
+.export-section h4,
+.import-section h4 {
+  margin: 0 0 12px 0;
+  font-size: 16px;
+  color: #555;
+  font-weight: 500;
+}
+
+.export-buttons,
+.import-buttons {
+  display: flex;
+  gap: 12px;
+  margin-top: 12px;
+}
+
+.export-button,
+.import-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  color: white;
+}
+
+.export-button:hover:not(:disabled),
+.import-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.export-button:active:not(:disabled),
+.import-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.export-button:disabled,
+.import-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.export-button-primary {
+  background-color: #4caf50;
+}
+
+.export-button-primary:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+.import-button-primary {
+  background-color: #2196f3;
+}
+
+.import-button-primary:hover:not(:disabled) {
+  background-color: #0b7dda;
+}
+
+.import-options {
+  margin-bottom: 12px;
+}
+
+.import-options label {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  font-size: 14px;
+  color: #555;
+}
+
+.import-options select {
+  padding: 8px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background-color: #fff;
+  cursor: pointer;
+}
+
+.import-options select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.import-buttons label {
+  cursor: pointer;
+}
+
+.import-buttons input[type="file"],
+.hidden-file-input {
+  display: none;
+}
+
+.settings-export-error {
+  margin-top: 12px;
+  padding: 12px;
+  background-color: #ffebee;
+  color: #c62828;
+  border-radius: 4px;
+  font-size: 14px;
+  border-left: 4px solid #c62828;
+}
+
+.settings-export-success {
+  margin-top: 12px;
+  padding: 12px;
+  background-color: #e8f5e9;
+  color: #2e7d32;
+  border-radius: 4px;
+  font-size: 14px;
+  border-left: 4px solid #2e7d32;
+}

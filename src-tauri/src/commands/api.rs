@@ -180,7 +180,7 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
     };
     
     // 10. エンドポイントURL生成
-    let endpoint = format!("http://localhost:{}", port);
+    let endpoint = format!("http://localhost:{port}");
     
     // 注意: 認証プロキシの起動は、現在はAPI作成時には行わず、
     // start_apiコマンドで起動します（認証エージェントの統合待ち）
@@ -243,7 +243,7 @@ pub async fn start_api(api_id: String) -> Result<(), String> {
             
             Ok::<(u16, bool), String>((api.port as u16, api.enable_auth))
         }
-    }).await.map_err(|e| format!("データベース操作エラー: {}", e))??;
+    }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
     
     // 2. Ollamaが起動しているか確認・起動
     use crate::ollama::{check_ollama_running, start_ollama};
@@ -289,7 +289,7 @@ pub async fn start_api(api_id: String) -> Result<(), String> {
                 "APIの状態を更新できませんでした。アプリを再起動して再度お試しください。".to_string()
             })
         }
-    }).await.map_err(|e| format!("データベース操作エラー: {}", e))??;
+    }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
     
     Ok(())
 }
@@ -312,7 +312,7 @@ pub async fn stop_api(api_id: String) -> Result<(), String> {
             
             Ok::<u16, String>(api.port as u16)
         }
-    }).await.map_err(|e| format!("データベース操作エラー: {}", e))??;
+    }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
     
     // 2. 認証プロキシを停止
     use crate::auth;
@@ -340,7 +340,7 @@ pub async fn stop_api(api_id: String) -> Result<(), String> {
                 "APIの状態を更新できませんでした。アプリを再起動して再度お試しください。".to_string()
             })
         }
-    }).await.map_err(|e| format!("データベース操作エラー: {}", e))??;
+    }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
     
     Ok(())
 }
@@ -362,7 +362,7 @@ pub async fn delete_api(api_id: String) -> Result<(), String> {
                 Err(_) => Ok((false, 0)),
             }
         }
-    }).await.map_err(|e| format!("データベース操作エラー: {}", e))??;
+    }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
     
     // 2. APIが実行中の場合は停止
     if was_running.0 {
@@ -382,7 +382,7 @@ pub async fn delete_api(api_id: String) -> Result<(), String> {
                 "APIの削除に失敗しました。アプリを再起動して再度お試しください。".to_string()
             })
         }
-    }).await.map_err(|e| format!("データベース操作エラー: {}", e))??;
+    }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
     
     Ok(())
 }
@@ -391,12 +391,12 @@ pub async fn delete_api(api_id: String) -> Result<(), String> {
 #[tauri::command]
 pub async fn get_api_details(api_id: String) -> Result<ApiDetailsResponse, String> {
     let conn = get_connection().map_err(|e| {
-        format!("データベース接続エラー: {}", e)
+        format!("データベース接続エラー: {e}")
     })?;
     
     let api_repo = ApiRepository::new(&conn);
     let api = api_repo.find_by_id(&api_id).map_err(|e: DatabaseError| {
-        format!("API取得エラー: {}", e)
+        format!("API取得エラー: {e}")
     })?;
     
     // APIキーを取得（認証が有効な場合）
@@ -454,17 +454,17 @@ pub async fn update_api(api_id: String, config: ApiUpdateConfig) -> Result<(), S
         let api_id = api_id.clone();
         move || {
             let conn = get_connection().map_err(|e| {
-                format!("データベース接続エラー: {}", e)
+                format!("データベース接続エラー: {e}")
             })?;
             
             let api_repo = ApiRepository::new(&conn);
             let api = api_repo.find_by_id(&api_id).map_err(|e: DatabaseError| {
-                format!("API取得エラー: {}", e)
+                format!("API取得エラー: {e}")
             })?;
             
             Ok::<(bool, i32, bool), String>((api.status == ApiStatus::Running, api.port, api.enable_auth))
         }
-    }).await.map_err(|e| format!("データベース操作エラー: {}", e))??;
+    }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
     
     // 設定を更新（データベース操作）
     let (new_port, new_enable_auth, needs_restart_flag) = tokio::task::spawn_blocking({
@@ -473,7 +473,7 @@ pub async fn update_api(api_id: String, config: ApiUpdateConfig) -> Result<(), S
         let was_running_flag = was_running;
         move || {
             let conn = get_connection().map_err(|e| {
-                format!("データベース接続エラー: {}", e)
+                format!("データベース接続エラー: {e}")
             })?;
             
             let api_repo = ApiRepository::new(&conn);
@@ -511,7 +511,7 @@ pub async fn update_api(api_id: String, config: ApiUpdateConfig) -> Result<(), S
             
             Ok::<(i32, bool, bool), String>((api.port, api.enable_auth, needs_restart))
         }
-    }).await.map_err(|e| format!("データベース操作エラー: {}", e))??;
+    }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
     
     // 設定変更により再起動が必要な場合
     if needs_restart_flag && was_running {
@@ -543,12 +543,12 @@ pub struct ApiUpdateConfig {
 #[tauri::command]
 pub async fn get_api_key(api_id: String) -> Result<Option<String>, String> {
     let conn = get_connection().map_err(|e| {
-        format!("データベース接続エラー: {}", e)
+        format!("データベース接続エラー: {e}")
     })?;
     
     let api_repo = ApiRepository::new(&conn);
     let api = api_repo.find_by_id(&api_id).map_err(|e: DatabaseError| {
-        format!("API取得エラー: {}", e)
+        format!("API取得エラー: {e}")
     })?;
     
     if !api.enable_auth {
@@ -584,12 +584,12 @@ pub async fn get_api_key(api_id: String) -> Result<Option<String>, String> {
 #[allow(non_snake_case)] // Noneはパターンマッチングのリテラル（Clippyの誤検知）
 pub async fn regenerate_api_key(api_id: String) -> Result<String, String> {
     let conn = get_connection().map_err(|e| {
-        format!("データベース接続エラー: {}", e)
+        format!("データベース接続エラー: {e}")
     })?;
     
     let api_repo = ApiRepository::new(&conn);
     let api = api_repo.find_by_id(&api_id).map_err(|e: DatabaseError| {
-        format!("API取得エラー: {}", e)
+        format!("API取得エラー: {e}")
     })?;
     
     if !api.enable_auth {
@@ -619,12 +619,12 @@ pub async fn regenerate_api_key(api_id: String) -> Result<String, String> {
     
     // 暗号化して保存
     let encrypted_key_str = encryption::encrypt_api_key(&generated_key).map_err(|e| {
-        format!("APIキー暗号化エラー: {}", e)
+        format!("APIキー暗号化エラー: {e}")
     })?;
     
     // Base64デコードしてバイト配列に変換（データベースに保存するため）
     let encrypted_key_bytes = STANDARD.decode(&encrypted_key_str).map_err(|e| {
-        format!("暗号化データのデコードエラー: {}", e)
+        format!("暗号化データのデコードエラー: {e}")
     })?;
     
     // 既存のAPIキーを更新
@@ -635,7 +635,7 @@ pub async fn regenerate_api_key(api_id: String) -> Result<String, String> {
             key_data.updated_at = Utc::now();
             
             key_repo.update(&key_data).map_err(|e: DatabaseError| {
-                format!("APIキー更新エラー: {}", e)
+                format!("APIキー更新エラー: {e}")
             })?;
         }
         #[allow(non_snake_case)]
@@ -664,12 +664,12 @@ pub async fn regenerate_api_key(api_id: String) -> Result<String, String> {
 #[tauri::command]
 pub async fn delete_api_key(api_id: String) -> Result<(), String> {
     let conn = get_connection().map_err(|e| {
-        format!("データベース接続エラー: {}", e)
+        format!("データベース接続エラー: {e}")
     })?;
     
     let api_repo = ApiRepository::new(&conn);
     let api = api_repo.find_by_id(&api_id).map_err(|e: DatabaseError| {
-        format!("API取得エラー: {}", e)
+        format!("API取得エラー: {e}")
     })?;
     
     if !api.enable_auth {
@@ -680,7 +680,7 @@ pub async fn delete_api_key(api_id: String) -> Result<(), String> {
     
     // APIキーを削除
     key_repo.delete_by_api_id(&api_id).map_err(|e: DatabaseError| {
-        format!("APIキー削除エラー: {}", e)
+        format!("APIキー削除エラー: {e}")
     })?;
     
     Ok(())
@@ -1059,7 +1059,7 @@ pub async fn get_installed_models() -> Result<Vec<InstalledModelInfo>, String> {
         model_repo.find_all().map_err(|_| {
             "インストール済みAIモデルの一覧を取得できませんでした。アプリを再起動して再度お試しください。".to_string()
         })
-    }).await.map_err(|e| format!("データベース操作エラー: {}", e))??;
+    }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
     
     // Ollama APIからも取得して、最新の情報と同期
     use crate::ollama::check_ollama_running;
@@ -1300,5 +1300,365 @@ pub async fn get_log_statistics(request: GetLogStatisticsRequest) -> Result<LogS
         avg_response_time_ms,
         error_rate,
         status_code_distribution,
+    })
+}
+
+/// ログエクスポートリクエスト（BE-008-01）
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExportLogsRequest {
+    pub api_id: Option<String>,
+    pub format: String, // "csv" または "json"
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+    pub status_codes: Option<Vec<i32>>,
+    pub path_filter: Option<String>,
+}
+
+/// ログエクスポートレスポンス（BE-008-01）
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExportLogsResponse {
+    pub data: String,
+    pub format: String,
+    pub count: i64,
+}
+
+/// ログエクスポートコマンド（BE-008-01）
+/// ログデータをCSV/JSON形式でエクスポートします
+#[tauri::command]
+pub async fn export_logs(request: ExportLogsRequest) -> Result<ExportLogsResponse, String> {
+    let conn = get_connection().map_err(|_| {
+        "データの読み込みに失敗しました。アプリを再起動して再度お試しください。".to_string()
+    })?;
+    
+    let log_repo = RequestLogRepository::new(&conn);
+    
+    // フィルタ条件を使用してログを取得（limitなしで全件取得）
+    let logs = log_repo.find_with_filters(
+        request.api_id.as_deref(),
+        None, // limitなし
+        None, // offsetなし
+        request.start_date.as_deref(),
+        request.end_date.as_deref(),
+        request.status_codes.as_deref(),
+        request.path_filter.as_deref(),
+    ).map_err(|e| {
+        format!("リクエストログの取得に失敗しました: {}", e)
+    })?;
+    
+    let count = i64::try_from(logs.len()).unwrap_or(0);
+    
+    // フォーマットに応じてデータを変換
+    let data = match request.format.as_str() {
+        "csv" => {
+            // CSV形式に変換
+            let mut csv = String::new();
+            // ヘッダー行
+            csv.push_str("ID,API ID,Method,Path,Request Body,Response Status,Response Time (ms),Error Message,Created At\n");
+            
+            // データ行
+            for log in &logs {
+                csv.push_str(&format!(
+                    "{},{},{},{},{},{},{},{},{}\n",
+                    escape_csv_field(&log.id),
+                    escape_csv_field(&log.api_id),
+                    escape_csv_field(&log.method),
+                    escape_csv_field(&log.path),
+                    escape_csv_field(&log.request_body.as_deref().unwrap_or("")),
+                    log.response_status.map(|s| s.to_string()).as_deref().unwrap_or(""),
+                    log.response_time_ms.map(|t| t.to_string()).as_deref().unwrap_or(""),
+                    escape_csv_field(&log.error_message.as_deref().unwrap_or("")),
+                    escape_csv_field(&log.created_at.to_rfc3339()),
+                ));
+            }
+            csv
+        },
+        "json" => {
+            // JSON形式に変換
+            let log_infos: Vec<RequestLogInfo> = logs.into_iter().map(|log| {
+                RequestLogInfo {
+                    id: log.id,
+                    api_id: log.api_id,
+                    method: log.method,
+                    path: log.path,
+                    request_body: log.request_body,
+                    response_status: log.response_status,
+                    response_time_ms: log.response_time_ms,
+                    error_message: log.error_message,
+                    created_at: log.created_at.to_rfc3339(),
+                }
+            }).collect();
+            
+            serde_json::to_string_pretty(&log_infos).map_err(|e| {
+                format!("JSON変換に失敗しました: {}", e)
+            })?
+        },
+        _ => {
+            return Err(format!("無効なフォーマットです。'csv' または 'json' を指定してください。"));
+        }
+    };
+    
+    Ok(ExportLogsResponse {
+        data,
+        format: request.format,
+        count,
+    })
+}
+
+/// CSVフィールドのエスケープ処理（BE-008-01）
+fn escape_csv_field(field: &str) -> String {
+    // ダブルクォート、改行、カンマが含まれる場合はダブルクォートで囲む
+    if field.contains('"') || field.contains('\n') || field.contains(',') {
+        format!("\"{}\"", field.replace('"', "\"\""))
+    } else {
+        field.to_string()
+    }
+}
+
+/// API設定エクスポート用データ（BE-008-02）
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ApiSettingsExport {
+    pub apis: Vec<ApiSettingsData>,
+    pub export_date: String,
+    pub version: String,
+}
+
+/// API設定データ（BE-008-02）
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ApiSettingsData {
+    pub id: String,
+    pub name: String,
+    pub model: String,
+    pub port: i32,
+    pub enable_auth: bool,
+    pub status: String,
+    pub created_at: String,
+    pub updated_at: String,
+}
+
+/// API設定エクスポートリクエスト（BE-008-02）
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExportApiSettingsRequest {
+    pub api_ids: Option<Vec<String>>, // Noneの場合は全API
+}
+
+/// API設定エクスポートコマンド（BE-008-02）
+/// 選択したAPIまたはすべてのAPI設定をJSON形式でエクスポートします
+#[tauri::command]
+pub async fn export_api_settings(request: ExportApiSettingsRequest) -> Result<String, String> {
+    let conn = get_connection().map_err(|_| {
+        "データの読み込みに失敗しました。アプリを再起動して再度お試しください。".to_string()
+    })?;
+    
+    let api_repo = ApiRepository::new(&conn);
+    
+    // API一覧を取得
+    let apis = if let Some(api_ids) = request.api_ids {
+        // 指定されたAPIのみ取得
+        let mut result = Vec::new();
+        for api_id in api_ids {
+            match api_repo.find_by_id(&api_id) {
+                Ok(api) => result.push(api),
+                Err(crate::database::DatabaseError::NotFound(_)) => {
+                    return Err(format!("API ID '{}' が見つかりません", api_id));
+                },
+                Err(e) => {
+                    return Err(format!("API '{}' の取得に失敗しました: {}", api_id, e));
+                }
+            }
+        }
+        result
+    } else {
+        // すべてのAPIを取得
+        api_repo.find_all().map_err(|e| {
+            format!("API一覧の取得に失敗しました: {}", e)
+        })?
+    };
+    
+    // エクスポートデータに変換
+    let settings_data: Vec<ApiSettingsData> = apis.into_iter().map(|api| {
+        ApiSettingsData {
+            id: api.id,
+            name: api.name,
+            model: api.model,
+            port: api.port,
+            enable_auth: api.enable_auth,
+            status: api.status.as_str().to_string(),
+            created_at: api.created_at.to_rfc3339(),
+            updated_at: api.updated_at.to_rfc3339(),
+        }
+    }).collect();
+    
+    let export_data = ApiSettingsExport {
+        apis: settings_data,
+        export_date: Utc::now().to_rfc3339(),
+        version: "1.0".to_string(),
+    };
+    
+    // JSON形式でエクスポート
+    serde_json::to_string_pretty(&export_data).map_err(|e| {
+        format!("JSON変換に失敗しました: {}", e)
+    })
+}
+
+/// API設定インポートリクエスト（BE-008-02）
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ImportApiSettingsRequest {
+    pub json_data: String,
+    pub conflict_resolution: String, // "skip", "overwrite", "rename"
+}
+
+/// API設定インポートレスポンス（BE-008-02）
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ImportApiSettingsResponse {
+    pub imported: i32,
+    pub skipped: i32,
+    pub renamed: i32,
+    pub errors: Vec<String>,
+}
+
+/// API設定インポートコマンド（BE-008-02）
+/// JSON形式のAPI設定データをインポートします
+#[tauri::command]
+pub async fn import_api_settings(request: ImportApiSettingsRequest) -> Result<ImportApiSettingsResponse, String> {
+    // JSONデータをパース
+    let export_data: ApiSettingsExport = serde_json::from_str(&request.json_data).map_err(|e| {
+        format!("JSONの解析に失敗しました: {}", e)
+    })?;
+    
+    let conn = get_connection().map_err(|_| {
+        "データの保存に失敗しました。アプリを再起動して再度お試しください。".to_string()
+    })?;
+    
+    let api_repo = ApiRepository::new(&conn);
+    let mut imported = 0;
+    let mut skipped = 0;
+    let mut renamed = 0;
+    let mut errors = Vec::new();
+    
+    'api_loop: for api_data in export_data.apis {
+        // 既存のAPIをチェック
+        let existing_api_result = api_repo.find_by_id(&api_data.id);
+        match existing_api_result {
+            Ok(_) => {
+                // 既存APIが見つかった場合
+                match request.conflict_resolution.as_str() {
+                    "skip" => {
+                        skipped += 1;
+                        continue;
+                    },
+                    "overwrite" => {
+                        // 既存APIを更新
+                        match api_repo.update(&crate::database::models::Api {
+                            id: api_data.id.clone(),
+                            name: api_data.name.clone(),
+                            model: api_data.model.clone(),
+                            port: api_data.port,
+                            enable_auth: api_data.enable_auth,
+                            status: crate::database::models::ApiStatus::from_str(&api_data.status),
+                            created_at: chrono::DateTime::parse_from_rfc3339(&api_data.created_at)
+                                .map_err(|_| "日付の解析に失敗しました".to_string())?
+                                .with_timezone(&Utc),
+                            updated_at: Utc::now(),
+                        }) {
+                            Ok(_) => {
+                                imported += 1;
+                            },
+                            Err(e) => {
+                                errors.push(format!("API '{}' の更新に失敗しました: {}", api_data.name, e));
+                            }
+                        }
+                    },
+                    "rename" => {
+                        // 新しいIDを生成して名前を変更
+                        let new_id = Uuid::new_v4().to_string();
+                        let mut new_name = api_data.name.clone();
+                        let mut counter = 1;
+                        
+                        // 名前が既に使用されている場合は番号を追加
+                        loop {
+                            match api_repo.find_by_name(&new_name) {
+                                Ok(Some(_)) => {
+                                    // 名前が使用されている場合は番号を追加
+                                    new_name = format!("{} ({})", api_data.name, counter);
+                                    counter += 1;
+                                },
+                                Ok(None) => {
+                                    // 名前が使用されていない場合は使用可能
+                                    break;
+                                },
+                                Err(e) => {
+                                    errors.push(format!("API名 '{}' の確認に失敗しました: {}", new_name, e));
+                                    skipped += 1;
+                                    continue 'api_loop;
+                                }
+                            }
+                        }
+                        
+                        let new_api = crate::database::models::Api {
+                            id: new_id,
+                            name: new_name.clone(),
+                            model: api_data.model,
+                            port: api_data.port,
+                            enable_auth: api_data.enable_auth,
+                            status: crate::database::models::ApiStatus::from_str(&api_data.status),
+                            created_at: chrono::DateTime::parse_from_rfc3339(&api_data.created_at)
+                                .map_err(|_| "日付の解析に失敗しました".to_string())?
+                                .with_timezone(&Utc),
+                            updated_at: Utc::now(),
+                        };
+                        
+                        match api_repo.create(&new_api) {
+                            Ok(_) => {
+                                imported += 1;
+                                renamed += 1;
+                            },
+                            Err(e) => {
+                                errors.push(format!("API '{}' のインポートに失敗しました: {}", new_name, e));
+                            }
+                        }
+                        continue 'api_loop;
+                    },
+                    _ => {
+                        errors.push(format!("無効な競合解決方法です: {}", request.conflict_resolution));
+                        skipped += 1;
+                    }
+                }
+            },
+            Err(crate::database::DatabaseError::NotFound(_)) => {
+                // 新規APIとして作成
+                let new_api = crate::database::models::Api {
+                    id: api_data.id.clone(),
+                    name: api_data.name.clone(),
+                    model: api_data.model,
+                    port: api_data.port,
+                    enable_auth: api_data.enable_auth,
+                    status: crate::database::models::ApiStatus::from_str(&api_data.status),
+                    created_at: chrono::DateTime::parse_from_rfc3339(&api_data.created_at)
+                        .map_err(|_| "日付の解析に失敗しました".to_string())?
+                        .with_timezone(&Utc),
+                    updated_at: Utc::now(),
+                };
+                
+                match api_repo.create(&new_api) {
+                    Ok(_) => {
+                        imported += 1;
+                    },
+                    Err(e) => {
+                        errors.push(format!("API '{}' のインポートに失敗しました: {}", api_data.name, e));
+                    }
+                }
+            },
+            Err(e) => {
+                errors.push(format!("API '{}' の確認に失敗しました: {}", api_data.id, e));
+                skipped += 1;
+            }
+        }
+    }
+    
+    Ok(ImportApiSettingsResponse {
+        imported,
+        skipped,
+        renamed,
+        errors,
     })
 }

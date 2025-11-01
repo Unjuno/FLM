@@ -82,9 +82,6 @@ export const PerformanceDashboard: React.FC = () => {
     setSelectedPeriod(event.target.value as PeriodOption);
   };
 
-  // 選択されたAPIの情報を取得
-  const selectedApi = apis.find(api => api.id === selectedApiId);
-
   // 期間に応じた日時範囲を計算
   const dateRange = useMemo(() => {
     const end = new Date();
@@ -108,7 +105,8 @@ export const PerformanceDashboard: React.FC = () => {
     };
   }, [selectedPeriod]);
 
-  const { startDate, endDate } = dateRange;
+  // 選択されたAPIの情報を取得
+  const selectedApi = apis.find(api => api.id === selectedApiId);
 
   if (loading && apis.length === 0) {
     return (
@@ -202,6 +200,7 @@ export const PerformanceDashboard: React.FC = () => {
                 apiId={selectedApiId}
                 period={selectedPeriod}
                 autoRefresh={true}
+                refreshInterval={30000}
               />
 
               {/* グラフセクション */}
@@ -210,9 +209,10 @@ export const PerformanceDashboard: React.FC = () => {
                 <div className="chart-item">
                   <ResponseTimeChart
                     apiId={selectedApiId}
-                    startDate={startDate}
-                    endDate={endDate}
+                    startDate={dateRange.startDate}
+                    endDate={dateRange.endDate}
                     autoRefresh={true}
+                    refreshInterval={30000}
                   />
                 </div>
 
@@ -220,9 +220,10 @@ export const PerformanceDashboard: React.FC = () => {
                 <div className="chart-item">
                   <RequestCountChart
                     apiId={selectedApiId}
-                    startDate={startDate}
-                    endDate={endDate}
+                    startDate={dateRange.startDate}
+                    endDate={dateRange.endDate}
                     autoRefresh={true}
+                    refreshInterval={30000}
                   />
                 </div>
 
@@ -245,7 +246,7 @@ export const PerformanceDashboard: React.FC = () => {
                     endDate={dateRange.endDate}
                     autoRefresh={true}
                     refreshInterval={30000}
-                    alertThreshold={5}
+                    alertThreshold={5.0}
                   />
                 </div>
               </div>

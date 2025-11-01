@@ -1,0 +1,190 @@
+/* FLM - ログ削除コンポーネントスタイル */
+/* フロントエンドエージェント (FE) 実装 */
+
+.log-delete {
+  margin: 10px 0;
+}
+
+.delete-button {
+  padding: 8px 16px;
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  transition: background-color 0.2s;
+}
+
+.delete-button:hover:not(:disabled) {
+  background-color: #c82333;
+}
+
+.delete-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+/* 削除ダイアログオーバーレイ */
+.delete-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+}
+
+.delete-dialog {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  width: 90%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+}
+
+.delete-dialog-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.delete-dialog-header h2 {
+  margin: 0;
+  font-size: 20px;
+  color: #333;
+}
+
+.delete-dialog-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6c757d;
+  padding: 0;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.delete-dialog-close:hover:not(:disabled) {
+  background-color: #f8f9fa;
+}
+
+.delete-dialog-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.delete-dialog-content {
+  padding: 20px;
+}
+
+.delete-dialog-description {
+  margin: 0 0 20px 0;
+  color: #495057;
+  line-height: 1.6;
+}
+
+.delete-dialog-form {
+  margin-bottom: 20px;
+}
+
+.delete-dialog-form label {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: #333;
+}
+
+.delete-date-input {
+  width: 100%;
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 14px;
+  transition: border-color 0.2s;
+}
+
+.delete-date-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.delete-date-input:disabled {
+  background-color: #e9ecef;
+  cursor: not-allowed;
+}
+
+.delete-dialog-hint {
+  margin: 8px 0 0 0;
+  font-size: 12px;
+  color: #6c757d;
+}
+
+.delete-error {
+  padding: 12px;
+  background-color: #f8d7da;
+  color: #721c24;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  margin-bottom: 20px;
+}
+
+.delete-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 20px;
+  border-top: 1px solid #dee2e6;
+}
+
+.delete-dialog-cancel,
+.delete-dialog-confirm {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+  font-weight: 500;
+  transition: background-color 0.2s;
+}
+
+.delete-dialog-cancel {
+  background-color: #6c757d;
+  color: white;
+}
+
+.delete-dialog-cancel:hover:not(:disabled) {
+  background-color: #5a6268;
+}
+
+.delete-dialog-confirm {
+  background-color: #dc3545;
+  color: white;
+}
+
+.delete-dialog-confirm:hover:not(:disabled) {
+  background-color: #c82333;
+}
+
+.delete-dialog-cancel:disabled,
+.delete-dialog-confirm:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+

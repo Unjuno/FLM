@@ -3,9 +3,12 @@
  * 
  * QAエージェント (QA) 実装
  * ログ表示UIのE2Eテスト
+ * 
+ * 注意: TauriアプリケーションのE2Eテストは、実際のUI操作ではなく、
+ * フロントエンドからバックエンドへの完全なフローのテストとして実装します
  */
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
 
 /**
@@ -39,10 +42,11 @@ interface LogStatistics {
 interface ApiInfo {
   id: string;
   name: string;
+  endpoint: string;
   model_name: string;
   port: number;
+  enable_auth: boolean;
   status: string;
-  endpoint: string;
   created_at: string;
   updated_at: string;
 }
@@ -56,6 +60,7 @@ interface ApiInfo {
  * - 詳細表示テスト（ログクリック、モーダル表示、詳細情報表示確認）
  * - 統計情報表示テスト（統計サマリー表示確認、グラフ表示確認）
  * - ページネーションテスト
+ * - リアルタイム更新テスト（オプション）
  */
 describe('F006: ログ表示機能 E2Eテスト', () => {
   let testApiId: string | null = null;
@@ -153,16 +158,8 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
   });
 
   afterAll(async () => {
-    // テスト用ログを削除
-    for (const logId of testLogIds) {
-      try {
-        // ログ削除コマンドが存在する場合
-        // await invoke('delete_request_log', { logId });
-      } catch (error) {
-        // ログ削除はオプション
-        console.warn('ログの削除に失敗しました:', error);
-      }
-    }
+    // テスト用ログを削除（ログ削除コマンドが存在する場合）
+    // 実際の実装では、テストデータのクリーンアップ戦略を検討してください
 
     // テスト用APIを削除
     if (testApiId) {

@@ -9,6 +9,8 @@ import { ErrorMessage } from '../components/common/ErrorMessage';
 import { LogFilter, LogFilterState } from '../components/api/LogFilter';
 import { LogStatistics } from '../components/api/LogStatistics';
 import { LogDetail } from '../components/api/LogDetail';
+import { LogExport } from '../components/api/LogExport';
+import { LogDelete } from '../components/api/LogDelete';
 import './ApiLogs.css';
 
 /**
@@ -346,6 +348,19 @@ export const ApiLogs: React.FC = () => {
             />
           </div>
 
+          {/* ログエクスポート（FE-008-01で追加） */}
+          {selectedApiId && (
+            <div className="log-export-section">
+              <LogExport
+                apiId={selectedApiId}
+                filter={filter}
+                onExportComplete={(count) => {
+                  console.log(`${count}件のログをエクスポートしました`);
+                }}
+              />
+            </div>
+          )}
+
           {/* API選択 */}
           <div className="api-selector">
             <label htmlFor="api-select">表示するAPI:</label>
@@ -368,27 +383,6 @@ export const ApiLogs: React.FC = () => {
                 <span className="info-value">{selectedApi.name}</span>
               </div>
             )}
-          </div>
-
-          {/* 統計情報コンポーネント */}
-          {selectedApiId && (
-            <div className="statistics-section">
-              <LogStatistics
-                apiId={selectedApiId}
-                startDate={filter.startDate || null}
-                endDate={filter.endDate || null}
-                autoRefresh={true}
-                refreshInterval={POLLING_INTERVAL}
-              />
-            </div>
-          )}
-
-          {/* フィルタコンポーネント */}
-          <div className="filter-section">
-            <LogFilter
-              onFilterChange={handleFilterChange}
-              initialFilter={filter}
-            />
           </div>
 
           {/* ログ一覧 */}

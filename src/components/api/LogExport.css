@@ -1,0 +1,75 @@
+/* FLM - ログエクスポートコンポーネントスタイル */
+/* フロントエンドエージェント (FE) 実装 */
+
+.log-export {
+  margin: 16px 0;
+  padding: 16px;
+  background-color: #f5f5f5;
+  border-radius: 8px;
+  border: 1px solid #ddd;
+}
+
+.log-export-buttons {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 8px;
+}
+
+.export-button {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+  color: white;
+}
+
+.export-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.export-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.export-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.export-button-csv {
+  background-color: #4caf50;
+}
+
+.export-button-csv:hover:not(:disabled) {
+  background-color: #45a049;
+}
+
+.export-button-json {
+  background-color: #2196f3;
+}
+
+.export-button-json:hover:not(:disabled) {
+  background-color: #0b7dda;
+}
+
+.export-error {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #ffebee;
+  color: #c62828;
+  border-radius: 4px;
+  font-size: 14px;
+}
+
+.export-warning {
+  margin-top: 8px;
+  padding: 8px 12px;
+  background-color: #fff3e0;
+  color: #e65100;
+  border-radius: 4px;
+  font-size: 14px;
+}

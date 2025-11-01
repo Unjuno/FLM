@@ -79,6 +79,28 @@ export const Home: React.FC = () => {
               <small>APIキーの一覧表示・管理</small>
             </span>
           </button>
+
+          <button
+            className="home-action-button"
+            onClick={() => navigate('/logs')}
+          >
+            <span className="button-icon">📊</span>
+            <span className="button-text">
+              <strong>APIログ</strong>
+              <small>リクエストログの表示・検索</small>
+            </span>
+          </button>
+
+          <button
+            className="home-action-button"
+            onClick={() => navigate('/performance')}
+          >
+            <span className="button-icon">⚡</span>
+            <span className="button-text">
+              <strong>パフォーマンス監視</strong>
+              <small>APIのパフォーマンスメトリクスを監視</small>
+            </span>
+          </button>
         </div>
 
         <div className="home-info">

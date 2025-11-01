@@ -7,6 +7,8 @@
 document.addEventListener('DOMContentLoaded', function() {
   initDownloadButtons();
   initDownloadCountdown();
+  // GitHub Releases APIから最新リリース情報を取得
+  fetchLatestRelease();
 });
 
 /**
@@ -110,5 +112,201 @@ function checkSystemRequirements() {
   };
   
   return requirements[os] || null;
+}
+
+/**
+ * GitHub Releases APIから最新リリース情報を取得
+ */
+async function fetchLatestRelease() {
+  try {
+    // GitHub Releases APIから最新リリースを取得
+    const response = await fetch('https://api.github.com/repos/Unjuno/FLM/releases/latest', {
+      headers: {
+        'Accept': 'application/vnd.github.v3+json'
+      }
+    });
+    
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const release = await response.json();
+    
+    // プラットフォーム別アセットを分類
+    const assets = {
+      windows: null,
+      macos: null,
+      linux: null
+    };
+    
+    release.assets.forEach(asset => {
+      const name = asset.name.toLowerCase();
+      
+      // Windows用アセット（.msi または .exe）
+      if (name.endsWith('.msi') || (name.endsWith('.exe') && !name.includes('setup'))) {
+        assets.windows = asset;
+      }
+      // macOS用アセット（.dmg）
+      else if (name.endsWith('.dmg') || (name.endsWith('.app') && name.includes('macos'))) {
+        assets.macos = asset;
+      }
+      // Linux用アセット（.AppImage または .deb）
+      else if (name.endsWith('.appimage') || name.endsWith('.deb')) {
+        assets.linux = asset;
+      }
+    });
+    
+    // バージョン情報を表示
+    updateReleaseInfo(release, assets);
+    
+    // ダウンロードリンクを更新
+    updateDownloadLinks(assets);
+    
+  } catch (error) {
+    console.error('リリース情報の取得に失敗しました:', error);
+    
+    // エラー時はデフォルト表示を維持
+    showReleaseError();
+  }
+}
+
+/**
+ * リリース情報をページに表示
+ */
+function updateReleaseInfo(release, assets) {
+  const version = release.tag_name.replace(/^v/, ''); // 'v1.0.0' -> '1.0.0'
+  const releaseDate = new Date(release.published_at).toLocaleDateString('ja-JP');
+  
+  // バージョン情報を更新
+  document.querySelectorAll('.info-value').forEach(el => {
+    if (el.textContent.includes('1.0.0')) {
+      el.textContent = version;
+    }
+  });
+  
+  // リリース日時を表示（存在する場合）
+  const releaseDateEl = document.getElementById('release-date');
+  if (releaseDateEl) {
+    releaseDateEl.textContent = releaseDate;
+  }
+  
+  // 各プラットフォームのファイル情報を更新
+  updatePlatformInfo('windows', assets.windows, version);
+  updatePlatformInfo('macos', assets.macos, version);
+  updatePlatformInfo('linux', assets.linux, version);
+}
+
+/**
+ * プラットフォーム別のファイル情報を更新
+ */
+function updatePlatformInfo(platform, asset, version) {
+  if (!asset) return;
+  
+  const detailsEl = document.getElementById(`${platform}-details`);
+  if (!detailsEl) return;
+  
+  // ファイル名を更新
+  const fileNameEl = detailsEl.querySelector('.info-item:nth-child(1) .info-value');
+  if (fileNameEl) {
+    fileNameEl.textContent = asset.name;
+  }
+  
+  // バージョンを更新
+  const versionEl = detailsEl.querySelector('.info-item:nth-child(2) .info-value');
+  if (versionEl) {
+    versionEl.textContent = version;
+  }
+  
+  // ファイルサイズを更新
+  const sizeEl = detailsEl.querySelector('.info-item:nth-child(3) .info-value');
+  if (sizeEl) {
+    const sizeMB = (asset.size / (1024 * 1024)).toFixed(1);
+    sizeEl.textContent = `約 ${sizeMB} MB`;
+  }
+  
+  // ダウンロードボタンのhrefを更新
+  const downloadBtn = detailsEl.querySelector('.download-button');
+  if (downloadBtn) {
+    downloadBtn.href = asset.browser_download_url;
+    downloadBtn.setAttribute('data-download-url', asset.browser_download_url);
+  }
+}
+
+/**
+ * ダウンロードリンクを更新
+ */
+function updateDownloadLinks(assets) {
+  // 各プラットフォームのダウンロードボタンにURLを設定
+  ['windows', 'macos', 'linux'].forEach(platform => {
+    const asset = assets[platform];
+    if (!asset) return;
+    
+    const buttons = document.querySelectorAll(`[data-download="${platform}"], [data-os="${platform}"]`);
+    buttons.forEach(btn => {
+      if (btn.tagName === 'A') {
+        btn.href = asset.browser_download_url;
+        btn.setAttribute('data-download-url', asset.browser_download_url);
+      }
+    });
+  });
+  
+  // OS自動検出による推奨ダウンロード
+  const detectedOS = detectOS();
+  if (detectedOS !== 'unknown' && assets[detectedOS]) {
+    highlightRecommendedOS(detectedOS);
+  }
+}
+
+/**
+ * 検出されたOSをハイライト表示
+ */
+function highlightRecommendedOS(os) {
+  const osCard = document.querySelector(`[data-os="${os}"]`);
+  if (osCard) {
+    osCard.classList.add('recommended');
+    
+    // 推奨バッジを追加
+    if (!osCard.querySelector('.recommended-badge')) {
+      const badge = document.createElement('span');
+      badge.className = 'recommended-badge';
+      badge.textContent = '推奨';
+      badge.style.cssText = `
+        position: absolute;
+        top: 0.5rem;
+        right: 0.5rem;
+        background: var(--primary-color);
+        color: white;
+        padding: 0.25rem 0.75rem;
+        border-radius: 1rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+      `;
+      osCard.style.position = 'relative';
+      osCard.appendChild(badge);
+    }
+  }
+}
+
+/**
+ * リリース情報取得エラー時の表示
+ */
+function showReleaseError() {
+  // エラー表示（必要に応じて）
+  const errorMsg = document.createElement('div');
+  errorMsg.className = 'release-error';
+  errorMsg.style.cssText = `
+    padding: 1rem;
+    background-color: #fee;
+    border: 1px solid #fcc;
+    border-radius: 4px;
+    margin: 1rem 0;
+    color: #c33;
+  `;
+  errorMsg.textContent = '最新バージョン情報の取得に失敗しました。GitHubリリースページから直接ダウンロードしてください。';
+  
+  const downloadSection = document.querySelector('.download-section');
+  if (downloadSection) {
+    downloadSection.insertBefore(errorMsg, downloadSection.firstChild);
+  }
 }
 

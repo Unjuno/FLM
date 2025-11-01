@@ -26,7 +26,7 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["msi", "nsis"],
+    "targets": ["msi", "nsis", "dmg", "app", "deb", "AppImage"],
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -38,6 +38,22 @@
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
       "timestampUrl": ""
+    },
+    "macOS": {
+      "frameworks": [],
+      "minimumSystemVersion": "11.0",
+      "exceptionDomain": "",
+      "signingIdentity": null,
+      "providerShortName": null,
+      "entitlements": null
+    },
+    "linux": {
+      "deb": {
+        "depends": []
+      },
+      "appimage": {
+        "bundleMediaFramework": false
+      }
     },
     "resources": [],
     "externalBin": [],
