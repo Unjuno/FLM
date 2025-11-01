@@ -11,50 +11,25 @@ import './LogDelete.css';
  */
 interface LogDeleteProps {
   apiId: string | null;
-  onDeleteComplete?: (count: number) => void;
+  onDeleteComplete?: (deletedCount: number) => void;
 }
 
 /**
  * ログ削除コンポーネント
- * 古いログを削除します
+ * 古いログを日付範囲指定で削除します
  */
 export const LogDelete: React.FC<LogDeleteProps> = ({
   apiId,
   onDeleteComplete,
 }) => {
-  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [deleting, setDeleting] = useState(false);
-  const [deleteBeforeDate, setDeleteBeforeDate] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [beforeDate, setBeforeDate] = useState<string>('');
+  const [confirmText, setConfirmText] = useState<string>('');
 
   /**
-   * 削除ダイアログを開く
-   */
-  const handleOpenDeleteDialog = () => {
-    if (!apiId) {
-      setError('APIが選択されていません');
-      return;
-    }
-    
-    // デフォルトで30日前の日付を設定
-    const date = new Date();
-    date.setDate(date.getDate() - 30);
-    setDeleteBeforeDate(date.toISOString().split('T')[0]);
-    setShowDeleteDialog(true);
-    setError(null);
-  };
-
-  /**
-   * 削除ダイアログを閉じる
-   */
-  const handleCloseDeleteDialog = () => {
-    setShowDeleteDialog(false);
-    setDeleteBeforeDate('');
-    setError(null);
-  };
-
-  /**
-   * ログを削除する
+   * ログを削除します
    */
   const handleDelete = async () => {
     if (!apiId) {
@@ -62,20 +37,28 @@ export const LogDelete: React.FC<LogDeleteProps> = ({
       return;
     }
 
-    if (!deleteBeforeDate) {
+    if (!beforeDate) {
       setError('削除する日付を指定してください');
       return;
     }
 
-    // 確認ダイアログ
-    const confirmMessage = `指定した日付（${deleteBeforeDate}）より前のログを削除しますか？\nこの操作は取り消せません。`;
-    if (!window.confirm(confirmMessage)) {
+    // 確認用テキスト（日付を表示）
+    const confirmMessage = `指定した日付（${beforeDate}）より前のログをすべて削除しますか？\n\nこの操作は取り消せません。`;
+    
+    if (confirmText !== '削除') {
+      setError('確認のため、「削除」と入力してください');
+      return;
+    }
+
+    const confirmed = window.confirm(confirmMessage);
+    if (!confirmed) {
       return;
     }
 
     try {
       setDeleting(true);
       setError(null);
+      setSuccessMessage(null);
 
       // delete_logs IPCコマンドを呼び出し
       const response = await invoke<{
@@ -83,19 +66,21 @@ export const LogDelete: React.FC<LogDeleteProps> = ({
       }>('delete_logs', {
         request: {
           api_id: apiId,
-          before_date: `${deleteBeforeDate}T00:00:00Z`, // ISO 8601形式に変換
+          before_date: beforeDate,
         },
       });
 
-      console.log(`${response.deleted_count}件のログを削除しました`);
-      
+      setSuccessMessage(`${response.deleted_count}件のログを削除しました`);
+      setTimeout(() => setSuccessMessage(null), 5000);
+
       // コールバックを呼び出し
       if (onDeleteComplete) {
         onDeleteComplete(response.deleted_count);
       }
 
-      // ダイアログを閉じる
-      handleCloseDeleteDialog();
+      // フォームをリセット
+      setBeforeDate('');
+      setConfirmText('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ログの削除に失敗しました');
       console.error('ログ削除エラー:', err);
@@ -106,79 +91,66 @@ export const LogDelete: React.FC<LogDeleteProps> = ({
 
   return (
     <div className="log-delete">
-      <button
-        className="delete-button"
-        onClick={handleOpenDeleteDialog}
-        disabled={!apiId}
-        title={!apiId ? 'APIを選択してください' : '古いログを削除'}
-      >
-        🗑️ ログを削除
-      </button>
+      <div className="log-delete-header">
+        <h3>ログ削除</h3>
+      </div>
 
-      {showDeleteDialog && (
-        <div className="delete-dialog-overlay" onClick={handleCloseDeleteDialog}>
-          <div className="delete-dialog" onClick={(e) => e.stopPropagation()}>
-            <div className="delete-dialog-header">
-              <h2>ログ削除</h2>
-              <button
-                className="delete-dialog-close"
-                onClick={handleCloseDeleteDialog}
-                disabled={deleting}
-              >
-                ×
-              </button>
-            </div>
-            
-            <div className="delete-dialog-content">
-              <p className="delete-dialog-description">
-                指定した日付より前のログを削除します。
-                この操作は取り消せませんので、注意してください。
-              </p>
-              
-              <div className="delete-dialog-form">
-                <label htmlFor="delete-before-date">
-                  削除する日付（この日付より前のログを削除）:
-                </label>
-                <input
-                  id="delete-before-date"
-                  type="date"
-                  value={deleteBeforeDate}
-                  onChange={(e) => setDeleteBeforeDate(e.target.value)}
-                  disabled={deleting}
-                  className="delete-date-input"
-                />
-                <p className="delete-dialog-hint">
-                  ※ デフォルトで30日前のログまで削除されます
-                </p>
-              </div>
-
-              {error && (
-                <div className="delete-error">
-                  {error}
-                </div>
-              )}
-            </div>
-
-            <div className="delete-dialog-actions">
-              <button
-                className="delete-dialog-cancel"
-                onClick={handleCloseDeleteDialog}
-                disabled={deleting}
-              >
-                キャンセル
-              </button>
-              <button
-                className="delete-dialog-confirm"
-                onClick={handleDelete}
-                disabled={deleting || !deleteBeforeDate}
-              >
-                {deleting ? '削除中...' : '削除する'}
-              </button>
-            </div>
+      <div className="log-delete-content">
+        <div className="delete-form">
+          <div className="form-group">
+            <label htmlFor="before-date">
+              削除する日付（この日付より前のログを削除）:
+            </label>
+            <input
+              id="before-date"
+              type="date"
+              value={beforeDate}
+              onChange={(e) => setBeforeDate(e.target.value)}
+              disabled={deleting || !apiId}
+              className="date-input"
+            />
           </div>
+
+          <div className="form-group">
+            <label htmlFor="confirm-text">
+              確認のため「削除」と入力してください:
+            </label>
+            <input
+              id="confirm-text"
+              type="text"
+              value={confirmText}
+              onChange={(e) => setConfirmText(e.target.value)}
+              disabled={deleting || !apiId}
+              placeholder="削除"
+              className="confirm-input"
+            />
+          </div>
+
+          <button
+            onClick={handleDelete}
+            disabled={deleting || !apiId || !beforeDate || confirmText !== '削除'}
+            className="delete-button"
+          >
+            {deleting ? '削除中...' : 'ログを削除'}
+          </button>
         </div>
-      )}
+
+        {error && (
+          <div className="delete-error">
+            {error}
+          </div>
+        )}
+        {successMessage && (
+          <div className="delete-success">
+            {successMessage}
+          </div>
+        )}
+        {!apiId && (
+          <div className="delete-warning">
+            APIを選択してください
+          </div>
+        )}
+      </div>
     </div>
   );
 };
-

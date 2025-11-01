@@ -401,6 +401,40 @@
   border: 1px solid #e0e0e0;
 }
 
+/* ログ管理セクション（エクスポート・削除） */
+.log-management-section {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background-color: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.log-export-section {
+  flex: 1;
+  min-width: 200px;
+}
+
+.log-delete-section {
+  flex: 1;
+  min-width: 200px;
+}
+
+@media (max-width: 768px) {
+  .log-management-section {
+    flex-direction: column;
+  }
+
+  .log-export-section,
+  .log-delete-section {
+    width: 100%;
+  }
+}
+
 /* ページネーション */
 .pagination {
   display: flex;

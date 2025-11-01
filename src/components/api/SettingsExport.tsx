@@ -109,8 +109,34 @@ export const SettingsExport: React.FC<SettingsExportProps> = ({
         throw new Error('無効なJSONファイルです');
       }
 
-      // 競合解決方法を選択（デフォルトはskip、将来的にはダイアログで選択可能に）
-      const conflictResolution = 'skip'; // TODO: ダイアログで選択可能に
+      // インポートを実行（デフォルトでskip方式を使用）
+      await handleImportWithResolution(fileContent, 'skip');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'インポートに失敗しました');
+      console.error('設定インポートエラー:', err);
+      
+      // ファイル入力をリセット
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      setImporting(false);
+      return;
+    }
+  };
+
+  /**
+   * 競合解決ダイアログで選択された方法でインポートを実行
+   */
+  const handleImportWithResolution = async () => {
+    if (!pendingFileContent) {
+      return;
+    }
+
+    try {
+      setImporting(true);
+      setError(null);
+      setSuccessMessage(null);
+      setShowConflictDialog(false);
 
       // import_api_settings IPCコマンドを呼び出し
       const result = await invoke<{

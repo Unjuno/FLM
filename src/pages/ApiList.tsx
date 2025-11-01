@@ -31,7 +31,7 @@ export const ApiList: React.FC = () => {
   const [apis, setApis] = useState<ApiInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [selectedApiIds, setSelectedApiIds] = useState<string[]>([]);
+  const [selectedApiIds, setSelectedApiIds] = useState<Set<string>>(new Set());
 
   // API一覧を取得（useCallbackでメモ化してパフォーマンス最適化）
   const loadApis = useCallback(async () => {
@@ -125,6 +125,28 @@ export const ApiList: React.FC = () => {
     }
   }, [loadApis]);
 
+  // API選択のトグル（FE-008-02）
+  const handleToggleSelection = useCallback((apiId: string) => {
+    setSelectedApiIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(apiId)) {
+        newSet.delete(apiId);
+      } else {
+        newSet.add(apiId);
+      }
+      return newSet;
+    });
+  }, []);
+
+  // 全選択/全解除（FE-008-02）
+  const handleSelectAll = useCallback(() => {
+    if (selectedApiIds.size === apis.length) {
+      setSelectedApiIds(new Set());
+    } else {
+      setSelectedApiIds(new Set(apis.map(api => api.id)));
+    }
+  }, [selectedApiIds, apis]);
+
   // ステータステキストを取得（パフォーマンス最適化：関数として定義）
   const getStatusText = (status: string): string => {
     switch (status) {
@@ -172,24 +194,28 @@ export const ApiList: React.FC = () => {
           </div>
         </header>
 
-        <div className="settings-export-section">
-          <SettingsExport
-            selectedApiIds={selectedApiIds.length > 0 ? selectedApiIds : undefined}
-            onImportComplete={(result) => {
-              // インポート完了後に一覧を再読み込み
-              if (result.imported > 0 || result.renamed > 0) {
-                loadApis();
-              }
-            }}
-          />
-        </div>
-
         {error && (
           <ErrorMessage
             message={error}
             type="api"
             onClose={() => setError(null)}
           />
+        )}
+
+        {/* 設定エクスポート・インポート（FE-008-02で追加） */}
+        {apis.length > 0 && (
+          <div className="settings-export-section">
+            <SettingsExport
+              selectedApiIds={selectedApiIds.size > 0 ? Array.from(selectedApiIds) : undefined}
+              onImportComplete={(result) => {
+                // インポート完了後、API一覧を再読み込み
+                loadApis();
+                // 選択をクリア
+                setSelectedApiIds(new Set());
+                console.log(`インポート完了: ${result.imported}件追加、${result.skipped}件スキップ、${result.renamed}件リネーム`);
+              }}
+            />
+          </div>
         )}
 
         {apis.length === 0 ? (
@@ -203,9 +229,29 @@ export const ApiList: React.FC = () => {
           </div>
         ) : (
           <div className="api-list">
+            {/* 全選択/全解除ボタン（FE-008-02） */}
+            <div className="api-list-controls">
+              <label className="select-all-checkbox">
+                <input
+                  type="checkbox"
+                  checked={selectedApiIds.size === apis.length && apis.length > 0}
+                  onChange={handleSelectAll}
+                  aria-label="すべてのAPIを選択"
+                />
+                <span>すべて選択（{selectedApiIds.size}件選択中）</span>
+              </label>
+            </div>
             {apis.map((api) => (
               <div key={api.id} className="api-card">
                 <div className="api-card-header">
+                  <label className="api-select-checkbox">
+                    <input
+                      type="checkbox"
+                      checked={selectedApiIds.has(api.id)}
+                      onChange={() => handleToggleSelection(api.id)}
+                      aria-label={`${api.name}を選択`}
+                    />
+                  </label>
                   <h3 className="api-name">{api.name}</h3>
                   <div className={`status-badge status-${api.status}`}>
                     {getStatusText(api.status)}

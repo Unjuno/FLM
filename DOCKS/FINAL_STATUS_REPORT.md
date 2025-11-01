@@ -227,7 +227,7 @@
 ### 実装ファイル確認 ✅
 - ✅ バックエンドIPCコマンド: `api.rs`, `performance.rs` - 実装済み
 - ✅ データベーススキーマ: `performance_metrics`テーブル - 実装済み（3つのインデックス付き）
-- ✅ 認証プロキシ: `server.ts` - メトリクス収集実装済み
+- ✅ 認証プロキシ: `src/backend/auth/server.ts`, `src/backend/auth/database.ts` - メトリクス収集実装済み
 - ✅ フロントエンドコンポーネント: 全9コンポーネント実装済み
   - `ApiLogs.tsx`, `PerformanceDashboard.tsx`
   - `LogFilter.tsx`, `LogDetail.tsx`, `LogStatistics.tsx`

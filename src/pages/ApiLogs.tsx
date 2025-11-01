@@ -348,16 +348,30 @@ export const ApiLogs: React.FC = () => {
             />
           </div>
 
-          {/* ログエクスポート（FE-008-01で追加） */}
+          {/* ログエクスポート・削除（FE-008-01, FE-008-03で追加） */}
           {selectedApiId && (
-            <div className="log-export-section">
-              <LogExport
-                apiId={selectedApiId}
-                filter={filter}
-                onExportComplete={(count) => {
-                  console.log(`${count}件のログをエクスポートしました`);
-                }}
-              />
+            <div className="log-management-section">
+              <div className="log-export-section">
+                <LogExport
+                  apiId={selectedApiId}
+                  filter={filter}
+                  onExportComplete={(count) => {
+                    console.log(`${count}件のログをエクスポートしました`);
+                  }}
+                />
+              </div>
+              <div className="log-delete-section">
+                <LogDelete
+                  apiId={selectedApiId}
+                  onDeleteComplete={(count) => {
+                    console.log(`${count}件のログを削除しました`);
+                    // ログ一覧を再読み込み
+                    if (selectedApiId) {
+                      loadLogs(selectedApiId, currentPage);
+                    }
+                  }}
+                />
+              </div>
             </div>
           )}
 

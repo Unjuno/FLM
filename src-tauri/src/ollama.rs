@@ -56,6 +56,7 @@ pub async fn detect_ollama() -> Result<OllamaDetectionResult, AppError> {
                 result.version = Some(version);
             }
         }
+        #[allow(non_snake_case)]
         Ok(None) => {
             // ポータブル版Ollamaが見つからない場合はスキップ
         }
@@ -92,6 +93,7 @@ pub async fn detect_ollama() -> Result<OllamaDetectionResult, AppError> {
                 }
             }
         }
+        #[allow(non_snake_case)]
         Ok(None) => {
             // ポータブル版Ollamaが見つからない場合はスキップ
         }
@@ -432,7 +434,8 @@ where
             message: format!("ファイル書き込みエラー: {}", e),
         })?;
 
-        downloaded += chunk.len() as u64;
+        let chunk_len = chunk.len() as u64;
+        downloaded += chunk_len;
         let elapsed = start_time.elapsed().as_secs_f64();
         let speed = if elapsed > 0.0 {
             downloaded as f64 / elapsed

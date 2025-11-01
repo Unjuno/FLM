@@ -64,6 +64,7 @@ pub fn run() {
             api::get_request_logs,
             api::get_log_statistics,
             api::export_logs,
+            api::delete_logs,
             api::export_api_settings,
             api::import_api_settings,
             performance::record_performance_metric,

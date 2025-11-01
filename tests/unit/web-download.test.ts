@@ -25,10 +25,13 @@ describe('WEBダウンロード機能 - OS検出', () => {
 
   beforeEach(() => {
     // グローバルオブジェクトのモック
-    global.navigator = {
-      userAgent: '',
-      platform: '',
-    } as Navigator;
+    // Node.js環境ではnavigatorが存在しないため、グローバルに追加
+    if (typeof global.navigator === 'undefined') {
+      (global as any).navigator = {
+        userAgent: '',
+        platform: '',
+      };
+    }
   });
 
   afterEach(() => {
@@ -39,8 +42,9 @@ describe('WEBダウンロード機能 - OS検出', () => {
    * OS検出関数（download.jsから抽出したロジック）
    */
   function detectOS(): string {
-    const userAgent = (global.navigator?.userAgent || '').toLowerCase();
-    const platform = (global.navigator?.platform || '').toLowerCase();
+    const nav = (global as any).navigator || {};
+    const userAgent = (nav.userAgent || '').toLowerCase();
+    const platform = (nav.platform || '').toLowerCase();
 
     if (/win/i.test(platform) || /windows/i.test(userAgent)) {
       return 'windows';

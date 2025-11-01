@@ -478,7 +478,7 @@ pub async fn update_api(api_id: String, config: ApiUpdateConfig) -> Result<(), S
             
             let api_repo = ApiRepository::new(&conn);
             let mut api = api_repo.find_by_id(&api_id).map_err(|e: DatabaseError| {
-                format!("API取得エラー: {}", e)
+                format!("API取得エラー: {e}")
             })?;
             
             let mut needs_restart = false;
@@ -1238,7 +1238,7 @@ pub async fn get_request_logs(request: GetRequestLogsRequest) -> Result<Vec<Requ
         request.status_codes.as_deref(),
         request.path_filter.as_deref(),
     ).map_err(|e| {
-        format!("リクエストログの取得に失敗しました: {}", e)
+        format!("リクエストログの取得に失敗しました: {e}")
     })?;
     
     let result: Vec<RequestLogInfo> = logs.into_iter().map(|log| {
@@ -1292,7 +1292,7 @@ pub async fn get_log_statistics(request: GetLogStatisticsRequest) -> Result<LogS
             request.end_date.as_deref(),
         )
         .map_err(|e| {
-            format!("ログ統計情報の取得に失敗しました: {}", e)
+            format!("ログ統計情報の取得に失敗しました: {e}")
         })?;
     
     Ok(LogStatistics {
@@ -1342,7 +1342,7 @@ pub async fn export_logs(request: ExportLogsRequest) -> Result<ExportLogsRespons
         request.status_codes.as_deref(),
         request.path_filter.as_deref(),
     ).map_err(|e| {
-        format!("リクエストログの取得に失敗しました: {}", e)
+        format!("リクエストログの取得に失敗しました: {e}")
     })?;
     
     let count = i64::try_from(logs.len()).unwrap_or(0);
@@ -1389,7 +1389,7 @@ pub async fn export_logs(request: ExportLogsRequest) -> Result<ExportLogsRespons
             }).collect();
             
             serde_json::to_string_pretty(&log_infos).map_err(|e| {
-                format!("JSON変換に失敗しました: {}", e)
+                format!("JSON変換に失敗しました: {e}")
             })?
         },
         _ => {
@@ -1462,7 +1462,7 @@ pub async fn export_api_settings(request: ExportApiSettingsRequest) -> Result<St
                     return Err(format!("API ID '{}' が見つかりません", api_id));
                 },
                 Err(e) => {
-                    return Err(format!("API '{}' の取得に失敗しました: {}", api_id, e));
+                    return Err(format!("API '{api_id}' の取得に失敗しました: {e}"));
                 }
             }
         }
@@ -1522,7 +1522,7 @@ pub struct ImportApiSettingsResponse {
 pub async fn import_api_settings(request: ImportApiSettingsRequest) -> Result<ImportApiSettingsResponse, String> {
     // JSONデータをパース
     let export_data: ApiSettingsExport = serde_json::from_str(&request.json_data).map_err(|e| {
-        format!("JSONの解析に失敗しました: {}", e)
+        format!("JSONの解析に失敗しました: {e}")
     })?;
     
     let conn = get_connection().map_err(|_| {
@@ -1582,6 +1582,7 @@ pub async fn import_api_settings(request: ImportApiSettingsRequest) -> Result<Im
                                     new_name = format!("{} ({})", api_data.name, counter);
                                     counter += 1;
                                 },
+                                #[allow(non_snake_case)]
                                 Ok(None) => {
                                     // 名前が使用されていない場合は使用可能
                                     break;
@@ -1660,5 +1661,42 @@ pub async fn import_api_settings(request: ImportApiSettingsRequest) -> Result<Im
         skipped,
         renamed,
         errors,
+    })
+}
+
+/// ログ削除リクエスト（BE-008-03）
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DeleteLogsRequest {
+    pub api_id: Option<String>, // Noneの場合は全API
+    pub before_date: Option<String>, // ISO 8601形式の日付文字列（この日付より前のログを削除）
+}
+
+/// ログ削除レスポンス（BE-008-03）
+#[derive(Debug, Serialize, Deserialize)]
+pub struct DeleteLogsResponse {
+    pub deleted_count: usize,
+}
+
+/// ログ削除コマンド（BE-008-03）
+/// 指定した条件に一致するログを削除します
+/// 安全のため、api_idとbefore_dateの両方がNoneの場合はエラーを返します
+#[tauri::command]
+pub async fn delete_logs(request: DeleteLogsRequest) -> Result<DeleteLogsResponse, String> {
+    let conn = get_connection().map_err(|_| {
+        "データの読み込みに失敗しました。アプリを再起動して再度お試しください。".to_string()
+    })?;
+    
+    let log_repo = RequestLogRepository::new(&conn);
+    
+    // トランザクション内で削除を実行
+    let deleted_count = log_repo.delete_by_date_range(
+        request.api_id.as_deref(),
+        request.before_date.as_deref(),
+    ).map_err(|e| {
+        format!("ログの削除に失敗しました: {}", e)
+    })?;
+    
+    Ok(DeleteLogsResponse {
+        deleted_count,
     })
 }
