@@ -44,11 +44,8 @@ export const ApiKeys: React.FC = () => {
       setError(null);
 
       // バックエンドのIPCコマンドを呼び出し
-      // TODO: バックエンドが実装するIPCコマンドを呼び出し
-      // const apis = await invoke<Array<{...}>>('list_apis');
-      // const keys = await invoke<Array<{...}>>('list_api_keys');
-
-      // 暫定実装（バックエンド実装待ち）
+      // list_apisコマンドでAPI一覧を取得し、認証が有効なAPIに対して
+      // 必要に応じてget_api_keyコマンドで個別にAPIキーを取得します
       const apis = await invoke<Array<{
         id: string;
         name: string;

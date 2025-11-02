@@ -17,6 +17,8 @@ export interface ApiConfig {
   name: string;
   port: number;
   enableAuth: boolean;
+  engineType?: string; // エンジンタイプ（'ollama', 'lm_studio', 'vllm', 'llama_cpp'）
+  engineConfig?: string; // エンジン固有設定（JSON形式）
 }
 
 /**

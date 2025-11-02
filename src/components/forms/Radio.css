@@ -1,0 +1,143 @@
+/* FLM - Radioコンポーネントのスタイル */
+
+.form-radio-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-radio-wrapper-full-width {
+  width: 100%;
+}
+
+.form-radio-container {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-radio {
+  width: 1.25rem;
+  height: 1.25rem;
+  cursor: pointer;
+  accent-color: #667eea;
+  flex-shrink: 0;
+}
+
+.form-radio-medium {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.form-radio-small {
+  width: 1rem;
+  height: 1rem;
+}
+
+.form-radio-large {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.form-radio-error {
+  accent-color: #f56565;
+}
+
+.form-radio-disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.form-radio-label {
+  font-size: 0.9rem;
+  color: #333;
+  cursor: pointer;
+  -webkit-user-select: none;
+  user-select: none;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.form-radio-label:hover {
+  color: #667eea;
+}
+
+.form-radio-disabled + .form-radio-label {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.form-radio-disabled + .form-radio-label:hover {
+  color: #333;
+}
+
+.form-radio-required {
+  color: #f56565;
+  font-weight: bold;
+}
+
+.form-radio-error-message {
+  font-size: 0.875rem;
+  color: #f56565;
+  margin-left: 1.75rem;
+}
+
+.form-radio-help-text {
+  font-size: 0.875rem;
+  color: #666;
+  margin-left: 1.75rem;
+}
+
+.form-radio-group-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: #333;
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.form-radio-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-radio-group-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  .form-radio-label {
+    color: #e0e0e0;
+  }
+
+  .form-radio-label:hover {
+    color: #667eea;
+  }
+
+  .form-radio-disabled + .form-radio-label:hover {
+    color: #e0e0e0;
+  }
+
+  .form-radio-help-text {
+    color: #a0aec0;
+  }
+
+  .form-radio-group-label {
+    color: #e0e0e0;
+  }
+}
+
+[data-theme="dark"] {
+  --form-radio-label-color: #e0e0e0;
+  --form-radio-label-hover-color: #667eea;
+  --form-radio-help-text-color: #a0aec0;
+  --form-radio-group-label-color: #e0e0e0;
+}
+

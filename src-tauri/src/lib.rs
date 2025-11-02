@@ -5,11 +5,16 @@ mod commands;
 mod database;
 mod ollama;
 mod auth;
-mod utils;
+pub mod utils;
+pub mod engines;
 
 use commands::{greet, api};
 use commands::database as db_commands;
 use commands::performance;
+use commands::settings;
+use commands::alerts;
+use commands::backup;
+use commands::engine;
 use serde::{Deserialize, Serialize};
 
 /// アプリケーション情報取得コマンド
@@ -52,6 +57,7 @@ pub fn run() {
             api::stop_api,
             api::delete_api,
             api::get_models_list,
+            api::get_model_catalog,
             api::get_api_details,
             api::update_api,
             api::get_api_key,
@@ -72,6 +78,26 @@ pub fn run() {
             performance::get_performance_summary,
             db_commands::check_database_integrity,
             db_commands::fix_database_integrity,
+            settings::get_app_settings,
+            settings::update_app_settings,
+            alerts::get_alert_settings,
+            alerts::update_alert_settings,
+            alerts::check_performance_alerts,
+            alerts::get_alert_history,
+            alerts::resolve_alert,
+            alerts::resolve_alerts,
+            backup::create_backup,
+            backup::restore_backup,
+            backup::restore_backup_from_json,
+            engine::get_available_engines,
+            engine::detect_engine,
+            engine::detect_all_engines,
+            engine::start_engine,
+            engine::stop_engine,
+            engine::save_engine_config,
+            engine::get_engine_configs,
+            engine::delete_engine_config,
+            engine::get_engine_models,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

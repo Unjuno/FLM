@@ -3,6 +3,10 @@
 // FE-009-01: ヘルプページ実装
 
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { useOnboarding } from '../components/onboarding/Onboarding';
+import { KeyboardShortcuts } from '../components/common/KeyboardShortcuts';
+import { useGlobalKeyboardShortcuts, KeyboardShortcut } from '../hooks/useKeyboardShortcuts';
 import './Help.css';
 
 /**
@@ -10,8 +14,64 @@ import './Help.css';
  * よくある質問、使い方ガイド、トラブルシューティングを提供
  */
 export const Help: React.FC = () => {
+  const navigate = useNavigate();
   const [activeSection, setActiveSection] = useState<string>('faq');
   const [expandedItems, setExpandedItems] = useState<Set<string>>(new Set());
+  const { handleShowOnboarding } = useOnboarding();
+  
+  // グローバルキーボードショートカットを有効化
+  useGlobalKeyboardShortcuts();
+  
+  // ショートカット定義（表示用）
+  const globalShortcuts: KeyboardShortcut[] = [
+    {
+      key: 'n',
+      description: '新しいAPIを作成',
+      ctrlKey: true,
+      handler: () => navigate('/api/create'),
+    },
+    {
+      key: 'l',
+      description: 'APIログを表示',
+      ctrlKey: true,
+      handler: () => navigate('/logs'),
+    },
+    {
+      key: 'p',
+      description: 'パフォーマンスダッシュボードを表示',
+      ctrlKey: true,
+      handler: () => navigate('/performance'),
+    },
+    {
+      key: 'm',
+      description: 'モデル管理を表示',
+      ctrlKey: true,
+      handler: () => navigate('/models'),
+    },
+    {
+      key: 'h',
+      description: 'ヘルプを表示',
+      ctrlKey: true,
+      handler: () => navigate('/help'),
+    },
+    {
+      key: 'Home',
+      description: 'ホーム画面に戻る',
+      ctrlKey: true,
+      handler: () => navigate('/'),
+    },
+    {
+      key: 'Escape',
+      description: 'モーダルを閉じる',
+      handler: () => {
+        const event = new CustomEvent('closeModal');
+        window.dispatchEvent(event);
+      },
+    },
+  ];
+  
+  // グローバルキーボードショートカットを有効化
+  useGlobalKeyboardShortcuts();
 
   const toggleItem = (id: string) => {
     const newExpanded = new Set(expandedItems);
@@ -234,6 +294,13 @@ export const Help: React.FC = () => {
             <span className="nav-icon">🔧</span>
             トラブルシューティング
           </button>
+          <button
+            className={`help-nav-button ${activeSection === 'shortcuts' ? 'active' : ''}`}
+            onClick={() => setActiveSection('shortcuts')}
+          >
+            <span className="nav-icon">⌨️</span>
+            キーボードショートカット
+          </button>
         </nav>
 
         <div className="help-content">
@@ -319,21 +386,42 @@ export const Help: React.FC = () => {
               </div>
             </section>
           )}
+
+          {activeSection === 'shortcuts' && (
+            <section className="help-section">
+              <h2>キーボードショートカット</h2>
+              <p className="help-section-intro">
+                以下のキーボードショートカットを使用して、素早く操作できます。
+              </p>
+              <KeyboardShortcuts shortcuts={globalShortcuts} />
+            </section>
+          )}
         </div>
 
         <footer className="help-footer">
-          <p>
-            まだ質問がある場合:
-            <a
-              href="https://github.com/your-repo/issues"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="help-link"
+          <div className="help-footer-content">
+            <p>
+              まだ質問がある場合:
+              <a
+                href="https://github.com/your-repo/issues"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="help-link"
+              >
+                GitHub Issues
+              </a>
+              で報告してください。
+            </p>
+            <button
+              className="help-onboarding-button"
+              onClick={() => {
+                handleShowOnboarding();
+                navigate('/');
+              }}
             >
-              GitHub Issues
-            </a>
-            で報告してください。
-          </p>
+              📚 チュートリアルを再表示
+            </button>
+          </div>
         </footer>
       </div>
     </div>

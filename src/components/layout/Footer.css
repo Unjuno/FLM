@@ -1,0 +1,117 @@
+/* FLM - フッターコンポーネントのスタイル */
+
+.app-footer {
+  background: #f5f5f5;
+  border-top: 1px solid #e0e0e0;
+  padding: 2rem;
+  margin-top: auto;
+}
+
+.footer-container {
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.footer-content {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.footer-copyright {
+  color: #666;
+  font-size: 0.875rem;
+}
+
+.footer-copyright p {
+  margin: 0;
+}
+
+.footer-nav {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.footer-links {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.footer-link-item {
+  margin: 0;
+}
+
+.footer-link {
+  background: none;
+  border: none;
+  color: #666;
+  text-decoration: none;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: color 0.2s;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+}
+
+.footer-link:hover {
+  color: #667eea;
+  background: rgba(102, 126, 234, 0.1);
+}
+
+.footer-version {
+  color: #999;
+  font-size: 0.75rem;
+}
+
+.footer-version p {
+  margin: 0;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .app-footer {
+    padding: 1.5rem 1rem;
+  }
+
+  .footer-content {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 1rem;
+  }
+
+  .footer-links {
+    gap: 1rem;
+  }
+
+  .footer-copyright,
+  .footer-version {
+    order: 2;
+  }
+
+  .footer-nav {
+    order: 1;
+    width: 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .app-footer {
+    padding: 1rem;
+  }
+
+  .footer-links {
+    flex-direction: column;
+    align-items: center;
+    gap: 0.5rem;
+  }
+}
+

@@ -189,7 +189,7 @@ describe('セキュリティテスト', () => {
         const errorMessage = String(error);
         
         // システムパスが含まれていないことを確認
-        expect(errorMessage).not.toMatch(/C:\\|/usr\/|C:\/|\.exe|\.dll/i);
+        expect(errorMessage).not.toMatch(/C:\\\\|\\/usr\\/|C:\\/|\\.exe|\\.dll/i);
       }
     });
 

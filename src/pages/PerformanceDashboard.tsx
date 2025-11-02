@@ -4,13 +4,17 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../utils/tauri';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { ResponseTimeChart } from '../components/api/ResponseTimeChart';
 import { RequestCountChart } from '../components/api/RequestCountChart';
 import { ResourceUsageChart } from '../components/api/ResourceUsageChart';
 import { ErrorRateChart } from '../components/api/ErrorRateChart';
 import { PerformanceSummary } from '../components/api/PerformanceSummary';
+import { Tooltip } from '../components/common/Tooltip';
+import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useI18n } from '../contexts/I18nContext';
+import { printSelector } from '../utils/print';
 import './PerformanceDashboard.css';
 
 /**
@@ -32,17 +36,14 @@ interface ApiInfo {
  */
 type PeriodOption = '1h' | '24h' | '7d';
 
-const PERIOD_OPTIONS: Array<{ value: PeriodOption; label: string }> = [
-  { value: '1h', label: '1時間' },
-  { value: '24h', label: '24時間' },
-  { value: '7d', label: '7日間' },
-];
+// PERIOD_OPTIONSは多言語対応のためにコンポーネント内で動的に生成
 
 /**
  * パフォーマンスダッシュボードページ
  * APIのパフォーマンスメトリクスを表示・監視します
  */
 export const PerformanceDashboard: React.FC = () => {
+  const { t } = useI18n();
   const navigate = useNavigate();
   const [apis, setApis] = useState<ApiInfo[]>([]);
   const [selectedApiId, setSelectedApiId] = useState<string>('');
@@ -50,22 +51,92 @@ export const PerformanceDashboard: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // グローバルキーボードショートカットを有効化
+  useGlobalKeyboardShortcuts();
+
+  // 期間選択オプション（多言語対応）
+  const periodOptions = useMemo(() => [
+    { value: '1h' as PeriodOption, label: t('performanceDashboard.period1h') },
+    { value: '24h' as PeriodOption, label: t('performanceDashboard.period24h') },
+    { value: '7d' as PeriodOption, label: t('performanceDashboard.period7d') },
+  ], [t]);
+
   // API一覧を取得
   const loadApis = useCallback(async () => {
     try {
-      const result = await invoke<ApiInfo[]>('list_apis');
-      setApis(result);
+      setLoading(true);
+      setError(null);
       
-      // APIが1つ以上ある場合は、最初のAPIを選択
-      if (result.length > 0 && !selectedApiId) {
-        setSelectedApiId(result[0].id);
+      // バックエンドのIPCコマンドを呼び出し（safeInvokeが内部でチェックを行う）
+      const result = await safeInvoke<Array<{
+        id: string;
+        name: string;
+        endpoint: string;
+        model_name: string;
+        port: number;
+        status: string;
+        created_at: string;
+        updated_at: string;
+      }>>('list_apis');
+      
+      // レスポンスをApiInfo形式に変換
+      const apiInfos: ApiInfo[] = result.map(api => ({
+        id: api.id,
+        name: api.name,
+        model_name: api.model_name,
+        port: api.port,
+        status: api.status,
+        endpoint: api.endpoint,
+        created_at: api.created_at,
+        updated_at: api.updated_at,
+      }));
+      
+      setApis(apiInfos);
+      
+      // APIが1つ以上ある場合は、最初のAPIを選択（初期化時のみ）
+      setSelectedApiId(prev => {
+        if (!prev && apiInfos.length > 0) {
+          return apiInfos[0].id;
+        }
+        return prev;
+      });
+      
+      // APIが存在しない場合は、エラーではなく空の状態として扱う
+      if (apiInfos.length === 0) {
+        setSelectedApiId('');
+        setError(null); // エラーをクリア（空の状態は正常）
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'API一覧の取得に失敗しました');
+      // エラーの詳細情報を取得
+      let errorMessage = t('performanceDashboard.error.loadApisError');
+      if (err instanceof Error) {
+        errorMessage = err.message;
+        // invokeが未定義の場合の特別な処理
+        if (errorMessage.includes('invoke') || errorMessage.includes('undefined') || errorMessage.includes('Cannot read properties') || errorMessage.includes('アプリケーションが正しく起動')) {
+          errorMessage = 'Tauri環境が初期化されていません。アプリケーションを再起動してください。';
+          console.warn('Tauri環境が初期化されていません');
+        } else {
+          console.error('API一覧取得エラー詳細:', {
+            message: err.message,
+            stack: err.stack,
+            name: err.name,
+          });
+        }
+      } else {
+        console.error('API一覧取得エラー（非Error型）:', err);
+        errorMessage = String(err);
+      }
+      
+      // エラーメッセージを表示
+      setError(errorMessage);
+      
+      // エラー時も空のリストとして扱い、ユーザーが操作できるようにする
+      setApis([]);
+      setSelectedApiId('');
     } finally {
       setLoading(false);
     }
-  }, [selectedApiId]);
+  }, []);
 
   // 初期化とAPI一覧取得
   useEffect(() => {
@@ -114,7 +185,7 @@ export const PerformanceDashboard: React.FC = () => {
         <div className="performance-dashboard-container">
           <div className="loading-container">
             <div className="loading-spinner"></div>
-            <p>パフォーマンスダッシュボードを読み込んでいます...</p>
+            <p>{t('performanceDashboard.loading')}</p>
           </div>
         </div>
       </div>
@@ -126,24 +197,37 @@ export const PerformanceDashboard: React.FC = () => {
       <div className="performance-dashboard-container">
         <header className="performance-dashboard-header">
           <div className="header-top">
-            <button className="back-button" onClick={() => navigate('/')}>
-              ← ホームに戻る
-            </button>
-            <h1>パフォーマンスダッシュボード</h1>
+            <Tooltip content={t('header.home')}>
+              <button className="back-button" onClick={() => navigate('/')}>
+                {t('performanceDashboard.backToHome')}
+              </button>
+            </Tooltip>
+            <h1>{t('performanceDashboard.title')}</h1>
           </div>
           <div className="header-actions">
-            <button className="refresh-button" onClick={loadApis}>
-              🔄 更新
-            </button>
+            <Tooltip content={t('performanceDashboard.refresh')}>
+              <button className="refresh-button" onClick={loadApis}>
+                {t('performanceDashboard.refresh')}
+              </button>
+            </Tooltip>
+            <Tooltip content={t('performanceDashboard.print')}>
+              <button 
+                className="print-button no-print" 
+                onClick={() => printSelector('.performance-dashboard-content', t('performanceDashboard.title'))}
+              >
+                {t('performanceDashboard.print')}
+              </button>
+            </Tooltip>
           </div>
         </header>
 
-        {error && (
+        {error && apis.length === 0 && (
           <ErrorMessage
             message={error}
             type="api"
             onClose={() => setError(null)}
             onRetry={loadApis}
+            suggestion={t('performanceDashboard.error.noApisSuggestion')}
           />
         )}
 
@@ -152,23 +236,27 @@ export const PerformanceDashboard: React.FC = () => {
           <div className="controls-panel">
             {/* API選択 */}
             <div className="control-group">
-              <label htmlFor="api-select">監視するAPI:</label>
-              <select
-                id="api-select"
-                value={selectedApiId}
-                onChange={handleApiChange}
-                className="api-select"
-              >
-                <option value="">APIを選択してください</option>
-                {apis.map((api) => (
-                  <option key={api.id} value={api.id}>
-                    {api.name} ({api.endpoint})
-                  </option>
-                ))}
-              </select>
+              <Tooltip content={t('performanceDashboard.selectApiHint')}>
+                <label htmlFor="api-select">{t('performanceDashboard.selectApi')}</label>
+              </Tooltip>
+              <Tooltip content={t('performanceDashboard.selectApiHint')} position="bottom">
+                <select
+                  id="api-select"
+                  value={selectedApiId}
+                  onChange={handleApiChange}
+                  className="api-select"
+                >
+                  <option value="">{t('performanceDashboard.selectApiPlaceholder')}</option>
+                  {apis.map((api) => (
+                    <option key={api.id} value={api.id}>
+                      {api.name} ({api.endpoint})
+                    </option>
+                  ))}
+                </select>
+              </Tooltip>
               {selectedApi && (
                 <div className="selected-api-info">
-                  <span className="info-label">選択中:</span>
+                  <span className="info-label">{t('performanceDashboard.selectedApi')}</span>
                   <span className="info-value">{selectedApi.name}</span>
                 </div>
               )}
@@ -176,19 +264,23 @@ export const PerformanceDashboard: React.FC = () => {
 
             {/* 期間選択 */}
             <div className="control-group">
-              <label htmlFor="period-select">期間:</label>
-              <select
-                id="period-select"
-                value={selectedPeriod}
-                onChange={handlePeriodChange}
-                className="period-select"
-              >
-                {PERIOD_OPTIONS.map((option) => (
+              <Tooltip content={t('performanceDashboard.periodHint')}>
+                <label htmlFor="period-select">{t('performanceDashboard.period')}</label>
+              </Tooltip>
+              <Tooltip content={t('performanceDashboard.periodHint')} position="bottom">
+                <select
+                  id="period-select"
+                  value={selectedPeriod}
+                  onChange={handlePeriodChange}
+                  className="period-select"
+                >
+                {periodOptions.map((option) => (
                   <option key={option.value} value={option.value}>
                     {option.label}
                   </option>
                 ))}
-              </select>
+                </select>
+              </Tooltip>
             </div>
           </div>
 
@@ -254,8 +346,25 @@ export const PerformanceDashboard: React.FC = () => {
           ) : (
             <div className="empty-state">
               <div className="empty-icon">📊</div>
-              <h2>APIを選択してください</h2>
-              <p>監視したいAPIを選択すると、パフォーマンスメトリクスが表示されます。</p>
+              <h2>
+                {apis.length === 0 && !error ? t('performanceDashboard.emptyState.noApiTitle') : t('performanceDashboard.emptyState.selectApiTitle')}
+              </h2>
+              <p>
+                {apis.length === 0 && !error ? (
+                  <>
+                    {t('performanceDashboard.emptyState.noApiMessage')}
+                    <br />
+                    <button 
+                      className="create-api-button"
+                      onClick={() => navigate('/api/create')}
+                    >
+                      {t('performanceDashboard.emptyState.createApi')}
+                    </button>
+                  </>
+                ) : (
+                  t('performanceDashboard.emptyState.selectApiMessage')
+                )}
+              </p>
             </div>
           )}
         </div>

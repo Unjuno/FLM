@@ -1,0 +1,63 @@
+
+> flm@1.0.0 test
+> jest --config jest.config.cjs tests/unit/api-commands.test.ts --no-coverage
+
+ts-jest[config] (WARN) message TS151001: If you have issues related to imports, you should consider setting `esModuleInterop` to `true` in your TypeScript configuration file (usually `tsconfig.json`). See https://blogs.msdn.microsoft.com/typescript/2018/01/31/announcing-typescript-2-7/#easier-ecmascript-module-interoperability for more information.
+  console.log
+    繝・せ繝育腸蠅・ｒ蛻晄悄蛹悶＠縺ｦ縺・∪縺・..
+
+      at Object.<anonymous> (tests/setup/jest.setup.ts:11:11)
+
+  console.log
+    API繧ｳ繝槭Φ繝峨ユ繧ｹ繝医ｒ髢句ｧ九＠縺ｾ縺・
+      at Object.<anonymous> (tests/unit/api-commands.test.ts:22:13)
+
+  console.log
+    API繧ｳ繝槭Φ繝峨ユ繧ｹ繝医ｒ螳御ｺ・＠縺ｾ縺励◆
+
+      at Object.<anonymous> (tests/unit/api-commands.test.ts:27:13)
+
+  console.log
+    繝・せ繝育腸蠅・ｒ繧ｯ繝ｪ繝ｼ繝ｳ繧｢繝・・縺励※縺・∪縺・..
+
+      at Object.<anonymous> (tests/setup/jest.setup.ts:16:11)
+
+FAIL tests/unit/api-commands.test.ts
+  API Commands Unit Tests
+    create_api command
+      竏・should validate API creation config structure (3 ms)
+      竏・should handle missing required fields (1 ms)
+      竏・should validate port range (1 ms)
+    list_apis command
+      竏・should return an array of API info (2 ms)
+    start_api and stop_api commands
+      竏・should validate API ID format
+      竏・should handle invalid API ID
+    error handling
+      ﾃ・should return user-friendly error messages (2 ms)
+      竏・should handle network errors gracefully
+
+  笳・API Commands Unit Tests 窶ｺ error handling 窶ｺ should return user-friendly error messages
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      136 |         expect(typeof message).toBe('string');
+      137 |         // 髱樣幕逋ｺ閠・髄縺代・繝｡繝・そ繝ｼ繧ｸ・亥ｰる摩逕ｨ隱槭′蟆代↑縺・ｼ・[39m
+    > 138 |         expect(message.includes('繧ｨ繝ｩ繝ｼ') || message.includes('繧ｨ繝ｩ繝ｼ')).toBe(true);
+          |                                                                    ^
+      139 |       });
+      140 |     });
+      141 |
+
+      at tests/unit/api-commands.test.ts:138:68
+          at Array.forEach (<anonymous>)
+      at Object.<anonymous> (tests/unit/api-commands.test.ts:134:21)
+
+Test Suites: 1 failed, 1 total
+Tests:       1 failed, 7 passed, 8 total
+Snapshots:   0 total
+Time:        0.816 s, estimated 1 s
+Ran all test suites matching /tests\\unit\\api-commands.test.ts/i.

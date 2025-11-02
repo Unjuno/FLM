@@ -2,8 +2,10 @@
 // フロントエンドエージェント (FE) 実装
 // F001: API作成機能 - 設定画面
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { safeInvoke } from '../../utils/tauri';
 import { HelpTooltip } from '../common/HelpTooltip';
+import { Tooltip } from '../common/Tooltip';
 import type { SelectedModel, ApiConfig } from '../../types/api';
 import './ApiConfigForm.css';
 
@@ -23,8 +25,32 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
   onSubmit,
   onBack,
 }) => {
-  const [config, setConfig] = useState<ApiConfig>(defaultConfig);
+  const [config, setConfig] = useState<ApiConfig>({
+    ...defaultConfig,
+    engineType: defaultConfig.engineType || 'ollama',
+  });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [availableEngines, setAvailableEngines] = useState<string[]>([]);
+  const [loadingEngines, setLoadingEngines] = useState(false);
+
+  // 利用可能なエンジン一覧を取得
+  useEffect(() => {
+    loadAvailableEngines();
+  }, []);
+
+  const loadAvailableEngines = async () => {
+    try {
+      setLoadingEngines(true);
+      const engines = await safeInvoke<string[]>('get_available_engines');
+      setAvailableEngines(engines);
+    } catch (err) {
+      console.error('エンジン一覧の取得に失敗:', err);
+      // デフォルトエンジンのみ使用可能とする
+      setAvailableEngines(['ollama']);
+    } finally {
+      setLoadingEngines(false);
+    }
+  };
 
   // フォームバリデーション
   const validate = (): boolean => {
@@ -80,8 +106,49 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
         </div>
 
         <div className="form-group">
+          <label htmlFor="engine-type">
+            LLMエンジン <span className="required">*</span>
+            <Tooltip
+              content="使用するLLMエンジンを選択します。Ollama（デフォルト）、LM Studio、vLLM、llama.cppから選択できます。"
+              position="right"
+            >
+              <span className="tooltip-trigger-icon">ℹ️</span>
+            </Tooltip>
+          </label>
+          <select
+            id="engine-type"
+            value={config.engineType || 'ollama'}
+            onChange={(e) => setConfig({ ...config, engineType: e.target.value })}
+            className={errors.engineType ? 'error' : ''}
+            disabled={loadingEngines}
+          >
+            {availableEngines.map((engine) => {
+              const engineNames: { [key: string]: string } = {
+                'ollama': 'Ollama',
+                'lm_studio': 'LM Studio',
+                'vllm': 'vLLM',
+                'llama_cpp': 'llama.cpp',
+              };
+              return (
+                <option key={engine} value={engine}>
+                  {engineNames[engine] || engine}
+                </option>
+              );
+            })}
+          </select>
+          {errors.engineType && <span className="error-message">{errors.engineType}</span>}
+          <small className="form-hint">LLM実行エンジン（デフォルト: Ollama）</small>
+        </div>
+
+        <div className="form-group">
           <label htmlFor="api-port">
             ポート番号 <span className="required">*</span>
+            <Tooltip
+              content="APIエンドポイントが使用するポート番号です。1024-65535の範囲で指定してください。他のアプリケーションが使用していないポートを選択してください。"
+              position="right"
+            >
+              <span className="tooltip-trigger-icon">ℹ️</span>
+            </Tooltip>
           </label>
           <input
             id="api-port"
@@ -98,11 +165,16 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
 
         <div className="form-group">
           <label className="checkbox-label">
-            <input
-              type="checkbox"
-              checked={config.enableAuth}
-              onChange={(e) => setConfig({ ...config, enableAuth: e.target.checked })}
-            />
+            <Tooltip
+              content="認証を有効にすると、APIキーが必要になります。外部アプリケーションから使用する場合は有効にすることをおすすめします。ローカル環境のみで使用する場合は無効でも問題ありません。"
+              position="right"
+            >
+              <input
+                type="checkbox"
+                checked={config.enableAuth}
+                onChange={(e) => setConfig({ ...config, enableAuth: e.target.checked })}
+              />
+            </Tooltip>
             <span>認証を有効にする</span>
           </label>
           <small className="form-hint">

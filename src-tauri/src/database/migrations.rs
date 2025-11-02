@@ -6,7 +6,8 @@ use crate::database::{DatabaseError, models::Migration};
 use chrono::Utc;
 
 /// マイグレーションのバージョン番号
-const CURRENT_VERSION: i32 = 1;
+#[allow(dead_code)] // 将来の検証機能で使用予定
+const CURRENT_VERSION: i32 = 2;
 
 /// 全てのマイグレーションを実行
 pub fn run_migrations(conn: &mut Connection) -> Result<(), DatabaseError> {
@@ -14,13 +15,73 @@ pub fn run_migrations(conn: &mut Connection) -> Result<(), DatabaseError> {
     let current_version = get_current_version(conn)?;
     
     // 未適用のマイグレーションを実行
-    if current_version < CURRENT_VERSION {
-        apply_migration(conn, 1, "initial_schema", || {
+    if current_version < 1 {
+        apply_migration(conn, 1, "initial_schema", |conn_ref| {
             // 初回スキーマは既にschema.rsで作成済み
             // ここでは追加のマイグレーション処理があれば記述
+            let _ = conn_ref; // 未使用警告を回避
             Ok(())
         })?;
     }
+    
+    // エンジン対応のマイグレーション（バージョン2）
+    if current_version < 2 {
+        apply_migration(conn, 2, "add_engine_support", |conn_ref| {
+            add_engine_support(conn_ref)
+        })?;
+    }
+    
+    Ok(())
+}
+
+/// エンジン対応のマイグレーション
+fn add_engine_support(tx: &mut rusqlite::Transaction) -> Result<(), DatabaseError> {
+    // APIsテーブルにengine_typeカラムを追加（既に存在する場合はエラーを無視）
+    tx.execute(
+        "ALTER TABLE apis ADD COLUMN engine_type TEXT NOT NULL DEFAULT 'ollama'",
+        [],
+    ).ok(); // エラーは無視（既に存在する場合）
+    
+    // APIsテーブルにengine_configカラムを追加
+    tx.execute(
+        "ALTER TABLE apis ADD COLUMN engine_config TEXT",
+        [],
+    ).ok(); // エラーは無視（既に存在する場合）
+    
+    // engine_configsテーブルを作成
+    tx.execute(
+        r#"
+        CREATE TABLE IF NOT EXISTS engine_configs (
+            id TEXT PRIMARY KEY,
+            engine_type TEXT NOT NULL,
+            name TEXT NOT NULL,
+            base_url TEXT NOT NULL,
+            auto_detect INTEGER DEFAULT 1,
+            executable_path TEXT,
+            is_default INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        "#,
+        [],
+    )?;
+    
+    // インデックスを作成
+    tx.execute(
+        "CREATE INDEX IF NOT EXISTS idx_engine_configs_type ON engine_configs(engine_type)",
+        [],
+    )?;
+    
+    tx.execute(
+        "CREATE INDEX IF NOT EXISTS idx_engine_configs_default ON engine_configs(is_default)",
+        [],
+    )?;
+    
+    // APIsテーブルにインデックスを追加
+    tx.execute(
+        "CREATE INDEX IF NOT EXISTS idx_apis_engine_type ON apis(engine_type)",
+        [],
+    ).ok(); // エラーは無視
     
     Ok(())
 }
@@ -51,14 +112,14 @@ fn get_current_version(conn: &Connection) -> Result<i32, DatabaseError> {
 /// マイグレーションを適用
 fn apply_migration<F>(conn: &mut Connection, version: i32, name: &str, migration_fn: F) -> Result<(), DatabaseError>
 where
-    F: FnOnce() -> Result<(), DatabaseError>,
+    F: FnOnce(&mut rusqlite::Transaction) -> Result<(), DatabaseError>,
 {
     // トランザクション内で実行
-    let tx = conn.transaction()
+    let mut tx = conn.transaction()
         .map_err(|_| DatabaseError::MigrationFailed("データベースの更新を開始できませんでした。アプリを再起動して再度お試しください。".to_string()))?;
     
     // マイグレーション関数を実行
-    migration_fn()?;
+    migration_fn(&mut tx)?;
     
     // マイグレーション履歴を記録
     let now = Utc::now().to_rfc3339();

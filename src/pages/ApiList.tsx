@@ -7,6 +7,8 @@ import { useNavigate } from 'react-router-dom';
 import { invoke } from '@tauri-apps/api/core';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { SettingsExport } from '../components/api/SettingsExport';
+import { Tooltip } from '../components/common/Tooltip';
+import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import './ApiList.css';
 
 /**
@@ -32,6 +34,9 @@ export const ApiList: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedApiIds, setSelectedApiIds] = useState<Set<string>>(new Set());
+  
+  // グローバルキーボードショートカットを有効化
+  useGlobalKeyboardShortcuts();
 
   // API一覧を取得（useCallbackでメモ化してパフォーマンス最適化）
   const loadApis = useCallback(async () => {
@@ -179,18 +184,24 @@ export const ApiList: React.FC = () => {
       <div className="api-list-container">
         <header className="api-list-header">
           <div className="header-top">
-            <button className="back-button" onClick={() => navigate('/')}>
-              ← ホームに戻る
-            </button>
+            <Tooltip content="ホーム画面に戻ります">
+              <button className="back-button" onClick={() => navigate('/')}>
+                ← ホームに戻る
+              </button>
+            </Tooltip>
             <h1>API一覧</h1>
           </div>
           <div className="header-actions">
-            <button className="create-button" onClick={() => navigate('/api/create')}>
-              + 新しいAPIを作成
-            </button>
-            <button className="refresh-button" onClick={loadApis}>
-              🔄 更新
-            </button>
+            <Tooltip content="新しいAPIエンドポイントを作成します。Ollamaモデルを選択してAPIを設定できます。">
+              <button className="create-button" onClick={() => navigate('/api/create')}>
+                + 新しいAPIを作成
+              </button>
+            </Tooltip>
+            <Tooltip content="API一覧を最新の状態に更新します。起動・停止状態も更新されます。">
+              <button className="refresh-button" onClick={loadApis}>
+                🔄 更新
+              </button>
+            </Tooltip>
           </div>
         </header>
 
@@ -223,9 +234,11 @@ export const ApiList: React.FC = () => {
             <div className="empty-icon">📋</div>
             <h2>APIがまだ作成されていません</h2>
             <p>新しいAPIを作成して、ローカルLLMのAPIを利用しましょう。</p>
-            <button className="create-button primary" onClick={() => navigate('/api/create')}>
-              + 新しいAPIを作成
-            </button>
+            <Tooltip content="Ollamaモデルを使用して新しいAPIエンドポイントを作成します。作成後はOpenAI互換の形式で利用できます。">
+              <button className="create-button primary" onClick={() => navigate('/api/create')}>
+                + 新しいAPIを作成
+              </button>
+            </Tooltip>
           </div>
         ) : (
           <div className="api-list">
@@ -274,42 +287,59 @@ export const ApiList: React.FC = () => {
                 </div>
 
                 <div className="api-actions">
-                  <button
-                    className={`action-button ${api.status === 'running' ? 'stop' : 'start'}`}
-                    onClick={() => handleToggleStatus(api.id, api.status)}
+                  <Tooltip 
+                    content={api.status === 'running' 
+                      ? 'APIを停止します。停止後はリクエストを受け付けなくなります。' 
+                      : 'APIを起動します。起動後はリクエストを受け付けるようになります。'}
+                    position="top"
                   >
-                    {api.status === 'running' ? '停止' : '起動'}
-                  </button>
-                  <button
-                    className="action-button test"
-                    onClick={() => navigate(`/api/test/${api.id}`)}
-                  >
-                    テスト
-                  </button>
-                  <button
-                    className="action-button details"
-                    onClick={() => navigate(`/api/details/${api.id}`)}
-                  >
-                    詳細
-                  </button>
-                  <button
-                    className="action-button settings"
-                    onClick={() => navigate(`/api/settings/${api.id}`)}
-                  >
-                    設定
-                  </button>
-                  <button
-                    className="action-button edit"
-                    onClick={() => navigate(`/api/edit/${api.id}`)}
-                  >
-                    設定変更
-                  </button>
-                  <button
-                    className="action-button delete"
-                    onClick={() => handleDelete(api.id, api.name)}
-                  >
-                    削除
-                  </button>
+                    <button
+                      className={`action-button ${api.status === 'running' ? 'stop' : 'start'}`}
+                      onClick={() => handleToggleStatus(api.id, api.status)}
+                    >
+                      {api.status === 'running' ? '停止' : '起動'}
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="このAPIをテストできます。チャット形式でAPIの動作を確認します。" position="top">
+                    <button
+                      className="action-button test"
+                      onClick={() => navigate(`/api/test/${api.id}`)}
+                    >
+                      テスト
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="APIの詳細情報を表示します。エンドポイント、APIキー、モデル情報などを確認できます。" position="top">
+                    <button
+                      className="action-button details"
+                      onClick={() => navigate(`/api/details/${api.id}`)}
+                    >
+                      詳細
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="APIの設定を確認・変更します。ポート番号や認証設定などを変更できます。" position="top">
+                    <button
+                      className="action-button settings"
+                      onClick={() => navigate(`/api/settings/${api.id}`)}
+                    >
+                      設定
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="APIの設定を変更します。変更後は再起動が必要な場合があります。" position="top">
+                    <button
+                      className="action-button edit"
+                      onClick={() => navigate(`/api/edit/${api.id}`)}
+                    >
+                      設定変更
+                    </button>
+                  </Tooltip>
+                  <Tooltip content="このAPIを削除します。関連するプロセスも停止され、この操作は取り消せません。" position="top">
+                    <button
+                      className="action-button delete"
+                      onClick={() => handleDelete(api.id, api.name)}
+                    >
+                      削除
+                    </button>
+                  </Tooltip>
                 </div>
               </div>
             ))}

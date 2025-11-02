@@ -46,8 +46,8 @@ export const ApiInfo: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      // バックエンドのIPCコマンドを呼び出し（list_apisから該当APIを取得）
-      const apis = await invoke<Array<{
+      // バックエンドのIPCコマンドを呼び出してAPI詳細を取得（APIキーを含む）
+      const apiDetails = await invoke<{
         id: string;
         name: string;
         endpoint: string;
@@ -55,39 +55,20 @@ export const ApiInfo: React.FC = () => {
         port: number;
         enable_auth: boolean;
         status: string;
+        api_key: string | null;
         created_at: string;
         updated_at: string;
-      }>>('list_apis');
+      }>('get_api_details', { api_id: apiId });
 
-      type ApiListItem = {
-        id: string;
-        name: string;
-        endpoint: string;
-        model_name: string;
-        port: number;
-        enable_auth: boolean;
-        status: string;
-        created_at: string;
-        updated_at: string;
-      };
-      const api = apis.find((a: ApiListItem) => a.id === apiId);
-      
-      if (!api) {
-        setError('APIが見つかりませんでした');
-        return;
-      }
-
-      // APIキーは別途取得する必要があるが、現在の実装ではAPIキーは作成時のみ表示される
-      // セキュリティ上の理由で、APIキー取得コマンドは後で実装
       setApiInfo({
-        id: api.id,
-        name: api.name,
-        endpoint: api.endpoint,
-        apiKey: api.enable_auth ? undefined : undefined, // TODO: APIキー取得コマンドで取得
-        port: api.port,
-        model: api.model_name,
-        status: (api.status === 'running' ? 'running' : 'stopped') as 'running' | 'stopped',
-        created_at: api.created_at,
+        id: apiDetails.id,
+        name: apiDetails.name,
+        endpoint: apiDetails.endpoint,
+        apiKey: apiDetails.api_key || undefined,
+        port: apiDetails.port,
+        model: apiDetails.model_name,
+        status: (apiDetails.status === 'running' ? 'running' : 'stopped') as 'running' | 'stopped',
+        created_at: apiDetails.created_at,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'API情報の取得に失敗しました');

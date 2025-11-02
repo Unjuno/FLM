@@ -11,6 +11,9 @@ import { LogStatistics } from '../components/api/LogStatistics';
 import { LogDetail } from '../components/api/LogDetail';
 import { LogExport } from '../components/api/LogExport';
 import { LogDelete } from '../components/api/LogDelete';
+import { Tooltip } from '../components/common/Tooltip';
+import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { printSelector } from '../utils/print';
 import './ApiLogs.css';
 
 /**
@@ -57,6 +60,9 @@ export const ApiLogs: React.FC = () => {
   const [totalLogs, setTotalLogs] = useState(0);
   const [selectedLog, setSelectedLog] = useState<RequestLogInfo | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
+
+  // グローバルキーボードショートカットを有効化
+  useGlobalKeyboardShortcuts();
   const [filter, setFilter] = useState<LogFilterState>({
     startDate: '',
     endDate: '',
@@ -73,14 +79,18 @@ export const ApiLogs: React.FC = () => {
       const result = await invoke<ApiInfo[]>('list_apis');
       setApis(result);
       
-      // APIが1つ以上ある場合は、最初のAPIを選択
-      if (result.length > 0 && !selectedApiId) {
-        setSelectedApiId(result[0].id);
-      }
+      // APIが1つ以上ある場合は、最初のAPIを選択（初期化時のみ）
+      setSelectedApiId(prev => {
+        if (!prev && result.length > 0) {
+          return result[0].id;
+        }
+        return prev;
+      });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'API一覧の取得に失敗しました');
+      setLoading(false);
     }
-  }, [selectedApiId]);
+  }, []);
 
   // ログ一覧を取得（フィルタ対応 - FE-006-05）
   const loadLogs = useCallback(async (apiId: string | null, page: number, filterState?: LogFilterState) => {
@@ -141,6 +151,7 @@ export const ApiLogs: React.FC = () => {
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ログの取得に失敗しました');
       setLogs([]);
+      setTotalLogs(0);
     } finally {
       setLoading(false);
     }
@@ -151,12 +162,25 @@ export const ApiLogs: React.FC = () => {
     loadApis();
   }, [loadApis]);
 
-  // API選択時、ページ変更時、フィルタ変更時にログを取得
+  // API選択時、ページ変更時にログを取得
   useEffect(() => {
     if (selectedApiId) {
-      loadLogs(selectedApiId, currentPage);
+      loadLogs(selectedApiId, currentPage, filter);
+    } else {
+      setLogs([]);
+      setTotalLogs(0);
+      setLoading(false);
     }
-  }, [selectedApiId, currentPage, filter, loadLogs]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedApiId, currentPage]);
+  
+  // フィルタ変更時にログを再取得
+  useEffect(() => {
+    if (selectedApiId) {
+      loadLogs(selectedApiId, currentPage, filter);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [filter]);
 
   // リアルタイム更新（ポーリング）
   useEffect(() => {
@@ -165,13 +189,15 @@ export const ApiLogs: React.FC = () => {
     }
 
     const interval = setInterval(() => {
-      loadLogs(selectedApiId, currentPage);
+      if (selectedApiId) {
+        loadLogs(selectedApiId, currentPage, filter);
+      }
     }, POLLING_INTERVAL);
 
     return () => {
       clearInterval(interval);
     };
-  }, [autoRefresh, selectedApiId, currentPage, loadLogs]);
+  }, [autoRefresh, selectedApiId, currentPage]);
 
   // ページが非表示の場合はポーリングを停止
   useEffect(() => {
@@ -298,22 +324,35 @@ export const ApiLogs: React.FC = () => {
       <div className="api-logs-container">
         <header className="api-logs-header">
           <div className="header-top">
-            <button className="back-button" onClick={() => navigate('/')}>
-              ← ホームに戻る
-            </button>
+            <Tooltip content="ホーム画面に戻ります">
+              <button className="back-button" onClick={() => navigate('/')}>
+                ← ホームに戻る
+              </button>
+            </Tooltip>
             <h1>APIログ</h1>
           </div>
           <div className="header-actions">
-            <button
-              className={`auto-refresh-toggle ${autoRefresh ? 'active' : ''}`}
-              onClick={() => setAutoRefresh(!autoRefresh)}
-              title={autoRefresh ? '自動更新を停止' : '自動更新を開始'}
-            >
-              {autoRefresh ? '⏸️ 自動更新: ON' : '▶️ 自動更新: OFF'}
-            </button>
-            <button className="refresh-button" onClick={() => selectedApiId && loadLogs(selectedApiId, currentPage)}>
-              🔄 更新
-            </button>
+            <Tooltip content={autoRefresh ? '自動更新を停止します。ログは手動で更新する必要があります。' : '30秒ごとにログを自動更新します。最新のログを常に表示できます。'}>
+              <button
+                className={`auto-refresh-toggle ${autoRefresh ? 'active' : ''}`}
+                onClick={() => setAutoRefresh(!autoRefresh)}
+              >
+                {autoRefresh ? '⏸️ 自動更新: ON' : '▶️ 自動更新: OFF'}
+              </button>
+            </Tooltip>
+            <Tooltip content="ログ一覧を最新の状態に更新します。フィルタ条件は維持されます。">
+              <button className="refresh-button" onClick={() => selectedApiId && loadLogs(selectedApiId, currentPage, filter)}>
+                🔄 更新
+              </button>
+            </Tooltip>
+            <Tooltip content="現在のログ一覧を印刷します。">
+              <button 
+                className="print-button no-print" 
+                onClick={() => printSelector('.api-logs-content', 'APIログ一覧')}
+              >
+                🖨️ 印刷
+              </button>
+            </Tooltip>
           </div>
         </header>
 
@@ -322,7 +361,7 @@ export const ApiLogs: React.FC = () => {
             message={error}
             type="api"
             onClose={() => setError(null)}
-            onRetry={() => selectedApiId && loadLogs(selectedApiId, currentPage)}
+            onRetry={() => selectedApiId && loadLogs(selectedApiId, currentPage, filter)}
           />
         )}
 
@@ -377,20 +416,24 @@ export const ApiLogs: React.FC = () => {
 
           {/* API選択 */}
           <div className="api-selector">
-            <label htmlFor="api-select">表示するAPI:</label>
-            <select
-              id="api-select"
-              value={selectedApiId}
-              onChange={handleApiChange}
-              className="api-select"
-            >
-              <option value="">すべてのAPI</option>
-              {apis.map((api) => (
-                <option key={api.id} value={api.id}>
-                  {api.name} ({api.endpoint})
-                </option>
-              ))}
-            </select>
+            <Tooltip content="表示するAPIを選択します。特定のAPIを選択すると、そのAPIのログのみが表示されます。">
+              <label htmlFor="api-select">表示するAPI:</label>
+            </Tooltip>
+            <Tooltip content="表示するAPIを選択します。特定のAPIを選択すると、そのAPIのログのみが表示されます。" position="bottom">
+              <select
+                id="api-select"
+                value={selectedApiId}
+                onChange={handleApiChange}
+                className="api-select"
+              >
+                <option value="">すべてのAPI</option>
+                {apis.map((api) => (
+                  <option key={api.id} value={api.id}>
+                    {api.name} ({api.endpoint})
+                  </option>
+                ))}
+              </select>
+            </Tooltip>
             {selectedApi && (
               <div className="selected-api-info">
                 <span className="info-label">選択中:</span>

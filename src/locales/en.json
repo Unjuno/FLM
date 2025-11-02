@@ -1,0 +1,135 @@
+{
+  "modelDownloadProgress": {
+    "title": "Downloading Model",
+    "downloaded": "Downloaded:",
+    "speed": "Speed:",
+    "remaining": "Remaining:",
+    "calculating": "Calculating...",
+    "time": {
+      "seconds": "{{seconds}}s",
+      "minutesSeconds": "{{minutes}}m {{seconds}}s"
+    },
+    "status": {
+      "verifying": "Verifying...",
+      "complete": "✓ Download Complete",
+      "error": "⚠️ An error occurred",
+      "paused": "⏸️ Paused"
+    },
+    "actions": {
+      "resume": "▶️ Resume",
+      "pause": "⏸️ Pause",
+      "cancel": "❌ Cancel",
+      "close": "Close"
+    },
+    "aria": {
+      "progress": "Download progress: {{percentage}}%",
+      "resume": "Resume download",
+      "pause": "Pause download",
+      "cancel": "Cancel download",
+      "close": "Close"
+    }
+  },
+  "settings": {
+    "title": "Application Settings",
+    "subtitle": "Manage application-wide settings",
+    "loading": "Loading...",
+    "appearance": {
+      "title": "Appearance",
+      "theme": "Theme",
+      "themeHint": "Light/Dark mode settings (Current: {{currentTheme}})",
+      "themeAuto": "Follow system settings",
+      "themeLight": "Light",
+      "themeDark": "Dark",
+      "quickToggle": "Quick toggle"
+    },
+    "language": {
+      "title": "Language",
+      "label": "Display Language",
+      "hint": "Application display language",
+      "japanese": "Japanese",
+      "english": "English"
+    },
+    "autoRefresh": {
+      "title": "Auto Refresh",
+      "label": "Auto refresh interval (seconds)",
+      "hint": "Data auto refresh interval (min: 5 seconds, max: 300 seconds)"
+    },
+    "logManagement": {
+      "title": "Log Management",
+      "label": "Log retention period (days)",
+      "hint": "Number of days to retain logs (min: 1 day, max: 365 days)"
+    },
+    "notifications": {
+      "title": "Notifications",
+      "label": "Enable notifications",
+      "hint": "Enable notifications for errors and important events"
+    },
+    "database": {
+      "title": "Database Management",
+      "info": "Database integrity checks and repairs are provided by separate features."
+    },
+    "actions": {
+      "save": "Save",
+      "saving": "Saving...",
+      "cancel": "Cancel",
+      "reset": "Reset to defaults",
+      "resetConfirm": "Reset all settings to default values?"
+    },
+    "messages": {
+      "loadError": "Failed to load settings",
+      "saveSuccess": "Settings saved",
+      "saveError": "Failed to save settings",
+      "themeChangeSuccess": "Theme changed",
+      "themeChangeError": "Failed to change theme",
+      "resetSuccess": "Settings reset",
+      "resetError": "Failed to reset settings"
+    }
+  },
+  "header": {
+    "home": "Home",
+    "apiList": "API List",
+    "modelManagement": "Model Management",
+    "logs": "Logs",
+    "performance": "Performance",
+    "settings": "Settings",
+    "help": "Help",
+    "notifications": "Notifications",
+    "userMenu": "User menu",
+    "openMenu": "Open menu",
+    "closeMenu": "Close menu"
+  },
+  "languageSwitcher": {
+    "label": "Select language",
+    "japanese": "Japanese",
+    "english": "English",
+    "changeLanguage": "Change language"
+  },
+  "performanceDashboard": {
+    "title": "Performance Dashboard",
+    "loading": "Loading performance dashboard...",
+    "backToHome": "← Back to Home",
+    "refresh": "🔄 Refresh",
+    "print": "🖨️ Print",
+    "selectApi": "API to Monitor:",
+    "selectApiHint": "Select the API to monitor. Performance metrics for the selected API will be displayed.",
+    "selectApiPlaceholder": "Please select an API",
+    "selectedApi": "Selected:",
+    "period": "Period:",
+    "periodHint": "Select the time period for displaying performance data. Choose from 1 hour, 24 hours, or 7 days.",
+    "period1h": "1 hour",
+    "period24h": "24 hours",
+    "period7d": "7 days",
+    "emptyState": {
+      "noApiTitle": "No APIs created yet",
+      "selectApiTitle": "Please select an API",
+      "noApiMessage": "To use the performance dashboard, you need to create an API first.",
+      "createApi": "Create New API",
+      "selectApiMessage": "Select an API to monitor to display performance metrics."
+    },
+    "error": {
+      "loadApisError": "Failed to load API list",
+      "noApisSuggestion": "If no APIs have been created yet, please create an API from the 'Create New API' button first."
+    }
+  }
+}
+

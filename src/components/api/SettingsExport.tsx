@@ -110,7 +110,7 @@ export const SettingsExport: React.FC<SettingsExportProps> = ({
       }
 
       // インポートを実行（デフォルトでskip方式を使用）
-      await handleImportWithResolution(fileContent, 'skip');
+      await handleImportWithResolutionDirectly(fileContent, 'skip');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'インポートに失敗しました');
       console.error('設定インポートエラー:', err);
@@ -125,18 +125,13 @@ export const SettingsExport: React.FC<SettingsExportProps> = ({
   };
 
   /**
-   * 競合解決ダイアログで選択された方法でインポートを実行
+   * インポートを実行（直接呼び出し用）
    */
-  const handleImportWithResolution = async () => {
-    if (!pendingFileContent) {
-      return;
-    }
-
+  const handleImportWithResolutionDirectly = async (fileContent: string, conflictResolution: string) => {
     try {
       setImporting(true);
       setError(null);
       setSuccessMessage(null);
-      setShowConflictDialog(false);
 
       // import_api_settings IPCコマンドを呼び出し
       const result = await invoke<{

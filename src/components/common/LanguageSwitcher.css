@@ -1,0 +1,133 @@
+/* FLM - 言語切り替えコンポーネントのスタイル */
+
+.language-switcher {
+  position: relative;
+  display: inline-block;
+}
+
+.language-switcher-button {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: var(--background-color, #ffffff);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 0.375rem;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-color, #333333);
+  transition: all 0.2s ease;
+}
+
+.language-switcher-button:hover {
+  background: var(--hover-background-color, #f5f5f5);
+  border-color: var(--hover-border-color, #d0d0d0);
+}
+
+.language-switcher-button:focus {
+  outline: 2px solid var(--focus-color, #4a90e2);
+  outline-offset: 2px;
+}
+
+.language-flag {
+  font-size: 1.25rem;
+  line-height: 1;
+}
+
+.language-code {
+  font-weight: 600;
+  letter-spacing: 0.05em;
+}
+
+.language-arrow {
+  font-size: 0.75rem;
+  opacity: 0.6;
+  transition: transform 0.2s ease;
+}
+
+.language-dropdown {
+  position: absolute;
+  top: calc(100% + 0.5rem);
+  right: 0;
+  min-width: 180px;
+  background: var(--background-color, #ffffff);
+  border: 1px solid var(--border-color, #e0e0e0);
+  border-radius: 0.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  z-index: 1000;
+  overflow: hidden;
+  animation: slideDown 0.2s ease;
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    transform: translateY(-0.5rem);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.language-option {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: var(--text-color, #333333);
+  transition: background-color 0.15s ease;
+}
+
+.language-option:hover {
+  background: var(--hover-background-color, #f5f5f5);
+}
+
+.language-option.active {
+  background: var(--active-background-color, #e8f4f8);
+  font-weight: 600;
+}
+
+.language-option .language-flag {
+  font-size: 1.5rem;
+  line-height: 1;
+}
+
+.language-option .language-label {
+  flex: 1;
+}
+
+.language-check {
+  color: var(--primary-color, #4a90e2);
+  font-weight: bold;
+  font-size: 1rem;
+}
+
+/* ダークモード対応 */
+[data-theme="dark"] .language-switcher-button,
+[data-theme="dark"] .language-dropdown {
+  background: var(--dark-background-color, #2d2d2d);
+  border-color: var(--dark-border-color, #404040);
+  color: var(--dark-text-color, #e0e0e0);
+}
+
+[data-theme="dark"] .language-switcher-button:hover {
+  background: var(--dark-hover-background-color, #3d3d3d);
+  border-color: var(--dark-hover-border-color, #505050);
+}
+
+[data-theme="dark"] .language-option:hover {
+  background: var(--dark-hover-background-color, #3d3d3d);
+}
+
+[data-theme="dark"] .language-option.active {
+  background: var(--dark-active-background-color, #1a4a5a);
+}
+

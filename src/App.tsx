@@ -15,6 +15,18 @@ import { ModelManagement } from "./pages/ModelManagement";
 import { ApiLogs } from "./pages/ApiLogs";
 import { PerformanceDashboard } from "./pages/PerformanceDashboard";
 import { Help } from "./pages/Help";
+import { Settings } from "./pages/Settings";
+import { AlertSettings } from "./pages/AlertSettings";
+import { AlertHistory } from "./pages/AlertHistory";
+import { BackupRestore } from "./pages/BackupRestore";
+import { About } from "./pages/About";
+import { PrivacyPolicy } from "./pages/PrivacyPolicy";
+import { TermsOfService } from "./pages/TermsOfService";
+import { useGlobalKeyboardShortcuts } from "./hooks/useKeyboardShortcuts";
+import { ErrorBoundary } from "./components/common/ErrorBoundary";
+import { ThemeProvider } from "./contexts/ThemeContext";
+import { NotificationProvider } from "./contexts/NotificationContext";
+import { I18nProvider } from "./contexts/I18nContext";
 import "./App.css";
 
 /**
@@ -22,8 +34,15 @@ import "./App.css";
  * ルーティング設定を含みます
  */
 function App() {
+  // グローバルキーボードショートカットを有効化
+  useGlobalKeyboardShortcuts();
+
   return (
-    <div className="app">
+    <ErrorBoundary>
+      <I18nProvider>
+        <ThemeProvider>
+          <NotificationProvider>
+            <div className="app">
       <Routes>
         {/* ホーム画面 */}
         <Route path="/" element={<Home />} />
@@ -62,10 +81,38 @@ function App() {
         {/* ヘルプ画面 */}
         <Route path="/help" element={<Help />} />
         
+        {/* 設定画面 */}
+        <Route path="/settings" element={<Settings />} />
+        
+        {/* アラート設定画面 */}
+        <Route path="/alerts/settings" element={<AlertSettings />} />
+        
+        {/* アラート履歴画面 */}
+        <Route path="/alerts/history" element={<AlertHistory />} />
+        
+        {/* バックアップ・復元画面 */}
+        <Route path="/backup" element={<BackupRestore />} />
+        
+        {/* About画面 */}
+        <Route path="/about" element={<About />} />
+        
+        {/* プライバシーポリシー画面 */}
+        <Route path="/privacy" element={<PrivacyPolicy />} />
+        
+        {/* 利用規約画面 */}
+        <Route path="/terms" element={<TermsOfService />} />
+        
+        {/* バックアップ・復元画面 */}
+        <Route path="/backup" element={<BackupRestore />} />
+        
         {/* デフォルトルートはホームにリダイレクト */}
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
-    </div>
+      </div>
+            </NotificationProvider>
+          </ThemeProvider>
+        </I18nProvider>
+      </ErrorBoundary>
   );
 }
 

@@ -2,7 +2,8 @@
 // フロントエンドエージェント (FE) 実装
 // F004: モデル管理機能 - モデルダウンロード進捗表示
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback, useMemo } from 'react';
+import { useI18n } from '../../contexts/I18nContext';
 import './ModelDownloadProgress.css';
 
 /**
@@ -41,63 +42,86 @@ export const ModelDownloadProgress: React.FC<ModelDownloadProgressProps> = ({
   onResume,
   onCancel,
 }) => {
-  const [isPaused, setIsPaused] = useState(false);
+  const { t } = useI18n();
   const progressBarRef = useRef<HTMLDivElement>(null);
+
+  // 一時停止状態を判定（statusプロップから）
+  const isPaused = status === 'paused';
+
+  // プログレスバーの値を計算（useMemoでメモ化、progressPercentage も同時に計算）
+  const { progressValue, progressPercentage } = useMemo(() => {
+    const value = Math.min(progress.progress, 100);
+    return {
+      progressValue: value,
+      progressPercentage: Math.round(value),
+    };
+  }, [progress.progress]);
 
   // プログレスバーの幅を更新
   useEffect(() => {
     if (progressBarRef.current) {
-      progressBarRef.current.style.setProperty('--progress', `${Math.min(progress.progress, 100)}%`);
+      progressBarRef.current.style.setProperty('--progress', `${progressValue}%`);
     }
-  }, [progress.progress]);
+  }, [progressValue]);
 
-  // サイズをフォーマット
-  const formatSize = (bytes: number): string => {
+  // サイズをフォーマット（useCallbackでメモ化）
+  const formatSize = useCallback((bytes: number): string => {
     const gb = bytes / (1024 * 1024 * 1024);
     if (gb >= 1) {
       return `${gb.toFixed(2)} GB`;
     }
     const mb = bytes / (1024 * 1024);
     return `${mb.toFixed(2)} MB`;
-  };
+  }, []);
 
-  // 速度をフォーマット
-  const formatSpeed = (bytesPerSecond: number): string => {
+  // 速度をフォーマット（useCallbackでメモ化）
+  const formatSpeed = useCallback((bytesPerSecond: number): string => {
     const mbps = bytesPerSecond / (1024 * 1024);
     if (mbps >= 1) {
       return `${mbps.toFixed(2)} MB/s`;
     }
     const kbps = bytesPerSecond / 1024;
     return `${kbps.toFixed(2)} KB/s`;
-  };
+  }, []);
 
-  // 残り時間をフォーマット
-  const formatRemainingTime = (seconds: number): string => {
+  // 残り時間をフォーマット（useCallbackでメモ化）
+  const formatRemainingTime = useCallback((seconds: number): string => {
     if (seconds < 60) {
-      return `${Math.round(seconds)}秒`;
+      const sec = Math.round(seconds);
+      return t('modelDownloadProgress.time.seconds', { seconds: sec });
     }
     const minutes = Math.floor(seconds / 60);
     const secs = Math.round(seconds % 60);
-    return `${minutes}分${secs}秒`;
-  };
+    return t('modelDownloadProgress.time.minutesSeconds', { minutes, seconds: secs });
+  }, [t]);
+
+  // フォーマット済みの値を計算（useMemoでメモ化）
+  const formattedDownloaded = useMemo(() => formatSize(progress.downloaded), [formatSize, progress.downloaded]);
+  const formattedTotal = useMemo(() => formatSize(progress.total), [formatSize, progress.total]);
+  const formattedSpeed = useMemo(() => formatSpeed(progress.speed), [formatSpeed, progress.speed]);
+  const formattedRemaining = useMemo(() => {
+    return progress.remaining > 0 ? formatRemainingTime(progress.remaining) : t('modelDownloadProgress.calculating');
+  }, [formatRemainingTime, progress.remaining, t]);
 
   // 一時停止/再開の切り替え
-  const handlePauseResume = () => {
+  const handlePauseResume = useCallback(() => {
     if (isPaused) {
-      setIsPaused(false);
       onResume?.();
     } else {
-      setIsPaused(true);
       onPause?.();
     }
-  };
+  }, [isPaused, onPause, onResume]);
 
   return (
     <div className="model-download-progress">
       <div className="download-progress-card">
         <div className="progress-header">
-          <h3>モデルをダウンロード中</h3>
-          <button className="close-button" onClick={onCancel}>
+          <h3>{t('modelDownloadProgress.title')}</h3>
+          <button 
+            className="close-button" 
+            onClick={onCancel}
+            aria-label={t('modelDownloadProgress.actions.close')}
+          >
             ✕
           </button>
         </div>
@@ -110,62 +134,83 @@ export const ModelDownloadProgress: React.FC<ModelDownloadProgressProps> = ({
           <div 
             ref={progressBarRef}
             className="progress-bar"
-            data-progress={Math.min(progress.progress, 100)}
+            role="progressbar"
+            {...{
+              'aria-valuenow': progressPercentage,
+              'aria-valuemin': 0,
+              'aria-valuemax': 100,
+              'aria-label': t('modelDownloadProgress.aria.progress', { percentage: progressPercentage })
+            }}
           >
-            <span className="progress-percentage">
-              {Math.round(progress.progress)}%
-            </span>
           </div>
+          <span className="progress-percentage" aria-hidden="true">
+            {progressPercentage}%
+          </span>
         </div>
 
         <div className="progress-details">
           <div className="detail-row">
-            <span className="detail-label">ダウンロード済み:</span>
+            <span className="detail-label">{t('modelDownloadProgress.downloaded')}</span>
             <span className="detail-value">
-              {formatSize(progress.downloaded)} / {formatSize(progress.total)}
+              {formattedDownloaded} / {formattedTotal}
             </span>
           </div>
           <div className="detail-row">
-            <span className="detail-label">速度:</span>
+            <span className="detail-label">{t('modelDownloadProgress.speed')}</span>
             <span className="detail-value">
-              {formatSpeed(progress.speed)}
+              {formattedSpeed}
             </span>
           </div>
           <div className="detail-row">
-            <span className="detail-label">残り時間:</span>
+            <span className="detail-label">{t('modelDownloadProgress.remaining')}</span>
             <span className="detail-value">
-              {progress.remaining > 0 ? formatRemainingTime(progress.remaining) : '計算中...'}
+              {formattedRemaining}
             </span>
           </div>
         </div>
 
-        <div className="progress-status">
-          {status === 'verifying' && (
-            <span className="status-badge verifying">検証中...</span>
-          )}
-          {status === 'complete' && (
-            <span className="status-badge complete">✓ ダウンロード完了</span>
-          )}
-          {status === 'error' && (
-            <span className="status-badge error">⚠️ エラーが発生しました</span>
-          )}
-        </div>
+        {status !== 'downloading' && (
+          <div className="progress-status">
+            {status === 'verifying' && (
+              <span className="status-badge verifying" role="status" aria-live="polite">
+                {t('modelDownloadProgress.status.verifying')}
+              </span>
+            )}
+            {status === 'complete' && (
+              <span className="status-badge complete" role="status" aria-live="polite">
+                {t('modelDownloadProgress.status.complete')}
+              </span>
+            )}
+            {status === 'error' && (
+              <span className="status-badge error" role="alert" aria-live="assertive">
+                {t('modelDownloadProgress.status.error')}
+              </span>
+            )}
+            {status === 'paused' && (
+              <span className="status-badge paused" role="status" aria-live="polite">
+                {t('modelDownloadProgress.status.paused')}
+              </span>
+            )}
+          </div>
+        )}
 
         <div className="progress-actions">
-          {status === 'downloading' && (
+          {(status === 'downloading' || status === 'paused') && (
             <button
               className="action-button pause-resume"
               onClick={handlePauseResume}
+              aria-label={isPaused ? t('modelDownloadProgress.aria.resume') : t('modelDownloadProgress.aria.pause')}
             >
-              {isPaused ? '▶️ 再開' : '⏸️ 一時停止'}
+              {isPaused ? t('modelDownloadProgress.actions.resume') : t('modelDownloadProgress.actions.pause')}
             </button>
           )}
           <button
             className="action-button cancel"
             onClick={onCancel}
             disabled={status === 'complete'}
+            aria-label={status === 'complete' ? t('modelDownloadProgress.aria.close') : t('modelDownloadProgress.aria.cancel')}
           >
-            {status === 'complete' ? '閉じる' : '❌ キャンセル'}
+            {status === 'complete' ? t('modelDownloadProgress.actions.close') : t('modelDownloadProgress.actions.cancel')}
           </button>
         </div>
       </div>

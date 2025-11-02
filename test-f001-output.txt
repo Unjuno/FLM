@@ -1,0 +1,244 @@
+
+> flm@1.0.0 test
+> jest --config jest.config.cjs tests/integration/f001-api-creation.test.ts --no-coverage
+
+ts-jest[config] (WARN) message TS151001: If you have issues related to imports, you should consider setting `esModuleInterop` to `true` in your TypeScript configuration file (usually `tsconfig.json`). See https://blogs.msdn.microsoft.com/typescript/2018/01/31/announcing-typescript-2-7/#easier-ecmascript-module-interoperability for more information.
+  console.log
+    繝・せ繝育腸蠅・ｒ蛻晄悄蛹悶＠縺ｦ縺・∪縺・..
+
+      at Object.<anonymous> (tests/setup/jest.setup.ts:11:11)
+
+  console.log
+    F001 API菴懈・讖溯・邨ｱ蜷医ユ繧ｹ繝医ｒ髢句ｧ九＠縺ｾ縺・
+      at Object.<anonymous> (tests/integration/f001-api-creation.test.ts:24:13)
+
+  console.log
+    F001 API菴懈・讖溯・邨ｱ蜷医ユ繧ｹ繝医ｒ螳御ｺ・＠縺ｾ縺励◆
+
+      at Object.<anonymous> (tests/integration/f001-api-creation.test.ts:42:13)
+
+  console.log
+    繝・せ繝育腸蠅・ｒ繧ｯ繝ｪ繝ｼ繝ｳ繧｢繝・・縺励※縺・∪縺・..
+
+      at Object.<anonymous> (tests/setup/jest.setup.ts:16:11)
+
+FAIL tests/integration/f001-api-creation.test.ts
+  F001: API菴懈・讖溯・ 邨ｱ蜷医ユ繧ｹ繝・    API菴懈・縺ｮ蝓ｺ譛ｬ繝輔Ο繝ｼ
+      ﾃ・should create API with valid configuration (2 ms)
+      ﾃ・should create API without authentication
+      ﾃ・should create API with default port
+      ﾃ・should create API with default authentication setting (1 ms)
+      竏・should validate port number range (1 ms)
+    繝｢繝・Ν荳隕ｧ蜿門ｾ玲ｩ溯・
+      ﾃ・should retrieve list of available models
+      ﾃ・should handle Ollama not running gracefully (4 ms)
+    API菴懈・蠕後・繝・・繧ｿ豌ｸ邯壼喧
+      ﾃ・should persist API configuration to database (1 ms)
+    API繧ｭ繝ｼ逕滓・繝ｻ證怜捷蛹悶・讀懆ｨｼ
+      ﾃ・should generate unique API keys for different APIs
+      ﾃ・should allow retrieving API key after creation
+    繧ｨ繝ｩ繝ｼ繝上Φ繝峨Μ繝ｳ繧ｰ
+      ﾃ・should handle duplicate port numbers
+      ﾃ・should handle invalid model names
+
+  笳・F001: API菴懈・讖溯・ 邨ｱ蜷医ユ繧ｹ繝・窶ｺ API菴懈・縺ｮ蝓ｺ譛ｬ繝輔Ο繝ｼ 窶ｺ should create API with valid configuration
+
+    The error below may be caused by using the wrong test environment, see https://jestjs.io/docs/configuration#testenvironment-string.
+    Consider using the "jsdom" test environment.
+
+    ReferenceError: window is not defined
+
+      63 |       };
+      64 |
+    > 65 |       const result = await invoke<{
+         |                                  ^
+      66 |         id: string;
+      67 |         name: string;
+      68 |         endpoint: string;
+
+      at invoke (node_modules/@tauri-apps/api/core.cjs:202:5)
+      at Object.<anonymous> (tests/integration/f001-api-creation.test.ts:65:34)
+
+  笳・F001: API菴懈・讖溯・ 邨ｱ蜷医ユ繧ｹ繝・窶ｺ API菴懈・縺ｮ蝓ｺ譛ｬ繝輔Ο繝ｼ 窶ｺ should create API without authentication
+
+    The error below may be caused by using the wrong test environment, see https://jestjs.io/docs/configuration#testenvironment-string.
+    Consider using the "jsdom" test environment.
+
+    ReferenceError: window is not defined
+
+       99 |       };
+      100 |
+    > 101 |       const result = await invoke<{
+          |                                  ^
+      102 |         id: string;
+      103 |         api_key: string | null;
+      104 |       }>('create_api', config);
+
+      at invoke (node_modules/@tauri-apps/api/core.cjs:202:5)
+      at Object.<anonymous> (tests/integration/f001-api-creation.test.ts:101:34)
+
+  笳・F001: API菴懈・讖溯・ 邨ｱ蜷医ユ繧ｹ繝・窶ｺ API菴懈・縺ｮ蝓ｺ譛ｬ繝輔Ο繝ｼ 窶ｺ should create API with default port
+
+    The error below may be caused by using the wrong test environment, see https://jestjs.io/docs/configuration#testenvironment-string.
+    Consider using the "jsdom" test environment.
+
+    ReferenceError: window is not defined
+
+      118 |       };
+      119 |
+    > 120 |       const result = await invoke<{
+          |                                  ^
+      121 |         id: string;
+      122 |         port: number;
+      123 |       }>('create_api', config);
+
+      at invoke (node_modules/@tauri-apps/api/core.cjs:202:5)
+      at Object.<anonymous> (tests/integration/f001-api-creation.test.ts:120:34)
+
+  笳・F001: API菴懈・讖溯・ 邨ｱ蜷医ユ繧ｹ繝・窶ｺ API菴懈・縺ｮ蝓ｺ譛ｬ繝輔Ο繝ｼ 窶ｺ should create API with default authentication setting
+
+    The error below may be caused by using the wrong test environment, see https://jestjs.io/docs/configuration#testenvironment-string.
+    Consider using the "jsdom" test environment.
+
+    ReferenceError: window is not defined
+
+      137 |       };
+      138 |
+    > 139 |       const result = await invoke<{
+          |                                  ^
+      140 |         id: string;
+      141 |         api_key: string | null;
+      142 |       }>('create_api', config);
+
+      at invoke (node_modules/@tauri-apps/api/core.cjs:202:5)
+      at Object.<anonymous> (tests/integration/f001-api-creation.test.ts:139:34)
+
+  笳・F001: API菴懈・讖溯・ 邨ｱ蜷医ユ繧ｹ繝・窶ｺ 繝｢繝・Ν荳隕ｧ蜿門ｾ玲ｩ溯・ 窶ｺ should retrieve list of available models
+
+    The error below may be caused by using the wrong test environment, see https://jestjs.io/docs/configuration#testenvironment-string.
+    Consider using the "jsdom" test environment.
+
+    ReferenceError: window is not defined
+
+      175 |   describe('繝｢繝・Ν荳隕ｧ蜿門ｾ玲ｩ溯・', () => {
+      176 |     it('should retrieve list of available models', async () => {
+    > 177 |       const models = await invoke<Array<{
+          |                                  ^
+      178 |         name: string;
+      179 |         size: number;
+      180 |         parameters?: number;
+
+      at invoke (node_modules/@tauri-apps/api/core.cjs:202:5)
+      at Object.<anonymous> (tests/integration/f001-api-creation.test.ts:177:34)
+
+  笳・F001: API菴懈・讖溯・ 邨ｱ蜷医ユ繧ｹ繝・窶ｺ 繝｢繝・Ν荳隕ｧ蜿門ｾ玲ｩ溯・ 窶ｺ should handle Ollama not running gracefully
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "string"
+    Received: "object"
+
+      199 |       } catch (error) {
+      200 |         expect(error).toBeDefined();
+    > 201 |         expect(typeof error).toBe('string');
+          |                              ^
+      202 |         // 繧ｨ繝ｩ繝ｼ繝｡繝・そ繝ｼ繧ｸ縺碁撼髢狗匱閠・髄縺代〒縺ゅｋ縺薙→繧堤｢ｺ隱・[39m
+      203 |         expect(String(error)).toMatch(/Ollama|螳溯｡芸襍ｷ蜍・i);
+      204 |       }
+
+      at Object.<anonymous> (tests/integration/f001-api-creation.test.ts:201:30)
+
+  笳・F001: API菴懈・讖溯・ 邨ｱ蜷医ユ繧ｹ繝・窶ｺ API菴懈・蠕後・繝・・繧ｿ豌ｸ邯壼喧 窶ｺ should persist API configuration to database
+
+    The error below may be caused by using the wrong test environment, see https://jestjs.io/docs/configuration#testenvironment-string.
+    Consider using the "jsdom" test environment.
+
+    ReferenceError: window is not defined
+
+      218 |       };
+      219 |
+    > 220 |       const createResult = await invoke<{ id: string }>('create_api', config);
+          |                                        ^
+      221 |       const apiId = recordApiId(createResult.id);
+      222 |
+      223 |       // 菴懈・縺励◆API縺御ｸ隕ｧ縺ｫ蜷ｫ縺ｾ繧後※縺・ｋ縺薙→繧堤｢ｺ隱・[39m
+
+      at invoke (node_modules/@tauri-apps/api/core.cjs:202:5)
+      at Object.<anonymous> (tests/integration/f001-api-creation.test.ts:220:40)
+
+  笳・F001: API菴懈・讖溯・ 邨ｱ蜷医ユ繧ｹ繝・窶ｺ API繧ｭ繝ｼ逕滓・繝ｻ證怜捷蛹悶・讀懆ｨｼ 窶ｺ should generate unique API keys for different APIs
+
+    The error below may be caused by using the wrong test environment, see https://jestjs.io/docs/configuration#testenvironment-string.
+    Consider using the "jsdom" test environment.
+
+    ReferenceError: window is not defined
+
+      269 |       };
+      270 |
+    > 271 |       const result1 = await invoke<{ id: string; api_key: string | null }>('create_api', config1);
+          |                                   ^
+      272 |       const result2 = await invoke<{ id: string; api_key: string | null }>('create_api', config2);
+      273 |
+      274 |       expect(result1.api_key).toBeDefined();
+
+      at invoke (node_modules/@tauri-apps/api/core.cjs:202:5)
+      at Object.<anonymous> (tests/integration/f001-api-creation.test.ts:271:35)
+
+  笳・F001: API菴懈・讖溯・ 邨ｱ蜷医ユ繧ｹ繝・窶ｺ API繧ｭ繝ｼ逕滓・繝ｻ證怜捷蛹悶・讀懆ｨｼ 窶ｺ should allow retrieving API key after creation
+
+    The error below may be caused by using the wrong test environment, see https://jestjs.io/docs/configuration#testenvironment-string.
+    Consider using the "jsdom" test environment.
+
+    ReferenceError: window is not defined
+
+      288 |       };
+      289 |
+    > 290 |       const createResult = await invoke<{ id: string; api_key: string | null }>('create_api', config);
+          |                                        ^
+      291 |       const apiId = createResult.id;
+      292 |       const originalKey = createResult.api_key;
+      293 |
+
+      at invoke (node_modules/@tauri-apps/api/core.cjs:202:5)
+      at Object.<anonymous> (tests/integration/f001-api-creation.test.ts:290:40)
+
+  笳・F001: API菴懈・讖溯・ 邨ｱ蜷医ユ繧ｹ繝・窶ｺ 繧ｨ繝ｩ繝ｼ繝上Φ繝峨Μ繝ｳ繧ｰ 窶ｺ should handle duplicate port numbers
+
+    The error below may be caused by using the wrong test environment, see https://jestjs.io/docs/configuration#testenvironment-string.
+    Consider using the "jsdom" test environment.
+
+    ReferenceError: window is not defined
+
+      314 |       };
+      315 |
+    > 316 |       const result1 = await invoke<{ id: string }>('create_api', config);
+          |                                   ^
+      317 |       const apiId1 = recordApiId(result1.id);
+      318 |       
+      319 |       // 蜷後§繝昴・繝育分蜿ｷ縺ｧAPI繧剃ｽ懈・縺励ｈ縺・→縺吶ｋ
+
+      at invoke (node_modules/@tauri-apps/api/core.cjs:202:5)
+      at Object.<anonymous> (tests/integration/f001-api-creation.test.ts:316:35)
+
+  笳・F001: API菴懈・讖溯・ 邨ｱ蜷医ユ繧ｹ繝・窶ｺ 繧ｨ繝ｩ繝ｼ繝上Φ繝峨Μ繝ｳ繧ｰ 窶ｺ should handle invalid model names
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "string"
+    Received: "object"
+
+      345 |       } catch (error) {
+      346 |         expect(error).toBeDefined();
+    > 347 |         expect(typeof error).toBe('string');
+          |                              ^
+      348 |       }
+      349 |     }, 30000);
+      350 |   });
+
+      at Object.<anonymous> (tests/integration/f001-api-creation.test.ts:347:30)
+
+Test Suites: 1 failed, 1 total
+Tests:       11 failed, 1 passed, 12 total
+Snapshots:   0 total
+Time:        0.728 s, estimated 1 s
+Ran all test suites matching /tests\\integration\\f001-api-creation.test.ts/i.

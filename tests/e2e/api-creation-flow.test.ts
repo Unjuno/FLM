@@ -95,7 +95,7 @@ describe('API Creation Flow E2E Tests', () => {
           model_name: string;
           port: number;
           status: string;
-        }>('create_api', { config });
+        }>('create_api', config);
 
         expect(result).toBeDefined();
         expect(result.id).toBeDefined();

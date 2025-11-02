@@ -11,22 +11,27 @@ pub struct ApiRepository;
 impl ApiRepository {
     /// 全てのAPIを取得
     pub fn find_all(conn: &Connection) -> Result<Vec<Api>, DatabaseError> {
+        // engine_typeとengine_configカラムが存在するかチェックしてクエリを動的に構築
         let mut stmt = conn.prepare(
-            "SELECT id, name, model, port, enable_auth, status, created_at, updated_at FROM apis ORDER BY created_at DESC"
+            "SELECT id, name, model, port, enable_auth, status, 
+             COALESCE(engine_type, 'ollama'), engine_config, created_at, updated_at 
+             FROM apis ORDER BY created_at DESC"
         )?;
         
         let api_iter = stmt.query_map([], |row| {
             Ok(Api {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                model_name: row.get(2)?,
+                model: row.get(2)?,
                 port: row.get(3)?,
                 enable_auth: row.get::<_, i32>(4)? != 0,
-                status: ApiStatus::from(row.get::<_, String>(5)?.as_str()),
-                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(6)?)
+                status: ApiStatus::from_str(row.get::<_, String>(5)?.as_str()),
+                engine_type: row.get::<_, Option<String>>(6)?,
+                engine_config: row.get::<_, Option<String>>(7)?,
+                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
                     .unwrap()
                     .with_timezone(&Utc),
-                updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(7)?)
+                updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
                     .unwrap()
                     .with_timezone(&Utc),
             })
@@ -43,21 +48,25 @@ impl ApiRepository {
     /// IDでAPIを取得
     pub fn find_by_id(conn: &Connection, id: &str) -> Result<Option<Api>, DatabaseError> {
         let mut stmt = conn.prepare(
-            "SELECT id, name, model, port, enable_auth, status, created_at, updated_at FROM apis WHERE id = ?"
+            "SELECT id, name, model, port, enable_auth, status, 
+             COALESCE(engine_type, 'ollama'), engine_config, created_at, updated_at 
+             FROM apis WHERE id = ?"
         )?;
         
         let api_result = stmt.query_row(params![id], |row| {
             Ok(Api {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                model_name: row.get(2)?,
+                model: row.get(2)?,
                 port: row.get(3)?,
                 enable_auth: row.get::<_, i32>(4)? != 0,
-                status: ApiStatus::from(row.get::<_, String>(5)?.as_str()),
-                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(6)?)
+                status: ApiStatus::from_str(row.get::<_, String>(5)?.as_str()),
+                engine_type: row.get::<_, Option<String>>(6)?,
+                engine_config: row.get::<_, Option<String>>(7)?,
+                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
                     .unwrap()
                     .with_timezone(&Utc),
-                updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(7)?)
+                updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
                     .unwrap()
                     .with_timezone(&Utc),
             })
@@ -73,21 +82,25 @@ impl ApiRepository {
     /// ポート番号でAPIを取得
     pub fn find_by_port(conn: &Connection, port: u16) -> Result<Option<Api>, DatabaseError> {
         let mut stmt = conn.prepare(
-            "SELECT id, name, model, port, enable_auth, status, created_at, updated_at FROM apis WHERE port = ?"
+            "SELECT id, name, model, port, enable_auth, status, 
+             COALESCE(engine_type, 'ollama'), engine_config, created_at, updated_at 
+             FROM apis WHERE port = ?"
         )?;
         
         let api_result = stmt.query_row(params![port], |row| {
             Ok(Api {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                model_name: row.get(2)?,
+                model: row.get(2)?,
                 port: row.get(3)?,
                 enable_auth: row.get::<_, i32>(4)? != 0,
-                status: ApiStatus::from(row.get::<_, String>(5)?.as_str()),
-                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(6)?)
+                status: ApiStatus::from_str(row.get::<_, String>(5)?.as_str()),
+                engine_type: row.get::<_, Option<String>>(6)?,
+                engine_config: row.get::<_, Option<String>>(7)?,
+                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
                     .unwrap()
                     .with_timezone(&Utc),
-                updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(7)?)
+                updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
                     .unwrap()
                     .with_timezone(&Utc),
             })
@@ -102,23 +115,27 @@ impl ApiRepository {
     
     /// ステータスでAPIを取得
     pub fn find_by_status(conn: &Connection, status: ApiStatus) -> Result<Vec<Api>, DatabaseError> {
-        let status_str: String = status.into();
+        let status_str = status.as_str();
         let mut stmt = conn.prepare(
-            "SELECT id, name, model, port, enable_auth, status, created_at, updated_at FROM apis WHERE status = ? ORDER BY created_at DESC"
+            "SELECT id, name, model, port, enable_auth, status, 
+             COALESCE(engine_type, 'ollama'), engine_config, created_at, updated_at 
+             FROM apis WHERE status = ? ORDER BY created_at DESC"
         )?;
         
         let api_iter = stmt.query_map(params![status_str], |row| {
             Ok(Api {
                 id: row.get(0)?,
                 name: row.get(1)?,
-                model_name: row.get(2)?,
+                model: row.get(2)?,
                 port: row.get(3)?,
                 enable_auth: row.get::<_, i32>(4)? != 0,
-                status: ApiStatus::from(row.get::<_, String>(5)?.as_str()),
-                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(6)?)
+                status: ApiStatus::from_str(row.get::<_, String>(5)?.as_str()),
+                engine_type: row.get::<_, Option<String>>(6)?,
+                engine_config: row.get::<_, Option<String>>(7)?,
+                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
                     .unwrap()
                     .with_timezone(&Utc),
-                updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(7)?)
+                updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
                     .unwrap()
                     .with_timezone(&Utc),
             })
@@ -136,17 +153,21 @@ impl ApiRepository {
     pub fn create(conn: &Connection, api: &Api) -> Result<(), DatabaseError> {
         let created_at = api.created_at.to_rfc3339();
         let updated_at = api.updated_at.to_rfc3339();
-        let status_str: String = api.status.clone().into();
+        let status_str = api.status.as_str();
+        let engine_type = api.engine_type.as_deref().unwrap_or("ollama");
         
         conn.execute(
-            "INSERT INTO apis (id, name, model, port, enable_auth, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+            "INSERT INTO apis (id, name, model, port, enable_auth, status, engine_type, engine_config, created_at, updated_at) 
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
             params![
                 api.id,
                 api.name,
-                api.model_name,
+                api.model,
                 api.port,
                 if api.enable_auth { 1 } else { 0 },
                 status_str,
+                engine_type,
+                api.engine_config,
                 created_at,
                 updated_at
             ],
@@ -158,16 +179,19 @@ impl ApiRepository {
     /// APIを更新
     pub fn update(conn: &Connection, api: &Api) -> Result<(), DatabaseError> {
         let updated_at = Utc::now().to_rfc3339();
-        let status_str: String = api.status.clone().into();
+        let status_str = api.status.as_str();
+        let engine_type = api.engine_type.as_deref().unwrap_or("ollama");
         
         conn.execute(
-            "UPDATE apis SET name = ?, model = ?, port = ?, enable_auth = ?, status = ?, updated_at = ? WHERE id = ?",
+            "UPDATE apis SET name = ?, model = ?, port = ?, enable_auth = ?, status = ?, engine_type = ?, engine_config = ?, updated_at = ? WHERE id = ?",
             params![
                 api.name,
-                api.model_name,
+                api.model,
                 api.port,
                 if api.enable_auth { 1 } else { 0 },
                 status_str,
+                engine_type,
+                api.engine_config,
                 updated_at,
                 api.id
             ],
@@ -179,7 +203,7 @@ impl ApiRepository {
     /// APIステータスを更新
     pub fn update_status(conn: &Connection, id: &str, status: ApiStatus) -> Result<(), DatabaseError> {
         let updated_at = Utc::now().to_rfc3339();
-        let status_str: String = status.into();
+        let status_str = status.as_str();
         
         conn.execute(
             "UPDATE apis SET status = ?, updated_at = ? WHERE id = ?",

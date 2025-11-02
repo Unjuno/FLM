@@ -1,0 +1,253 @@
+/* Onboarding Component Styles */
+/* FE-009-03: オンボーディング・チュートリアル機能実装 */
+
+.onboarding-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 10000;
+  pointer-events: none;
+}
+
+.onboarding-backdrop {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.7);
+  pointer-events: all;
+  animation: fadeIn 0.3s ease-out;
+}
+
+.onboarding-highlight {
+  position: absolute;
+  border: 3px solid #667eea;
+  border-radius: 12px;
+  box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 20px rgba(102, 126, 234, 0.5);
+  pointer-events: none;
+  z-index: 10001;
+  transition: all 0.3s ease-out;
+  animation: highlightPulse 2s ease-in-out infinite;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes highlightPulse {
+  0%, 100% {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 20px rgba(102, 126, 234, 0.5);
+  }
+  50% {
+    box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 30px rgba(102, 126, 234, 0.8);
+  }
+}
+
+.onboarding-card {
+  position: absolute;
+  background: white;
+  border-radius: 16px;
+  padding: 2rem;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  max-width: 400px;
+  z-index: 10002;
+  pointer-events: all;
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.onboarding-card.onboarding-top {
+  top: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.onboarding-card.onboarding-bottom {
+  bottom: 20%;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.onboarding-card.onboarding-left {
+  top: 50%;
+  left: 10%;
+  transform: translateY(-50%);
+}
+
+.onboarding-card.onboarding-right {
+  top: 50%;
+  right: 10%;
+  transform: translateY(-50%);
+}
+
+.onboarding-card.onboarding-center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+}
+
+.onboarding-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+}
+
+.onboarding-icon {
+  font-size: 3rem;
+  line-height: 1;
+}
+
+.onboarding-close {
+  background: transparent;
+  border: none;
+  font-size: 1.5rem;
+  color: #666;
+  cursor: pointer;
+  padding: 0.25rem;
+  line-height: 1;
+  transition: color 0.2s;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+}
+
+.onboarding-close:hover {
+  color: #333;
+  background-color: #f0f0f0;
+}
+
+.onboarding-content {
+  margin-bottom: 2rem;
+}
+
+.onboarding-title {
+  font-size: 1.5rem;
+  margin: 0 0 1rem 0;
+  color: #333;
+  font-weight: 600;
+}
+
+.onboarding-description {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: #666;
+  margin: 0 0 1.5rem 0;
+}
+
+.onboarding-progress {
+  display: flex;
+  gap: 0.5rem;
+  justify-content: center;
+  align-items: center;
+}
+
+.onboarding-progress-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background-color: #e0e0e0;
+  transition: all 0.3s;
+}
+
+.onboarding-progress-dot.active {
+  width: 24px;
+  background-color: #667eea;
+  border-radius: 4px;
+}
+
+.onboarding-progress-dot.completed {
+  background-color: #4caf50;
+}
+
+.onboarding-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+}
+
+.onboarding-nav-buttons {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.onboarding-button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.onboarding-button.primary {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
+}
+
+.onboarding-button.primary:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.onboarding-button.secondary {
+  background: #f5f5f5;
+  color: #333;
+  border: 2px solid #e0e0e0;
+}
+
+.onboarding-button.secondary:hover {
+  background: #e0e0e0;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .onboarding-card {
+    max-width: 90%;
+    padding: 1.5rem;
+  }
+
+  .onboarding-card.onboarding-left,
+  .onboarding-card.onboarding-right {
+    left: 50%;
+    right: auto;
+    transform: translate(-50%, -50%);
+  }
+
+  .onboarding-title {
+    font-size: 1.25rem;
+  }
+
+  .onboarding-description {
+    font-size: 0.9rem;
+  }
+
+  .onboarding-button {
+    padding: 0.625rem 1.25rem;
+    font-size: 0.9rem;
+  }
+}
+

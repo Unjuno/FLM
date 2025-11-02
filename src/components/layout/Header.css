@@ -1,0 +1,274 @@
+/* FLM - ヘッダーコンポーネントのスタイル */
+
+:root {
+  --header-bg-start: #667eea;
+  --header-bg-end: #764ba2;
+  --header-text: white;
+  --header-overlay-light: rgba(255, 255, 255, 0.1);
+  --header-overlay-medium: rgba(255, 255, 255, 0.2);
+  --header-overlay-dark: rgba(255, 255, 255, 0.25);
+  --header-border-light: rgba(255, 255, 255, 0.2);
+  --header-shadow: rgba(0, 0, 0, 0.1);
+  --header-transition: all 0.2s ease-in-out;
+  --header-radius: 8px;
+}
+
+.app-header {
+  background: linear-gradient(135deg, var(--header-bg-start) 0%, var(--header-bg-end) 100%);
+  color: var(--header-text);
+  padding: 1rem 2rem;
+  box-shadow: 0 2px 8px var(--header-shadow);
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  contain: layout style paint;
+}
+
+.header-container {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  max-width: 1400px;
+  margin: 0 auto;
+  gap: 2rem;
+}
+
+.header-brand {
+  display: flex;
+  align-items: center;
+}
+
+/* 共通フォーカススタイル（すべてのボタン要素に適用） */
+.brand-link:focus-visible,
+.nav-link:focus-visible,
+.action-button:focus-visible,
+.mobile-menu-toggle:focus-visible,
+.mobile-nav-link:focus-visible {
+  outline: 2px solid var(--header-text);
+  outline-offset: 2px;
+}
+
+/* 共通ボタンスタイル（ベース） */
+.header-button-base,
+.action-button,
+.mobile-menu-toggle {
+  display: flex;
+  align-items: center;
+  background: var(--header-overlay-light);
+  border: none;
+  border-radius: var(--header-radius);
+  color: var(--header-text);
+  cursor: pointer;
+  transition: var(--header-transition);
+  padding: 0.5rem;
+}
+
+.header-button-base:hover,
+.action-button:hover,
+.mobile-menu-toggle:hover {
+  background: var(--header-overlay-medium);
+}
+
+.brand-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  background: none;
+  border: none;
+  color: var(--header-text);
+  text-decoration: none;
+  font-size: 1.25rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: var(--header-transition);
+  padding: 0.5rem;
+  border-radius: var(--header-radius);
+}
+
+.brand-link:hover {
+  opacity: 0.9;
+  background: var(--header-overlay-light);
+}
+
+.header-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+.header-logo-text {
+  font-size: 1.5rem;
+}
+
+.header-app-name {
+  font-weight: bold;
+}
+
+.header-nav {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+}
+
+.nav-list {
+  display: flex;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  gap: 0.5rem;
+}
+
+.nav-list > li {
+  margin: 0;
+}
+
+.nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: var(--header-overlay-light);
+  border: none;
+  border-radius: var(--header-radius);
+  color: var(--header-text);
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--header-transition);
+}
+
+.nav-link:hover {
+  background: var(--header-overlay-medium);
+}
+
+
+.nav-link.active {
+  background: var(--header-overlay-dark);
+  font-weight: bold;
+}
+
+.nav-icon {
+  font-size: 1rem;
+}
+
+.nav-label {
+  display: inline-block;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.action-button {
+  font-size: 1.25rem;
+}
+
+.mobile-menu-toggle {
+  display: none;
+  font-size: 1.5rem;
+}
+
+.mobile-nav {
+  display: none;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--header-border-light);
+}
+
+.mobile-nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.mobile-nav-list > li {
+  margin: 0;
+}
+
+.mobile-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: var(--header-overlay-light);
+  border: none;
+  border-radius: var(--header-radius);
+  color: var(--header-text);
+  text-decoration: none;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: var(--header-transition);
+  width: 100%;
+}
+
+.mobile-nav-link:hover {
+  background: var(--header-overlay-medium);
+}
+
+
+.mobile-nav-link.active {
+  background: var(--header-overlay-dark);
+  font-weight: bold;
+}
+
+.mobile-nav-icon {
+  font-size: 1.25rem;
+}
+
+.mobile-nav-label {
+  flex: 1;
+  text-align: left;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 1rem;
+  }
+
+  .header-container {
+    gap: 1rem;
+  }
+
+  .header-nav {
+    display: none;
+  }
+
+  .mobile-menu-toggle {
+    display: block;
+  }
+
+  .mobile-nav {
+    display: block;
+  }
+
+  .nav-label {
+    display: none;
+  }
+
+  .header-actions {
+    gap: 0.5rem;
+  }
+
+  .action-button {
+    padding: 0.5rem;
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .header-app-name {
+    font-size: 1rem;
+  }
+
+  .header-logo-text {
+    font-size: 1.25rem;
+  }
+}
+

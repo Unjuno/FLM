@@ -5,6 +5,10 @@ pub mod ollama;
 pub mod api;
 pub mod database;
 pub mod performance;
+pub mod settings;
+pub mod alerts;
+pub mod backup;
+pub mod engine;
 
 // use crate::utils::error::AppError; // 未使用のためコメントアウト
 // pub use api::*; // 未使用のためコメントアウト

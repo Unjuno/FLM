@@ -1,0 +1,135 @@
+{
+  "modelDownloadProgress": {
+    "title": "モデルをダウンロード中",
+    "downloaded": "ダウンロード済み:",
+    "speed": "速度:",
+    "remaining": "残り時間:",
+    "calculating": "計算中...",
+    "time": {
+      "seconds": "{{seconds}}秒",
+      "minutesSeconds": "{{minutes}}分{{seconds}}秒"
+    },
+    "status": {
+      "verifying": "検証中...",
+      "complete": "✓ ダウンロード完了",
+      "error": "⚠️ エラーが発生しました",
+      "paused": "⏸️ 一時停止中"
+    },
+    "actions": {
+      "resume": "▶️ 再開",
+      "pause": "⏸️ 一時停止",
+      "cancel": "❌ キャンセル",
+      "close": "閉じる"
+    },
+    "aria": {
+      "progress": "ダウンロード進捗: {{percentage}}%",
+      "resume": "ダウンロードを再開",
+      "pause": "ダウンロードを一時停止",
+      "cancel": "ダウンロードをキャンセル",
+      "close": "閉じる"
+    }
+  },
+  "settings": {
+    "title": "アプリケーション設定",
+    "subtitle": "アプリケーション全体の設定を管理します",
+    "loading": "読み込み中...",
+    "appearance": {
+      "title": "外観",
+      "theme": "テーマ",
+      "themeHint": "ライト/ダークモードの設定（現在: {{currentTheme}}）",
+      "themeAuto": "システム設定に従う",
+      "themeLight": "ライト",
+      "themeDark": "ダーク",
+      "quickToggle": "クイック切り替え"
+    },
+    "language": {
+      "title": "言語",
+      "label": "表示言語",
+      "hint": "アプリケーションの表示言語",
+      "japanese": "日本語",
+      "english": "English"
+    },
+    "autoRefresh": {
+      "title": "自動更新",
+      "label": "自動更新間隔（秒）",
+      "hint": "データの自動更新間隔（最小: 5秒、最大: 300秒）"
+    },
+    "logManagement": {
+      "title": "ログ管理",
+      "label": "ログ保持期間（日数）",
+      "hint": "ログを保持する日数（最小: 1日、最大: 365日）"
+    },
+    "notifications": {
+      "title": "通知",
+      "label": "通知を有効にする",
+      "hint": "エラーや重要なイベントの通知を有効にします"
+    },
+    "database": {
+      "title": "データベース管理",
+      "info": "データベースの整合性チェックや修復は、別の機能で提供されています。"
+    },
+    "actions": {
+      "save": "保存",
+      "saving": "保存中...",
+      "cancel": "キャンセル",
+      "reset": "デフォルトに戻す",
+      "resetConfirm": "すべての設定をデフォルト値に戻しますか？"
+    },
+    "messages": {
+      "loadError": "設定の読み込みに失敗しました",
+      "saveSuccess": "設定を保存しました",
+      "saveError": "設定の保存に失敗しました",
+      "themeChangeSuccess": "テーマを変更しました",
+      "themeChangeError": "テーマの変更に失敗しました",
+      "resetSuccess": "設定をリセットしました",
+      "resetError": "設定のリセットに失敗しました"
+    }
+  },
+  "header": {
+    "home": "ホーム",
+    "apiList": "API一覧",
+    "modelManagement": "モデル管理",
+    "logs": "ログ",
+    "performance": "パフォーマンス",
+    "settings": "設定",
+    "help": "ヘルプ",
+    "notifications": "通知",
+    "userMenu": "ユーザーメニュー",
+    "openMenu": "メニューを開く",
+    "closeMenu": "メニューを閉じる"
+  },
+  "languageSwitcher": {
+    "label": "言語を選択",
+    "japanese": "日本語",
+    "english": "English",
+    "changeLanguage": "言語を変更"
+  },
+  "performanceDashboard": {
+    "title": "パフォーマンスダッシュボード",
+    "loading": "パフォーマンスダッシュボードを読み込んでいます...",
+    "backToHome": "← ホームに戻る",
+    "refresh": "🔄 更新",
+    "print": "🖨️ 印刷",
+    "selectApi": "監視するAPI:",
+    "selectApiHint": "監視するAPIを選択します。選択したAPIのパフォーマンスメトリクスが表示されます。",
+    "selectApiPlaceholder": "APIを選択してください",
+    "selectedApi": "選択中:",
+    "period": "期間:",
+    "periodHint": "パフォーマンスデータを表示する期間を選択します。1時間、24時間、7日間から選択できます。",
+    "period1h": "1時間",
+    "period24h": "24時間",
+    "period7d": "7日間",
+    "emptyState": {
+      "noApiTitle": "APIがまだ作成されていません",
+      "selectApiTitle": "APIを選択してください",
+      "noApiMessage": "パフォーマンスダッシュボードを使用するには、まずAPIを作成する必要があります。",
+      "createApi": "新しいAPIを作成",
+      "selectApiMessage": "監視したいAPIを選択すると、パフォーマンスメトリクスが表示されます。"
+    },
+    "error": {
+      "loadApisError": "API一覧の取得に失敗しました",
+      "noApisSuggestion": "APIがまだ作成されていない場合は、まず「新しいAPIを作成」ボタンからAPIを作成してください。"
+    }
+  }
+}
+

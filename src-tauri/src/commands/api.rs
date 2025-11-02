@@ -3,7 +3,7 @@
 
 use serde::{Deserialize, Serialize};
 use crate::database::models::*;
-use crate::database::repository::{ApiRepository, ApiKeyRepository, InstalledModelRepository, RequestLogRepository};
+use crate::database::repository::{ApiRepository, ApiKeyRepository, InstalledModelRepository, RequestLogRepository, ModelCatalogRepository};
 use crate::database::connection::get_connection;
 use crate::database::DatabaseError;
 use chrono::Utc;
@@ -18,6 +18,8 @@ pub struct ApiCreateConfig {
     pub model_name: String,
     pub port: Option<u16>,
     pub enable_auth: Option<bool>,
+    pub engine_type: Option<String>, // エンジンタイプ（デフォルト: 'ollama'）
+    pub engine_config: Option<String>, // エンジン固有設定（JSON形式）
 }
 
 /// API作成レスポンス
@@ -54,70 +56,69 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
         "データの保存に失敗しました。アプリを再起動して再度お試しください。".to_string()
     })?;
     
-    // 2. Ollamaが起動しているか確認・起動
-    use crate::ollama::{check_ollama_running, start_ollama};
+    // 2. エンジンタイプの決定（デフォルト: 'ollama'）
+    let engine_type = config.engine_type.as_deref().unwrap_or("ollama");
     
-    if !check_ollama_running().await.map_err(|_| {
-        "AIエンジンの状態を確認できませんでした。".to_string()
-    })? {
-        // Ollamaが起動していない場合は起動を試みる
-        start_ollama(None).await.map_err(|_| {
-            "AIエンジンの起動に失敗しました。しばらく待ってから再度お試しください。".to_string()
+    // 3. エンジンが実行中か確認・起動
+    use crate::engines::{EngineManager, EngineConfig};
+    let engine_manager = EngineManager::new();
+    
+    // エンジンの状態を確認
+    let detection_result = engine_manager.detect_engine(engine_type).await
+        .map_err(|e| format!("エンジン検出エラー: {}", e))?;
+    
+    if !detection_result.running {
+        // エンジン起動設定を作成
+        let engine_config = EngineConfig {
+            engine_type: engine_type.to_string(),
+            base_url: None,
+            executable_path: None,
+            port: None,
+            auto_detect: true,
+        };
+        
+        engine_manager.start_engine(engine_type, Some(engine_config)).await.map_err(|e| {
+            format!("エンジンの起動に失敗しました: {}. 手動でエンジンを起動してから再度お試しください。", e)
         })?;
         
         // 起動確認のため少し待機
         tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
     }
     
-    // 3. モデルが存在するか確認（Ollama APIから取得）
-    let client = reqwest::Client::new();
-    let response = client
-        .get("http://localhost:11434/api/tags")
-        .timeout(std::time::Duration::from_secs(10))
-        .send()
-        .await
-        .map_err(|_| "AIエンジンに接続できませんでした。AIエンジンが正常に起動しているか確認してください。".to_string())?;
-    
-    if !response.status().is_success() {
-        return Err(format!("AIエンジンから情報を取得できませんでした（エラーコード: {}）。AIエンジンが正常に動作しているか確認してください。", response.status()));
-    }
-    
-    let tags: serde_json::Value = response.json().await.map_err(|_| {
-        "AIエンジンからの応答を読み取れませんでした。AIエンジンを再起動して再度お試しください。".to_string()
+    // 5. モデルが存在するか確認（エンジンから取得）
+    let models = engine_manager.get_engine_models(engine_type).await.map_err(|e| {
+        format!("エンジンからモデル一覧を取得できませんでした: {}", e)
     })?;
     
-    let models = tags["models"]
-        .as_array()
-        .ok_or_else(|| "モデル一覧の形式が不正です".to_string())?
-        .iter()
-        .map(|m| m["name"].as_str().unwrap_or("").to_string())
-        .collect::<Vec<String>>();
+    let model_names: Vec<String> = models.iter().map(|m| m.name.clone()).collect();
     
     // 指定されたモデルが存在するか確認
-    if !models.iter().any(|m| m == &config.model_name) {
+    if !model_names.iter().any(|m| m == &config.model_name) {
         return Err(format!(
             "選択されたAIモデル「{}」が見つかりませんでした。\n\n先に「モデル管理」画面からこのモデルをダウンロードしてください。",
             config.model_name
         ));
     }
     
-    // 4. ポート番号のデフォルト値
+    // 6. ポート番号のデフォルト値
     let port = config.port.unwrap_or(8080) as i32;
     
-    // 5. 認証設定のデフォルト値
+    // 7. 認証設定のデフォルト値
     let enable_auth = config.enable_auth.unwrap_or(true);
     
-    // 6. API ID生成
+    // 8. API ID生成
     let api_id = Uuid::new_v4().to_string();
     
-    // 7. API設定を作成
+    // 9. API設定を作成
     let api = Api {
         id: api_id.clone(),
         name: config.name.clone(),
-        model: config.model_name.clone(), // 既存の実装では`model`フィールドを使用
+        model: config.model_name.clone(),
         port,
         enable_auth,
         status: ApiStatus::Stopped,
+        engine_type: Some(engine_type.to_string()),
+        engine_config: config.engine_config.clone(),
         created_at: Utc::now(),
         updated_at: Utc::now(),
     };
@@ -179,11 +180,13 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
         None
     };
     
-    // 10. エンドポイントURL生成
-    let endpoint = format!("http://localhost:{port}");
+    // 10. エンドポイントURL生成（HTTPSとローカルIPも含む）
+    use crate::utils::network;
+    // API作成時は証明書がまだ生成されていないため、Noneを渡す（起動時に自動生成される）
+    let endpoint = network::format_endpoint_url(port as u16, None);
     
-    // 注意: 認証プロキシの起動は、現在はAPI作成時には行わず、
-    // start_apiコマンドで起動します（認証エージェントの統合待ち）
+    // 注意: 認証プロキシの起動と証明書生成は、API起動時（start_api）に行います
+    // API作成時は設定の保存のみを行います
     
     Ok(ApiCreateResponse {
         id: api_id,
@@ -208,11 +211,13 @@ pub async fn list_apis() -> Result<Vec<ApiInfo>, String> {
         "作成済みAPIの一覧を取得できませんでした。アプリを再起動して再度お試しください。".to_string()
     })?;
     
+    use crate::utils::network;
     let api_infos: Vec<ApiInfo> = apis.into_iter().map(|api| {
+        let endpoint = network::format_endpoint_url(api.port as u16, Some(&api.id));
         ApiInfo {
             id: api.id,
             name: api.name,
-            endpoint: format!("http://localhost:{}", api.port),
+            endpoint,
             model_name: api.model,
             port: api.port as u16,
             enable_auth: api.enable_auth,
@@ -229,7 +234,7 @@ pub async fn list_apis() -> Result<Vec<ApiInfo>, String> {
 #[tauri::command]
 pub async fn start_api(api_id: String) -> Result<(), String> {
     // データベース操作を同期的に実行（非Send型のため）
-    let (port, enable_auth) = tokio::task::spawn_blocking({
+    let (port, enable_auth, engine_type, engine_base_url) = tokio::task::spawn_blocking({
         let api_id = api_id.clone();
         move || {
             let conn = get_connection().map_err(|_| {
@@ -241,22 +246,86 @@ pub async fn start_api(api_id: String) -> Result<(), String> {
                 "指定されたAPIが見つかりませんでした。API一覧を確認してください。".to_string()
             })?;
             
-            Ok::<(u16, bool), String>((api.port as u16, api.enable_auth))
+            // エンジンベースURLを取得
+            let engine_base_url = api.engine_type.as_deref()
+                .map(|et| {
+                    match et {
+                        "ollama" => {
+                            use crate::engines::{ollama::OllamaEngine, traits::LLMEngine};
+                            OllamaEngine::new().get_base_url()
+                        },
+                        "lm_studio" => {
+                            use crate::engines::{lm_studio::LMStudioEngine, traits::LLMEngine};
+                            LMStudioEngine::new().get_base_url()
+                        },
+                        "vllm" => {
+                            use crate::engines::{vllm::VLLMEngine, traits::LLMEngine};
+                            VLLMEngine::new().get_base_url()
+                        },
+                        "llama_cpp" => {
+                            use crate::engines::{llama_cpp::LlamaCppEngine, traits::LLMEngine};
+                            LlamaCppEngine::new().get_base_url()
+                        },
+                        _ => "http://localhost:11434".to_string(),
+                    }
+                })
+                .unwrap_or_else(|| "http://localhost:11434".to_string());
+            
+            Ok::<(u16, bool, Option<String>, String), String>((
+                api.port as u16, 
+                api.enable_auth,
+                api.engine_type,
+                engine_base_url
+            ))
         }
     }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
     
-    // 2. Ollamaが起動しているか確認・起動
-    use crate::ollama::{check_ollama_running, start_ollama};
+    // 2. エンジンが起動しているか確認・起動
+    let engine_type_str = engine_type.as_deref().unwrap_or("ollama");
+    use crate::engines::{EngineManager, EngineConfig};
+    let engine_manager = EngineManager::new();
     
-    if !check_ollama_running().await.map_err(|_| {
-        "AIエンジンの状態を確認できませんでした。".to_string()
-    })? {
-        start_ollama(None).await.map_err(|_| {
-            "AIエンジンの起動に失敗しました。しばらく待ってから再度お試しください。".to_string()
-        })?;
+    let is_running = match engine_type_str {
+        "ollama" => {
+            use crate::engines::{ollama::OllamaEngine, traits::LLMEngine};
+            OllamaEngine::new().is_running().await.map_err(|e| format!("エンジン状態確認エラー: {}", e))?
+        },
+        "lm_studio" => {
+            use crate::engines::{lm_studio::LMStudioEngine, traits::LLMEngine};
+            LMStudioEngine::new().is_running().await.map_err(|e| format!("エンジン状態確認エラー: {}", e))?
+        },
+        "vllm" => {
+            use crate::engines::{vllm::VLLMEngine, traits::LLMEngine};
+            VLLMEngine::new().is_running().await.map_err(|e| format!("エンジン状態確認エラー: {}", e))?
+        },
+        "llama_cpp" => {
+            use crate::engines::{llama_cpp::LlamaCppEngine, traits::LLMEngine};
+            LlamaCppEngine::new().is_running().await.map_err(|e| format!("エンジン状態確認エラー: {}", e))?
+        },
+        _ => return Err(format!("不明なエンジンタイプ: {}", engine_type_str)),
+    };
+    
+    if !is_running {
+        let engine_config = EngineConfig {
+            engine_type: engine_type_str.to_string(),
+            base_url: Some(engine_base_url.clone()),
+            executable_path: None,
+            port: None,
+            auto_detect: true,
+        };
+        
+        engine_manager.start_engine(engine_type_str, Some(engine_config)).await
+            .map_err(|e| {
+                format!("エンジンの起動に失敗しました: {}. 手動でエンジンを起動してから再度お試しください。", e)
+            })?;
     }
     
-    // 3. 認証プロキシを起動（認証が有効な場合）
+    // 3. SSL証明書を生成（HTTPS必須）
+    // セキュリティ: HTTPは使用不可（パスワード漏洩のリスクがあるため）
+    // 注意: 証明書生成はstart_apiで行う（認証プロキシ起動時）
+    // API作成時は証明書生成をスキップ（Node.js側で自動生成される）
+    
+    // 4. 認証プロキシを起動（認証が有効な場合）
     if enable_auth {
         use crate::auth;
         
@@ -264,12 +333,13 @@ pub async fn start_api(api_id: String) -> Result<(), String> {
         // 認証プロキシサーバーはデータベースから直接APIキーのハッシュを確認するため、
         // APIキーを環境変数として渡す必要はない
         // API IDはリクエストログ記録用に環境変数として渡す
-        auth::start_auth_proxy(port, None, None, Some(api_id.clone())).await.map_err(|_| {
+        // エンジン別のベースURLを環境変数として渡す
+        auth::start_auth_proxy(port, None, Some(engine_base_url.clone()), Some(api_id.clone())).await.map_err(|_| {
             "セキュリティ機能の起動に失敗しました。ポート番号が他のアプリで使用されていないか確認してください。".to_string()
         })?;
     }
     
-    // 4. ステータスを更新（同期的に実行）
+    // 5. ステータスを更新（同期的に実行）
     tokio::task::spawn_blocking({
         let api_id = api_id.clone();
         move || {
@@ -417,10 +487,13 @@ pub async fn get_api_details(api_id: String) -> Result<ApiDetailsResponse, Strin
         None
     };
     
+    use crate::utils::network;
+    let endpoint = network::format_endpoint_url(api.port as u16, Some(&api.id));
+    
     Ok(ApiDetailsResponse {
         id: api.id,
         name: api.name,
-        endpoint: format!("http://localhost:{}", api.port),
+        endpoint,
         model_name: api.model,
         port: api.port as u16,
         enable_auth: api.enable_auth,
@@ -1555,6 +1628,8 @@ pub async fn import_api_settings(request: ImportApiSettingsRequest) -> Result<Im
                             port: api_data.port,
                             enable_auth: api_data.enable_auth,
                             status: crate::database::models::ApiStatus::from_str(&api_data.status),
+                            engine_type: Some("ollama".to_string()), // バックアップ復元時はデフォルトでOllama
+                            engine_config: None, // バックアップデータに含まれていない場合はNone
                             created_at: chrono::DateTime::parse_from_rfc3339(&api_data.created_at)
                                 .map_err(|_| "日付の解析に失敗しました".to_string())?
                                 .with_timezone(&Utc),
@@ -1602,6 +1677,8 @@ pub async fn import_api_settings(request: ImportApiSettingsRequest) -> Result<Im
                             port: api_data.port,
                             enable_auth: api_data.enable_auth,
                             status: crate::database::models::ApiStatus::from_str(&api_data.status),
+                            engine_type: Some("ollama".to_string()), // バックアップ復元時はデフォルトでOllama
+                            engine_config: None, // バックアップデータに含まれていない場合はNone
                             created_at: chrono::DateTime::parse_from_rfc3339(&api_data.created_at)
                                 .map_err(|_| "日付の解析に失敗しました".to_string())?
                                 .with_timezone(&Utc),
@@ -1634,6 +1711,8 @@ pub async fn import_api_settings(request: ImportApiSettingsRequest) -> Result<Im
                     port: api_data.port,
                     enable_auth: api_data.enable_auth,
                     status: crate::database::models::ApiStatus::from_str(&api_data.status),
+                    engine_type: Some("ollama".to_string()), // バックアップ復元時はデフォルトでOllama
+                    engine_config: None, // バックアップデータに含まれていない場合はNone
                     created_at: chrono::DateTime::parse_from_rfc3339(&api_data.created_at)
                         .map_err(|_| "日付の解析に失敗しました".to_string())?
                         .with_timezone(&Utc),
@@ -1699,4 +1778,53 @@ pub async fn delete_logs(request: DeleteLogsRequest) -> Result<DeleteLogsRespons
     Ok(DeleteLogsResponse {
         deleted_count,
     })
+}
+
+/// モデルカタログ情報のレスポンス型
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ModelCatalogInfo {
+    pub name: String,
+    pub description: Option<String>,
+    pub size: Option<i64>,
+    pub parameters: Option<i64>,
+    pub category: Option<String>,
+    pub recommended: bool,
+    pub author: Option<String>,
+    pub license: Option<String>,
+    pub modified_at: Option<String>,
+}
+
+/// モデルカタログを取得（データベースから）
+#[tauri::command]
+pub async fn get_model_catalog() -> Result<Vec<ModelCatalogInfo>, String> {
+    use crate::database::connection::get_connection;
+    
+    // データベースからモデルカタログを取得（非Send型のため）
+    let catalog_models = tokio::task::spawn_blocking(|| {
+        let conn = get_connection().map_err(|_| {
+            "データの読み込みに失敗しました。アプリを再起動して再度お試しください。".to_string()
+        })?;
+        
+        let catalog_repo = ModelCatalogRepository::new(&conn);
+        catalog_repo.find_all().map_err(|e| {
+            format!("モデルカタログの取得に失敗しました: {}", e)
+        })
+    }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
+    
+    // ModelCatalogをModelCatalogInfoに変換
+    let result: Vec<ModelCatalogInfo> = catalog_models.into_iter().map(|model| {
+        ModelCatalogInfo {
+            name: model.name,
+            description: model.description,
+            size: model.size,
+            parameters: model.parameters,
+            category: model.category,
+            recommended: model.recommended,
+            author: model.author,
+            license: model.license,
+            modified_at: Some(model.updated_at.to_rfc3339()),
+        }
+    }).collect();
+    
+    Ok(result)
 }

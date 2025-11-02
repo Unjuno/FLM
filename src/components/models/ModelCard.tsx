@@ -26,6 +26,7 @@ interface ModelCardProps {
   onDownload: () => void;
   onUseForApi?: () => void;
   isDownloading?: boolean;
+  viewMode?: 'grid' | 'list';
 }
 
 export const ModelCard: React.FC<ModelCardProps> = ({
@@ -34,6 +35,7 @@ export const ModelCard: React.FC<ModelCardProps> = ({
   onDownload,
   onUseForApi,
   isDownloading = false,
+  viewMode = 'grid',
 }) => {
   // サイズをフォーマット
   const formatSize = (bytes: number): string => {
@@ -68,7 +70,7 @@ export const ModelCard: React.FC<ModelCardProps> = ({
   };
 
   return (
-    <div className={`model-card ${model.recommended ? 'recommended' : ''}`}>
+    <div className={`model-card ${model.recommended ? 'recommended' : ''} ${viewMode === 'list' ? 'list-view' : 'grid-view'}`}>
       {model.recommended && (
         <div className="recommended-badge">⭐ 推奨</div>
       )}

@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ModelSearch } from '../components/models/ModelSearch';
 import { InstalledModelsList } from '../components/models/InstalledModelsList';
+import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import './ModelManagement.css';
 
 /**
@@ -15,6 +16,9 @@ import './ModelManagement.css';
 export const ModelManagement: React.FC = () => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'search' | 'installed'>('search');
+
+  // グローバルキーボードショートカットを有効化
+  useGlobalKeyboardShortcuts();
 
   return (
     <div className="model-management-page">

@@ -2,36 +2,202 @@
 
 .api-create-page {
   min-height: 100vh;
-  background-color: #f5f5f5;
-  padding: 2rem;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding: var(--spacing-xl);
+  background: linear-gradient(180deg, #87CEEB 0%, #B0E0E6 40%, #E0F6FF 100%);
+  position: relative;
+  overflow: hidden;
+}
+
+/* 雲のような装飾要素 */
+.api-create-page::before,
+.api-create-page::after {
+  content: '';
+  position: absolute;
+  border-radius: 50%;
+  opacity: 0.3;
+  pointer-events: none;
+}
+
+.api-create-page::before {
+  width: 400px;
+  height: 200px;
+  background: rgba(255, 255, 255, 0.8);
+  top: 10%;
+  right: -10%;
+  animation: float-cloud 30s ease-in-out infinite;
+  will-change: transform;
+}
+
+.api-create-page::after {
+  width: 300px;
+  height: 150px;
+  background: rgba(255, 255, 255, 0.6);
+  bottom: 15%;
+  left: -5%;
+  animation: float-cloud 25s ease-in-out infinite reverse;
+  will-change: transform;
+}
+
+@keyframes float-cloud {
+  0%, 100% {
+    transform: translate(0, 0) scale(1);
+  }
+  50% {
+    transform: translate(20px, -20px) scale(1.1);
+  }
+}
+
+[data-theme="dark"] .api-create-page {
+  background: linear-gradient(180deg, #1a3a52 0%, #2d4a66 40%, #3d5a7a 100%);
+}
+
+[data-theme="dark"] .api-create-page::before,
+[data-theme="dark"] .api-create-page::after {
+  background: rgba(255, 255, 255, 0.1);
 }
 
 .api-create-container {
   max-width: 900px;
-  margin: 0 auto;
-  background-color: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  padding: 2rem;
+  width: 100%;
+  margin: var(--spacing-2xl) auto;
+  background: rgba(255, 255, 255, 0.7);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-xl);
+  box-shadow: 0 8px 32px rgba(135, 206, 235, 0.2);
+  padding: var(--spacing-2xl);
+  position: relative;
+  z-index: 1;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+[data-theme="dark"] .api-create-container {
+  background: rgba(26, 58, 82, 0.6);
+  border-color: rgba(224, 246, 255, 0.2);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
 }
 
 .api-create-header {
-  margin-bottom: 2rem;
-  text-align: center;
-  border-bottom: 1px solid #e0e0e0;
-  padding-bottom: 1.5rem;
+  margin-bottom: var(--spacing-2xl);
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  padding-bottom: var(--spacing-lg);
 }
 
 .api-create-header h1 {
-  margin: 0 0 0.5rem 0;
-  font-size: 2rem;
-  color: #333;
+  margin: 0 0 var(--spacing-md) 0;
+  font-size: clamp(1.75rem, 4vw, 2.25rem);
+  color: #1a3a52;
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  text-shadow: 0 2px 10px rgba(255, 255, 255, 0.5);
+}
+
+[data-theme="dark"] .api-create-header h1 {
+  color: #E0F6FF;
+  text-shadow: 0 2px 10px rgba(26, 58, 82, 0.5);
 }
 
 .api-create-subtitle {
   margin: 0;
-  color: #666;
-  font-size: 0.9rem;
+  color: rgba(26, 58, 82, 0.8);
+  font-size: 1rem;
+}
+
+[data-theme="dark"] .api-create-subtitle {
+  color: rgba(224, 246, 255, 0.8);
+}
+
+.back-button {
+  background: rgba(255, 255, 255, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #1a3a52;
+  cursor: pointer;
+  font-size: 1rem;
+  padding: var(--spacing-sm) var(--spacing-md);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  border-radius: var(--radius-md);
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-lg);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 4px 16px rgba(135, 206, 235, 0.15);
+}
+
+.back-button:hover {
+  background: rgba(255, 255, 255, 0.7);
+  border-color: rgba(255, 255, 255, 0.5);
+  box-shadow: 0 6px 20px rgba(135, 206, 235, 0.25);
+  transform: translateY(-2px);
+}
+
+[data-theme="dark"] .back-button {
+  background: rgba(26, 58, 82, 0.5);
+  border-color: rgba(224, 246, 255, 0.2);
+  color: #E0F6FF;
+}
+
+[data-theme="dark"] .back-button:hover {
+  background: rgba(26, 58, 82, 0.7);
+  border-color: rgba(224, 246, 255, 0.3);
+}
+
+.step-indicator {
+  display: flex;
+  gap: var(--spacing-md);
+  margin-top: var(--spacing-lg);
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.step-indicator span {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border-radius: var(--radius-full);
+  font-size: 0.875rem;
+  font-weight: 600;
+  background: rgba(255, 255, 255, 0.4);
+  color: rgba(26, 58, 82, 0.7);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  transition: all 0.3s ease;
+}
+
+.step-indicator span.active {
+  background: linear-gradient(135deg, rgba(74, 144, 226, 0.9) 0%, rgba(91, 163, 245, 0.9) 100%);
+  color: #ffffff;
+  border-color: rgba(74, 144, 226, 0.5);
+  box-shadow: 0 4px 16px rgba(74, 144, 226, 0.3);
+}
+
+.step-indicator span.completed {
+  background: rgba(74, 144, 226, 0.2);
+  color: rgba(74, 144, 226, 0.9);
+  border-color: rgba(74, 144, 226, 0.3);
+}
+
+[data-theme="dark"] .step-indicator span {
+  background: rgba(26, 58, 82, 0.4);
+  color: rgba(224, 246, 255, 0.7);
+  border-color: rgba(224, 246, 255, 0.2);
+}
+
+[data-theme="dark"] .step-indicator span.active {
+  background: linear-gradient(135deg, rgba(74, 144, 226, 0.9) 0%, rgba(91, 163, 245, 0.9) 100%);
+  color: #ffffff;
+}
+
+[data-theme="dark"] .step-indicator span.completed {
+  background: rgba(74, 144, 226, 0.3);
+  color: rgba(224, 246, 255, 0.9);
+}
+
+.api-create-content {
+  margin-top: var(--spacing-xl);
 }
 
 .api-create-error {
@@ -51,11 +217,53 @@
 
 .error-message {
   margin: 0 0 2rem 0;
-  color: #666;
+  color: rgba(26, 58, 82, 0.8);
+}
+
+[data-theme="dark"] .error-message {
+  color: rgba(224, 246, 255, 0.8);
 }
 
 .error-actions {
   display: flex;
   justify-content: center;
   gap: 1rem;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .api-create-page {
+    padding: var(--spacing-md);
+  }
+
+  .api-create-page::before,
+  .api-create-page::after {
+    display: none;
+  }
+
+  .api-create-container {
+    padding: var(--spacing-lg);
+    margin: var(--spacing-lg) auto;
+  }
+
+  .step-indicator {
+    flex-direction: column;
+    gap: var(--spacing-sm);
+  }
+}
+
+/* モーションを減らしたいユーザーのための設定 */
+@media (prefers-reduced-motion: reduce) {
+  .api-create-page::before,
+  .api-create-page::after {
+    animation: none;
+  }
+
+  .back-button {
+    transition: none;
+  }
+
+  .back-button:hover {
+    transform: none;
+  }
 }

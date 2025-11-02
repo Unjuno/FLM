@@ -1,0 +1,167 @@
+/* Tooltip Component Styles */
+/* FE-009-02: ツールチップ・ヒント表示機能実装 */
+
+.tooltip-container {
+  position: relative;
+  display: inline-block;
+}
+
+.tooltip {
+  position: absolute;
+  z-index: 1000;
+  padding: 0.75rem 1rem;
+  background-color: #333;
+  color: white;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  line-height: 1.6;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  white-space: normal;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  word-break: normal;
+  animation: tooltipFadeIn 0.2s ease-out;
+  pointer-events: none;
+  max-width: var(--tooltip-max-width, 380px);
+  min-width: 260px;
+  width: fit-content;
+  text-align: left;
+  writing-mode: horizontal-tb;
+  box-sizing: border-box;
+  hyphens: auto;
+}
+
+@keyframes tooltipFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(-4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* 矢印（三角形）のスタイル */
+.tooltip::before {
+  content: '';
+  position: absolute;
+  width: 0;
+  height: 0;
+  border-style: solid;
+}
+
+/* Top position */
+.tooltip-top {
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 0.5rem;
+}
+
+.tooltip-top::before {
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 6px 6px 0 6px;
+  border-color: #333 transparent transparent transparent;
+}
+
+/* Bottom position */
+.tooltip-bottom {
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-top: 0.5rem;
+}
+
+.tooltip-bottom::before {
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border-width: 0 6px 6px 6px;
+  border-color: transparent transparent #333 transparent;
+}
+
+/* Left position */
+.tooltip-left {
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-right: 0.5rem;
+}
+
+.tooltip-left::before {
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 6px 0 6px 6px;
+  border-color: transparent transparent transparent #333;
+}
+
+/* Right position */
+.tooltip-right {
+  left: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-left: 0.5rem;
+}
+
+.tooltip-right::before {
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  border-width: 6px 6px 6px 0;
+  border-color: transparent #333 transparent transparent;
+}
+
+.tooltip-title {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.tooltip-content {
+  color: #e0e0e0;
+  font-size: 0.875rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: normal;
+  text-align: left;
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  .tooltip {
+    background-color: #2a2a2a;
+    border: 1px solid #444;
+  }
+
+  .tooltip-top::before {
+    border-color: #2a2a2a transparent transparent transparent;
+  }
+
+  .tooltip-bottom::before {
+    border-color: transparent transparent #2a2a2a transparent;
+  }
+
+  .tooltip-left::before {
+    border-color: transparent transparent transparent #2a2a2a;
+  }
+
+  .tooltip-right::before {
+    border-color: transparent #2a2a2a transparent transparent;
+  }
+}
+
+/* モバイル対応（タッチデバイスではツールチップを非表示にするか、タップで表示） */
+@media (max-width: 768px) {
+  .tooltip {
+    font-size: 0.8125rem;
+    padding: 0.625rem 0.875rem;
+    max-width: 280px;
+    min-width: 180px;
+  }
+}
+

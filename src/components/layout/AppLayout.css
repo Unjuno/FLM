@@ -1,0 +1,58 @@
+/* FLM - アプリケーションレイアウトコンポーネントのスタイル */
+
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  background: #f5f5f5;
+}
+
+.app-layout.minimal {
+  background: #fff;
+}
+
+.layout-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.main-content {
+  flex: 1;
+  padding: 2rem;
+  overflow-y: auto;
+  transition: margin-left 0.3s ease;
+}
+
+.main-content.with-sidebar {
+  margin-left: 0;
+}
+
+.minimal-content {
+  padding: 0;
+}
+
+.app-layout.sidebar-collapsed .main-content.with-sidebar {
+  margin-left: 64px;
+}
+
+.app-layout:not(.sidebar-collapsed) .main-content.with-sidebar {
+  margin-left: 250px;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .main-content {
+    padding: 1rem;
+  }
+
+  .main-content.with-sidebar {
+    margin-left: 0;
+  }
+
+  .app-layout.sidebar-collapsed .main-content.with-sidebar,
+  .app-layout:not(.sidebar-collapsed) .main-content.with-sidebar {
+    margin-left: 0;
+  }
+}
+

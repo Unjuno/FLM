@@ -1,0 +1,114 @@
+/* Alert Threshold Component Styles */
+/* FE-012-02: アラート・閾値設定機能実装 */
+
+.alert-threshold {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--color-bg-secondary, #f8f9fa);
+  border: 1px solid var(--color-border, #e0e0e0);
+  border-radius: 8px;
+}
+
+.alert-threshold-header {
+  margin-bottom: 0.75rem;
+}
+
+.alert-threshold-label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 600;
+  font-size: 1rem;
+  color: var(--color-text, #333);
+  cursor: pointer;
+}
+
+.alert-threshold-checkbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+}
+
+.alert-threshold-controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.alert-threshold-input {
+  width: 120px;
+  padding: 0.5rem;
+  border: 2px solid var(--color-border, #e0e0e0);
+  border-radius: 6px;
+  font-size: 1rem;
+  font-weight: 600;
+  transition: border-color 0.2s;
+}
+
+.alert-threshold-input:focus {
+  outline: none;
+  border-color: var(--color-link, #667eea);
+}
+
+.alert-threshold-input:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.alert-threshold-unit {
+  font-weight: 600;
+  color: var(--color-text-secondary, #666);
+  min-width: 40px;
+}
+
+.alert-threshold-slider {
+  flex: 1;
+  min-width: 200px;
+  height: 6px;
+  border-radius: 3px;
+  background: var(--color-border, #e0e0e0);
+  outline: none;
+  -webkit-appearance: none;
+}
+
+.alert-threshold-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-link, #667eea);
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.alert-threshold-slider::-webkit-slider-thumb:hover {
+  background: var(--color-link-hover, #535bf2);
+}
+
+.alert-threshold-slider::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: var(--color-link, #667eea);
+  cursor: pointer;
+  border: none;
+  transition: background 0.2s;
+}
+
+.alert-threshold-slider::-moz-range-thumb:hover {
+  background: var(--color-link-hover, #535bf2);
+}
+
+.alert-threshold-slider:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ダークモード対応 */
+[data-theme="dark"] .alert-threshold {
+  background: #2f2f2f;
+  border-color: #404040;
+}
+

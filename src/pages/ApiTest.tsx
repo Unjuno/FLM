@@ -46,8 +46,8 @@ export const ApiTest: React.FC = () => {
     if (!apiId) return;
 
     try {
-      // バックエンドのIPCコマンドを呼び出し（list_apisから該当APIを取得）
-      const apis = await invoke<Array<{
+      // バックエンドのIPCコマンドを呼び出してAPI詳細を取得（APIキーを含む）
+      const apiDetails = await invoke<{
         id: string;
         name: string;
         endpoint: string;
@@ -55,24 +55,16 @@ export const ApiTest: React.FC = () => {
         port: number;
         enable_auth: boolean;
         status: string;
+        api_key: string | null;
         created_at: string;
         updated_at: string;
-      }>>('list_apis');
+      }>('get_api_details', { api_id: apiId });
 
-      const api = apis.find(a => a.id === apiId);
-      
-      if (!api) {
-        console.error('APIが見つかりませんでした');
-        return;
-      }
-
-      // APIキーは別途取得する必要があるが、現在の実装ではAPIキーは作成時のみ表示される
-      // セキュリティ上の理由で、APIキー取得コマンドは後で実装（F005で実装予定）
       setApiInfo({
-        endpoint: api.endpoint,
-        apiKey: api.enable_auth ? undefined : undefined, // TODO: APIキー取得コマンドで取得
-        name: api.name,
-        model_name: api.model_name,
+        endpoint: apiDetails.endpoint,
+        apiKey: apiDetails.api_key || undefined,
+        name: apiDetails.name,
+        model_name: apiDetails.model_name,
       });
     } catch (err) {
       console.error('API情報の取得に失敗しました:', err);

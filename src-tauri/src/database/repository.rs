@@ -17,10 +17,11 @@ impl<'a> ApiRepository<'a> {
     
     /// API設定を作成
     pub fn create(&self, api: &Api) -> Result<(), DatabaseError> {
+        let engine_type = api.engine_type.as_deref().unwrap_or("ollama");
         self.conn.execute(
             r#"
-            INSERT INTO apis (id, name, model, port, enable_auth, status, created_at, updated_at)
-            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+            INSERT INTO apis (id, name, model, port, enable_auth, status, engine_type, engine_config, created_at, updated_at)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
             "#,
             params![
                 api.id,
@@ -29,6 +30,8 @@ impl<'a> ApiRepository<'a> {
                 api.port,
                 if api.enable_auth { 1 } else { 0 },
                 api.status.as_str(),
+                engine_type,
+                api.engine_config,
                 api.created_at.to_rfc3339(),
                 api.updated_at.to_rfc3339(),
             ],
@@ -39,7 +42,7 @@ impl<'a> ApiRepository<'a> {
     /// API設定を取得（IDで）
     pub fn find_by_id(&self, id: &str) -> Result<Api, DatabaseError> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, name, model, port, enable_auth, status, created_at, updated_at FROM apis WHERE id = ?1"
+            "SELECT id, name, model, port, enable_auth, status, engine_type, engine_config, created_at, updated_at FROM apis WHERE id = ?1"
         )?;
         
         stmt.query_row(params![id], |row| {
@@ -57,7 +60,7 @@ impl<'a> ApiRepository<'a> {
     /// 全てのAPI設定を取得
     pub fn find_all(&self) -> Result<Vec<Api>, DatabaseError> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, name, model, port, enable_auth, status, created_at, updated_at FROM apis ORDER BY created_at DESC"
+            "SELECT id, name, model, port, enable_auth, status, engine_type, engine_config, created_at, updated_at FROM apis ORDER BY created_at DESC"
         )?;
         
         let apis = stmt.query_map([], |row| {
@@ -73,10 +76,11 @@ impl<'a> ApiRepository<'a> {
     
     /// API設定を更新
     pub fn update(&self, api: &Api) -> Result<(), DatabaseError> {
+        let engine_type = api.engine_type.as_deref().unwrap_or("ollama");
         let rows_affected = self.conn.execute(
             r#"
             UPDATE apis 
-            SET name = ?2, model = ?3, port = ?4, enable_auth = ?5, status = ?6, updated_at = ?7
+            SET name = ?2, model = ?3, port = ?4, enable_auth = ?5, status = ?6, engine_type = ?7, engine_config = ?8, updated_at = ?9
             WHERE id = ?1
             "#,
             params![
@@ -86,6 +90,8 @@ impl<'a> ApiRepository<'a> {
                 api.port,
                 if api.enable_auth { 1 } else { 0 },
                 api.status.as_str(),
+                engine_type,
+                api.engine_config,
                 api.updated_at.to_rfc3339(),
             ],
         )?;
@@ -114,7 +120,7 @@ impl<'a> ApiRepository<'a> {
     /// API名でAPI設定を取得（BE-008-02で追加）
     pub fn find_by_name(&self, name: &str) -> Result<Option<Api>, DatabaseError> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, name, model, port, enable_auth, status, created_at, updated_at FROM apis WHERE name = ?1"
+            "SELECT id, name, model, port, enable_auth, status, engine_type, engine_config, created_at, updated_at FROM apis WHERE name = ?1"
         )?;
         
         match stmt.query_row(params![name], |row| {
@@ -130,7 +136,7 @@ impl<'a> ApiRepository<'a> {
     #[allow(dead_code)] // 将来使用予定
     pub fn find_by_port(&self, port: i32) -> Result<Option<Api>, DatabaseError> {
         let mut stmt = self.conn.prepare(
-            "SELECT id, name, model, port, enable_auth, status, created_at, updated_at FROM apis WHERE port = ?1"
+            "SELECT id, name, model, port, enable_auth, status, engine_type, engine_config, created_at, updated_at FROM apis WHERE port = ?1"
         )?;
         
         match stmt.query_row(params![port], |row| {
@@ -145,15 +151,17 @@ impl<'a> ApiRepository<'a> {
     /// RowからApiに変換
     fn row_to_api(row: &Row) -> Result<Api, rusqlite::Error> {
         let status_str: String = row.get(5)?;
-        let created_at_str: String = row.get(6)?;
-        let updated_at_str: String = row.get(7)?;
+        let engine_type: Option<String> = row.get(6).ok();
+        let engine_config: Option<String> = row.get(7).ok();
+        let created_at_str: String = row.get(8)?;
+        let updated_at_str: String = row.get(9)?;
         
         let created_at = chrono::DateTime::parse_from_rfc3339(&created_at_str)
-            .map_err(|_| rusqlite::Error::InvalidColumnType(6, "created_at".to_string(), rusqlite::types::Type::Text))?
+            .map_err(|_| rusqlite::Error::InvalidColumnType(8, "created_at".to_string(), rusqlite::types::Type::Text))?
             .with_timezone(&Utc);
         
         let updated_at = chrono::DateTime::parse_from_rfc3339(&updated_at_str)
-            .map_err(|_| rusqlite::Error::InvalidColumnType(7, "updated_at".to_string(), rusqlite::types::Type::Text))?
+            .map_err(|_| rusqlite::Error::InvalidColumnType(9, "updated_at".to_string(), rusqlite::types::Type::Text))?
             .with_timezone(&Utc);
         
         Ok(Api {
@@ -163,6 +171,8 @@ impl<'a> ApiRepository<'a> {
             port: row.get(3)?,
             enable_auth: row.get::<_, i32>(4)? != 0,
             status: ApiStatus::from_str(&status_str),
+            engine_type,
+            engine_config,
             created_at,
             updated_at,
         })
@@ -939,7 +949,7 @@ impl<'a> RequestLogRepository<'a> {
             ));
         }
         
-        // 条件に応じてクエリを実行
+        // 条件に応じてクエリを実行（SQLiteのDELETEは単一ステートメントでも原子性がある）
         let rows_affected = match (api_id, before_date) {
             (Some(api_id_val), Some(before_date_val)) => {
                 // API IDと日付の両方を指定
@@ -948,22 +958,25 @@ impl<'a> RequestLogRepository<'a> {
                     params![api_id_val, before_date_val],
                 )?
             },
-            (Some(api_id_val), None) => {
-                // API IDのみ指定
+            (Some(api_id_val), none_date) => {
+                // API IDのみ指定（Clippy警告回避: none_dateとして明示的に命名）
+                let _ = none_date; // 未使用変数の警告を回避
                 self.conn.execute(
                     "DELETE FROM request_logs WHERE api_id = ?1",
                     params![api_id_val],
                 )?
             },
-            (None, Some(before_date_val)) => {
-                // 日付のみ指定
+            (none_id, Some(before_date_val)) => {
+                // 日付のみ指定（Clippy警告回避: none_idとして明示的に命名）
+                let _ = none_id; // 未使用変数の警告を回避
                 self.conn.execute(
                     "DELETE FROM request_logs WHERE created_at < ?1",
                     params![before_date_val],
                 )?
             },
-            (None, None) => {
+            (none_id, none_date) => {
                 // このパターンは既に上でエラーになっているはず
+                let _ = (none_id, none_date); // 未使用変数の警告を回避
                 unreachable!()
             },
         };
@@ -1190,6 +1203,118 @@ impl<'a> PerformanceMetricRepository<'a> {
     }
 }
 
+/// アラート履歴のリポジトリ（F012の基盤）
+pub struct AlertHistoryRepository<'a> {
+    conn: &'a Connection,
+}
+
+impl<'a> AlertHistoryRepository<'a> {
+    pub fn new(conn: &'a Connection) -> Self {
+        Self { conn }
+    }
+    
+    /// アラート履歴を作成
+    pub fn create(&self, alert: &crate::database::models::AlertHistory) -> Result<(), DatabaseError> {
+        self.conn.execute(
+            r#"
+            INSERT INTO alert_history (id, api_id, alert_type, current_value, threshold, message, timestamp, resolved_at)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)
+            "#,
+            params![
+                alert.id,
+                alert.api_id,
+                alert.alert_type,
+                alert.current_value,
+                alert.threshold,
+                alert.message,
+                alert.timestamp.to_rfc3339(),
+                alert.resolved_at.map(|dt| dt.to_rfc3339()),
+            ],
+        )?;
+        Ok(())
+    }
+    
+    /// API IDでアラート履歴を取得（最新順）
+    pub fn find_by_api_id(&self, api_id: &str, limit: Option<i32>) -> Result<Vec<crate::database::models::AlertHistory>, DatabaseError> {
+        let limit_value = limit.unwrap_or(100);
+        let mut stmt = self.conn.prepare(
+            "SELECT id, api_id, alert_type, current_value, threshold, message, timestamp, resolved_at FROM alert_history WHERE api_id = ?1 ORDER BY timestamp DESC LIMIT ?2"
+        )?;
+        
+        let alerts = stmt.query_map(params![api_id, limit_value], |row| {
+            Ok(crate::database::models::AlertHistory {
+                id: row.get(0)?,
+                api_id: row.get(1)?,
+                alert_type: row.get(2)?,
+                current_value: row.get(3)?,
+                threshold: row.get(4)?,
+                message: row.get(5)?,
+                timestamp: chrono::DateTime::parse_from_rfc3339(&row.get::<_, String>(6)?)
+                    .map_err(|_| rusqlite::Error::InvalidColumnType(6, "timestamp".to_string(), rusqlite::types::Type::Text))?
+                    .with_timezone(&Utc),
+                resolved_at: row.get::<_, Option<String>>(7)?
+                    .map(|s| chrono::DateTime::parse_from_rfc3339(&s)
+                        .map_err(|_| rusqlite::Error::InvalidColumnType(7, "resolved_at".to_string(), rusqlite::types::Type::Text))
+                        .map(|dt| dt.with_timezone(&Utc)))
+                    .transpose()?,
+            })
+        })?;
+        
+        let mut result = Vec::new();
+        for alert in alerts {
+            result.push(alert?);
+        }
+        Ok(result)
+    }
+    
+    /// すべてのアラート履歴を取得（最新順、未解決のみまたはすべて）
+    pub fn find_all(&self, unresolved_only: bool, limit: Option<i32>) -> Result<Vec<crate::database::models::AlertHistory>, DatabaseError> {
+        let limit_value = limit.unwrap_or(100);
+        let query = if unresolved_only {
+            "SELECT id, api_id, alert_type, current_value, threshold, message, timestamp, resolved_at FROM alert_history WHERE resolved_at IS NULL ORDER BY timestamp DESC LIMIT ?1"
+        } else {
+            "SELECT id, api_id, alert_type, current_value, threshold, message, timestamp, resolved_at FROM alert_history ORDER BY timestamp DESC LIMIT ?1"
+        };
+        
+        let mut stmt = self.conn.prepare(query)?;
+        
+        let alerts = stmt.query_map(params![limit_value], |row| {
+            Ok(crate::database::models::AlertHistory {
+                id: row.get(0)?,
+                api_id: row.get(1)?,
+                alert_type: row.get(2)?,
+                current_value: row.get(3)?,
+                threshold: row.get(4)?,
+                message: row.get(5)?,
+                timestamp: chrono::DateTime::parse_from_rfc3339(&row.get::<_, String>(6)?)
+                    .map_err(|_| rusqlite::Error::InvalidColumnType(6, "timestamp".to_string(), rusqlite::types::Type::Text))?
+                    .with_timezone(&Utc),
+                resolved_at: row.get::<_, Option<String>>(7)?
+                    .map(|s| chrono::DateTime::parse_from_rfc3339(&s)
+                        .map_err(|_| rusqlite::Error::InvalidColumnType(7, "resolved_at".to_string(), rusqlite::types::Type::Text))
+                        .map(|dt| dt.with_timezone(&Utc)))
+                    .transpose()?,
+            })
+        })?;
+        
+        let mut result = Vec::new();
+        for alert in alerts {
+            result.push(alert?);
+        }
+        Ok(result)
+    }
+    
+    /// アラートを解決済みとしてマーク
+    pub fn mark_resolved(&self, id: &str) -> Result<(), DatabaseError> {
+        let now = Utc::now().to_rfc3339();
+        self.conn.execute(
+            "UPDATE alert_history SET resolved_at = ?1 WHERE id = ?2",
+            params![now, id],
+        )?;
+        Ok(())
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -1215,6 +1340,8 @@ mod tests {
             port: 8080,
             enable_auth: true,
             status: ApiStatus::Stopped,
+            engine_type: Some("ollama".to_string()),
+            engine_config: None,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         };
@@ -1243,6 +1370,8 @@ mod tests {
             port: 8080,
             enable_auth: true,
             status: ApiStatus::Stopped,
+            engine_type: Some("ollama".to_string()),
+            engine_config: None,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         };
@@ -1273,6 +1402,8 @@ mod tests {
             port: 8080,
             enable_auth: true,
             status: ApiStatus::Stopped,
+            engine_type: Some("ollama".to_string()),
+            engine_config: None,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         };
@@ -1306,6 +1437,8 @@ mod tests {
             port: 8080,
             enable_auth: true,
             status: ApiStatus::Stopped,
+            engine_type: Some("ollama".to_string()),
+            engine_config: None,
             created_at: Utc::now(),
             updated_at: Utc::now(),
         };

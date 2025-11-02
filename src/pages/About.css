@@ -1,0 +1,263 @@
+/* FLM - About Page Styles */
+
+.about-page {
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+  padding: 2rem;
+}
+
+.about-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.about-header {
+  margin-bottom: 2rem;
+}
+
+.about-back-button {
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  transition: color 0.2s;
+}
+
+.about-back-button:hover {
+  color: var(--color-text);
+}
+
+.about-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0;
+  color: var(--color-text);
+}
+
+.about-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.about-section {
+  background: var(--color-card-bg);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.about-section-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  color: var(--color-text);
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: 0.5rem;
+}
+
+.about-info-card {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1rem;
+  background: var(--color-bg);
+  border-radius: 8px;
+}
+
+.about-logo {
+  font-size: 4rem;
+  line-height: 1;
+}
+
+.about-info {
+  flex: 1;
+}
+
+.about-app-name {
+  font-size: 1.8rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  color: var(--color-text);
+}
+
+.about-app-version {
+  font-size: 1rem;
+  color: var(--color-text-secondary);
+  margin: 0 0 0.5rem 0;
+}
+
+.about-app-description {
+  font-size: 1rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.about-text-content {
+  line-height: 1.8;
+}
+
+.about-text-content p {
+  margin: 0 0 1rem 0;
+  color: var(--color-text-secondary);
+}
+
+.about-text-content p:last-child {
+  margin-bottom: 0;
+}
+
+.about-dependencies {
+  margin-top: 1rem;
+}
+
+.about-dependency-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.about-dependency-item {
+  padding: 1rem;
+  background: var(--color-bg);
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+  transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.about-dependency-item:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.about-dependency-name {
+  font-weight: 600;
+  color: var(--color-text);
+  margin-bottom: 0.25rem;
+}
+
+.about-dependency-version {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  margin-bottom: 0.5rem;
+}
+
+.about-dependency-description {
+  font-size: 0.85rem;
+  color: var(--color-text-secondary);
+  line-height: 1.4;
+}
+
+.about-links {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.about-link-button {
+  background: var(--color-primary);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  text-align: left;
+}
+
+.about-link-button:hover {
+  background: var(--color-primary-hover);
+  transform: translateY(-1px);
+}
+
+.about-link-button:active {
+  transform: translateY(0);
+}
+
+.about-link-note {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--color-bg);
+  border-radius: 8px;
+  border-left: 4px solid var(--color-primary);
+}
+
+.about-link-note p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}
+
+.about-footer {
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--color-border);
+  text-align: center;
+}
+
+.about-footer-text {
+  margin: 0;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+}
+
+.about-loading {
+  text-align: center;
+  padding: 3rem;
+  color: var(--color-text-secondary);
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  .about-section {
+    background: var(--color-card-bg);
+  }
+  
+  .about-info-card {
+    background: var(--color-bg);
+  }
+  
+  .about-dependency-item {
+    background: var(--color-bg);
+    border-color: var(--color-border);
+  }
+  
+  .about-link-note {
+    background: var(--color-bg);
+  }
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .about-page {
+    padding: 1rem;
+  }
+
+  .about-title {
+    font-size: 1.5rem;
+  }
+
+  .about-section {
+    padding: 1rem;
+  }
+
+  .about-info-card {
+    flex-direction: column;
+    text-align: center;
+  }
+
+  .about-logo {
+    font-size: 3rem;
+  }
+
+  .about-dependency-grid {
+    grid-template-columns: 1fr;
+  }
+}
+

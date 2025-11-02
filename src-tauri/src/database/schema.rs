@@ -18,6 +18,8 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
             port INTEGER NOT NULL,
             enable_auth INTEGER NOT NULL DEFAULT 1,
             status TEXT NOT NULL DEFAULT 'stopped',
+            engine_type TEXT NOT NULL DEFAULT 'ollama',
+            engine_config TEXT,
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             CHECK (port > 0 AND port < 65536),
@@ -36,6 +38,11 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
     
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_apis_created_at ON apis(created_at)",
+        [],
+    )?;
+    
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_apis_engine_type ON apis(engine_type)",
         [],
     )?;
     
@@ -208,6 +215,70 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
     
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_performance_metrics_api_type_timestamp ON performance_metrics(api_id, metric_type, timestamp)",
+        [],
+    )?;
+    
+    // Alert History テーブル（F012の基盤）
+    conn.execute(
+        r#"
+        CREATE TABLE IF NOT EXISTS alert_history (
+            id TEXT PRIMARY KEY,
+            api_id TEXT NOT NULL,
+            alert_type TEXT NOT NULL,
+            current_value REAL NOT NULL,
+            threshold REAL NOT NULL,
+            message TEXT NOT NULL,
+            timestamp TEXT NOT NULL,
+            resolved_at TEXT,
+            FOREIGN KEY (api_id) REFERENCES apis(id) ON DELETE CASCADE,
+            CHECK (alert_type IN ('response_time', 'error_rate', 'cpu_usage', 'memory_usage'))
+        )
+        "#,
+        [],
+    )?;
+    
+    // Alert History テーブルのインデックス
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_alert_history_api_id ON alert_history(api_id)",
+        [],
+    )?;
+    
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_alert_history_timestamp ON alert_history(timestamp)",
+        [],
+    )?;
+    
+    // Engine Configs テーブル（マルチエンジン対応）
+    conn.execute(
+        r#"
+        CREATE TABLE IF NOT EXISTS engine_configs (
+            id TEXT PRIMARY KEY,
+            engine_type TEXT NOT NULL,
+            name TEXT NOT NULL,
+            base_url TEXT NOT NULL,
+            auto_detect INTEGER DEFAULT 1,
+            executable_path TEXT,
+            is_default INTEGER DEFAULT 0,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        "#,
+        [],
+    )?;
+    
+    // Engine Configs テーブルのインデックス
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_engine_configs_type ON engine_configs(engine_type)",
+        [],
+    )?;
+    
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_engine_configs_default ON engine_configs(is_default)",
+        [],
+    )?;
+    
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_alert_history_api_timestamp ON alert_history(api_id, timestamp)",
         [],
     )?;
     

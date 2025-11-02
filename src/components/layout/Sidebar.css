@@ -1,0 +1,172 @@
+/* FLM - サイドバーコンポーネントのスタイル */
+
+.app-sidebar {
+  width: 250px;
+  background: #fff;
+  border-right: 1px solid #e0e0e0;
+  transition: width 0.3s ease;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+.app-sidebar.collapsed {
+  width: 64px;
+}
+
+.sidebar-container {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sidebar-header {
+  padding: 1rem;
+  border-bottom: 1px solid #e0e0e0;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.sidebar-toggle {
+  padding: 0.5rem;
+  background: #f5f5f5;
+  border: none;
+  border-radius: 6px;
+  color: #666;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.sidebar-toggle:hover {
+  background: #e0e0e0;
+  color: #333;
+}
+
+.app-sidebar.collapsed .sidebar-header {
+  justify-content: center;
+}
+
+.sidebar-nav {
+  flex: 1;
+  overflow-y: auto;
+  padding: 0.5rem;
+}
+
+.sidebar-nav-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.sidebar-nav-item {
+  margin: 0;
+}
+
+.sidebar-nav-link {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 8px;
+  color: #333;
+  text-decoration: none;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+  text-align: left;
+  position: relative;
+}
+
+.sidebar-nav-link:hover {
+  background: #f5f5f5;
+  color: #667eea;
+}
+
+.sidebar-nav-link.active {
+  background: #e8ebff;
+  color: #667eea;
+  font-weight: bold;
+}
+
+.sidebar-nav-icon {
+  font-size: 1.25rem;
+  flex-shrink: 0;
+  width: 24px;
+  text-align: center;
+}
+
+.sidebar-nav-label {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.sidebar-nav-badge {
+  background: #ff4757;
+  color: white;
+  font-size: 0.75rem;
+  font-weight: bold;
+  padding: 0.125rem 0.5rem;
+  border-radius: 12px;
+  min-width: 20px;
+  text-align: center;
+}
+
+.app-sidebar.collapsed .sidebar-nav-label,
+.app-sidebar.collapsed .sidebar-nav-badge {
+  display: none;
+}
+
+.app-sidebar.collapsed .sidebar-nav-link {
+  justify-content: center;
+  padding: 0.75rem;
+}
+
+/* スクロールバーのスタイル */
+.sidebar-nav::-webkit-scrollbar {
+  width: 6px;
+}
+
+.sidebar-nav::-webkit-scrollbar-track {
+  background: #f5f5f5;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb {
+  background: #ccc;
+  border-radius: 3px;
+}
+
+.sidebar-nav::-webkit-scrollbar-thumb:hover {
+  background: #999;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .app-sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    height: 100vh;
+    z-index: 999;
+    transform: translateX(-100%);
+    transition: transform 0.3s ease;
+  }
+
+  .app-sidebar:not(.collapsed) {
+    transform: translateX(0);
+  }
+
+  .app-sidebar.collapsed {
+    width: 250px;
+  }
+}
+

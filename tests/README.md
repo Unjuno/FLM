@@ -12,7 +12,7 @@
 
 2. **統合テスト** (`tests/integration/`)
    - 複数モジュール間の統合テスト
-   - 例: `f001-api-creation.test.ts`, `f003-api-management.test.ts`, `f004-model-management.test.ts`
+   - 例: `f001-api-creation.test.ts`, `f003-api-management.test.ts`, `f004-model-management.test.ts`, `multi-engine.test.ts`
 
 3. **E2Eテスト** (`tests/e2e/`)
    - エンドツーエンドのフローテスト

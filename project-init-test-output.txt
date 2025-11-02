@@ -1,0 +1,252 @@
+
+> flm@1.0.0 test
+> jest --config jest.config.cjs tests/integration/project-init.test.ts --no-coverage
+
+ts-jest[config] (WARN) message TS151001: If you have issues related to imports, you should consider setting `esModuleInterop` to `true` in your TypeScript configuration file (usually `tsconfig.json`). See https://blogs.msdn.microsoft.com/typescript/2018/01/31/announcing-typescript-2-7/#easier-ecmascript-module-interoperability for more information.
+  console.log
+    繝・せ繝育腸蠅・ｒ蛻晄悄蛹悶＠縺ｦ縺・∪縺・..
+
+      at Object.<anonymous> (tests/setup/jest.setup.ts:11:11)
+
+  console.log
+    繝・せ繝育腸蠅・ｒ繧ｯ繝ｪ繝ｼ繝ｳ繧｢繝・・縺励※縺・∪縺・..
+
+      at Object.<anonymous> (tests/setup/jest.setup.ts:16:11)
+
+FAIL tests/integration/project-init.test.ts
+  Project Initialization Verification
+    Required directories
+      ﾃ・should have src directory (2 ms)
+      ﾃ・should have src-tauri directory (1 ms)
+      ﾃ・should have src-tauri/src directory
+    Required files
+      ﾃ・should have package.json (1 ms)
+      ﾃ・should have tauri.conf.json
+      ﾃ・should have Cargo.toml
+      ﾃ・should have src/main.tsx
+      ﾃ・should have src-tauri/src/main.rs
+    Configuration files
+      ﾃ・should have valid package.json structure
+      ﾃ・should have required dependencies in package.json
+      ﾃ・should have valid tauri.conf.json structure
+      ﾃ・should have valid Cargo.toml structure
+    Project structure
+      ﾃ・should have correct TypeScript configuration
+      ﾃ・should have vite configuration
+      ﾃ・should have App.tsx component
+
+  笳・Project Initialization Verification 窶ｺ Required directories 窶ｺ should have src directory
+
+    TypeError: Cannot read properties of undefined (reading 'join')
+
+      22 |   describe('Required directories', () => {
+      23 |     it('should have src directory', () => {
+    > 24 |       const srcDir = path.join(projectRoot, 'src');
+         |                           ^
+      25 |       expect(fs.existsSync(srcDir)).toBe(true);
+      26 |     });
+      27 |
+
+      at Object.<anonymous> (tests/integration/project-init.test.ts:24:27)
+
+  笳・Project Initialization Verification 窶ｺ Required directories 窶ｺ should have src-tauri directory
+
+    TypeError: Cannot read properties of undefined (reading 'join')
+
+      27 |
+      28 |     it('should have src-tauri directory', () => {
+    > 29 |       const tauriDir = path.join(projectRoot, 'src-tauri');
+         |                             ^
+      30 |       expect(fs.existsSync(tauriDir)).toBe(true);
+      31 |     });
+      32 |
+
+      at Object.<anonymous> (tests/integration/project-init.test.ts:29:29)
+
+  笳・Project Initialization Verification 窶ｺ Required directories 窶ｺ should have src-tauri/src directory
+
+    TypeError: Cannot read properties of undefined (reading 'join')
+
+      32 |
+      33 |     it('should have src-tauri/src directory', () => {
+    > 34 |       const tauriSrcDir = path.join(projectRoot, 'src-tauri/src');
+         |                                ^
+      35 |       expect(fs.existsSync(tauriSrcDir)).toBe(true);
+      36 |     });
+      37 |   });
+
+      at Object.<anonymous> (tests/integration/project-init.test.ts:34:32)
+
+  笳・Project Initialization Verification 窶ｺ Required files 窶ｺ should have package.json
+
+    TypeError: Cannot read properties of undefined (reading 'join')
+
+      42 |   describe('Required files', () => {
+      43 |     it('should have package.json', () => {
+    > 44 |       const packageJson = path.join(projectRoot, 'package.json');
+         |                                ^
+      45 |       expect(fs.existsSync(packageJson)).toBe(true);
+      46 |     });
+      47 |
+
+      at Object.<anonymous> (tests/integration/project-init.test.ts:44:32)
+
+  笳・Project Initialization Verification 窶ｺ Required files 窶ｺ should have tauri.conf.json
+
+    TypeError: Cannot read properties of undefined (reading 'join')
+
+      47 |
+      48 |     it('should have tauri.conf.json', () => {
+    > 49 |       const tauriConfig = path.join(projectRoot, 'src-tauri/tauri.conf.json');
+         |                                ^
+      50 |       expect(fs.existsSync(tauriConfig)).toBe(true);
+      51 |     });
+      52 |
+
+      at Object.<anonymous> (tests/integration/project-init.test.ts:49:32)
+
+  笳・Project Initialization Verification 窶ｺ Required files 窶ｺ should have Cargo.toml
+
+    TypeError: Cannot read properties of undefined (reading 'join')
+
+      52 |
+      53 |     it('should have Cargo.toml', () => {
+    > 54 |       const cargoToml = path.join(projectRoot, 'src-tauri/Cargo.toml');
+         |                              ^
+      55 |       expect(fs.existsSync(cargoToml)).toBe(true);
+      56 |     });
+      57 |
+
+      at Object.<anonymous> (tests/integration/project-init.test.ts:54:30)
+
+  笳・Project Initialization Verification 窶ｺ Required files 窶ｺ should have src/main.tsx
+
+    TypeError: Cannot read properties of undefined (reading 'join')
+
+      57 |
+      58 |     it('should have src/main.tsx', () => {
+    > 59 |       const mainTsx = path.join(projectRoot, 'src/main.tsx');
+         |                            ^
+      60 |       expect(fs.existsSync(mainTsx)).toBe(true);
+      61 |     });
+      62 |
+
+      at Object.<anonymous> (tests/integration/project-init.test.ts:59:28)
+
+  笳・Project Initialization Verification 窶ｺ Required files 窶ｺ should have src-tauri/src/main.rs
+
+    TypeError: Cannot read properties of undefined (reading 'join')
+
+      62 |
+      63 |     it('should have src-tauri/src/main.rs', () => {
+    > 64 |       const mainRs = path.join(projectRoot, 'src-tauri/src/main.rs');
+         |                           ^
+      65 |       expect(fs.existsSync(mainRs)).toBe(true);
+      66 |     });
+      67 |   });
+
+      at Object.<anonymous> (tests/integration/project-init.test.ts:64:27)
+
+  笳・Project Initialization Verification 窶ｺ Configuration files 窶ｺ should have valid package.json structure
+
+    TypeError: Cannot read properties of undefined (reading 'join')
+
+      72 |   describe('Configuration files', () => {
+      73 |     it('should have valid package.json structure', () => {
+    > 74 |       const packageJsonPath = path.join(projectRoot, 'package.json');
+         |                                    ^
+      75 |       const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+      76 |
+      77 |       expect(packageJson.name).toBeDefined();
+
+      at Object.<anonymous> (tests/integration/project-init.test.ts:74:36)
+
+  笳・Project Initialization Verification 窶ｺ Configuration files 窶ｺ should have required dependencies in package.json
+
+    TypeError: Cannot read properties of undefined (reading 'join')
+
+      82 |
+      83 |     it('should have required dependencies in package.json', () => {
+    > 84 |       const packageJsonPath = path.join(projectRoot, 'package.json');
+         |                                    ^
+      85 |       const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
+      86 |
+      87 |       expect(packageJson.dependencies).toHaveProperty('react');
+
+      at Object.<anonymous> (tests/integration/project-init.test.ts:84:36)
+
+  笳・Project Initialization Verification 窶ｺ Configuration files 窶ｺ should have valid tauri.conf.json structure
+
+    TypeError: Cannot read properties of undefined (reading 'join')
+
+      90 |
+      91 |     it('should have valid tauri.conf.json structure', () => {
+    > 92 |       const tauriConfigPath = path.join(projectRoot, 'src-tauri/tauri.conf.json');
+         |                                    ^
+      93 |       const tauriConfig = JSON.parse(fs.readFileSync(tauriConfigPath, 'utf-8'));
+      94 |
+      95 |       expect(tauriConfig).toHaveProperty('build');
+
+      at Object.<anonymous> (tests/integration/project-init.test.ts:92:36)
+
+  笳・Project Initialization Verification 窶ｺ Configuration files 窶ｺ should have valid Cargo.toml structure
+
+    TypeError: Cannot read properties of undefined (reading 'join')
+
+       98 |
+       99 |     it('should have valid Cargo.toml structure', () => {
+    > 100 |       const cargoTomlPath = path.join(projectRoot, 'src-tauri/Cargo.toml');
+          |                                  ^
+      101 |       const cargoToml = fs.readFileSync(cargoTomlPath, 'utf-8');
+      102 |
+      103 |       expect(cargoToml).toContain('[package]');
+
+      at Object.<anonymous> (tests/integration/project-init.test.ts:100:34)
+
+  笳・Project Initialization Verification 窶ｺ Project structure 窶ｺ should have correct TypeScript configuration
+
+    TypeError: Cannot read properties of undefined (reading 'join')
+
+      112 |   describe('Project structure', () => {
+      113 |     it('should have correct TypeScript configuration', () => {
+    > 114 |       const tsConfigPath = path.join(projectRoot, 'tsconfig.json');
+          |                                 ^
+      115 |       expect(fs.existsSync(tsConfigPath)).toBe(true);
+      116 |     });
+      117 |
+
+      at Object.<anonymous> (tests/integration/project-init.test.ts:114:33)
+
+  笳・Project Initialization Verification 窶ｺ Project structure 窶ｺ should have vite configuration
+
+    TypeError: Cannot read properties of undefined (reading 'join')
+
+      117 |
+      118 |     it('should have vite configuration', () => {
+    > 119 |       const viteConfigPath = path.join(projectRoot, 'vite.config.ts');
+          |                                   ^
+      120 |       expect(fs.existsSync(viteConfigPath)).toBe(true);
+      121 |     });
+      122 |
+
+      at Object.<anonymous> (tests/integration/project-init.test.ts:119:35)
+
+  笳・Project Initialization Verification 窶ｺ Project structure 窶ｺ should have App.tsx component
+
+    TypeError: Cannot read properties of undefined (reading 'join')
+
+      122 |
+      123 |     it('should have App.tsx component', () => {
+    > 124 |       const appTsx = path.join(projectRoot, 'src/App.tsx');
+          |                           ^
+      125 |       expect(fs.existsSync(appTsx)).toBe(true);
+      126 |     });
+      127 |   });
+
+      at Object.<anonymous> (tests/integration/project-init.test.ts:124:27)
+
+Test Suites: 1 failed, 1 total
+Tests:       15 failed, 15 total
+Snapshots:   0 total
+Time:        1.341 s
+Ran all test suites matching /tests\\integration\\project-init.test.ts/i.

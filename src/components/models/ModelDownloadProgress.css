@@ -1,13 +1,42 @@
-/* Model Download Progress Styles */
+/* FLM - モデルダウンロード進捗コンポーネントのスタイル */
+
+/* コンポーネント固有の変数（グローバル変数が存在しない場合のフォールバック付き） */
+:root {
+  --progress-card-bg: var(--color-bg-primary, #ffffff);
+  --progress-card-border: var(--color-border-light, #e2e8f0);
+  --progress-card-shadow: var(--shadow-lg, 0 4px 16px rgba(0, 0, 0, 0.15));
+  --progress-header-gradient-start: #2196f3;
+  --progress-header-gradient-end: #1976d2;
+  --progress-model-name-bg: var(--color-bg-tertiary, #f5f5f5);
+  --progress-bar-bg: var(--color-border-light, #e0e0e0);
+  --progress-bar-gradient-start: #2196f3;
+  --progress-bar-gradient-end: #1976d2;
+  --progress-text: var(--color-text-primary, #212121);
+  --progress-text-secondary: var(--color-text-secondary, #666);
+  --progress-actions-bg: var(--color-bg-secondary, #fafafa);
+  --progress-button-orange: #ff9800;
+  --progress-button-orange-hover: #f57c00;
+  --progress-button-red: #f44336;
+  --progress-button-red-hover: #d32f2f;
+  --progress-status-verifying-bg: var(--color-warning-light, #fff3e0);
+  --progress-status-verifying-text: #e65100;
+  --progress-status-complete-bg: var(--color-success-light, #e8f5e9);
+  --progress-status-complete-text: #2e7d32;
+  --progress-status-error-bg: var(--color-error-light, #ffebee);
+  --progress-status-error-text: #c62828;
+  --progress-border-radius: var(--radius-lg, 0.75rem);
+  --progress-transition: var(--transition-base, 200ms ease-in-out);
+}
 
 .model-download-progress {
   position: fixed;
-  bottom: 2rem;
-  right: 2rem;
+  bottom: var(--spacing-xl, 2rem);
+  right: var(--spacing-xl, 2rem);
   z-index: 1000;
   max-width: 400px;
   width: 100%;
-  animation: slideUp 0.3s ease-out;
+  animation: slideUp var(--transition-slow, 300ms ease-out);
+  contain: layout style;
 }
 
 @keyframes slideUp {
@@ -21,20 +50,23 @@
   }
 }
 
-.progress-card {
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2);
+.download-progress-card {
+  background: var(--progress-card-bg);
+  border-radius: var(--progress-border-radius);
+  box-shadow: var(--progress-card-shadow);
   overflow: hidden;
+  border: 1px solid var(--progress-card-border);
+  contain: layout style paint;
 }
 
 .progress-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 1rem;
-  background: linear-gradient(135deg, #396cd8 0%, #764ba2 100%);
-  color: white;
+  padding: var(--spacing-md, 1rem) var(--spacing-lg, 1.25rem);
+  background: linear-gradient(135deg, var(--progress-header-gradient-start) 0%, var(--progress-header-gradient-end) 100%);
+  color: var(--color-text-inverse, #ffffff);
+  contain: layout;
 }
 
 .progress-header h3 {
@@ -46,118 +78,208 @@
 .close-button {
   background: transparent;
   border: none;
-  color: white;
+  color: var(--color-text-inverse, #ffffff);
   font-size: 1.25rem;
   cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 4px;
-  transition: background-color 0.2s;
+  padding: var(--spacing-xs, 0.25rem);
+  border-radius: var(--radius-sm, 0.375rem);
+  transition: background-color var(--progress-transition);
 }
 
 .close-button:hover {
   background-color: rgba(255, 255, 255, 0.2);
 }
 
-.progress-content {
-  padding: 1.5rem;
+.close-button:focus-visible {
+  outline: 2px solid var(--color-text-inverse, #ffffff);
+  outline-offset: 2px;
+}
+
+.progress-model-name {
+  padding: var(--spacing-md, 1rem) var(--spacing-lg, 1.25rem);
+  background-color: var(--progress-model-name-bg);
+  border-bottom: 1px solid var(--progress-card-border);
+  contain: layout;
+}
+
+.progress-model-name strong {
+  font-size: 1rem;
+  color: var(--progress-text);
+  font-weight: 600;
 }
 
 .progress-bar-container {
-  width: 100%;
-  height: 8px;
-  background-color: #e0e0e0;
-  border-radius: 4px;
+  margin: var(--spacing-lg, 1.25rem);
+  width: calc(100% - 2.5rem);
+  height: 10px;
+  background-color: var(--progress-bar-bg);
+  border-radius: var(--radius-md, 0.5rem);
   overflow: hidden;
-  margin-bottom: 1rem;
+  position: relative;
+  contain: layout;
 }
 
 .progress-bar {
   height: 100%;
-  background: linear-gradient(90deg, #396cd8 0%, #764ba2 100%);
-  border-radius: 4px;
-  transition: width 0.3s ease;
+  width: var(--progress, 0%);
+  background: linear-gradient(90deg, var(--progress-bar-gradient-start) 0%, var(--progress-bar-gradient-end) 100%);
+  border-radius: var(--radius-md, 0.5rem);
+  transition: width var(--transition-slow, 300ms ease);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  contain: layout style;
 }
 
 .progress-percentage {
-  text-align: center;
-  font-size: 1.5rem;
-  font-weight: bold;
-  color: #396cd8;
-  margin-bottom: 1rem;
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--progress-header-gradient-end);
+  z-index: 1;
+  text-shadow: 0 0 2px rgba(255, 255, 255, 0.8);
+  pointer-events: none;
 }
 
-.progress-info {
+.progress-details {
+  padding: 0 var(--spacing-lg, 1.25rem) var(--spacing-md, 1rem) var(--spacing-lg, 1.25rem);
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
+  gap: 0.75rem;
+  contain: layout;
 }
 
-.info-row {
+.detail-row {
   display: flex;
   justify-content: space-between;
   align-items: center;
 }
 
-.info-label {
-  color: #666;
+.detail-label {
+  color: var(--progress-text-secondary);
   font-size: 0.9rem;
 }
 
-.info-value {
-  color: #0f0f0f;
+.detail-value {
+  color: var(--progress-text);
   font-weight: 500;
   font-size: 0.9rem;
+}
+
+.progress-status {
+  padding: 0 var(--spacing-lg, 1.25rem) var(--spacing-md, 1rem) var(--spacing-lg, 1.25rem);
+  contain: layout;
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.375rem 0.75rem;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  contain: layout style;
+}
+
+.status-badge.verifying {
+  background-color: var(--progress-status-verifying-bg);
+  color: var(--progress-status-verifying-text);
+}
+
+.status-badge.complete {
+  background-color: var(--progress-status-complete-bg);
+  color: var(--progress-status-complete-text);
+}
+
+.status-badge.error {
+  background-color: var(--progress-status-error-bg);
+  color: var(--progress-status-error-text);
+}
+
+.status-badge.paused {
+  background-color: var(--progress-status-verifying-bg);
+  color: var(--progress-status-verifying-text);
 }
 
 .progress-actions {
   display: flex;
-  gap: 0.5rem;
+  gap: 0.75rem;
   justify-content: flex-end;
+  padding: var(--spacing-md, 1rem) var(--spacing-lg, 1.25rem);
+  border-top: 1px solid var(--progress-card-border);
+  background-color: var(--progress-actions-bg);
+  contain: layout;
 }
 
 .action-button {
-  padding: 0.5rem 1rem;
+  padding: 0.625rem var(--spacing-lg, 1.25rem);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-md, 0.5rem);
   cursor: pointer;
   font-size: 0.9rem;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: all var(--progress-transition);
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm, 0.5rem);
+}
+
+.action-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.action-button:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: 2px;
 }
 
 .action-button.pause-resume {
-  background-color: #ff9800;
-  color: white;
+  background-color: var(--progress-button-orange);
+  color: var(--color-text-inverse, #ffffff);
 }
 
-.action-button.pause-resume:hover {
-  background-color: #f57c00;
+.action-button.pause-resume:hover:not(:disabled) {
+  background-color: var(--progress-button-orange-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md, 0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
 .action-button.cancel {
-  background-color: #f44336;
-  color: white;
+  background-color: var(--progress-button-red);
+  color: var(--color-text-inverse, #ffffff);
 }
 
-.action-button.cancel:hover {
-  background-color: #da190b;
+.action-button.cancel:hover:not(:disabled) {
+  background-color: var(--progress-button-red-hover);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md, 0 2px 4px rgba(0, 0, 0, 0.2));
 }
 
+/* ダークモード対応 */
+/* システム設定（prefers-color-scheme: dark）とグローバルテーマ（[data-theme="dark"]）の両方に対応 */
 @media (prefers-color-scheme: dark) {
-  .progress-card {
-    background: #1f1f1f;
+  :root {
+    --progress-card-bg: var(--color-bg-primary, #1e1e1e);
+    --progress-card-border: var(--color-border-light, #333);
+    --progress-model-name-bg: var(--color-bg-secondary, #2a2a2a);
+    --progress-bar-bg: var(--color-border-light, #333);
+    --progress-text: var(--color-text-primary, #f5f5f5);
+    --progress-text-secondary: var(--color-text-secondary, #aaa);
+    --progress-actions-bg: var(--color-bg-secondary, #2a2a2a);
   }
+}
 
-  .progress-bar-container {
-    background-color: #333;
-  }
-
-  .info-value {
-    color: #f6f6f6;
-  }
-
-  .info-label {
-    color: #aaa;
-  }
+/* グローバルテーマによるダークモード（ユーザーが明示的に選択した場合） */
+[data-theme="dark"] {
+  --progress-card-bg: var(--color-bg-primary, #1e1e1e);
+  --progress-card-border: var(--color-border-light, #333);
+  --progress-model-name-bg: var(--color-bg-secondary, #2a2a2a);
+  --progress-bar-bg: var(--color-border-light, #333);
+  --progress-text: var(--color-text-primary, #f5f5f5);
+  --progress-text-secondary: var(--color-text-secondary, #aaa);
+  --progress-actions-bg: var(--color-bg-secondary, #2a2a2a);
 }

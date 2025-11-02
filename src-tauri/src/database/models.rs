@@ -13,6 +13,8 @@ pub struct Api {
     pub port: i32,
     pub enable_auth: bool,
     pub status: ApiStatus,
+    pub engine_type: Option<String>, // エンジンタイプ（'ollama', 'lm_studio', 'vllm', 'llama_cpp'など）
+    pub engine_config: Option<String>, // エンジン固有設定（JSON形式）
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
 }
@@ -122,4 +124,17 @@ pub struct PerformanceMetric {
     pub metric_type: String,
     pub value: f64,
     pub timestamp: DateTime<Utc>,
+}
+
+/// アラート履歴情報（F012の基盤）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct AlertHistory {
+    pub id: String,
+    pub api_id: String,
+    pub alert_type: String,
+    pub current_value: f64,
+    pub threshold: f64,
+    pub message: String,
+    pub timestamp: DateTime<Utc>,
+    pub resolved_at: Option<DateTime<Utc>>,
 }

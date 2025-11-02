@@ -236,3 +236,117 @@ export async function savePerformanceMetric(params: SavePerformanceMetricParams)
     });
 }
 
+/**
+ * アラート設定インターフェース
+ */
+export interface AlertSettings {
+    response_time_threshold: number | null;
+    error_rate_threshold: number | null;
+    cpu_usage_threshold: number | null;
+    memory_usage_threshold: number | null;
+    notifications_enabled: boolean | null;
+}
+
+/**
+ * アラート設定を取得
+ * @param apiId API ID（nullの場合はグローバル設定）
+ * @returns アラート設定
+ */
+export async function getAlertSettings(apiId: string | null): Promise<AlertSettings> {
+    const db = await getDatabase();
+    
+    return new Promise((resolve, reject) => {
+        const prefix = apiId ? `alert_${apiId}_` : 'alert_global_';
+        
+        // 各設定値を取得
+        const getSetting = (key: string): Promise<string | null> => {
+            return new Promise((res, rej) => {
+                db.get(
+                    'SELECT value FROM user_settings WHERE key = ?',
+                    [`${prefix}${key}`],
+                    (err: Error | null, row: any) => {
+                        if (err) {
+                            rej(err);
+                        } else if (row) {
+                            res(row.value);
+                        } else {
+                            res(null);
+                        }
+                    }
+                );
+            });
+        };
+        
+        Promise.all([
+            getSetting('response_time'),
+            getSetting('error_rate'),
+            getSetting('cpu_usage'),
+            getSetting('memory_usage'),
+            getSetting('notifications_enabled'),
+        ]).then(([responseTime, errorRate, cpuUsage, memoryUsage, notificationsEnabled]) => {
+            db.close();
+            
+            resolve({
+                response_time_threshold: responseTime ? parseFloat(responseTime) : null,
+                error_rate_threshold: errorRate ? parseFloat(errorRate) : null,
+                cpu_usage_threshold: cpuUsage ? parseFloat(cpuUsage) : null,
+                memory_usage_threshold: memoryUsage ? parseFloat(memoryUsage) : null,
+                notifications_enabled: notificationsEnabled ? notificationsEnabled === 'true' : null,
+            });
+        }).catch((err) => {
+            db.close();
+            reject(err);
+        });
+    });
+}
+
+/**
+ * アラート履歴保存インターフェース
+ */
+export interface SaveAlertHistoryParams {
+    apiId: string;
+    alertType: string;
+    currentValue: number;
+    threshold: number;
+    message: string;
+}
+
+/**
+ * アラート履歴をデータベースに保存
+ * @param params アラート履歴情報
+ * @returns 保存成功時 true、失敗時 false（エラーはコンソールに出力）
+ */
+export async function saveAlertHistory(params: SaveAlertHistoryParams): Promise<boolean> {
+    const db = await getDatabaseReadWrite();
+    const uuid = crypto.randomUUID();
+    const now = new Date().toISOString();
+    
+    return new Promise((resolve) => {
+        db.run(
+            `INSERT INTO alert_history 
+             (id, api_id, alert_type, current_value, threshold, message, timestamp, resolved_at)
+             VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+            [
+                uuid,
+                params.apiId,
+                params.alertType,
+                params.currentValue,
+                params.threshold,
+                params.message,
+                now,
+                null // resolved_atは初期値としてnull
+            ],
+            (err: Error | null) => {
+                db.close();
+                if (err) {
+                    // エラーはログに出力するが、リクエスト処理は続行する
+                    console.error('[ALERT_HISTORY] アラート履歴保存エラー:', err);
+                    resolve(false);
+                } else {
+                    resolve(true);
+                }
+            }
+        );
+    });
+}
+

@@ -4,6 +4,7 @@
 
 import React, { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';
+import { Tooltip } from '../common/Tooltip';
 import './LogDelete.css';
 
 /**
@@ -97,41 +98,51 @@ export const LogDelete: React.FC<LogDeleteProps> = ({
       <div className="log-delete-content">
         <div className="delete-form">
           <div className="form-group">
-            <label htmlFor="before-date">
-              削除する日付（この日付より前のログを削除）:
-            </label>
-            <input
-              id="before-date"
-              type="date"
-              value={beforeDate}
-              onChange={(e) => setBeforeDate(e.target.value)}
-              disabled={deleting || !apiId}
-              className="date-input"
-            />
+            <Tooltip content="指定した日付より前のログをすべて削除します。例: 2024-01-01を指定すると、2024-01-01より前のすべてのログが削除されます。">
+              <label htmlFor="before-date">
+                削除する日付（この日付より前のログを削除）:
+              </label>
+            </Tooltip>
+            <Tooltip content="指定した日付より前のログをすべて削除します。この操作は取り消せませんので、慎重に日付を選択してください。" position="bottom">
+              <input
+                id="before-date"
+                type="date"
+                value={beforeDate}
+                onChange={(e) => setBeforeDate(e.target.value)}
+                disabled={deleting || !apiId}
+                className="date-input"
+              />
+            </Tooltip>
           </div>
 
           <div className="form-group">
-            <label htmlFor="confirm-text">
-              確認のため「削除」と入力してください:
-            </label>
-            <input
-              id="confirm-text"
-              type="text"
-              value={confirmText}
-              onChange={(e) => setConfirmText(e.target.value)}
-              disabled={deleting || !apiId}
-              placeholder="削除"
-              className="confirm-input"
-            />
+            <Tooltip content="誤削除を防ぐため、「削除」と入力してください。この確認により、意図しない削除を防止します。">
+              <label htmlFor="confirm-text">
+                確認のため「削除」と入力してください:
+              </label>
+            </Tooltip>
+            <Tooltip content="誤削除を防ぐため、「削除」と入力してください。" position="bottom">
+              <input
+                id="confirm-text"
+                type="text"
+                value={confirmText}
+                onChange={(e) => setConfirmText(e.target.value)}
+                disabled={deleting || !apiId}
+                placeholder="削除"
+                className="confirm-input"
+              />
+            </Tooltip>
           </div>
 
-          <button
-            onClick={handleDelete}
-            disabled={deleting || !apiId || !beforeDate || confirmText !== '削除'}
-            className="delete-button"
-          >
-            {deleting ? '削除中...' : 'ログを削除'}
-          </button>
+          <Tooltip content="指定した日付より前のログを削除します。この操作は取り消せません。削除されたログは復元できませんので、十分に確認してください。" position="top">
+            <button
+              onClick={handleDelete}
+              disabled={deleting || !apiId || !beforeDate || confirmText !== '削除'}
+              className="delete-button"
+            >
+              {deleting ? '削除中...' : 'ログを削除'}
+            </button>
+          </Tooltip>
         </div>
 
         {error && (

@@ -130,29 +130,39 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
   }, [message]);
 
   return (
-    <div className={`error-message error-${type}`}>
+    <div className={`error-message error-${type}`} role="alert" aria-live="assertive" aria-atomic="true">
       <div className="error-header">
-        <span className="error-icon">{errorInfo.icon}</span>
-        <h3 className="error-title">{errorInfo.title}</h3>
+        <span className="error-icon" aria-hidden="true">{errorInfo.icon}</span>
+        <h3 className="error-title" id={`error-title-${type}`}>{errorInfo.title}</h3>
         {onClose && (
-          <button className="error-close-button" onClick={onClose} aria-label="閉じる">
-            ✕
+          <button 
+            className="error-close-button" 
+            onClick={onClose} 
+            aria-label="エラーメッセージを閉じる"
+            type="button"
+          >
+            <span aria-hidden="true">✕</span>
           </button>
         )}
       </div>
       <div className="error-content">
-        <p className="error-text">{userFriendlyMessage}</p>
+        <p className="error-text" aria-describedby={`error-title-${type}`}>{userFriendlyMessage}</p>
         {displaySuggestion && (
-          <div className="error-suggestion">
-            <span className="suggestion-icon">💡</span>
+          <div className="error-suggestion" role="note">
+            <span className="suggestion-icon" aria-hidden="true">💡</span>
             <span className="suggestion-text">{displaySuggestion}</span>
           </div>
         )}
       </div>
       {onRetry && (
         <div className="error-actions">
-          <button className="error-retry-button" onClick={onRetry}>
-            🔄 もう一度試す
+          <button 
+            className="error-retry-button" 
+            onClick={onRetry}
+            aria-label="操作を再試行する"
+            type="button"
+          >
+            <span aria-hidden="true">🔄</span> もう一度試す
           </button>
         </div>
       )}

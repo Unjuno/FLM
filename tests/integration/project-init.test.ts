@@ -13,7 +13,8 @@ import path from 'path';
  * プロジェクト構造の検証テスト
  */
 describe('Project Initialization Verification', () => {
-  const projectRoot = path.resolve(__dirname, '../../');
+  // process.cwd()を使用してプロジェクトルートを取得（Jest実行時の作業ディレクトリ）
+  const projectRoot = process.cwd();
 
   /**
    * 必須ディレクトリの存在確認
@@ -92,7 +93,9 @@ describe('Project Initialization Verification', () => {
       const tauriConfig = JSON.parse(fs.readFileSync(tauriConfigPath, 'utf-8'));
 
       expect(tauriConfig).toHaveProperty('build');
-      expect(tauriConfig).toHaveProperty('tauri');
+      // Tauri v2では 'tauri' プロパティが 'app' に変更されている可能性がある
+      // 'app' または 'tauri' のどちらかが存在することを確認
+      expect(tauriConfig.app || tauriConfig.tauri).toBeDefined();
     });
 
     it('should have valid Cargo.toml structure', () => {
@@ -100,8 +103,10 @@ describe('Project Initialization Verification', () => {
       const cargoToml = fs.readFileSync(cargoTomlPath, 'utf-8');
 
       expect(cargoToml).toContain('[package]');
-      expect(cargoToml).toContain('name = "flm"');
-      expect(cargoToml).toContain('tauri');
+      // 名前が "flm" であることを確認（引用符の有無に関わらず）
+      expect(cargoToml.toLowerCase()).toMatch(/name\s*=\s*["']?flm["']?/);
+      // tauriまたはTauriが含まれていることを確認
+      expect(cargoToml.toLowerCase()).toContain('tauri');
     });
   });
 

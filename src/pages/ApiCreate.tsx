@@ -4,13 +4,14 @@
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../utils/tauri';
 import { ModelSelection } from '../components/api/ModelSelection';
 import { ApiConfigForm } from '../components/api/ApiConfigForm';
 import { ApiCreationProgress } from '../components/api/ApiCreationProgress';
 import { ApiCreationSuccess } from '../components/api/ApiCreationSuccess';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { InfoBanner } from '../components/common/InfoBanner';
+import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import type { SelectedModel, ApiConfig, ApiCreationResult } from '../types/api';
 import './ApiCreate.css';
 
@@ -36,6 +37,7 @@ export const ApiCreate: React.FC = () => {
     name: 'LocalAI API',
     port: 8080,
     enableAuth: true,
+    engineType: 'ollama',
   });
   const [creationResult, setCreationResult] = useState<ApiCreationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -43,6 +45,9 @@ export const ApiCreate: React.FC = () => {
     step: '初期化中...',
     progress: 0,
   });
+
+  // グローバルキーボードショートカットを有効化
+  useGlobalKeyboardShortcuts();
 
   // モデル選択完了時のハンドラ
   const handleModelSelected = (model: SelectedModel) => {
@@ -68,10 +73,19 @@ export const ApiCreate: React.FC = () => {
     }
 
     try {
-      setProgress({ step: 'Ollama確認中...', progress: 0 });
+      const engineType = config.engineType || 'ollama';
+      const engineNames: { [key: string]: string } = {
+        'ollama': 'Ollama',
+        'lm_studio': 'LM Studio',
+        'vllm': 'vLLM',
+        'llama_cpp': 'llama.cpp',
+      };
+      const engineName = engineNames[engineType] || engineType;
+      
+      setProgress({ step: `${engineName}確認中...`, progress: 0 });
 
-      // ステップ1: Ollama確認
-      setProgress({ step: 'Ollama確認中...', progress: 20 });
+      // ステップ1: エンジン確認
+      setProgress({ step: `${engineName}確認中...`, progress: 20 });
       await new Promise(resolve => setTimeout(resolve, 300)); // UI更新のための短い待機
 
       // ステップ2: API設定保存中
@@ -84,7 +98,7 @@ export const ApiCreate: React.FC = () => {
 
       // バックエンドのIPCコマンドを呼び出し
       // Rust側のApiCreateConfig構造体と一致させる
-      const response = await invoke<{
+      const response = await safeInvoke<{
         id: string;
         name: string;
         endpoint: string;
@@ -97,6 +111,8 @@ export const ApiCreate: React.FC = () => {
         model_name: selectedModel.name,
         port: config.port,
         enable_auth: config.enableAuth,
+        engine_type: config.engineType || 'ollama',
+        engine_config: config.engineConfig || null,
       });
 
       // レスポンスをApiCreationResultに変換
@@ -114,7 +130,20 @@ export const ApiCreate: React.FC = () => {
       setCreationResult(result);
       setCurrentStep(CreationStep.Success);
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'API作成中にエラーが発生しました';
+      // エラーの詳細情報を取得
+      let errorMessage = 'API作成中にエラーが発生しました';
+      if (err instanceof Error) {
+        errorMessage = err.message;
+        console.error('API作成エラー詳細:', {
+          message: err.message,
+          stack: err.stack,
+          name: err.name,
+        });
+      } else {
+        console.error('API作成エラー（非Error型）:', err);
+        errorMessage = String(err);
+      }
+      
       setError(errorMessage);
       setCurrentStep(CreationStep.Configuration);
     }
@@ -123,8 +152,12 @@ export const ApiCreate: React.FC = () => {
   // 戻るボタンのハンドラ
   const handleBack = () => {
     switch (currentStep) {
+      case CreationStep.ModelSelection:
+        navigate('/');
+        break;
       case CreationStep.Configuration:
         setCurrentStep(CreationStep.ModelSelection);
+        setSelectedModel(null);
         break;
       case CreationStep.Progress:
         setCurrentStep(CreationStep.Configuration);
@@ -200,13 +233,18 @@ export const ApiCreate: React.FC = () => {
               message={error}
               type="api"
               onClose={() => setError(null)}
-              onRetry={currentStep === CreationStep.Progress ? undefined : () => {
+              onRetry={() => {
                 setError(null);
-                if (currentStep === CreationStep.Configuration) {
-                  // 設定画面に戻る
+                if (currentStep === CreationStep.Progress) {
+                  // 進行中の場合は作成を再試行
+                  if (selectedModel && apiConfig) {
+                    startApiCreation(apiConfig);
+                  }
+                } else if (currentStep === CreationStep.Configuration) {
+                  // 設定画面の場合はそのまま再表示
                   setCurrentStep(CreationStep.Configuration);
                 } else if (currentStep === CreationStep.ModelSelection) {
-                  // モデル選択画面に戻る
+                  // モデル選択画面の場合はモデル一覧を再読み込み
                   setCurrentStep(CreationStep.ModelSelection);
                 }
               }}
@@ -217,6 +255,10 @@ export const ApiCreate: React.FC = () => {
             <ModelSelection
               onModelSelected={handleModelSelected}
               selectedModel={selectedModel}
+              engineType={apiConfig.engineType || 'ollama'}
+              onEngineChange={(engineType) => {
+                setApiConfig({ ...apiConfig, engineType });
+              }}
             />
           )}
 

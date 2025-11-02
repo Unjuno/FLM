@@ -1,0 +1,275 @@
+/* FLM - Backup Restore Page Styles */
+
+.backup-restore-page {
+  min-height: 100vh;
+  background: var(--color-bg);
+  color: var(--color-text);
+  padding: 2rem;
+}
+
+.backup-restore-container {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.backup-restore-header {
+  margin-bottom: 2rem;
+}
+
+.backup-restore-back-button {
+  background: transparent;
+  border: none;
+  color: var(--color-text-secondary);
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.5rem;
+  margin-bottom: 1rem;
+  transition: color 0.2s;
+}
+
+.backup-restore-back-button:hover {
+  color: var(--color-text);
+}
+
+.backup-restore-title {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  color: var(--color-text);
+}
+
+.backup-restore-subtitle {
+  font-size: 1rem;
+  color: var(--color-text-secondary);
+  margin: 0;
+}
+
+.backup-restore-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.backup-restore-section {
+  background: var(--color-card-bg);
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.backup-restore-section-title {
+  font-size: 1.3rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  color: var(--color-text);
+  border-bottom: 2px solid var(--color-border);
+  padding-bottom: 0.5rem;
+}
+
+.backup-restore-section-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.backup-restore-description {
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+  margin: 0;
+}
+
+.backup-restore-description strong {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.backup-restore-info,
+.backup-restore-warning {
+  background: var(--color-bg);
+  border-radius: 8px;
+  padding: 1rem;
+  border-left: 4px solid var(--color-primary);
+}
+
+.backup-restore-warning {
+  border-left-color: var(--color-warning, #f59e0b);
+  background: var(--color-warning-bg, rgba(245, 158, 11, 0.1));
+}
+
+.backup-restore-info p,
+.backup-restore-warning p {
+  margin: 0 0 0.5rem 0;
+  font-weight: 600;
+  color: var(--color-text);
+}
+
+.backup-restore-info ul,
+.backup-restore-warning ul {
+  margin: 0.5rem 0 0 1.5rem;
+  padding: 0;
+  color: var(--color-text-secondary);
+}
+
+.backup-restore-info li,
+.backup-restore-warning li {
+  margin: 0.25rem 0;
+  line-height: 1.6;
+}
+
+.backup-restore-button {
+  border: none;
+  border-radius: 8px;
+  padding: 0.75rem 1.5rem;
+  font-size: 1rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.2s, transform 0.1s;
+  align-self: flex-start;
+}
+
+.backup-restore-button.primary {
+  background: var(--color-primary);
+  color: white;
+}
+
+.backup-restore-button.primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+  transform: translateY(-1px);
+}
+
+.backup-restore-button.secondary {
+  background: var(--color-secondary, #6b7280);
+  color: white;
+}
+
+.backup-restore-button.secondary:hover:not(:disabled) {
+  background: var(--color-secondary-hover, #4b5563);
+  transform: translateY(-1px);
+}
+
+.backup-restore-button:active:not(:disabled) {
+  transform: translateY(0);
+}
+
+.backup-restore-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.backup-restore-file-selector {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.backup-restore-progress {
+  padding: 1rem;
+  background: var(--color-bg);
+  border-radius: 8px;
+  text-align: center;
+  color: var(--color-text-secondary);
+}
+
+.backup-restore-result {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--color-bg);
+  border-radius: 8px;
+  border: 1px solid var(--color-border);
+}
+
+.backup-restore-result-title {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  color: var(--color-text);
+}
+
+.backup-restore-result-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.backup-restore-result-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.backup-restore-result-item:last-child {
+  border-bottom: none;
+}
+
+.backup-restore-result-label {
+  font-weight: 500;
+  color: var(--color-text-secondary);
+}
+
+.backup-restore-result-value {
+  font-weight: 600;
+  color: var(--color-text);
+  word-break: break-all;
+  text-align: right;
+  margin-left: 1rem;
+}
+
+.backup-restore-result-note {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: var(--color-success-bg, rgba(34, 197, 94, 0.1));
+  border-radius: 8px;
+  border-left: 4px solid var(--color-success, #22c55e);
+}
+
+.backup-restore-result-note p {
+  margin: 0;
+  color: var(--color-text);
+  line-height: 1.6;
+}
+
+/* ダークモード対応 */
+@media (prefers-color-scheme: dark) {
+  .backup-restore-section {
+    background: var(--color-card-bg);
+  }
+
+  .backup-restore-info,
+  .backup-restore-warning,
+  .backup-restore-result {
+    background: var(--color-bg);
+  }
+}
+
+.backup-restore-file-input {
+  display: none;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .backup-restore-page {
+    padding: 1rem;
+  }
+
+  .backup-restore-title {
+    font-size: 1.5rem;
+  }
+
+  .backup-restore-section {
+    padding: 1rem;
+  }
+
+  .backup-restore-result-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+
+  .backup-restore-result-value {
+    text-align: left;
+    margin-left: 0;
+  }
+}
+

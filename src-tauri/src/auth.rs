@@ -111,10 +111,14 @@ pub async fn start_auth_proxy(
         cmd.env("API_KEY", key);
     }
     
+    // エンジンベースURLを設定（デフォルト: Ollama）
     if let Some(url) = ollama_url {
+        let url_clone = url.clone();
         cmd.env("OLLAMA_URL", url);
+        cmd.env("ENGINE_BASE_URL", url_clone); // 新しい環境変数も設定
     } else {
         cmd.env("OLLAMA_URL", "http://localhost:11434");
+        cmd.env("ENGINE_BASE_URL", "http://localhost:11434");
     }
     
     // API IDを環境変数として設定（リクエストログ記録用）

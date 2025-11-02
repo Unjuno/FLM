@@ -71,6 +71,23 @@
   background: #e0e0e0;
 }
 
+.print-button {
+  padding: 0.75rem 1.5rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: #f5f5f5;
+  color: #333;
+  border: 1px solid #e0e0e0;
+}
+
+.print-button:hover {
+  background: #e0e0e0;
+}
+
 .auto-refresh-toggle {
   padding: 0.75rem 1.5rem;
   border: 1px solid #e0e0e0;
@@ -525,5 +542,54 @@
 
   .pagination {
     flex-wrap: wrap;
+  }
+}
+
+/* 印刷用スタイル */
+@media print {
+  .api-logs-page {
+    background: #fff;
+    padding: 0;
+  }
+
+  .api-logs-container {
+    box-shadow: none;
+    padding: 1rem;
+  }
+
+  /* 印刷時に非表示にする要素 */
+  .no-print,
+  button,
+  .button,
+  .header-actions,
+  .log-management-section,
+  .log-filter-section,
+  .log-statistics-section,
+  .api-selector,
+  .pagination {
+    display: none !important;
+  }
+
+  /* テーブルのスタイル */
+  .logs-table {
+    width: 100%;
+    border-collapse: collapse;
+  }
+
+  .logs-table th,
+  .logs-table td {
+    border: 1px solid #ddd;
+    padding: 0.5rem;
+    font-size: 11pt;
+  }
+
+  .logs-table th {
+    background-color: #f5f5f5;
+    font-weight: bold;
+  }
+
+  /* ページ区切り */
+  .page-break {
+    page-break-before: always;
   }
 }

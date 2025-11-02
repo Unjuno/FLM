@@ -105,6 +105,7 @@ export const ApiSettings: React.FC = () => {
       setError(null);
 
       // バックエンドのupdate_apiコマンドを呼び出し
+      // ポート番号や認証設定が変更された場合、バックエンド側で自動的に再起動が行われます
       await invoke('update_api', {
         api_id: id,
         config: {
@@ -113,9 +114,6 @@ export const ApiSettings: React.FC = () => {
           enable_auth: settings.enableAuth,
         },
       });
-
-      // ポート番号が変更された場合は再起動が必要
-      // TODO: 再起動処理を実装（バックエンドエージェントが実装予定）
 
       navigate('/api/list');
     } catch (err) {
@@ -160,13 +158,18 @@ export const ApiSettings: React.FC = () => {
     }
 
     try {
-      // TODO: バックエンドエージェントが実装するIPCコマンドを呼び出し
-      // await invoke('delete_api', { id });
+      setSaving(true);
+      setError(null);
 
-      // 暫定実装（バックエンド実装待ち）
+      // バックエンドのdelete_apiコマンドを呼び出し
+      await invoke('delete_api', { api_id: id });
+
+      // API一覧に戻る
       navigate('/api/list');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'APIの削除に失敗しました');
+    } finally {
+      setSaving(false);
     }
   };
 

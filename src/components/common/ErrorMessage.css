@@ -43,6 +43,12 @@
   color: #333;
 }
 
+.error-close-button:focus-visible {
+  outline: 2px solid #0066cc;
+  outline-offset: 2px;
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
 .error-content {
   margin-bottom: 1rem;
 }
@@ -81,8 +87,8 @@
 }
 
 .error-retry-button {
-  padding: 0.75rem 1.5rem;
-  background-color: #f44336;
+  padding: 0.625rem 1.25rem;
+  background: linear-gradient(135deg, var(--color-primary, #667eea) 0%, var(--color-secondary, #764ba2) 100%);
   color: white;
   border: none;
   border-radius: 6px;
@@ -90,12 +96,27 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 .error-retry-button:hover {
-  background-color: #d32f2f;
   transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+  opacity: 0.9;
+}
+
+.error-retry-button:focus-visible {
+  outline: 2px solid var(--color-primary, #667eea);
+  outline-offset: 2px;
+}
+
+.error-retry-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
 
 /* エラーの種類に応じたスタイル */

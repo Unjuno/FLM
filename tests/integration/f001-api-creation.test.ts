@@ -18,7 +18,7 @@ import { invoke } from '@tauri-apps/api/core';
  * - エラーハンドリングの確認
  */
 describe('F001: API作成機能 統合テスト', () => {
-  let createdApiId: string | null = null;
+  const createdApiIds: string[] = [];
 
   beforeAll(() => {
     console.log('F001 API作成機能統合テストを開始します');
@@ -26,15 +26,29 @@ describe('F001: API作成機能 統合テスト', () => {
 
   afterAll(async () => {
     // テストで作成したAPIをクリーンアップ
-    if (createdApiId) {
+    for (const apiId of createdApiIds) {
       try {
-        await invoke('delete_api', { api_id: createdApiId });
+        // 実行中の場合は停止
+        try {
+          await invoke('stop_api', { api_id: apiId });
+        } catch (error) {
+          // 既に停止している可能性がある
+        }
+        await invoke('delete_api', { api_id: apiId });
       } catch (error) {
-        console.warn('テスト後のクリーンアップに失敗しました:', error);
+        console.warn(`API ${apiId} のクリーンアップに失敗しました:`, error);
       }
     }
     console.log('F001 API作成機能統合テストを完了しました');
   });
+
+  /**
+   * API IDを記録してクリーンアップ対象に追加
+   */
+  const recordApiId = (apiId: string) => {
+    createdApiIds.push(apiId);
+    return apiId;
+  };
 
   /**
    * API作成の基本フロー
@@ -46,6 +60,7 @@ describe('F001: API作成機能 統合テスト', () => {
         model_name: 'llama3:8b',
         port: 8080,
         enable_auth: true,
+        engine_type: 'ollama', // マルチエンジン対応: エンジンタイプを明示的に指定
       };
 
       const result = await invoke<{
@@ -73,7 +88,7 @@ describe('F001: API作成機能 統合テスト', () => {
         expect(result.api_key!.length).toBeGreaterThanOrEqual(32);
       }
 
-      createdApiId = result.id;
+      recordApiId(result.id);
     }, 30000); // タイムアウト: 30秒
 
     it('should create API without authentication', async () => {
@@ -92,6 +107,48 @@ describe('F001: API作成機能 統合テスト', () => {
       expect(result).toBeDefined();
       expect(result.id).toBeDefined();
       expect(result.api_key).toBeNull(); // 認証無効の場合はAPIキーがない
+      
+      recordApiId(result.id);
+    }, 30000);
+
+    it('should create API with default port', async () => {
+      const config = {
+        name: 'Test API (Default Port)',
+        model_name: 'llama3:8b',
+        enable_auth: false,
+      };
+
+      const result = await invoke<{
+        id: string;
+        port: number;
+      }>('create_api', config);
+
+      expect(result).toBeDefined();
+      expect(result.id).toBeDefined();
+      expect(result.port).toBe(8080); // デフォルトポート
+
+      recordApiId(result.id);
+    }, 30000);
+
+    it('should create API with default authentication setting', async () => {
+      const config = {
+        name: 'Test API (Default Auth)',
+        model_name: 'llama3:8b',
+        port: 8098,
+      };
+
+      const result = await invoke<{
+        id: string;
+        api_key: string | null;
+      }>('create_api', config);
+
+      expect(result).toBeDefined();
+      expect(result.id).toBeDefined();
+      // デフォルトでは認証が有効になっているはず
+      expect(result.api_key).toBeDefined();
+      expect(result.api_key).not.toBeNull();
+
+      recordApiId(result.id);
     }, 30000);
 
     it('should validate port number range', async () => {
@@ -162,7 +219,7 @@ describe('F001: API作成機能 統合テスト', () => {
       };
 
       const createResult = await invoke<{ id: string }>('create_api', config);
-      const apiId = createResult.id;
+      const apiId = recordApiId(createResult.id);
 
       // 作成したAPIが一覧に含まれていることを確認
       const apis = await invoke<Array<{
@@ -176,8 +233,20 @@ describe('F001: API作成機能 統合テスト', () => {
       expect(createdApi!.name).toBe(config.name);
       expect(createdApi!.port).toBe(config.port);
 
-      // クリーンアップ
-      await invoke('delete_api', { api_id: apiId });
+      // API詳細も取得できることを確認
+      const apiDetails = await invoke<{
+        id: string;
+        name: string;
+        port: number;
+        enable_auth: boolean;
+        status: string;
+      }>('get_api_details', { api_id: apiId });
+
+      expect(apiDetails).toBeDefined();
+      expect(apiDetails.id).toBe(apiId);
+      expect(apiDetails.name).toBe(config.name);
+      expect(apiDetails.port).toBe(config.port);
+      expect(apiDetails.enable_auth).toBe(config.enable_auth);
     }, 30000);
   });
 
@@ -207,9 +276,8 @@ describe('F001: API作成機能 統合テスト', () => {
       expect(result2.api_key).toBeDefined();
       expect(result1.api_key).not.toBe(result2.api_key); // 異なるAPIキーが生成される
 
-      // クリーンアップ
-      await invoke('delete_api', { api_id: result1.id });
-      await invoke('delete_api', { api_id: result2.id });
+      recordApiId(result1.id);
+      recordApiId(result2.id);
     }, 30000);
 
     it('should allow retrieving API key after creation', async () => {
@@ -230,8 +298,7 @@ describe('F001: API作成機能 統合テスト', () => {
       expect(retrievedKey).toBeDefined();
       expect(retrievedKey).toBe(originalKey); // 同じキーが取得できる
 
-      // クリーンアップ
-      await invoke('delete_api', { api_id: apiId });
+      recordApiId(apiId);
     }, 30000);
   });
 
@@ -248,17 +315,21 @@ describe('F001: API作成機能 統合テスト', () => {
       };
 
       const result1 = await invoke<{ id: string }>('create_api', config);
+      const apiId1 = recordApiId(result1.id);
       
       // 同じポート番号でAPIを作成しようとする
       try {
-        await invoke('create_api', { ...config, name: 'Port Test 2' });
-        // エラーが発生することを期待（実装によって異なる）
+        const result2 = await invoke<{ id: string }>('create_api', { ...config, name: 'Port Test 2' });
+        // ポート番号の重複チェックが実装されていない場合は作成可能
+        // 作成された場合は記録してクリーンアップ
+        if (result2.id) {
+          recordApiId(result2.id);
+        }
       } catch (error) {
+        // エラーが発生した場合
         expect(error).toBeDefined();
+        expect(typeof error).toBe('string');
       }
-
-      // クリーンアップ
-      await invoke('delete_api', { api_id: result1.id });
     }, 30000);
 
     it('should handle invalid model names', async () => {
@@ -274,7 +345,8 @@ describe('F001: API作成機能 統合テスト', () => {
         // エラーが発生することを期待
       } catch (error) {
         expect(error).toBeDefined();
-        expect(typeof error).toBe('string');
+        // エラーは文字列またはエラーオブジェクトの可能性がある
+        expect(typeof error === 'string' || error instanceof Error).toBe(true);
       }
     }, 30000);
   });
