@@ -80,10 +80,29 @@ export const ApiList: React.FC = () => {
     
     // ステータスを定期的に更新（5秒ごと）
     const interval = setInterval(() => {
-      loadApis();
+      // ページが非表示の場合は更新をスキップ
+      if (!document.hidden) {
+        loadApis();
+      }
     }, 5000);
 
     return () => clearInterval(interval);
+  }, [loadApis]);
+
+  // ページが非表示の場合は自動更新を停止
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      // ページが表示された時に一度更新
+      if (!document.hidden) {
+        loadApis();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [loadApis]);
 
   // APIの起動/停止（useCallbackでメモ化）
@@ -221,7 +240,9 @@ export const ApiList: React.FC = () => {
                 loadApis();
                 // 選択をクリア
                 setSelectedApiIds(new Set());
-                console.log(`インポート完了: ${result.imported}件追加、${result.skipped}件スキップ、${result.renamed}件リネーム`);
+                if (import.meta.env.DEV) {
+                  console.log(`インポート完了: ${result.imported}件追加、${result.skipped}件スキップ、${result.renamed}件リネーム`);
+                }
               }}
             />
           </div>

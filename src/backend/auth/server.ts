@@ -91,7 +91,7 @@ const requestLogMiddleware = async (req: Request, res: Response, next: NextFunct
         const errorMessage = status >= 400 ? `HTTP ${status}` : null;
         
         // ログ情報をコンソールに出力（開発用）
-        if (apiId) {
+        if (apiId && process.env.NODE_ENV === 'development') {
             console.log(`[LOG] ${method} ${path} - ${status} - ${responseTime}ms - API: ${apiId}`);
         }
         

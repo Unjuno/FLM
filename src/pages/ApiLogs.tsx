@@ -393,7 +393,9 @@ export const ApiLogs: React.FC = () => {
                   apiId={selectedApiId}
                   filter={filter}
                   onExportComplete={(count) => {
-                    console.log(`${count}件のログをエクスポートしました`);
+                    if (import.meta.env.DEV) {
+                      console.log(`${count}件のログをエクスポートしました`);
+                    }
                   }}
                 />
               </div>
@@ -401,7 +403,9 @@ export const ApiLogs: React.FC = () => {
                 <LogDelete
                   apiId={selectedApiId}
                   onDeleteComplete={(count) => {
-                    console.log(`${count}件のログを削除しました`);
+                    if (import.meta.env.DEV) {
+                      console.log(`${count}件のログを削除しました`);
+                    }
                     // ログ一覧を再読み込み
                     if (selectedApiId) {
                       loadLogs(selectedApiId, currentPage);
