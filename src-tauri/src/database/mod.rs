@@ -1,5 +1,4 @@
 // Database Module
-// データベースエージェント実装
 
 pub mod schema;
 pub mod repository;

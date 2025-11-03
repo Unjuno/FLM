@@ -1,6 +1,4 @@
 // アラート検出・通知コマンド
-// バックエンドエージェント実装
-// BE-012-01: アラート検出・通知IPCコマンド実装
 
 use serde::{Deserialize, Serialize};
 use crate::database::connection::get_connection;

@@ -1,5 +1,4 @@
 // Database Connection Module
-// データベース接続管理
 
 use rusqlite::Connection;
 use std::path::PathBuf;

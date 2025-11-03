@@ -58,10 +58,9 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
   const [localSelectedModel, setLocalSelectedModel] = useState<OllamaModel | null>(null);
   const [selectedEngine, setSelectedEngine] = useState<string>(engineType);
   const [availableEngines, setAvailableEngines] = useState<string[]>(['ollama']);
-  const [mode] = useState<'all' | 'web'>('all'); // 'all': すべてのモデル, 'web': Webサイト用（将来の機能拡張用）
+  const [mode] = useState<'all' | 'web'>('all');
   const [webModels, setWebModels] = useState<WebModelDefinition[]>([]);
   const [webModelLoading, setWebModelLoading] = useState(false);
-  // selectedWebModelは表示で使用されていますが、setSelectedWebModelは現在未使用です（将来の機能拡張用）
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedWebModel, _setSelectedWebModel] = useState<WebModelDefinition | null>(null);
   
@@ -338,18 +337,6 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
   };
 
   const handleNext = () => {
-    // mode は常に 'all' に設定されているため、selectedWebModel は使用されません（将来の機能拡張用）
-    // if (mode === 'web' && selectedWebModel) {
-    //   // Webサイト用モデルの場合
-    //   onModelSelected({
-    //     name: selectedWebModel.modelName,
-    //     size: selectedWebModel.size,
-    //     description: selectedWebModel.description,
-    //     capabilities: selectedWebModel.capabilities,
-    //     webModelId: selectedWebModel.id, // Webサイト用モデルのIDを保存
-    //   });
-    //   return;
-    // }
     if (localSelectedModel) {
       // 通常のモデル選択の場合
       const capabilities = detectModelCapabilities(localSelectedModel.name);
@@ -361,12 +348,6 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
       });
     }
   };
-
-  // Webサイト用モデル選択ハンドラ（将来の機能拡張用）
-  // 現在は使用されていませんが、将来のUI拡張のために保持しています
-  // const handleWebModelSelect = useCallback((webModel: WebModelDefinition) => {
-  //   _setSelectedWebModel(webModel);
-  // }, []);
 
   // カテゴリ表示名を取得（モデル名から推測）
   const getCategoryLabel = useCallback((modelName: string): string => {

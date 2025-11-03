@@ -1,6 +1,4 @@
 // システムリソースチェックコマンド
-// バックエンドエージェント実装
-// PCのシステムリソースをチェックして、モデル提案を行う
 
 use serde::{Deserialize, Serialize};
 use sysinfo::{System, SystemExt, CpuExt, DiskExt};

@@ -1,5 +1,4 @@
 // API Repository
-// API設定情報のデータアクセス層
 
 use rusqlite::{Connection, params};
 use chrono::{DateTime, Utc};

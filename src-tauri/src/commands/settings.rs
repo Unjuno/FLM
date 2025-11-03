@@ -1,6 +1,4 @@
 // アプリケーション設定コマンド
-// バックエンドエージェント実装
-// BE-011-01: アプリケーション設定IPCコマンド実装
 
 use serde::{Deserialize, Serialize};
 use crate::database::connection::get_connection;

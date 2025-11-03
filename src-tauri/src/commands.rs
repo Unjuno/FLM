@@ -1,5 +1,4 @@
 // Tauri IPCコマンド定義
-// フロントエンドから呼び出されるIPCコマンドを定義します
 
 pub mod ollama;
 pub mod api;

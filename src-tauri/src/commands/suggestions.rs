@@ -1,6 +1,4 @@
 // 提案機能コマンド
-// バックエンドエージェント実装
-// API名の自動生成、重複チェックなどの提案機能
 
 use serde::{Deserialize, Serialize};
 use crate::database::connection::get_connection;

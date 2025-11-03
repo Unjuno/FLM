@@ -1,6 +1,4 @@
 // ポート番号自動検出コマンド
-// バックエンドエージェント実装
-// 使用可能なポート番号を検出して提案する
 
 use serde::{Deserialize, Serialize};
 use std::net::TcpListener;

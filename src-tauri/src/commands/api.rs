@@ -1,5 +1,4 @@
 // API管理コマンド
-// バックエンドエージェント実装（F001, F002, F003, F004）
 
 use serde::{Deserialize, Serialize};
 use crate::database::models::*;
