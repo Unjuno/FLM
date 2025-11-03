@@ -64,7 +64,7 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
     
     // エンジンの状態を確認
     let detection_result = engine_manager.detect_engine(engine_type).await
-        .map_err(|e| format!("エンジン検出エラー: {}", e))?;
+        .map_err(|e| format!("エンジン検出エラー: {e}"))?;
     
     if !detection_result.running {
         // エンジン起動設定を作成
@@ -77,7 +77,7 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
         };
         
         engine_manager.start_engine(engine_type, Some(engine_config)).await.map_err(|e| {
-            format!("エンジンの起動に失敗しました: {}. 手動でエンジンを起動してから再度お試しください。", e)
+            format!("エンジンの起動に失敗しました: {e}. 手動でエンジンを起動してから再度お試しください。")
         })?;
         
         // 起動確認のため少し待機
@@ -86,7 +86,7 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
     
     // 5. モデルが存在するか確認（エンジンから取得）
     let models = engine_manager.get_engine_models(engine_type).await.map_err(|e| {
-        format!("エンジンからモデル一覧を取得できませんでした: {}", e)
+        format!("エンジンからモデル一覧を取得できませんでした: {e}")
     })?;
     
     let model_names: Vec<String> = models.iter().map(|m| m.name.clone()).collect();
@@ -287,21 +287,21 @@ pub async fn start_api(api_id: String) -> Result<(), String> {
     let is_running = match engine_type_str {
         "ollama" => {
             use crate::engines::{ollama::OllamaEngine, traits::LLMEngine};
-            OllamaEngine::new().is_running().await.map_err(|e| format!("エンジン状態確認エラー: {}", e))?
+            OllamaEngine::new().is_running().await.map_err(|e| format!("エンジン状態確認エラー: {e}"))?
         },
         "lm_studio" => {
             use crate::engines::{lm_studio::LMStudioEngine, traits::LLMEngine};
-            LMStudioEngine::new().is_running().await.map_err(|e| format!("エンジン状態確認エラー: {}", e))?
+            LMStudioEngine::new().is_running().await.map_err(|e| format!("エンジン状態確認エラー: {e}"))?
         },
         "vllm" => {
             use crate::engines::{vllm::VLLMEngine, traits::LLMEngine};
-            VLLMEngine::new().is_running().await.map_err(|e| format!("エンジン状態確認エラー: {}", e))?
+            VLLMEngine::new().is_running().await.map_err(|e| format!("エンジン状態確認エラー: {e}"))?
         },
         "llama_cpp" => {
             use crate::engines::{llama_cpp::LlamaCppEngine, traits::LLMEngine};
-            LlamaCppEngine::new().is_running().await.map_err(|e| format!("エンジン状態確認エラー: {}", e))?
+            LlamaCppEngine::new().is_running().await.map_err(|e| format!("エンジン状態確認エラー: {e}"))?
         },
-        _ => return Err(format!("不明なエンジンタイプ: {}", engine_type_str)),
+        _ => return Err(format!("不明なエンジンタイプ: {engine_type_str}")),
     };
     
     if !is_running {
@@ -1053,7 +1053,7 @@ pub async fn download_model(
                      downloaded_bytes: total_downloaded,
                      total_bytes: total_size,
                      speed_bytes_per_sec: 0.0,
-                     message: Some(format!("モデル '{}' のダウンロードが完了しました", model_name)),
+                     message: Some(format!("モデル '{model_name}' のダウンロードが完了しました")),
                  };
                  let _ = app_handle.emit("model_download_progress", &progress);
              }
