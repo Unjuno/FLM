@@ -1,6 +1,4 @@
-// FLM - Home Page
-// フロントエンドエージェント (FE) 実装
-// F001: API作成機能 - ホーム画面
+// Home - ホーム画面
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';

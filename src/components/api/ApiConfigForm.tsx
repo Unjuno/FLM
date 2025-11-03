@@ -1,6 +1,4 @@
-// FLM - API Configuration Form Component
-// フロントエンドエージェント (FE) 実装
-// F001: API作成機能 - 設定画面
+// ApiConfigForm - API設定フォームコンポーネント
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { safeInvoke } from '../../utils/tauri';

@@ -1,6 +1,4 @@
-// FLM - インストール済みモデル一覧コンポーネント
-// フロントエンドエージェント (FE) 実装
-// F004: モデル管理機能 - インストール済みモデル一覧
+// InstalledModelsList - インストール済みモデル一覧コンポーネント
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';

@@ -1,6 +1,4 @@
-// FLM - Database Access for Authentication Proxy
-// 認証エージェント (AUTH) 実装
-// 認証プロキシサーバーからデータベースにアクセスするモジュール
+// database - 認証プロキシサーバー用データベースアクセスモジュール
 
 import sqlite3 from 'sqlite3';
 import path from 'path';

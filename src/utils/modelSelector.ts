@@ -1,4 +1,4 @@
-// FLM - Webサイト要件に基づくモデル自動選定ロジック
+// modelSelector - Webサイト要件に基づくモデル自動選定ロジック
 
 import type { WebModelDefinition } from '../types/webModel';
 import type { WebServiceRequirements, ModelSelectionResult } from '../types/webService';

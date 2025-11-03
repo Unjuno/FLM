@@ -1,6 +1,4 @@
-// FLM - Inputコンポーネント
-// フロントエンドエージェント (FE) 実装
-// FE-017-03: 統一フォームコンポーネント実装
+// Input - 統一された入力フィールドコンポーネント
 
 import React, { forwardRef, useMemo } from 'react';
 import './Input.css';

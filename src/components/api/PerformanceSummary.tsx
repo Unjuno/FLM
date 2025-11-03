@@ -1,6 +1,4 @@
-// FLM - パフォーマンス統計サマリーコンポーネント
-// フロントエンドエージェント (FE) 実装
-// F007: パフォーマンス監視機能 - 統計サマリーカードコンポーネント実装
+// PerformanceSummary - パフォーマンス統計サマリーコンポーネント
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';

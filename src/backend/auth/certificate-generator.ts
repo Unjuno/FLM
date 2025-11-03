@@ -1,5 +1,4 @@
-// FLM - Certificate Generator (Node.js)
-// 証明書が見つからない場合に自動生成する（大衆向け: ユーザー操作不要）
+// certificate-generator - 証明書自動生成モジュール
 
 import fs from 'fs';
 import path from 'path';

@@ -1,6 +1,4 @@
-// FLM - テーマコンテキスト
-// フロントエンドエージェント (FE) 実装
-// FE-011-02: ダークモード実装
+// ThemeContext - テーマコンテキスト
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { safeInvoke, isTauriAvailable } from '../utils/tauri';

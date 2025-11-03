@@ -1,6 +1,4 @@
-// FLM - キーボードショートカット一覧コンポーネント
-// フロントエンドエージェント (FE) 実装
-// FE-009-05: キーボードショートカット実装
+// KeyboardShortcuts - キーボードショートカット一覧コンポーネント
 
 import React from 'react';
 import { getShortcutDisplay, KeyboardShortcut } from '../../hooks/useKeyboardShortcuts';

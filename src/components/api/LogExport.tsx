@@ -1,6 +1,4 @@
-// FLM - ログエクスポートコンポーネント
-// フロントエンドエージェント (FE) 実装
-// F008: データ管理・ユーティリティ機能 - ログエクスポート機能実装
+// LogExport - ログエクスポートコンポーネント
 
 import React, { useState, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';

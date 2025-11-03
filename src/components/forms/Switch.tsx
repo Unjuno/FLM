@@ -1,6 +1,4 @@
-// FLM - Switchコンポーネント
-// フロントエンドエージェント (FE) 実装
-// FE-017-03: 統一フォームコンポーネント実装
+// Switch - 統一されたスイッチコンポーネント
 
 import React, { forwardRef, useMemo } from 'react';
 import './Switch.css';

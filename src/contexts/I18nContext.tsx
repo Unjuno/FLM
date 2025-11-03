@@ -1,5 +1,4 @@
-// FLM - 多言語対応コンテキスト
-// フロントエンドエージェント (FE) 実装
+// I18nContext - 多言語対応コンテキスト
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useMemo, ReactNode } from 'react';
 import { isTauriAvailable, safeInvoke } from '../utils/tauri';
@@ -41,7 +40,9 @@ export const I18nProvider: React.FC<I18nProviderProps> = ({ children }) => {
       // Tauri環境が利用可能かチェック
       if (!isTauriAvailable()) {
         // 開発環境（ブラウザなど）ではデフォルトの言語を使用
-        console.warn('Tauri環境が利用できないため、デフォルト言語を使用します');
+        if (import.meta.env.DEV) {
+          console.warn('Tauri環境が利用できないため、デフォルト言語を使用します');
+        }
         return;
       }
 
@@ -55,9 +56,13 @@ export const I18nProvider: React.FC<I18nProviderProps> = ({ children }) => {
         const errorMessage = error instanceof Error ? error.message : String(error);
         // invokeが未定義の場合の特別な処理
         if (errorMessage.includes('invoke') || errorMessage.includes('undefined') || errorMessage.includes('Cannot read properties') || errorMessage.includes('アプリケーションが正しく起動')) {
-          console.warn('Tauri環境が初期化されていません。デフォルト言語を使用します');
+          if (import.meta.env.DEV) {
+            console.warn('Tauri環境が初期化されていません。デフォルト言語を使用します');
+          }
         } else {
-          console.error('言語設定の読み込みに失敗しました:', errorMessage);
+          if (import.meta.env.DEV) {
+            console.error('言語設定の読み込みに失敗しました:', errorMessage);
+          }
         }
       }
     };

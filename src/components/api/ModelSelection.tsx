@@ -1,6 +1,4 @@
-// FLM - Model Selection Component
-// フロントエンドエージェント (FE) 実装
-// F001: API作成機能 - モデル選択画面
+// ModelSelection - モデル選択コンポーネント
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';

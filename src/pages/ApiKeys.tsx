@@ -1,6 +1,4 @@
-// FLM - APIキー管理ページ
-// フロントエンドエージェント (FE) 実装
-// F005: 認証機能 - APIキー一覧表示UI
+// ApiKeys - APIキー管理ページ
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';

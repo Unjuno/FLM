@@ -1,6 +1,4 @@
-// FLM - API設定コンポーネント
-// フロントエンドエージェント (FE) 実装
-// F001: API作成機能 - 設定画面
+// ApiSettings - API設定コンポーネント
 
 import React, { useState } from 'react';
 import type { SelectedModel, ApiConfig } from '../../types/api';

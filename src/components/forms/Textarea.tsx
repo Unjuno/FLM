@@ -1,6 +1,4 @@
-// FLM - Textareaコンポーネント
-// フロントエンドエージェント (FE) 実装
-// FE-017-03: 統一フォームコンポーネント実装
+// Textarea - 統一されたテキストエリアコンポーネント
 
 import React, { forwardRef, useMemo } from 'react';
 import './Textarea.css';

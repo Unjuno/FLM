@@ -1,6 +1,4 @@
-// FLM - 設定エクスポート・インポートコンポーネント
-// フロントエンドエージェント (FE) 実装
-// F008: データ管理・ユーティリティ機能 - 設定のエクスポート・インポート機能実装
+// SettingsExport - 設定エクスポート・インポートコンポーネント
 
 import React, { useState, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';

@@ -1,6 +1,4 @@
-// FLM - Help Page
-// フロントエンドエージェント (FE) 実装
-// FE-009-01: ヘルプページ実装
+// Help - ヘルプページ
 
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';

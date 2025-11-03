@@ -1,6 +1,4 @@
-// FLM - PDFエクスポートユーティリティ
-// フロントエンドエージェント (FE) 実装
-// FE-022-02: PDFエクスポート機能実装
+// pdfExport - PDFエクスポートユーティリティ
 
 import { printElement, type PrintOptions } from './print';
 
@@ -160,7 +158,9 @@ export const exportLogsToPdf = async (
   // 将来の実装: logDataを使用してPDFを生成
   // 現在はブラウザの印刷機能を使用
   if (logData.length === 0) {
-    console.warn(ERROR_MESSAGES.NO_LOG_DATA);
+    if (import.meta.env.DEV) {
+      console.warn(ERROR_MESSAGES.NO_LOG_DATA);
+    }
   }
 
   await exportToPdf({

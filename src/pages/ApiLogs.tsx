@@ -1,6 +1,4 @@
-// FLM - ログ一覧ページ
-// フロントエンドエージェント (FE) 実装
-// F006: ログ表示機能 - ログ一覧ページ基本実装
+// ApiLogs - ログ一覧ページ
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -92,7 +90,7 @@ export const ApiLogs: React.FC = () => {
     }
   }, []);
 
-  // ログ一覧を取得（フィルタ対応 - FE-006-05）
+  // ログ一覧を取得（フィルタ対応）
   const loadLogs = useCallback(async (apiId: string | null, page: number, filterState?: LogFilterState) => {
     if (!apiId) {
       setLogs([]);
@@ -366,7 +364,7 @@ export const ApiLogs: React.FC = () => {
         )}
 
         <div className="api-logs-content">
-          {/* ログ統計情報（FE-006-05で統合） */}
+          {/* ログ統計情報 */}
           {selectedApiId && (
             <div className="log-statistics-section">
               <LogStatistics
@@ -379,7 +377,7 @@ export const ApiLogs: React.FC = () => {
             </div>
           )}
 
-          {/* ログフィルタ（FE-006-05で統合） */}
+          {/* ログフィルタ */}
           <div className="log-filter-section">
             <LogFilter
               onFilterChange={handleFilterChange}
@@ -387,7 +385,7 @@ export const ApiLogs: React.FC = () => {
             />
           </div>
 
-          {/* ログエクスポート・削除（FE-008-01, FE-008-03で追加） */}
+          {/* ログエクスポート・削除 */}
           {selectedApiId && (
             <div className="log-management-section">
               <div className="log-export-section">

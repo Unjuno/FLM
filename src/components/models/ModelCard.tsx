@@ -1,6 +1,4 @@
-// FLM - モデルカードコンポーネント
-// フロントエンドエージェント (FE) 実装
-// F004: モデル管理機能 - モデルカード表示
+// ModelCard - モデルカードコンポーネント
 
 import React from 'react';
 import './ModelCard.css';

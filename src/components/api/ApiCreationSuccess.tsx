@@ -1,6 +1,4 @@
-// FLM - API Creation Success Component
-// フロントエンドエージェント (FE) 実装
-// F001: API作成機能 - 成功画面
+// ApiCreationSuccess - API作成成功コンポーネント
 
 import React, { useState } from 'react';
 import type { ApiCreationResult } from '../../types/api';

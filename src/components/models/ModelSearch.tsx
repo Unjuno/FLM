@@ -1,6 +1,4 @@
-// FLM - モデル検索コンポーネント
-// フロントエンドエージェント (FE) 実装
-// F004: モデル管理機能 - モデル検索画面
+// ModelSearch - モデル検索コンポーネント
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';

@@ -1,6 +1,4 @@
-// FLM - ログ統計情報コンポーネント
-// フロントエンドエージェント (FE) 実装
-// F006: ログ表示機能 - ログ統計情報コンポーネント実装
+// LogStatistics - ログ統計情報コンポーネント
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';

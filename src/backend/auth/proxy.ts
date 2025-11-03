@@ -1,6 +1,4 @@
-// FLM - HTTP Proxy Middleware
-// 認証エージェント (AUTH) 実装
-// express-http-proxy を使用したプロキシミドルウェア
+// proxy - express-http-proxyを使用したプロキシミドルウェア
 
 import { Request, Response } from 'express';
 import proxy from 'express-http-proxy';

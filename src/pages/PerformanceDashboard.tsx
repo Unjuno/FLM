@@ -1,6 +1,4 @@
-// FLM - パフォーマンスダッシュボードページ
-// フロントエンドエージェント (FE) 実装
-// F007: パフォーマンス監視機能 - パフォーマンスダッシュボード基本実装
+// PerformanceDashboard - パフォーマンスダッシュボードページ
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -114,16 +112,22 @@ export const PerformanceDashboard: React.FC = () => {
         // invokeが未定義の場合の特別な処理
         if (errorMessage.includes('invoke') || errorMessage.includes('undefined') || errorMessage.includes('Cannot read properties') || errorMessage.includes('アプリケーションが正しく起動')) {
           errorMessage = 'Tauri環境が初期化されていません。アプリケーションを再起動してください。';
-          console.warn('Tauri環境が初期化されていません');
+          if (import.meta.env.DEV) {
+            console.warn('Tauri環境が初期化されていません');
+          }
         } else {
-          console.error('API一覧取得エラー詳細:', {
-            message: err.message,
-            stack: err.stack,
-            name: err.name,
-          });
+          if (import.meta.env.DEV) {
+            console.error('API一覧取得エラー詳細:', {
+              message: err.message,
+              stack: err.stack,
+              name: err.name,
+            });
+          }
         }
       } else {
-        console.error('API一覧取得エラー（非Error型）:', err);
+        if (import.meta.env.DEV) {
+          console.error('API一覧取得エラー（非Error型）:', err);
+        }
         errorMessage = String(err);
       }
       

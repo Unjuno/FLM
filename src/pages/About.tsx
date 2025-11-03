@@ -1,6 +1,4 @@
-// FLM - About Page
-// フロントエンドエージェント (FE) 実装
-// FE-018-03: Aboutページ実装
+// About - Aboutページ
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';

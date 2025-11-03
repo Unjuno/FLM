@@ -1,6 +1,4 @@
-// FLM - ナビゲーションコンポーネント
-// フロントエンドエージェント (FE) 実装
-// FE-017-02: ナビゲーションコンポーネント実装
+// Navigation - ナビゲーションコンポーネント
 
 import React, { useState, useCallback, useMemo, useRef } from 'react';
 import { useLocation } from 'react-router-dom';

@@ -1,6 +1,4 @@
-// FLM - オンボーディングコンポーネント
-// フロントエンドエージェント (FE) 実装
-// FE-009-03: オンボーディング・チュートリアル機能実装
+// Onboarding - オンボーディングコンポーネント
 
 import React, { useState, useEffect } from 'react';
 import './Onboarding.css';

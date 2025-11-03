@@ -1,6 +1,4 @@
-// FLM - アプリケーションレイアウトコンポーネント
-// フロントエンドエージェント (FE) 実装
-// FE-017-01: 共通レイアウトコンポーネント実装
+// AppLayout - アプリケーションレイアウトコンポーネント
 
 import React, { useState } from 'react';
 import { Header, HeaderProps } from './Header';

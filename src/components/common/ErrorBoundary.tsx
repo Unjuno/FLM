@@ -1,6 +1,4 @@
-// FLM - Error Boundaryコンポーネント
-// フロントエンドエージェント (FE) 実装
-// FE-009-06: エラーハンドリング強化
+// ErrorBoundary - エラーバウンダリコンポーネント
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { ErrorMessage } from './ErrorMessage';

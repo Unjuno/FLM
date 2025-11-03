@@ -1,6 +1,4 @@
-// FLM - useFormフック
-// フロントエンドエージェント (FE) 実装
-// FE-017-04: フォームバリデーションシステム実装
+// useForm - フォーム状態管理とバリデーション機能を提供するフック
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { Validator } from '../utils/validation';
@@ -283,7 +281,9 @@ export function useForm<T extends Record<string, unknown>>(
           // 最新の値を取得（refを使用）
           await onSubmit(valuesRef.current);
         } catch (error) {
-          console.error('フォーム送信中にエラーが発生しました:', error);
+          if (import.meta.env.DEV) {
+            console.error('フォーム送信中にエラーが発生しました:', error);
+          }
         }
       }
       

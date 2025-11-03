@@ -1,6 +1,4 @@
-// FLM - APIステータス管理カスタムフック
-// フロントエンドエージェント (FE) 実装
-// F003: API管理機能 - リアルタイムステータス更新
+// useApiStatus - APIステータス管理カスタムフック
 
 import { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';

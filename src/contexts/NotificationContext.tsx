@@ -1,6 +1,4 @@
-// FLM - 通知コンテキスト
-// フロントエンドエージェント (FE) 実装
-// FE-012-01: 通知システム実装
+// NotificationContext - 通知コンテキスト
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import type { NotificationItem, NotificationType } from '../components/common/Notification';

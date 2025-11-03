@@ -1,5 +1,4 @@
-// FLM - システムチェックコンポーネント
-// PCのシステムリソースをチェックして表示
+// SystemCheck - システムリソースチェックコンポーネント
 
 import React, { useState, useEffect } from 'react';
 import { safeInvoke } from '../../utils/tauri';

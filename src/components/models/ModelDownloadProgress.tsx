@@ -1,6 +1,4 @@
-// FLM - モデルダウンロード進捗コンポーネント
-// フロントエンドエージェント (FE) 実装
-// F004: モデル管理機能 - モデルダウンロード進捗表示
+// ModelDownloadProgress - モデルダウンロード進捗コンポーネント
 
 import React, { useEffect, useRef, useCallback, useMemo } from 'react';
 import { useI18n } from '../../contexts/I18nContext';

@@ -1,6 +1,4 @@
-// FLM - エラーメッセージコンポーネント
-// フロントエンドエージェント (FE) 実装
-// フェーズ4: UI/UX改善 - エラーメッセージの改善
+// ErrorMessage - エラーメッセージコンポーネント
 
 import React from 'react';
 import './ErrorMessage.css';

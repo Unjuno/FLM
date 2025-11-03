@@ -1,6 +1,4 @@
-// FLM - モデル選択コンポーネント
-// フロントエンドエージェント (FE) 実装
-// F001: API作成機能 - モデル選択画面
+// ModelSelect - モデル選択コンポーネント
 
 import React, { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';

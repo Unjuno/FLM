@@ -1,6 +1,4 @@
-// FLM - API情報ページ
-// フロントエンドエージェント (FE) 実装
-// F002: API利用機能 - API情報画面
+// ApiInfo - API情報ページ
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';

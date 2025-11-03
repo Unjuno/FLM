@@ -1,6 +1,4 @@
-// FLM - API一覧ページ
-// フロントエンドエージェント (FE) 実装
-// F002: API利用機能 - API一覧画面
+// ApiList - API一覧ページ
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
@@ -130,7 +128,7 @@ export const ApiList: React.FC = () => {
     }
   }, [loadApis]);
 
-  // API選択のトグル（FE-008-02）
+  // API選択のトグル
   const handleToggleSelection = useCallback((apiId: string) => {
     setSelectedApiIds(prev => {
       const newSet = new Set(prev);
@@ -143,7 +141,7 @@ export const ApiList: React.FC = () => {
     });
   }, []);
 
-  // 全選択/全解除（FE-008-02）
+  // 全選択/全解除
   const handleSelectAll = useCallback(() => {
     if (selectedApiIds.size === apis.length) {
       setSelectedApiIds(new Set());
@@ -213,7 +211,7 @@ export const ApiList: React.FC = () => {
           />
         )}
 
-        {/* 設定エクスポート・インポート（FE-008-02で追加） */}
+        {/* 設定エクスポート・インポート */}
         {apis.length > 0 && (
           <div className="settings-export-section">
             <SettingsExport
@@ -242,7 +240,7 @@ export const ApiList: React.FC = () => {
           </div>
         ) : (
           <div className="api-list">
-            {/* 全選択/全解除ボタン（FE-008-02） */}
+            {/* 全選択/全解除ボタン */}
             <div className="api-list-controls">
               <label className="select-all-checkbox">
                 <input

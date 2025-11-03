@@ -1,6 +1,4 @@
-// FLM - モデル詳細モーダルコンポーネント
-// フロントエンドエージェント (FE) 実装
-// F004: モデル管理機能 - モデル詳細表示モーダル
+// ModelDetailModal - モデル詳細モーダルコンポーネント
 
 import React from 'react';
 import './ModelDetailModal.css';

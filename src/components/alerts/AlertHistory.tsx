@@ -1,6 +1,4 @@
-// FLM - アラート履歴コンポーネント
-// フロントエンドエージェント (FE) 実装
-// FE-012-02: アラート・閾値設定機能実装（アラート履歴表示）
+// AlertHistory - アラート履歴コンポーネント
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';
@@ -58,7 +56,9 @@ export const AlertHistorySection: React.FC<AlertHistorySectionProps> = ({
       });
       setHistory(result);
     } catch (err) {
-      console.error('アラート履歴の読み込みに失敗しました:', err);
+      if (import.meta.env.DEV) {
+        console.error('アラート履歴の読み込みに失敗しました:', err);
+      }
       const errorMessage = err instanceof Error ? err.message : 'アラート履歴の読み込みに失敗しました';
       showError('アラート履歴の読み込みエラー', errorMessage);
     } finally {
@@ -79,7 +79,9 @@ export const AlertHistorySection: React.FC<AlertHistorySectionProps> = ({
       apis.forEach(api => apiMap.set(api.id, api.name));
       setApiNames(apiMap);
     } catch (err) {
-      console.error('API一覧の取得に失敗しました:', err);
+      if (import.meta.env.DEV) {
+        console.error('API一覧の取得に失敗しました:', err);
+      }
       // API名の取得に失敗しても履歴表示は継続できるため、エラー通知は省略
     }
   }, []);
@@ -101,7 +103,9 @@ export const AlertHistorySection: React.FC<AlertHistorySectionProps> = ({
       showSuccess('アラートを解決済みとしてマークしました');
       loadHistory(); // 履歴を再読み込み
     } catch (err) {
-      console.error('アラートの解決に失敗しました:', err);
+      if (import.meta.env.DEV) {
+        console.error('アラートの解決に失敗しました:', err);
+      }
       const errorMessage = err instanceof Error ? err.message : 'アラートの解決に失敗しました';
       showError('アラートの解決エラー', errorMessage);
     }
@@ -123,7 +127,9 @@ export const AlertHistorySection: React.FC<AlertHistorySectionProps> = ({
       setSelectedAlerts(new Set()); // 選択をクリア
       loadHistory(); // 履歴を再読み込み
     } catch (err) {
-      console.error('アラートの一括解決に失敗しました:', err);
+      if (import.meta.env.DEV) {
+        console.error('アラートの一括解決に失敗しました:', err);
+      }
       const errorMessage = err instanceof Error ? err.message : 'アラートの一括解決に失敗しました';
       showError('アラート一括解決エラー', errorMessage);
     }

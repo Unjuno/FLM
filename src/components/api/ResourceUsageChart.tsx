@@ -1,6 +1,4 @@
-// FLM - CPU/メモリ使用率グラフコンポーネント
-// フロントエンドエージェント (FE) 実装
-// F007: パフォーマンス監視機能 - CPU/メモリ使用率グラフ実装
+// ResourceUsageChart - CPU/メモリ使用率グラフコンポーネント
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';

@@ -1,6 +1,4 @@
-// FLM - ログフィルタコンポーネント
-// フロントエンドエージェント (FE) 実装
-// F006: ログ表示機能 - ログフィルタコンポーネント
+// LogFilter - ログフィルタコンポーネント
 
 import React, { useState, useEffect } from 'react';
 import './LogFilter.css';

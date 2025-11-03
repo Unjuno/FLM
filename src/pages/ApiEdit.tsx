@@ -1,6 +1,4 @@
-// FLM - API設定変更ページ
-// フロントエンドエージェント (FE) 実装
-// F003: API管理機能 - 設定変更画面
+// ApiEdit - API編集ページ
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';

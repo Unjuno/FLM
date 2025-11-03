@@ -1,4 +1,4 @@
-// FLM - Webサイト用モデル設定の読み込み・バリデーション
+// webModelConfig - Webサイト用モデル設定の読み込み・バリデーション
 
 import type { WebModelConfig, WebModelDefinition } from '../types/webModel';
 

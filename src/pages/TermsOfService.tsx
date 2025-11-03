@@ -1,6 +1,4 @@
-// FLM - Terms of Service Page
-// フロントエンドエージェント (FE) 実装
-// FE-018-04: 利用規約ページ実装
+// TermsOfService - 利用規約ページ
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';

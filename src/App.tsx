@@ -1,5 +1,4 @@
-// FLM - メインアプリケーションコンポーネント
-// フロントエンドエージェント (FE) 実装
+// App - メインアプリケーションコンポーネント
 
 import { Routes, Route, Navigate } from "react-router-dom";
 import { Home } from "./pages/Home";

@@ -1,6 +1,4 @@
-// FLM - 通知コンポーネント
-// フロントエンドエージェント (FE) 実装
-// FE-012-01: 通知システム実装
+// Notification - 通知コンポーネント
 
 import React, { useEffect, useState } from 'react';
 import './Notification.css';

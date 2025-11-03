@@ -1,6 +1,4 @@
-// FLM - API作成ページ
-// フロントエンドエージェント (FE) 実装
-// F001: API作成機能 - マルチステップウィザード
+// ApiCreate - API作成ページ
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';

@@ -1,6 +1,4 @@
-// FLM - エラー率グラフコンポーネント
-// フロントエンドエージェント (FE) 実装
-// F007: パフォーマンス監視機能 - エラー率グラフコンポーネント実装
+// ErrorRateChart - エラー率グラフコンポーネント
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';

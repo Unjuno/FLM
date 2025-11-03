@@ -1,6 +1,4 @@
-// FLM - アラート設定ページ
-// フロントエンドエージェント (FE) 実装
-// FE-012-02: アラート・閾値設定機能実装
+// AlertSettings - アラート設定ページ
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';

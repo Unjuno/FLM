@@ -1,6 +1,4 @@
-// FLM - アラート履歴ページ
-// フロントエンドエージェント (FE) 実装
-// FE-012-03: アラート履歴表示機能実装
+// AlertHistory - アラート履歴ページ
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';

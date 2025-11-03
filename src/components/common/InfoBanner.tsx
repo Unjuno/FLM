@@ -1,6 +1,4 @@
-// FLM - 情報バナーコンポーネント
-// フロントエンドエージェント (FE) 実装
-// フェーズ4: UI/UX改善 - ガイダンス表示の追加・改善
+// InfoBanner - 情報バナーコンポーネント
 
 import React, { useState } from 'react';
 import './InfoBanner.css';

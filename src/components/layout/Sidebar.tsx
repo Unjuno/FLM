@@ -1,6 +1,4 @@
-// FLM - サイドバーコンポーネント
-// フロントエンドエージェント (FE) 実装
-// FE-017-01: 共通レイアウトコンポーネント実装
+// Sidebar - サイドバーコンポーネント
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';

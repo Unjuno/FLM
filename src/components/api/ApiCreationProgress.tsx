@@ -1,6 +1,4 @@
-// FLM - API Creation Progress Component
-// フロントエンドエージェント (FE) 実装
-// F001: API作成機能 - 進行中画面
+// ApiCreationProgress - API作成進行中コンポーネント
 
 import React, { useRef, useEffect } from 'react';
 import './ApiCreationProgress.css';

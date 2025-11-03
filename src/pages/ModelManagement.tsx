@@ -1,6 +1,4 @@
-// FLM - モデル管理ページ
-// フロントエンドエージェント (FE) 実装
-// F004: モデル管理機能 - メインページ
+// ModelManagement - モデル管理ページ
 
 import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';

@@ -1,6 +1,4 @@
-// FLM - バックアップ・復元ページ
-// フロントエンドエージェント (FE) 実装
-// FE-019-01: バックアップ・復元UI実装
+// BackupRestore - バックアップ・復元ページ
 
 import React, { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';

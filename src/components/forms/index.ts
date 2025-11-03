@@ -1,6 +1,4 @@
-// FLM - フォームコンポーネントのエクスポート
-// フロントエンドエージェント (FE) 実装
-// FE-017-03: 統一フォームコンポーネント実装
+// index - フォームコンポーネントのエクスポート
 
 export { Input, type InputProps } from './Input';
 export { Textarea, type TextareaProps } from './Textarea';

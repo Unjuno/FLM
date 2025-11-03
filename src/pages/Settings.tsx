@@ -1,6 +1,4 @@
-// FLM - アプリケーション設定ページ
-// フロントエンドエージェント (FE) 実装
-// FE-011-01: アプリケーション設定ページ実装
+// Settings - アプリケーション設定ページ
 
 import React, { useState, useEffect } from 'react';
 import { invoke } from '@tauri-apps/api/core';

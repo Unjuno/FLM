@@ -1,6 +1,4 @@
-// FLM - アラート閾値設定コンポーネント
-// フロントエンドエージェント (FE) 実装
-// FE-012-02: アラート・閾値設定機能実装
+// AlertThreshold - アラート閾値設定コンポーネント
 
 import React from 'react';
 import './AlertThreshold.css';

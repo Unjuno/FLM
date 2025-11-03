@@ -1,6 +1,4 @@
-// FLM - レスポンス時間グラフコンポーネント
-// フロントエンドエージェント (FE) 実装
-// F007: パフォーマンス監視機能 - FE-007-03
+// ResponseTimeChart - レスポンス時間グラフコンポーネント
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';

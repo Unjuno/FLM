@@ -1,6 +1,4 @@
-// FLM - Authentication Proxy Server
-// 認証エージェント (AUTH) 実装
-// Express.jsベースの認証プロキシサーバー
+// server - Express.jsベースの認証プロキシサーバー
 
 import express, { Request, Response, NextFunction } from 'express';
 import https from 'https';
@@ -506,23 +504,33 @@ async function ensureCertificateAndStartServer() {
     
     // 証明書がない場合は自動生成
     if (!certPaths && API_ID && PORT) {
-        console.log('🔒 HTTPS証明書が見つかりません。自動生成します...');
+        if (process.env.NODE_ENV === 'development') {
+            console.log('🔒 HTTPS証明書が見つかりません。自動生成します...');
+        }
         try {
             const generated = await ensureCertificateExists(API_ID, PORT);
             certPaths = { certPath: generated.certPath, keyPath: generated.keyPath };
-            console.log('✅ HTTPS証明書の自動生成が完了しました');
+            if (process.env.NODE_ENV === 'development') {
+                console.log('✅ HTTPS証明書の自動生成が完了しました');
+            }
         } catch (error) {
+            // セキュリティエラーは常に出力（重要）
             console.error('❌ セキュリティエラー: HTTPS証明書の自動生成に失敗しました。');
             console.error('HTTPは使用できません（パスワード漏洩のリスクがあります）。');
-            console.error('エラー:', error);
+            if (process.env.NODE_ENV === 'development') {
+                console.error('エラー:', error);
+            }
             process.exit(1);
         }
     }
     
     if (!certPaths) {
+        // セキュリティエラーは常に出力（重要）
         console.error('❌ セキュリティエラー: HTTPS証明書が見つかりません。');
         console.error('HTTPは使用できません（パスワード漏洩のリスクがあります）。');
-        console.error('API IDまたはポート番号が設定されていない可能性があります。');
+        if (process.env.NODE_ENV === 'development') {
+            console.error('API IDまたはポート番号が設定されていない可能性があります。');
+        }
         process.exit(1);
     }
     

@@ -1,6 +1,4 @@
-// FLM - ログ削除コンポーネント
-// フロントエンドエージェント (FE) 実装
-// F008: データ管理・ユーティリティ機能 - ログ削除機能実装
+// LogDelete - ログ削除コンポーネント
 
 import React, { useState } from 'react';
 import { invoke } from '@tauri-apps/api/core';

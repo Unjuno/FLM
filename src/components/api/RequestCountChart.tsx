@@ -1,6 +1,4 @@
-// FLM - リクエスト数グラフコンポーネント
-// フロントエンドエージェント (FE) 実装
-// F007: パフォーマンス監視機能 - FE-007-04
+// RequestCountChart - リクエスト数グラフコンポーネント
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { invoke } from '@tauri-apps/api/core';

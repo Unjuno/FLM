@@ -1,6 +1,4 @@
-// FLM - API Key Generation and Validation
-// 認証エージェント (AUTH) 実装
-// APIキーの生成・検証機能
+// keygen - APIキーの生成・検証機能
 
 import crypto from 'crypto';
 
@@ -62,7 +60,9 @@ async function getApiKeyHashFromDatabase(apiKey: string): Promise<string | null>
         const apiKeyHash = hashApiKey(apiKey);
         return await database.getApiKeyHash(apiKeyHash);
     } catch (error) {
-        console.error('データベースアクセスエラー:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('データベースアクセスエラー:', error);
+        }
         return null;
     }
 }
@@ -88,7 +88,9 @@ export async function validateApiKey(apiKey: string): Promise<boolean> {
         // ハッシュを比較（定数時間比較でタイミング攻撃を防止）
         return apiKeyHash.toLowerCase() === storedHash.toLowerCase();
     } catch (error) {
-        console.error('APIキー検証エラー:', error);
+        if (process.env.NODE_ENV === 'development') {
+          console.error('APIキー検証エラー:', error);
+        }
         return false;
     }
 }

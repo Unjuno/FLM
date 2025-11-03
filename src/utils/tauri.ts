@@ -1,5 +1,4 @@
-// FLM - Tauriユーティリティ
-// Tauri環境の検出と安全なinvoke関数を提供
+// tauri - Tauri環境の検出と安全なinvoke関数を提供
 
 import { invoke as tauriInvoke } from '@tauri-apps/api/core';
 
@@ -66,9 +65,11 @@ export async function safeInvoke<T = unknown>(
  */
 export function checkTauriEnvironment(featureName: string = 'この機能'): void {
   if (!isTauriAvailable()) {
-    console.warn(
-      `${featureName}を使用するには、Tauriアプリケーションとして起動する必要があります。`
-    );
+    if (typeof window !== 'undefined' && (window as any).__DEV__) {
+      console.warn(
+        `${featureName}を使用するには、Tauriアプリケーションとして起動する必要があります。`
+      );
+    }
   }
 }
 

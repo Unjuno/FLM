@@ -1,6 +1,4 @@
-// FLM - Privacy Policy Page
-// フロントエンドエージェント (FE) 実装
-// FE-018-04: プライバシーポリシーページ実装
+// PrivacyPolicy - プライバシーポリシーページ
 
 import React from 'react';
 import { useNavigate } from 'react-router-dom';

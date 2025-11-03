@@ -1,6 +1,4 @@
-// FLM - キーボードショートカットフック
-// フロントエンドエージェント (FE) 実装
-// FE-009-05: キーボードショートカット実装
+// useKeyboardShortcuts - キーボードショートカットフック
 
 import { useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';

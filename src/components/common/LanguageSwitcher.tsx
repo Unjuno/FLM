@@ -1,5 +1,4 @@
-// FLM - 言語切り替えコンポーネント
-// フロントエンドエージェント (FE) 実装
+// LanguageSwitcher - 言語切り替えコンポーネント
 
 import React, { useState, useRef, useEffect } from 'react';
 import { useI18n } from '../../contexts/I18nContext';

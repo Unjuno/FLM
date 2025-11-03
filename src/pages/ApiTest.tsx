@@ -1,6 +1,4 @@
-// FLM - APIテストページ
-// フロントエンドエージェント (FE) 実装
-// F002: API利用機能 - APIテスト画面
+// ApiTest - APIテストページ
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';

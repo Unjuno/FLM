@@ -1,6 +1,4 @@
-// FLM - ログ詳細表示コンポーネント
-// フロントエンドエージェント (FE) 実装
-// F006: ログ表示機能 - ログ詳細表示コンポーネント実装
+// LogDetail - ログ詳細表示コンポーネント
 
 import React, { useState, useMemo } from 'react';
 import './LogDetail.css';

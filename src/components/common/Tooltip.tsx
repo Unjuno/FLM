@@ -1,6 +1,4 @@
-// FLM - ツールチップコンポーネント
-// フロントエンドエージェント (FE) 実装
-// FE-009-02: ツールチップ・ヒント表示機能実装
+// Tooltip - ツールチップコンポーネント
 
 import React, { useState, useRef, useEffect } from 'react';
 import './Tooltip.css';
