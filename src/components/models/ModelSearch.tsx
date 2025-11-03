@@ -768,15 +768,26 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({ onModelSelected }) => 
         pausedModelRef.current = null;
         downloadAbortControllerRef.current = null;
       }
-      
-      // インストール済みリストを更新（完了時のみ）
-      if (status === 'complete') {
-        setTimeout(() => {
-          loadModels();
-        }, 1000);
-      }
+      // インストール済みリストの更新は別のuseEffectで処理されるため、ここでは何もしない
     }
   }, [loadModels]);
+
+  // ダウンロード完了時のモデルリスト更新をクリーンアップ
+  useEffect(() => {
+    let timeoutId: NodeJS.Timeout | null = null;
+    
+    if (downloadStatus === 'complete') {
+      timeoutId = setTimeout(() => {
+        loadModels();
+      }, 1000);
+    }
+    
+    return () => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    };
+  }, [downloadStatus, loadModels]);
 
   // ダウンロード一時停止（useCallbackでメモ化）
   const handlePauseDownload = useCallback(() => {

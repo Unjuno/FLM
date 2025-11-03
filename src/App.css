@@ -17,7 +17,9 @@
   -webkit-text-size-adjust: 100%;
   -moz-text-size-adjust: 100%;
   /* stylelint-disable-next-line property-no-vendor-prefix */
-  text-size-adjust: 100%; /* 警告を抑制（標準プロパティとして使用） */
+  /* text-size-adjustは標準プロパティだが、Firefox/Safariでは非対応のため警告を抑制 */
+  /* autoprefixer: ignore next */
+  text-size-adjust: 100%;
 
   /* ========== カラーパレット - ライトモード ========== */
   /* プライマリカラー（ブランドカラー） */

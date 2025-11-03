@@ -9,6 +9,9 @@ pub mod settings;
 pub mod alerts;
 pub mod backup;
 pub mod engine;
+pub mod system;
+pub mod port;
+pub mod suggestions;
 
 // use crate::utils::error::AppError; // 未使用のためコメントアウト
 // pub use api::*; // 未使用のためコメントアウト

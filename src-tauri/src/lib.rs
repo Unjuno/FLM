@@ -15,6 +15,9 @@ use commands::settings;
 use commands::alerts;
 use commands::backup;
 use commands::engine;
+use commands::system;
+use commands::port;
+use commands::suggestions;
 use serde::{Deserialize, Serialize};
 
 /// アプリケーション情報取得コマンド
@@ -38,8 +41,13 @@ pub struct AppInfo {
 pub fn run() {
     // データベースを初期化
     if let Err(e) = database::init_database() {
-        eprintln!("データの初期化に失敗しました。アプリを再起動して再度お試しください。エラー: {}", e);
+        eprintln!("データの初期化に失敗しました。アプリを再起動して再度お試しください。");
+        eprintln!("エラー詳細: {}", e);
+        eprintln!("エラータイプ: {:?}", e);
         // アプリケーションは継続して起動します（データベースエラーは後で処理可能）
+        // 注意: データベース機能は利用できません
+    } else {
+        eprintln!("データベースの初期化に成功しました");
     }
     
     tauri::Builder::default()
@@ -98,6 +106,13 @@ pub fn run() {
             engine::get_engine_configs,
             engine::delete_engine_config,
             engine::get_engine_models,
+            system::get_system_resources,
+            system::get_model_recommendation,
+            port::find_available_port,
+            port::check_port_availability,
+            suggestions::suggest_api_name,
+            suggestions::suggest_error_fix,
+            suggestions::suggest_model_parameters,
         ])
         .run(tauri::generate_context!())
         .expect("error while running tauri application");

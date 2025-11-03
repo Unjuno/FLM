@@ -22,9 +22,12 @@ if (typeof global !== 'undefined') {
 }
 
 // jsdom環境ではwindowが既に存在するため、それを使用
-if (typeof window !== 'undefined' && !window.__TAURI__) {
+if (typeof window !== 'undefined') {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (window as any).__TAURI__ = {} as any;
+  const windowObj = window as any;
+  if (!windowObj.__TAURI__) {
+    windowObj.__TAURI__ = {} as any;
+  }
 }
 
 // グローバルなテスト設定

@@ -2,7 +2,7 @@
 // フロントエンドエージェント (FE) 実装
 // F007: パフォーマンス監視機能 - エラー率グラフコンポーネント実装
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { invoke } from '@tauri-apps/api/core';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import './ErrorRateChart.css';
@@ -45,16 +45,35 @@ export const ErrorRateChart: React.FC<ErrorRateChartProps> = ({
   const [data, setData] = useState<Array<{ time: string; value: number }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  
+  // アンマウント状態を追跡するためのref
+  const isMountedRef = useRef(true);
+
+  // コンポーネントのアンマウント時にクリーンアップ
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   // データを取得
   const loadData = useCallback(async () => {
-    if (!apiId) {
-      setData([]);
-      setLoading(false);
+    if (!isMountedRef.current) return;
+    
+    if (!apiId || apiId.trim() === '') {
+      if (isMountedRef.current) {
+        setData([]);
+        setLoading(false);
+        setError(null);
+      }
       return;
     }
 
     try {
+      // アンマウントチェック
+      if (!isMountedRef.current) return;
+      
       setLoading(true);
       setError(null);
 
@@ -67,9 +86,21 @@ export const ErrorRateChart: React.FC<ErrorRateChartProps> = ({
 
       const result = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', { request });
 
+      // APIレスポンスがnullやundefined、または配列でない場合のチェック
+      const safeMetrics: PerformanceMetricInfo[] = Array.isArray(result) ? result : [];
+
       // データを時間順にソートし、グラフ用フォーマットに変換
-      // error_rateは0-1の値なので、100倍してパーセンテージに変換
-      const sortedData = result
+      // error_rateは既に%値として保存されているため、そのまま使用
+      // 無効なデータをフィルタリング
+      const validMetrics = safeMetrics.filter((metric) => {
+        if (!metric.timestamp || typeof metric.value !== 'number' || isNaN(metric.value)) {
+          return false;
+        }
+        const timestamp = new Date(metric.timestamp).getTime();
+        return !isNaN(timestamp);
+      });
+
+      const sortedData = validMetrics
         .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
         .map((metric) => ({
           time: new Date(metric.timestamp).toLocaleTimeString('ja-JP', {
@@ -77,15 +108,22 @@ export const ErrorRateChart: React.FC<ErrorRateChartProps> = ({
             minute: '2-digit',
             second: '2-digit',
           }),
-          value: Math.round(metric.value * 100 * 100) / 100, // パーセンテージ（小数点以下2桁）
+          value: Math.round(metric.value * 100) / 100, // パーセンテージ（小数点以下2桁）
         }));
 
+      // アンマウントチェック
+      if (!isMountedRef.current) return;
       setData(sortedData);
     } catch (err) {
+      // アンマウントチェック
+      if (!isMountedRef.current) return;
+      
       setError(err instanceof Error ? err.message : 'データの取得に失敗しました');
-      setData([]);
+      // エラー時も既存のデータを保持する（前回のデータが表示され続ける）
     } finally {
-      setLoading(false);
+      if (isMountedRef.current) {
+        setLoading(false);
+      }
     }
   }, [apiId, startDate, endDate]);
 
@@ -107,10 +145,13 @@ export const ErrorRateChart: React.FC<ErrorRateChartProps> = ({
     return () => clearInterval(interval);
   }, [autoRefresh, apiId, refreshInterval, loadData]);
 
-  // 値フォーマット関数
-  const formatValue = (value: number): string => {
+  // 値フォーマット関数（useCallbackでメモ化）
+  const formatValue = useCallback((value: number): string => {
+    if (value <= 0 || isNaN(value)) {
+      return '0.00%';
+    }
     return `${value.toFixed(2)}%`;
-  };
+  }, []);
 
   // アラート閾値を超えているかチェック
   const hasHighErrorRate = data.some((item) => item.value > alertThreshold);
@@ -178,7 +219,14 @@ export const ErrorRateChart: React.FC<ErrorRateChartProps> = ({
             />
           )}
           <Tooltip 
-            formatter={(value: number) => formatValue(value)}
+            formatter={(value: number | string | number[]) => {
+              // Rechartsのformatterは配列を返すことがあるため、最初の値を取得
+              const numValue = Array.isArray(value) ? value[0] : value;
+              if (typeof numValue !== 'number') {
+                return String(numValue);
+              }
+              return formatValue(numValue);
+            }}
             labelFormatter={(label) => `時間: ${label}`}
           />
           <Legend />

@@ -245,6 +245,8 @@ export const PerformanceDashboard: React.FC = () => {
                   value={selectedApiId}
                   onChange={handleApiChange}
                   className="api-select"
+                  title={t('performanceDashboard.selectApi')}
+                  aria-label={t('performanceDashboard.selectApi')}
                 >
                   <option value="">{t('performanceDashboard.selectApiPlaceholder')}</option>
                   {apis.map((api) => (
@@ -273,6 +275,8 @@ export const PerformanceDashboard: React.FC = () => {
                   value={selectedPeriod}
                   onChange={handlePeriodChange}
                   className="period-select"
+                  title={t('performanceDashboard.period')}
+                  aria-label={t('performanceDashboard.period')}
                 >
                 {periodOptions.map((option) => (
                   <option key={option.value} value={option.value}>

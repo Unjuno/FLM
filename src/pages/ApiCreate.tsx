@@ -2,10 +2,10 @@
 // フロントエンドエージェント (FE) 実装
 // F001: API作成機能 - マルチステップウィザード
 
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
-import { ModelSelection } from '../components/api/ModelSelection';
+import { ModelSelection, ENGINE_NAMES } from '../components/api/ModelSelection';
 import { ApiConfigForm } from '../components/api/ApiConfigForm';
 import { ApiCreationProgress } from '../components/api/ApiCreationProgress';
 import { ApiCreationSuccess } from '../components/api/ApiCreationSuccess';
@@ -31,6 +31,7 @@ enum CreationStep {
  */
 export const ApiCreate: React.FC = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [currentStep, setCurrentStep] = useState<CreationStep>(CreationStep.ModelSelection);
   const [selectedModel, setSelectedModel] = useState<SelectedModel | null>(null);
   const [apiConfig, setApiConfig] = useState<ApiConfig>({
@@ -45,27 +46,17 @@ export const ApiCreate: React.FC = () => {
     step: '初期化中...',
     progress: 0,
   });
+  const [quickCreate, setQuickCreate] = useState(false);
+  const [pendingApiCreation, setPendingApiCreation] = useState<ApiConfig | null>(null);
+  
+  // location.stateの処理済み状態を追跡（重複実行を防ぐ）
+  const processedStateRef = useRef<string | null>(null);
 
   // グローバルキーボードショートカットを有効化
   useGlobalKeyboardShortcuts();
 
-  // モデル選択完了時のハンドラ
-  const handleModelSelected = (model: SelectedModel) => {
-    setSelectedModel(model);
-    setCurrentStep(CreationStep.Configuration);
-    setError(null);
-  };
-
-  // 設定完了時のハンドラ
-  const handleConfigSubmit = (config: ApiConfig) => {
-    setApiConfig(config);
-    setCurrentStep(CreationStep.Progress);
-    setError(null);
-    startApiCreation(config);
-  };
-
-  // API作成を開始
-  const startApiCreation = async (config: ApiConfig) => {
+  // API作成を開始（useCallbackでメモ化してuseEffectで使用可能にする）
+  const startApiCreation = useCallback(async (config: ApiConfig) => {
     if (!selectedModel) {
       setError('モデルが選択されていません');
       setCurrentStep(CreationStep.ModelSelection);
@@ -74,13 +65,7 @@ export const ApiCreate: React.FC = () => {
 
     try {
       const engineType = config.engineType || 'ollama';
-      const engineNames: { [key: string]: string } = {
-        'ollama': 'Ollama',
-        'lm_studio': 'LM Studio',
-        'vllm': 'vLLM',
-        'llama_cpp': 'llama.cpp',
-      };
-      const engineName = engineNames[engineType] || engineType;
+      const engineName = ENGINE_NAMES[engineType] || engineType;
       
       setProgress({ step: `${engineName}確認中...`, progress: 0 });
 
@@ -96,6 +81,79 @@ export const ApiCreate: React.FC = () => {
       setProgress({ step: '認証プロキシ起動中...', progress: 60 });
       await new Promise(resolve => setTimeout(resolve, 300));
 
+      // engine_configを構築（既存のengineConfigとmodelParameters、multimodalをマージ）
+      let engineConfigJson: string | null = null;
+      
+      // modelParameters、multimodal、またはengineConfigがある場合はマージして構築
+      if ((config.modelParameters && Object.keys(config.modelParameters).length > 0) || 
+          (config.multimodal && Object.keys(config.multimodal).length > 0) ||
+          config.engineConfig) {
+        try {
+          // 既存のengineConfigをパース（存在する場合）
+          const existingConfig = config.engineConfig ? JSON.parse(config.engineConfig) : {};
+          
+          // マージ設定を構築
+          const mergedConfig: any = {
+            ...existingConfig,
+          };
+          
+          // modelParametersを追加
+          if (config.modelParameters && Object.keys(config.modelParameters).length > 0) {
+            mergedConfig.model_parameters = config.modelParameters;
+          }
+          
+          // multimodal設定を追加
+          if (config.multimodal && Object.keys(config.multimodal).length > 0) {
+            mergedConfig.multimodal = config.multimodal;
+          }
+          
+          engineConfigJson = JSON.stringify(mergedConfig);
+        } catch (err) {
+          console.error('engine_configの構築に失敗:', err);
+          // エラーが発生した場合は、基本的な設定のみを含める
+          const fallbackConfig: any = {};
+          if (config.modelParameters && Object.keys(config.modelParameters).length > 0) {
+            fallbackConfig.model_parameters = config.modelParameters;
+          }
+          if (config.multimodal && Object.keys(config.multimodal).length > 0) {
+            fallbackConfig.multimodal = config.multimodal;
+          }
+          engineConfigJson = JSON.stringify(fallbackConfig);
+        }
+      }
+
+      // バックエンドに送信するデータを構築
+      const apiCreatePayload: {
+        name: string;
+        model_name: string;
+        port: number;
+        enable_auth: boolean;
+        engine_type: string;
+        engine_config?: string | null;
+      } = {
+        name: config.name,
+        model_name: selectedModel.name,
+        port: config.port,
+        enable_auth: config.enableAuth ?? true,
+        engine_type: config.engineType || 'ollama',
+      };
+      
+      // engine_configが存在する場合のみ追加（nullの場合は送信しない）
+      if (engineConfigJson) {
+        apiCreatePayload.engine_config = engineConfigJson;
+      }
+      
+      // デバッグ: 送信するデータをログ出力（開発環境のみ）
+      if (import.meta.env.DEV) {
+        console.log('API作成 - 送信する設定:', {
+          ...apiCreatePayload,
+          engine_config: engineConfigJson,
+          model_parameters: config.modelParameters,
+          multimodal: config.multimodal,
+          engine_config_length: engineConfigJson ? engineConfigJson.length : 0,
+        });
+      }
+
       // バックエンドのIPCコマンドを呼び出し
       // Rust側のApiCreateConfig構造体と一致させる
       const response = await safeInvoke<{
@@ -106,14 +164,7 @@ export const ApiCreate: React.FC = () => {
         model_name: string;
         port: number;
         status: string;
-      }>('create_api', {
-        name: config.name,
-        model_name: selectedModel.name,
-        port: config.port,
-        enable_auth: config.enableAuth,
-        engine_type: config.engineType || 'ollama',
-        engine_config: config.engineConfig || null,
-      });
+      }>('create_api', apiCreatePayload);
 
       // レスポンスをApiCreationResultに変換
       const result: ApiCreationResult = {
@@ -146,8 +197,123 @@ export const ApiCreate: React.FC = () => {
       
       setError(errorMessage);
       setCurrentStep(CreationStep.Configuration);
+      setQuickCreate(false); // クイック作成モードを解除
     }
+  }, [selectedModel]);
+
+  // クイック作成モードとモデル選択の処理
+  useEffect(() => {
+    const state = location.state as any;
+    
+    // stateが存在しない場合は何もしない
+    if (!state) {
+      processedStateRef.current = null;
+      return;
+    }
+    
+    // stateを文字列化して処理済みかチェック（重複実行を防ぐ）
+    const stateKey = JSON.stringify(state);
+    if (processedStateRef.current === stateKey) {
+      return; // 既に処理済み
+    }
+    processedStateRef.current = stateKey;
+    
+    // クイック作成モードの場合
+    if (state.quickCreate && state.recommendedModel) {
+      setQuickCreate(true);
+      // 推奨モデルを使用して直接API作成を開始
+      const modelName = state.recommendedModel;
+      const selectedModelData: SelectedModel = {
+        name: modelName,
+      };
+      setSelectedModel(selectedModelData);
+      
+      // デフォルト設定でAPIを作成
+      const defaultConfig: ApiConfig = {
+        name: `API ${new Date().toLocaleString('ja-JP', { month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' })}`,
+        port: 8080,
+        enableAuth: true,
+        engineType: 'ollama',
+      };
+      setApiConfig(defaultConfig);
+      setCurrentStep(CreationStep.Progress);
+      // selectedModelが設定されるまで待機するため、pendingApiCreationに保存
+      // setSelectedModelの後にpendingApiCreationを設定することで、確実に順序を保つ
+      setPendingApiCreation(defaultConfig);
+      return;
+    }
+    
+    // システムチェックからモデルが選択された場合
+    if (state.selectedModelName) {
+      const modelName = state.selectedModelName;
+      const selectedModelData: SelectedModel = {
+        name: modelName,
+      };
+      setSelectedModel(selectedModelData);
+      setCurrentStep(CreationStep.Configuration);
+      return;
+    }
+    
+    // モデル管理ページから戻ってきた場合
+    if (state.selectedModel) {
+      const model = state.selectedModel as SelectedModel;
+      setSelectedModel(model);
+      setCurrentStep(CreationStep.Configuration);
+      setError(null);
+      
+      // エンジンタイプも設定されていれば反映
+      if (state.engineType) {
+        setApiConfig(prev => ({ ...prev, engineType: state.engineType }));
+      }
+      return;
+    }
+    
+    // エンジンタイプのみが設定されている場合（戻るボタンで戻ってきた場合）
+    if (state.engineType) {
+      setApiConfig(prev => ({ ...prev, engineType: state.engineType }));
+    }
+  }, [location.state]);
+  
+  // location.pathnameが変更されたとき、処理済み状態をリセット
+  useEffect(() => {
+    processedStateRef.current = null;
+  }, [location.pathname]);
+
+  // selectedModelが設定され、pendingApiCreationがある場合にAPI作成を開始
+  useEffect(() => {
+    // selectedModelとpendingApiCreationの両方が設定されていることを確認
+    if (pendingApiCreation && selectedModel && selectedModel.name) {
+      const config = pendingApiCreation;
+      // pendingApiCreationを先にクリアして、二重実行を防ぐ
+      setPendingApiCreation(null);
+      
+      // startApiCreationを非同期で実行
+      // エラーが発生した場合は、エラー状態を設定して設定画面に戻る
+      startApiCreation(config).catch((err) => {
+        console.error('API作成の開始に失敗:', err);
+        const errorMessage = err instanceof Error ? err.message : 'API作成の開始に失敗しました';
+        setError(errorMessage);
+        setCurrentStep(CreationStep.Configuration);
+        setQuickCreate(false); // クイック作成モードを解除
+      });
+    }
+  }, [selectedModel, pendingApiCreation, startApiCreation]);
+
+  // モデル選択完了時のハンドラ
+  const handleModelSelected = (model: SelectedModel) => {
+    setSelectedModel(model);
+    setCurrentStep(CreationStep.Configuration);
+    setError(null);
   };
+
+  // 設定完了時のハンドラ
+  const handleConfigSubmit = (config: ApiConfig) => {
+    setApiConfig(config);
+    setCurrentStep(CreationStep.Progress);
+    setError(null);
+    startApiCreation(config);
+  };
+
 
   // 戻るボタンのハンドラ
   const handleBack = () => {
@@ -273,6 +439,13 @@ export const ApiCreate: React.FC = () => {
 
           {currentStep === CreationStep.Progress && (
             <ApiCreationProgress progress={progress} />
+          )}
+
+          {/* クイック作成モードの場合は説明を表示 */}
+          {quickCreate && currentStep === CreationStep.Progress && (
+            <div className="quick-create-info">
+              <p>⚡ クイック作成モードでAPIを作成中です。システムに最適な設定を使用しています。</p>
+            </div>
           )}
 
           {currentStep === CreationStep.Success && creationResult && (

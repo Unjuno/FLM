@@ -2,11 +2,13 @@
 // フロントエンドエージェント (FE) 実装
 // F001: API作成機能 - ホーム画面
 
-import React from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tooltip } from '../components/common/Tooltip';
 import { Onboarding, useOnboarding } from '../components/onboarding/Onboarding';
+import { SystemCheck } from '../components/common/SystemCheck';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { safeInvoke } from '../utils/tauri';
 import './Home.css';
 
 /**
@@ -16,6 +18,7 @@ import './Home.css';
 export const Home: React.FC = () => {
   const navigate = useNavigate();
   const { showOnboarding, handleOnboardingComplete, handleOnboardingSkip } = useOnboarding();
+  const [showSystemCheck, setShowSystemCheck] = useState(false);
   
   // グローバルキーボードショートカットを有効化
   useGlobalKeyboardShortcuts();
@@ -30,6 +33,38 @@ export const Home: React.FC = () => {
 
   const handleManageModels = () => {
     navigate('/models');
+  };
+
+  // クイック作成機能（推奨設定で作成）
+  const handleQuickCreate = async () => {
+    try {
+      // システムチェック結果を取得して推奨モデルを決定
+      const recommendation = await safeInvoke<{
+        recommended_model: string;
+        reason: string;
+      }>('get_model_recommendation');
+      
+      // 推奨モデルを選択してAPI作成画面へ
+      navigate('/api/create', {
+        state: {
+          quickCreate: true,
+          recommendedModel: recommendation.recommended_model,
+        },
+      });
+    } catch (err) {
+      console.error('クイック作成エラー:', err);
+      // エラー時は通常のAPI作成画面へ
+      navigate('/api/create');
+    }
+  };
+
+  // システムチェックでモデルが選択された時の処理
+  const handleModelSelected = (modelName: string) => {
+    navigate('/api/create', {
+      state: {
+        selectedModelName: modelName,
+      },
+    });
   };
 
   return (
@@ -49,6 +84,30 @@ export const Home: React.FC = () => {
         </header>
 
         <nav className="home-actions" aria-label="メインアクション">
+          <Tooltip content="システムリソースをチェックして、最適なモデルを自動選択してAPIを作成します。クリック1回でAPI作成が完了します。" position="right">
+            <button
+              className="home-action-button quick-create"
+              onClick={handleQuickCreate}
+              aria-label="クイック作成。システムに最適な設定でAPIを作成します。"
+            >
+              <span className="button-text">
+                <strong>⚡ 推奨設定で作成</strong>
+                <small>システムに最適な設定で自動作成</small>
+              </span>
+            </button>
+          </Tooltip>
+          <Tooltip content="Webサイトの要件（カテゴリ、用途、リソース）を入力すると、最適なモデルを自動選定してAPIを作成します。" position="right">
+            <button
+              className="home-action-button web-service"
+              onClick={() => navigate('/web-service/setup')}
+              aria-label="Webサイトサービスセットアップ"
+            >
+              <span className="button-text">
+                <strong>🌐 Webサイトサービス</strong>
+                <small>要件から自動で最適なAPIを作成</small>
+              </span>
+            </button>
+          </Tooltip>
           <Tooltip content="Ollama、LM Studio、vLLM、llama.cppなどのLLMエンジンから新しいAPIエンドポイントを作成します。作成後はOpenAI互換の形式で利用できます。" position="right">
             <button
               className="home-action-button primary"
@@ -127,6 +186,24 @@ export const Home: React.FC = () => {
             </button>
           </Tooltip>
         </nav>
+
+        {/* システムチェックセクション */}
+        <section className="home-system-check">
+          <div className="system-check-toggle">
+            <button
+              className="toggle-button"
+              onClick={() => setShowSystemCheck(!showSystemCheck)}
+            >
+              {showSystemCheck ? '▼ システム情報を隠す' : '▶ システム情報を表示'}
+            </button>
+          </div>
+          {showSystemCheck && (
+            <SystemCheck
+              onModelSelected={handleModelSelected}
+              showRecommendations={true}
+            />
+          )}
+        </section>
 
         <section className="home-info" aria-labelledby="usage-heading">
           <h2 id="usage-heading">使い方</h2>

@@ -50,33 +50,69 @@ pub fn get_database_path() -> Result<PathBuf, DatabaseError> {
 pub fn get_connection() -> Result<DatabaseConnection, crate::database::DatabaseError> {
     // データベースパスを取得
     let db_path = get_database_path()
-        .map_err(|e| crate::database::DatabaseError::ConnectionFailed(e.to_string()))?;
+        .map_err(|e| {
+            eprintln!("データベースパス取得エラー: {}", e);
+            crate::database::DatabaseError::ConnectionFailed(e.to_string())
+        })?;
+    
+    eprintln!("データベースパス: {:?}", db_path);
     
     // 親ディレクトリが存在しない場合は作成
     if let Some(parent) = db_path.parent() {
         std::fs::create_dir_all(parent)
-            .map_err(|_| crate::database::DatabaseError::ConnectionFailed(
-                "データ保存用のフォルダを作成できませんでした。".to_string()
-            ))?;
+            .map_err(|e| {
+                eprintln!("ディレクトリ作成エラー: {} (パス: {:?})", e, parent);
+                crate::database::DatabaseError::ConnectionFailed(
+                    format!("データ保存用のフォルダを作成できませんでした: {}", e)
+                )
+            })?;
     }
     
-    // データベース接続を開く
-    let conn = Connection::open(&db_path)
-        .map_err(|_| crate::database::DatabaseError::ConnectionFailed(
-            "データの読み込み・保存に失敗しました。アプリを再起動して再度お試しください。".to_string()
-        ))?;
+    // データベース接続を開く（リトライ付き）
+    // WALファイルがロックされている場合や、前回の実行が正常に終了しなかった場合に対応
+    let conn = match Connection::open_with_flags(&db_path, rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE | rusqlite::OpenFlags::SQLITE_OPEN_CREATE) {
+        Ok(c) => c,
+        Err(e) => {
+            eprintln!("データベース接続エラー: {} (パス: {:?})", e, db_path);
+            
+            // エラーメッセージから原因を推測
+            let error_msg = format!("{}", e);
+            if error_msg.contains("database is locked") || error_msg.contains("database locked") {
+                eprintln!("データベースがロックされています。数秒待機して再試行します...");
+                // 少し待機してから再試行
+                std::thread::sleep(std::time::Duration::from_millis(1000));
+                Connection::open_with_flags(&db_path, rusqlite::OpenFlags::SQLITE_OPEN_READ_WRITE | rusqlite::OpenFlags::SQLITE_OPEN_CREATE)
+                    .map_err(|e2| {
+                        eprintln!("再試行後もエラー: {} (パス: {:?})", e2, db_path);
+                        crate::database::DatabaseError::ConnectionFailed(
+                            format!("データベースがロックされています。他のプロセスがデータベースを使用していないか確認してください。パス: {:?}", db_path)
+                        )
+                    })?
+            } else {
+                return Err(crate::database::DatabaseError::ConnectionFailed(
+                    format!("データの読み込み・保存に失敗しました: {} (パス: {:?})。アプリを再起動して再度お試しください。", e, db_path)
+                ));
+            }
+        }
+    };
     
     // 外部キー制約を有効化
     conn.execute("PRAGMA foreign_keys = ON", [])
-        .map_err(|_| crate::database::DatabaseError::ConnectionFailed(
-            "データの整合性チェックに失敗しました。アプリを再起動して再度お試しください。".to_string()
-        ))?;
+        .map_err(|e| {
+            eprintln!("外部キー制約設定エラー: {}", e);
+            crate::database::DatabaseError::ConnectionFailed(
+                format!("データの整合性チェックに失敗しました: {}。アプリを再起動して再度お試しください。", e)
+            )
+        })?;
     
     // WALモードを有効化（パフォーマンス向上）
     conn.execute("PRAGMA journal_mode = WAL", [])
-        .map_err(|_| crate::database::DatabaseError::ConnectionFailed(
-            "データの最適化に失敗しました。アプリを再起動して再度お試しください。".to_string()
-        ))?;
+        .map_err(|e| {
+            eprintln!("WALモード設定エラー: {}", e);
+            crate::database::DatabaseError::ConnectionFailed(
+                format!("データの最適化に失敗しました: {}。アプリを再起動して再度お試しください。", e)
+            )
+        })?;
     
     Ok(conn)
 }

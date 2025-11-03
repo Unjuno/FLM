@@ -47,6 +47,61 @@
   box-sizing: border-box;
 }
 
+.port-input-group,
+.name-input-group {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.port-input-group input,
+.name-input-group input {
+  flex: 1;
+}
+
+.port-detect-button,
+.name-suggest-button {
+  padding: 0.75rem 1rem;
+  background: #4caf50;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: bold;
+  cursor: pointer;
+  transition: background 0.2s;
+  white-space: nowrap;
+  min-width: 120px;
+}
+
+.port-detect-button:hover:not(:disabled),
+.name-suggest-button:hover:not(:disabled) {
+  background: #45a049;
+}
+
+.port-detect-button:disabled,
+.name-suggest-button:disabled {
+  background: #cccccc;
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.name-suggest-button {
+  background: #ff9800;
+}
+
+.name-suggest-button:hover:not(:disabled) {
+  background: #f57c00;
+}
+
+.success-message {
+  display: block;
+  color: #4caf50;
+  font-size: 0.875rem;
+  margin-top: 0.25rem;
+  font-weight: 500;
+}
+
 .form-group input[type="text"]:focus,
 .form-group input[type="number"]:focus {
   outline: none;
@@ -135,5 +190,120 @@
 
 .tooltip-trigger-icon:hover {
   opacity: 1;
+}
+
+/* 高度な設定: モデル生成パラメータ */
+.advanced-params-header {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.advanced-params-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: none;
+  border: none;
+  padding: 0.5rem 0;
+  font-size: 1rem;
+  font-weight: bold;
+  color: #333;
+  cursor: pointer;
+  transition: color 0.2s;
+}
+
+.advanced-params-toggle:hover {
+  color: #667eea;
+}
+
+.advanced-params-toggle span:first-child {
+  font-size: 0.75rem;
+  width: 1rem;
+  display: inline-block;
+}
+
+.advanced-params-content {
+  margin-top: 1rem;
+  padding: 1.5rem;
+  background: #f9f9f9;
+  border-radius: 8px;
+  border: 1px solid #e0e0e0;
+}
+
+.param-row {
+  margin-bottom: 1.5rem;
+}
+
+.param-row:last-child {
+  margin-bottom: 0;
+}
+
+.param-row label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #333;
+}
+
+.param-input-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.param-input-group input[type="number"] {
+  flex: 1;
+  padding: 0.75rem;
+  border: 2px solid #e0e0e0;
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+  box-sizing: border-box;
+  max-width: 200px;
+}
+
+.param-input-group input[type="number"]:focus {
+  outline: none;
+  border-color: #667eea;
+}
+
+.param-input-group input[type="number"].error {
+  border-color: #f44336;
+}
+
+.param-range {
+  color: #666;
+  font-size: 0.875rem;
+  white-space: nowrap;
+}
+
+.optional {
+  color: #999;
+  font-weight: normal;
+  font-size: 0.875rem;
+}
+
+.param-reset {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid #e0e0e0;
+}
+
+.param-reset-button {
+  padding: 0.5rem 1rem;
+  background: #f5f5f5;
+  border: 2px solid #e0e0e0;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  color: #666;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.param-reset-button:hover {
+  background: #e0e0e0;
+  color: #333;
 }
 

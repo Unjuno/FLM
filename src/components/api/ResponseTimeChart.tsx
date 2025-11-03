@@ -89,7 +89,7 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({
       setData(sortedData);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'データの取得に失敗しました');
-      setData([]);
+      // エラー時も既存のデータを保持する（前回のデータが表示され続ける）
     } finally {
       setLoading(false);
     }

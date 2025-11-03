@@ -177,6 +177,31 @@
   transform: scale(1.02);
 }
 
+.home-action-button.quick-create {
+  border-color: rgba(255, 193, 7, 0.5);
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.9) 0%, rgba(255, 224, 130, 0.9) 100%);
+  color: #333;
+  box-shadow: 0 8px 32px rgba(255, 193, 7, 0.3);
+  font-weight: bold;
+}
+
+.home-action-button.quick-create:hover {
+  background: linear-gradient(135deg, rgba(255, 193, 7, 1) 0%, rgba(255, 224, 130, 1) 100%);
+  box-shadow: 0 12px 40px rgba(255, 193, 7, 0.4);
+  transform: translateY(-4px);
+}
+
+.home-action-button.quick-create:active {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 24px rgba(255, 193, 7, 0.35);
+}
+
+.home-action-button.quick-create:focus-visible {
+  outline: 2px solid #ffc107;
+  outline-offset: 2px;
+  box-shadow: 0 0 0 4px rgba(255, 193, 7, 0.4), 0 12px 40px rgba(255, 193, 7, 0.4);
+}
+
 .home-action-button.primary {
   border-color: rgba(74, 144, 226, 0.5);
   background: linear-gradient(135deg, rgba(74, 144, 226, 0.9) 0%, rgba(91, 163, 245, 0.9) 100%);
@@ -269,6 +294,51 @@
 
 .home-action-button.primary .button-text small {
   color: rgba(255, 255, 255, 0.9);
+}
+
+.home-system-check {
+  margin: var(--spacing-2xl) 0;
+  background: rgba(255, 255, 255, 0.4);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  border-radius: var(--radius-xl);
+  padding: var(--spacing-lg);
+  box-shadow: 0 8px 32px rgba(135, 206, 235, 0.15);
+}
+
+[data-theme="dark"] .home-system-check {
+  background: rgba(26, 58, 82, 0.4);
+}
+
+.system-check-toggle {
+  margin-bottom: var(--spacing-md);
+}
+
+.toggle-button {
+  background: rgba(255, 255, 255, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-sm) var(--spacing-md);
+  cursor: pointer;
+  font-size: 0.875rem;
+  color: #1a3a52;
+  transition: all 0.2s;
+}
+
+.toggle-button:hover {
+  background: rgba(255, 255, 255, 0.8);
+  border-color: rgba(255, 255, 255, 0.5);
+}
+
+[data-theme="dark"] .toggle-button {
+  background: rgba(26, 58, 82, 0.6);
+  border-color: rgba(224, 246, 255, 0.2);
+  color: #E0F6FF;
+}
+
+[data-theme="dark"] .toggle-button:hover {
+  background: rgba(26, 58, 82, 0.8);
+  border-color: rgba(224, 246, 255, 0.3);
 }
 
 .home-info {

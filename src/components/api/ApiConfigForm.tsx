@@ -2,11 +2,12 @@
 // フロントエンドエージェント (FE) 実装
 // F001: API作成機能 - 設定画面
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { safeInvoke } from '../../utils/tauri';
-import { HelpTooltip } from '../common/HelpTooltip';
 import { Tooltip } from '../common/Tooltip';
-import type { SelectedModel, ApiConfig } from '../../types/api';
+import { ENGINE_NAMES } from './ModelSelection';
+import type { SelectedModel, ApiConfig, ModelParameters, MemorySettings, MultimodalSettings } from '../../types/api';
+import { loadWebModelConfig, findModelById } from '../../utils/webModelConfig';
 import './ApiConfigForm.css';
 
 /**
@@ -28,10 +29,21 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
   const [config, setConfig] = useState<ApiConfig>({
     ...defaultConfig,
     engineType: defaultConfig.engineType || 'ollama',
+    modelParameters: defaultConfig.modelParameters || {
+      temperature: 0.7,
+      top_p: 0.9,
+      top_k: 40,
+      max_tokens: 1024,
+      repeat_penalty: 1.1,
+    },
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
   const [availableEngines, setAvailableEngines] = useState<string[]>([]);
   const [loadingEngines, setLoadingEngines] = useState(false);
+  const [showAdvancedParams, setShowAdvancedParams] = useState(false);
+  const [showMemorySettings, setShowMemorySettings] = useState(false);
+  const [showMultimodalSettings, setShowMultimodalSettings] = useState(false);
+  const [nameSuggesting, setNameSuggesting] = useState(false);
 
   // 利用可能なエンジン一覧を取得
   useEffect(() => {
@@ -52,6 +64,198 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
     }
   };
 
+
+  // 現在のポート番号の使用可能性をチェック
+  const checkPortAvailability = useCallback(async (port: number) => {
+    try {
+      const isAvailable = await safeInvoke<boolean>('check_port_availability', { port });
+      
+      if (!isAvailable) {
+        setErrors((prevErrors) => ({
+          ...prevErrors,
+          port: `ポート ${port} は既に使用されています。別のポート番号を選択してください。`,
+        }));
+      } else {
+        setErrors((prevErrors) => {
+          const newErrors = { ...prevErrors };
+          if (newErrors.port && newErrors.port.includes('既に使用されています')) {
+            delete newErrors.port;
+          }
+          return newErrors;
+        });
+      }
+    } catch (err) {
+      console.error('ポート確認エラー:', err);
+    }
+  }, []);
+
+  // ポート番号が変更されたときに確認
+  useEffect(() => {
+    if (config.port && config.port >= 1024 && config.port <= 65535) {
+      const timeoutId = setTimeout(() => {
+        checkPortAvailability(config.port);
+      }, 500);
+      return () => clearTimeout(timeoutId);
+    }
+  }, [config.port, checkPortAvailability]);
+
+  // API名の自動生成（重複回避）
+  const suggestApiName = async () => {
+    try {
+      setNameSuggesting(true);
+      const result = await safeInvoke<{
+        suggested_name: string;
+        alternatives: string[];
+        is_available: boolean;
+      }>('suggest_api_name', { baseName: config.name });
+      
+      if (!result.is_available || result.suggested_name !== config.name) {
+        setConfig({ ...config, name: result.suggested_name });
+        setErrors({ ...errors, name: '' });
+      }
+    } catch (err) {
+      console.error('API名提案エラー:', err);
+    } finally {
+      setNameSuggesting(false);
+    }
+  };
+
+  // モデルパラメータの更新
+  const updateModelParameter = (key: keyof ModelParameters, value: number | undefined) => {
+    setConfig({
+      ...config,
+      modelParameters: {
+        ...config.modelParameters,
+        [key]: value,
+      },
+    });
+  };
+
+  // メモリ設定の更新
+  const updateMemorySetting = (key: keyof MemorySettings, value: number | boolean | undefined) => {
+    setConfig({
+      ...config,
+      modelParameters: {
+        ...config.modelParameters,
+        memory: {
+          ...config.modelParameters?.memory,
+          [key]: value,
+        },
+      },
+    });
+  };
+
+  // マルチモーダル設定の更新
+  const updateMultimodalSetting = (key: keyof MultimodalSettings, value: boolean | number | string[] | undefined) => {
+    setConfig({
+      ...config,
+      multimodal: {
+        ...config.multimodal,
+        [key]: value,
+      },
+    });
+  };
+
+  // Webサイト用モデルのデフォルト設定を適用
+  useEffect(() => {
+    if (!model.webModelId) {
+      return;
+    }
+
+    let isMounted = true;
+
+    loadWebModelConfig()
+      .then((webConfig) => {
+        if (!isMounted) return;
+        
+        const webModel = findModelById(webConfig, model.webModelId!);
+        if (webModel && webModel.defaultSettings) {
+          const defaultSettings = webModel.defaultSettings;
+          
+          setConfig((prevConfig) => {
+            // 既に設定が適用されている場合はスキップ
+            if (prevConfig.engineType === webModel.engine && 
+                defaultSettings.port && prevConfig.port === defaultSettings.port) {
+              return prevConfig;
+            }
+
+            const updatedConfig: ApiConfig = {
+              ...prevConfig,
+              port: defaultSettings.port ?? prevConfig.port,
+              enableAuth: defaultSettings.enableAuth ?? prevConfig.enableAuth,
+              engineType: webModel.engine || prevConfig.engineType,
+            };
+
+            // modelParametersをマージ
+            if (defaultSettings.modelParameters) {
+              updatedConfig.modelParameters = {
+                ...prevConfig.modelParameters,
+                ...defaultSettings.modelParameters,
+                // memory設定もマージ（存在する場合）
+                memory: defaultSettings.memory
+                  ? { ...prevConfig.modelParameters?.memory, ...defaultSettings.memory }
+                  : prevConfig.modelParameters?.memory,
+              };
+            }
+
+            // multimodal設定をマージ
+            if (defaultSettings.multimodal) {
+              updatedConfig.multimodal = {
+                ...prevConfig.multimodal,
+                ...defaultSettings.multimodal,
+              };
+            }
+
+            return updatedConfig;
+          });
+        }
+      })
+      .catch((err) => {
+        if (isMounted) {
+          console.error('Webサイト用モデル設定の読み込みに失敗:', err);
+        }
+      });
+
+    return () => {
+      isMounted = false;
+    };
+  }, [model.webModelId]);
+
+  // モデルの機能に基づいてマルチモーダル設定を初期化（Webサイト用モデルでない場合のみ）
+  useEffect(() => {
+    if (model.webModelId) {
+      return; // Webサイト用モデルの場合は、上のuseEffectで処理済み
+    }
+
+    if (!model.capabilities) {
+      return; // capabilitiesがない場合は何もしない
+    }
+
+    setConfig((prevConfig) => {
+      // 既にmultimodal設定がある場合はスキップ
+      if (prevConfig.multimodal) {
+        return prevConfig;
+      }
+
+      const defaultMultimodal: MultimodalSettings = {
+        enableVision: model.capabilities?.vision || false,
+        enableAudio: model.capabilities?.audio || false,
+        enableVideo: model.capabilities?.video || false,
+        maxImageSize: 10,
+        maxAudioSize: 50,
+        maxVideoSize: 100,
+        supportedImageFormats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+        supportedAudioFormats: ['mp3', 'wav', 'ogg', 'm4a'],
+        supportedVideoFormats: ['mp4', 'webm', 'mov'],
+      };
+
+      return {
+        ...prevConfig,
+        multimodal: defaultMultimodal,
+      };
+    });
+  }, [model.capabilities, model.webModelId]);
+
   // フォームバリデーション
   const validate = (): boolean => {
     const newErrors: { [key: string]: string } = {};
@@ -64,6 +268,52 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
       newErrors.port = 'ポート番号は1024-65535の範囲で入力してください';
     }
 
+    // モデルパラメータのバリデーション
+    if (config.modelParameters) {
+      const params = config.modelParameters;
+      
+      if (params.temperature !== undefined && (params.temperature < 0 || params.temperature > 2)) {
+        newErrors.temperature = '温度は0.0-2.0の範囲で入力してください';
+      }
+      
+      if (params.top_p !== undefined && (params.top_p < 0 || params.top_p > 1)) {
+        newErrors.top_p = 'Top-pは0.0-1.0の範囲で入力してください';
+      }
+      
+      if (params.top_k !== undefined && (params.top_k < 1 || params.top_k > 100)) {
+        newErrors.top_k = 'Top-kは1-100の範囲で入力してください';
+      }
+      
+      if (params.max_tokens !== undefined && params.max_tokens < 1) {
+        newErrors.max_tokens = '最大トークン数は1以上の値を入力してください';
+      }
+      
+      if (params.repeat_penalty !== undefined && (params.repeat_penalty < 0 || params.repeat_penalty > 2)) {
+        newErrors.repeat_penalty = '繰り返しペナルティは0.0-2.0の範囲で入力してください';
+      }
+
+      // メモリ設定のバリデーション
+      if (params.memory) {
+        const memory = params.memory;
+        
+        if (memory.context_window !== undefined && memory.context_window < 128) {
+          newErrors.context_window = 'コンテキストウィンドウサイズは128以上の値を入力してください';
+        }
+        
+        if (memory.num_gpu_layers !== undefined && memory.num_gpu_layers < 0) {
+          newErrors.num_gpu_layers = 'GPUレイヤー数は0以上の値を入力してください';
+        }
+        
+        if (memory.num_threads !== undefined && memory.num_threads < 1) {
+          newErrors.num_threads = 'CPUスレッド数は1以上の値を入力してください';
+        }
+        
+        if (memory.batch_size !== undefined && memory.batch_size < 1) {
+          newErrors.batch_size = 'バッチサイズは1以上の値を入力してください';
+        }
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -71,7 +321,18 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (validate()) {
+      // デバッグ: 送信する設定をログ出力（開発環境のみ）
+      if (import.meta.env.DEV) {
+        console.log('ApiConfigForm - 送信する設定:', {
+          ...config,
+          modelParameters: config.modelParameters,
+        });
+      }
       onSubmit(config);
+    } else {
+      if (import.meta.env.DEV) {
+        console.warn('ApiConfigForm - バリデーションエラー:', errors);
+      }
     }
   };
 
@@ -88,19 +349,31 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
         <div className="form-group">
           <label htmlFor="api-name">
             API名 <span className="required">*</span>
-            <HelpTooltip
-              content="APIを識別するための名前です。後で変更できます。"
-              position="right"
-            />
+            <Tooltip content="重複を回避したAPI名を自動生成します。">
+              <span className="tooltip-trigger-icon">ℹ️</span>
+            </Tooltip>
           </label>
-          <input
-            id="api-name"
-            type="text"
-            value={config.name}
-            onChange={(e) => setConfig({ ...config, name: e.target.value })}
-            placeholder="LocalAI API"
-            className={errors.name ? 'error' : ''}
-          />
+          <div className="name-input-group">
+            <input
+              id="api-name"
+              type="text"
+              value={config.name}
+              onChange={(e) => setConfig({ ...config, name: e.target.value })}
+              placeholder="LocalAI API"
+              className={errors.name ? 'error' : ''}
+            />
+            <Tooltip content="重複を回避したAPI名を自動生成します。">
+              <button
+                type="button"
+                className="name-suggest-button"
+                onClick={suggestApiName}
+                disabled={nameSuggesting}
+                aria-label="API名を自動生成"
+              >
+                {nameSuggesting ? '生成中...' : '✨ 自動生成'}
+              </button>
+            </Tooltip>
+          </div>
           {errors.name && <span className="error-message">{errors.name}</span>}
           <small className="form-hint">この名前でAPIを識別します</small>
         </div>
@@ -122,19 +395,11 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
             className={errors.engineType ? 'error' : ''}
             disabled={loadingEngines}
           >
-            {availableEngines.map((engine) => {
-              const engineNames: { [key: string]: string } = {
-                'ollama': 'Ollama',
-                'lm_studio': 'LM Studio',
-                'vllm': 'vLLM',
-                'llama_cpp': 'llama.cpp',
-              };
-              return (
-                <option key={engine} value={engine}>
-                  {engineNames[engine] || engine}
-                </option>
-              );
-            })}
+            {availableEngines.map((engine) => (
+              <option key={engine} value={engine}>
+                {ENGINE_NAMES[engine] || engine}
+              </option>
+            ))}
           </select>
           {errors.engineType && <span className="error-message">{errors.engineType}</span>}
           <small className="form-hint">LLM実行エンジン（デフォルト: Ollama）</small>
@@ -181,6 +446,631 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
             認証を有効にすると、APIキーが必要になります（推奨）
           </small>
         </div>
+
+        {/* 高度な設定: モデル生成パラメータ */}
+        <div className="form-group">
+          <div className="advanced-params-header">
+            <button
+              type="button"
+              className="advanced-params-toggle"
+              onClick={() => setShowAdvancedParams(!showAdvancedParams)}
+              {...(showAdvancedParams ? { 'aria-expanded': 'true' as const } : { 'aria-expanded': 'false' as const })}
+            >
+              <span>{showAdvancedParams ? '▼' : '▶'}</span>
+              <span>高度な設定: モデル生成パラメータ</span>
+            </button>
+            <Tooltip
+              content="モデルの生成動作を調整するパラメータです。デフォルト値のままでも問題なく動作します。"
+              position="right"
+            >
+              <span className="tooltip-trigger-icon">ℹ️</span>
+            </Tooltip>
+          </div>
+          
+          {showAdvancedParams && (
+            <div className="advanced-params-content">
+              <div className="param-row">
+                <label htmlFor="temperature">
+                  温度 (Temperature)
+                  <Tooltip
+                    content="出力のランダム性を制御します。値が高いほど創造的で多様な出力になります（推奨: 0.7）。"
+                    position="right"
+                  >
+                    <span className="tooltip-trigger-icon">ℹ️</span>
+                  </Tooltip>
+                </label>
+                <div className="param-input-group">
+                  <input
+                    id="temperature"
+                    type="number"
+                    min="0"
+                    max="2"
+                    step="0.1"
+                    value={config.modelParameters?.temperature ?? 0.7}
+                    onChange={(e) => {
+                      const value = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                      updateModelParameter('temperature', value);
+                    }}
+                    className={errors.temperature ? 'error' : ''}
+                  />
+                  <small className="param-range">0.0 - 2.0</small>
+                </div>
+                {errors.temperature && <span className="error-message">{errors.temperature}</span>}
+              </div>
+
+              <div className="param-row">
+                <label htmlFor="top_p">
+                  Top-p (Nucleus Sampling)
+                  <Tooltip
+                    content="確率質量の累積分布がこの値に達するまでのトークンを考慮します（推奨: 0.9）。"
+                    position="right"
+                  >
+                    <span className="tooltip-trigger-icon">ℹ️</span>
+                  </Tooltip>
+                </label>
+                <div className="param-input-group">
+                  <input
+                    id="top_p"
+                    type="number"
+                    min="0"
+                    max="1"
+                    step="0.1"
+                    value={config.modelParameters?.top_p ?? 0.9}
+                    onChange={(e) => {
+                      const value = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                      updateModelParameter('top_p', value);
+                    }}
+                    className={errors.top_p ? 'error' : ''}
+                  />
+                  <small className="param-range">0.0 - 1.0</small>
+                </div>
+                {errors.top_p && <span className="error-message">{errors.top_p}</span>}
+              </div>
+
+              <div className="param-row">
+                <label htmlFor="top_k">
+                  Top-k
+                  <Tooltip
+                    content="最も確率の高いk個のトークンのみを考慮します（推奨: 40）。"
+                    position="right"
+                  >
+                    <span className="tooltip-trigger-icon">ℹ️</span>
+                  </Tooltip>
+                </label>
+                <div className="param-input-group">
+                  <input
+                    id="top_k"
+                    type="number"
+                    min="1"
+                    max="100"
+                    step="1"
+                    value={config.modelParameters?.top_k ?? 40}
+                    onChange={(e) => {
+                      const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
+                      updateModelParameter('top_k', value);
+                    }}
+                    className={errors.top_k ? 'error' : ''}
+                  />
+                  <small className="param-range">1 - 100</small>
+                </div>
+                {errors.top_k && <span className="error-message">{errors.top_k}</span>}
+              </div>
+
+              <div className="param-row">
+                <label htmlFor="max_tokens">
+                  最大トークン数 (Max Tokens)
+                  <Tooltip
+                    content="生成される最大のトークン数です（推奨: 1024）。"
+                    position="right"
+                  >
+                    <span className="tooltip-trigger-icon">ℹ️</span>
+                  </Tooltip>
+                </label>
+                <div className="param-input-group">
+                  <input
+                    id="max_tokens"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={config.modelParameters?.max_tokens ?? 1024}
+                    onChange={(e) => {
+                      const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
+                      updateModelParameter('max_tokens', value);
+                    }}
+                    className={errors.max_tokens ? 'error' : ''}
+                  />
+                  <small className="param-range">1以上</small>
+                </div>
+                {errors.max_tokens && <span className="error-message">{errors.max_tokens}</span>}
+              </div>
+
+              <div className="param-row">
+                <label htmlFor="repeat_penalty">
+                  繰り返しペナルティ (Repeat Penalty)
+                  <Tooltip
+                    content="同じトークンの繰り返しを抑制する強度です。値が高いほど繰り返しが減ります（推奨: 1.1）。"
+                    position="right"
+                  >
+                    <span className="tooltip-trigger-icon">ℹ️</span>
+                  </Tooltip>
+                </label>
+                <div className="param-input-group">
+                  <input
+                    id="repeat_penalty"
+                    type="number"
+                    min="0"
+                    max="2"
+                    step="0.1"
+                    value={config.modelParameters?.repeat_penalty ?? 1.1}
+                    onChange={(e) => {
+                      const value = e.target.value === '' ? undefined : parseFloat(e.target.value);
+                      updateModelParameter('repeat_penalty', value);
+                    }}
+                    className={errors.repeat_penalty ? 'error' : ''}
+                  />
+                  <small className="param-range">0.0 - 2.0</small>
+                </div>
+                {errors.repeat_penalty && <span className="error-message">{errors.repeat_penalty}</span>}
+              </div>
+
+              <div className="param-row">
+                <label htmlFor="seed">
+                  シード値 (Seed) <span className="optional">任意</span>
+                  <Tooltip
+                    content="出力の再現性を確保するためのシード値です。指定しない場合はランダムになります。"
+                    position="right"
+                  >
+                    <span className="tooltip-trigger-icon">ℹ️</span>
+                  </Tooltip>
+                </label>
+                <div className="param-input-group">
+                  <input
+                    id="seed"
+                    type="number"
+                    step="1"
+                    value={config.modelParameters?.seed ?? ''}
+                    onChange={(e) => {
+                      const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
+                      updateModelParameter('seed', value);
+                    }}
+                    placeholder="未指定"
+                  />
+                  <small className="param-range">任意の整数</small>
+                </div>
+              </div>
+
+              <div className="param-reset">
+                <button
+                  type="button"
+                  className="param-reset-button"
+                  onClick={() => {
+                    setConfig({
+                      ...config,
+                      modelParameters: {
+                        temperature: 0.7,
+                        top_p: 0.9,
+                        top_k: 40,
+                        max_tokens: 1024,
+                        repeat_penalty: 1.1,
+                      },
+                    });
+                  }}
+                >
+                  デフォルト値にリセット
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* メモリ・リソース設定 */}
+        <div className="form-group">
+          <div className="advanced-params-header">
+            <button
+              type="button"
+              className="advanced-params-toggle"
+              onClick={() => setShowMemorySettings(!showMemorySettings)}
+              {...(showMemorySettings ? { 'aria-expanded': 'true' as const } : { 'aria-expanded': 'false' as const })}
+            >
+              <span>{showMemorySettings ? '▼' : '▶'}</span>
+              <span>メモリ・リソース設定</span>
+            </button>
+            <Tooltip
+              content="モデルのメモリ使用量やパフォーマンスを調整する設定です。通常はデフォルト値のままでも問題なく動作します。"
+              position="right"
+            >
+              <span className="tooltip-trigger-icon">ℹ️</span>
+            </Tooltip>
+          </div>
+          
+          {showMemorySettings && (
+            <div className="advanced-params-content">
+              <div className="param-row">
+                <label htmlFor="context_window">
+                  コンテキストウィンドウサイズ (Context Window)
+                  <Tooltip
+                    content="モデルが一度に処理できる最大のトークン数です。値を大きくすると長い文章を処理できますが、メモリ使用量が増加します（推奨: モデル依存）。"
+                    position="right"
+                  >
+                    <span className="tooltip-trigger-icon">ℹ️</span>
+                  </Tooltip>
+                </label>
+                <div className="param-input-group">
+                  <input
+                    id="context_window"
+                    type="number"
+                    min="128"
+                    step="128"
+                    value={config.modelParameters?.memory?.context_window ?? ''}
+                    onChange={(e) => {
+                      const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
+                      updateMemorySetting('context_window', value);
+                    }}
+                    placeholder="モデル依存"
+                    className={errors.context_window ? 'error' : ''}
+                  />
+                  <small className="param-range">128以上（トークン数）</small>
+                </div>
+                {errors.context_window && <span className="error-message">{errors.context_window}</span>}
+              </div>
+
+              <div className="param-row">
+                <label htmlFor="num_gpu_layers">
+                  GPUレイヤー数 (GPU Layers)
+                  <Tooltip
+                    content="GPUを使用するレイヤー数です。0にするとCPUのみで動作します。GPUが利用可能な場合、値を大きくすると高速化できますが、VRAM使用量が増加します（推奨: モデル依存、0=CPUのみ）。"
+                    position="right"
+                  >
+                    <span className="tooltip-trigger-icon">ℹ️</span>
+                  </Tooltip>
+                </label>
+                <div className="param-input-group">
+                  <input
+                    id="num_gpu_layers"
+                    type="number"
+                    min="0"
+                    step="1"
+                    value={config.modelParameters?.memory?.num_gpu_layers ?? ''}
+                    onChange={(e) => {
+                      const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
+                      updateMemorySetting('num_gpu_layers', value);
+                    }}
+                    placeholder="モデル依存（0=CPUのみ）"
+                    className={errors.num_gpu_layers ? 'error' : ''}
+                  />
+                  <small className="param-range">0以上（0=CPUのみ）</small>
+                </div>
+                {errors.num_gpu_layers && <span className="error-message">{errors.num_gpu_layers}</span>}
+              </div>
+
+              <div className="param-row">
+                <label htmlFor="num_threads">
+                  CPUスレッド数 (CPU Threads)
+                  <Tooltip
+                    content="使用するCPUスレッド数です。通常はシステムのコア数に合わせて設定します。値を大きくすると処理速度が向上する場合があります（推奨: システム依存）。"
+                    position="right"
+                  >
+                    <span className="tooltip-trigger-icon">ℹ️</span>
+                  </Tooltip>
+                </label>
+                <div className="param-input-group">
+                  <input
+                    id="num_threads"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={config.modelParameters?.memory?.num_threads ?? ''}
+                    onChange={(e) => {
+                      const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
+                      updateMemorySetting('num_threads', value);
+                    }}
+                    placeholder="システム依存"
+                    className={errors.num_threads ? 'error' : ''}
+                  />
+                  <small className="param-range">1以上</small>
+                </div>
+                {errors.num_threads && <span className="error-message">{errors.num_threads}</span>}
+              </div>
+
+              <div className="param-row">
+                <label htmlFor="batch_size">
+                  バッチサイズ (Batch Size)
+                  <Tooltip
+                    content="一度に処理するトークン数です。値を大きくすると処理速度が向上する場合がありますが、メモリ使用量が増加します（推奨: 512）。"
+                    position="right"
+                  >
+                    <span className="tooltip-trigger-icon">ℹ️</span>
+                  </Tooltip>
+                </label>
+                <div className="param-input-group">
+                  <input
+                    id="batch_size"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={config.modelParameters?.memory?.batch_size ?? 512}
+                    onChange={(e) => {
+                      const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
+                      updateMemorySetting('batch_size', value);
+                    }}
+                    className={errors.batch_size ? 'error' : ''}
+                  />
+                  <small className="param-range">1以上（推奨: 512）</small>
+                </div>
+                {errors.batch_size && <span className="error-message">{errors.batch_size}</span>}
+              </div>
+
+              <div className="param-row">
+                <label className="checkbox-label">
+                  <Tooltip
+                    content="メモリマップドファイルを使用してモデルを読み込みます。有効にすると、起動時間が短縮され、メモリ使用量が削減されます（推奨: 有効）。"
+                    position="right"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={config.modelParameters?.memory?.use_mmap ?? true}
+                      onChange={(e) => updateMemorySetting('use_mmap', e.target.checked)}
+                    />
+                  </Tooltip>
+                  <span>メモリマップドファイルを使用 (Use MMAP)</span>
+                </label>
+              </div>
+
+              <div className="param-row">
+                <label className="checkbox-label">
+                  <Tooltip
+                    content="メモリをロックして、スワップに移行しないようにします。有効にすると、パフォーマンスが向上する場合がありますが、システムメモリが不足する可能性があります（推奨: 無効）。"
+                    position="right"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={config.modelParameters?.memory?.use_mlock ?? false}
+                      onChange={(e) => updateMemorySetting('use_mlock', e.target.checked)}
+                    />
+                  </Tooltip>
+                  <span>メモリをロック (Use MLock)</span>
+                </label>
+              </div>
+
+              <div className="param-row">
+                <label className="checkbox-label">
+                  <Tooltip
+                    content="低メモリモードを有効にします。メモリが少ない環境で使用しますが、パフォーマンスが低下する可能性があります（推奨: 無効）。"
+                    position="right"
+                  >
+                    <input
+                      type="checkbox"
+                      checked={config.modelParameters?.memory?.low_mem ?? false}
+                      onChange={(e) => updateMemorySetting('low_mem', e.target.checked)}
+                    />
+                  </Tooltip>
+                  <span>低メモリモード (Low Memory Mode)</span>
+                </label>
+              </div>
+
+              <div className="param-reset">
+                <button
+                  type="button"
+                  className="param-reset-button"
+                  onClick={() => {
+                    setConfig({
+                      ...config,
+                      modelParameters: {
+                        ...config.modelParameters,
+                        memory: {
+                          batch_size: 512,
+                          use_mmap: true,
+                          use_mlock: false,
+                          low_mem: false,
+                        },
+                      },
+                    });
+                  }}
+                >
+                  メモリ設定をデフォルト値にリセット
+                </button>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* マルチモーダル機能設定 */}
+        {model.capabilities && (model.capabilities.vision || model.capabilities.audio || model.capabilities.video) && (
+          <div className="form-group">
+            <div className="advanced-params-header">
+              <button
+                type="button"
+                className="advanced-params-toggle"
+                onClick={() => setShowMultimodalSettings(!showMultimodalSettings)}
+                {...(showMultimodalSettings ? { 'aria-expanded': 'true' as const } : { 'aria-expanded': 'false' as const })}
+              >
+                <span>{showMultimodalSettings ? '▼' : '▶'}</span>
+                <span>マルチモーダル機能設定（画像・音声・動画）</span>
+              </button>
+              <Tooltip
+                content="このモデルは画像・音声・動画を処理できます。各機能を有効化すると、対応するAPIエンドポイントが利用可能になります。"
+                position="right"
+              >
+                <span className="tooltip-trigger-icon">ℹ️</span>
+              </Tooltip>
+            </div>
+            
+            {showMultimodalSettings && (
+              <div className="advanced-params-content">
+                {/* 機能の有効化 */}
+                {model.capabilities.vision && (
+                  <div className="param-row">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={config.multimodal?.enableVision ?? false}
+                        onChange={(e) => updateMultimodalSetting('enableVision', e.target.checked)}
+                      />
+                      <span>🖼️ 画像処理機能を有効化</span>
+                      <Tooltip
+                        content="画像認識・画像説明・画像生成などの機能を有効化します。"
+                        position="right"
+                      >
+                        <span className="tooltip-trigger-icon">ℹ️</span>
+                      </Tooltip>
+                    </label>
+                  </div>
+                )}
+
+                {model.capabilities.audio && (
+                  <div className="param-row">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={config.multimodal?.enableAudio ?? false}
+                        onChange={(e) => updateMultimodalSetting('enableAudio', e.target.checked)}
+                      />
+                      <span>🎵 音声処理機能を有効化</span>
+                      <Tooltip
+                        content="音声認識・音声合成・音声変換などの機能を有効化します。"
+                        position="right"
+                      >
+                        <span className="tooltip-trigger-icon">ℹ️</span>
+                      </Tooltip>
+                    </label>
+                  </div>
+                )}
+
+                {model.capabilities.video && (
+                  <div className="param-row">
+                    <label className="checkbox-label">
+                      <input
+                        type="checkbox"
+                        checked={config.multimodal?.enableVideo ?? false}
+                        onChange={(e) => updateMultimodalSetting('enableVideo', e.target.checked)}
+                      />
+                      <span>🎬 動画処理機能を有効化</span>
+                      <Tooltip
+                        content="動画認識・動画生成などの機能を有効化します。"
+                        position="right"
+                      >
+                        <span className="tooltip-trigger-icon">ℹ️</span>
+                      </Tooltip>
+                    </label>
+                  </div>
+                )}
+
+                {/* ファイルサイズ制限 */}
+                {config.multimodal?.enableVision && (
+                  <div className="param-row">
+                    <label htmlFor="maxImageSize">
+                      最大画像サイズ (MB)
+                      <Tooltip
+                        content="アップロード可能な画像の最大サイズです（デフォルト: 10MB）。"
+                        position="right"
+                      >
+                        <span className="tooltip-trigger-icon">ℹ️</span>
+                      </Tooltip>
+                    </label>
+                    <div className="param-input-group">
+                      <input
+                        id="maxImageSize"
+                        type="number"
+                        min="1"
+                        max="100"
+                        step="1"
+                        value={config.multimodal?.maxImageSize ?? 10}
+                        onChange={(e) => {
+                          const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
+                          updateMultimodalSetting('maxImageSize', value);
+                        }}
+                      />
+                      <small className="param-range">1-100 MB</small>
+                    </div>
+                  </div>
+                )}
+
+                {config.multimodal?.enableAudio && (
+                  <div className="param-row">
+                    <label htmlFor="maxAudioSize">
+                      最大音声サイズ (MB)
+                      <Tooltip
+                        content="アップロード可能な音声ファイルの最大サイズです（デフォルト: 50MB）。"
+                        position="right"
+                      >
+                        <span className="tooltip-trigger-icon">ℹ️</span>
+                      </Tooltip>
+                    </label>
+                    <div className="param-input-group">
+                      <input
+                        id="maxAudioSize"
+                        type="number"
+                        min="1"
+                        max="500"
+                        step="1"
+                        value={config.multimodal?.maxAudioSize ?? 50}
+                        onChange={(e) => {
+                          const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
+                          updateMultimodalSetting('maxAudioSize', value);
+                        }}
+                      />
+                      <small className="param-range">1-500 MB</small>
+                    </div>
+                  </div>
+                )}
+
+                {config.multimodal?.enableVideo && (
+                  <div className="param-row">
+                    <label htmlFor="maxVideoSize">
+                      最大動画サイズ (MB)
+                      <Tooltip
+                        content="アップロード可能な動画ファイルの最大サイズです（デフォルト: 100MB）。"
+                        position="right"
+                      >
+                        <span className="tooltip-trigger-icon">ℹ️</span>
+                      </Tooltip>
+                    </label>
+                    <div className="param-input-group">
+                      <input
+                        id="maxVideoSize"
+                        type="number"
+                        min="1"
+                        max="1000"
+                        step="1"
+                        value={config.multimodal?.maxVideoSize ?? 100}
+                        onChange={(e) => {
+                          const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
+                          updateMultimodalSetting('maxVideoSize', value);
+                        }}
+                      />
+                      <small className="param-range">1-1000 MB</small>
+                    </div>
+                  </div>
+                )}
+
+                <div className="param-reset">
+                  <button
+                    type="button"
+                    className="param-reset-button"
+                    onClick={() => {
+                      setConfig({
+                        ...config,
+                        multimodal: {
+                          enableVision: model.capabilities?.vision || false,
+                          enableAudio: model.capabilities?.audio || false,
+                          enableVideo: model.capabilities?.video || false,
+                          maxImageSize: 10,
+                          maxAudioSize: 50,
+                          maxVideoSize: 100,
+                          supportedImageFormats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+                          supportedAudioFormats: ['mp3', 'wav', 'ogg', 'm4a'],
+                          supportedVideoFormats: ['mp4', 'webm', 'mov'],
+                        },
+                      });
+                    }}
+                  >
+                    マルチモーダル設定をデフォルト値にリセット
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="form-actions">
           <button type="button" onClick={onBack} className="button-secondary">

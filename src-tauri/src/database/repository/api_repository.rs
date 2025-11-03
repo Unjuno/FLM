@@ -29,10 +29,10 @@ impl ApiRepository {
                 engine_type: row.get::<_, Option<String>>(6)?,
                 engine_config: row.get::<_, Option<String>>(7)?,
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
-                    .unwrap()
+                    .map_err(|e| DatabaseError::Other(format!("Invalid created_at format: {}", e)))?
                     .with_timezone(&Utc),
                 updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
-                    .unwrap()
+                    .map_err(|e| DatabaseError::Other(format!("Invalid updated_at format: {}", e)))?
                     .with_timezone(&Utc),
             })
         })?;
@@ -64,10 +64,44 @@ impl ApiRepository {
                 engine_type: row.get::<_, Option<String>>(6)?,
                 engine_config: row.get::<_, Option<String>>(7)?,
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
-                    .unwrap()
+                    .map_err(|e| DatabaseError::Other(format!("Invalid created_at format: {}", e)))?
                     .with_timezone(&Utc),
                 updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
-                    .unwrap()
+                    .map_err(|e| DatabaseError::Other(format!("Invalid updated_at format: {}", e)))?
+                    .with_timezone(&Utc),
+            })
+        });
+        
+        match api_result {
+            Ok(api) => Ok(Some(api)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(DatabaseError::from(e)),
+        }
+    }
+    
+    /// 名前でAPIを取得
+    pub fn find_by_name(conn: &Connection, name: &str) -> Result<Option<Api>, DatabaseError> {
+        let mut stmt = conn.prepare(
+            "SELECT id, name, model, port, enable_auth, status, 
+             COALESCE(engine_type, 'ollama'), engine_config, created_at, updated_at 
+             FROM apis WHERE name = ?"
+        )?;
+        
+        let api_result = stmt.query_row(params![name], |row| {
+            Ok(Api {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                model: row.get(2)?,
+                port: row.get(3)?,
+                enable_auth: row.get::<_, i32>(4)? != 0,
+                status: ApiStatus::from_str(row.get::<_, String>(5)?.as_str()),
+                engine_type: row.get::<_, Option<String>>(6)?,
+                engine_config: row.get::<_, Option<String>>(7)?,
+                created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
+                    .map_err(|e| DatabaseError::Other(format!("Invalid created_at format: {}", e)))?
+                    .with_timezone(&Utc),
+                updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
+                    .map_err(|e| DatabaseError::Other(format!("Invalid updated_at format: {}", e)))?
                     .with_timezone(&Utc),
             })
         });
@@ -98,10 +132,10 @@ impl ApiRepository {
                 engine_type: row.get::<_, Option<String>>(6)?,
                 engine_config: row.get::<_, Option<String>>(7)?,
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
-                    .unwrap()
+                    .map_err(|e| DatabaseError::Other(format!("Invalid created_at format: {}", e)))?
                     .with_timezone(&Utc),
                 updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
-                    .unwrap()
+                    .map_err(|e| DatabaseError::Other(format!("Invalid updated_at format: {}", e)))?
                     .with_timezone(&Utc),
             })
         });
@@ -133,10 +167,10 @@ impl ApiRepository {
                 engine_type: row.get::<_, Option<String>>(6)?,
                 engine_config: row.get::<_, Option<String>>(7)?,
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
-                    .unwrap()
+                    .map_err(|e| DatabaseError::Other(format!("Invalid created_at format: {}", e)))?
                     .with_timezone(&Utc),
                 updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
-                    .unwrap()
+                    .map_err(|e| DatabaseError::Other(format!("Invalid updated_at format: {}", e)))?
                     .with_timezone(&Utc),
             })
         })?;

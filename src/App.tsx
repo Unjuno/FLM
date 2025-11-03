@@ -5,6 +5,7 @@ import { Routes, Route, Navigate } from "react-router-dom";
 import { Home } from "./pages/Home";
 import { OllamaSetup } from "./pages/OllamaSetup";
 import { ApiCreate } from "./pages/ApiCreate";
+import { WebServiceSetup } from "./pages/WebServiceSetup";
 import { ApiList } from "./pages/ApiList";
 import { ApiTest } from "./pages/ApiTest";
 import { ApiDetails } from "./pages/ApiDetails";
@@ -43,72 +44,72 @@ function App() {
         <ThemeProvider>
           <NotificationProvider>
             <div className="app">
-      <Routes>
-        {/* ホーム画面 */}
-        <Route path="/" element={<Home />} />
-        
-        {/* Ollamaセットアップ画面 */}
-        <Route path="/ollama-setup" element={<OllamaSetup />} />
-        
-        {/* API作成画面 */}
-        <Route path="/api/create" element={<ApiCreate />} />
-        
-        {/* API一覧画面 */}
-        <Route path="/api/list" element={<ApiList />} />
-        
-        {/* APIテスト画面 */}
-        <Route path="/api/test/:id" element={<ApiTest />} />
-        
-        {/* API情報画面 */}
-        <Route path="/api/details/:id" element={<ApiDetails />} />
-        
-        {/* API設定変更画面 */}
-        <Route path="/api/settings/:id" element={<ApiSettings />} />
-        <Route path="/api/edit/:id" element={<ApiEdit />} />
-        
-        {/* モデル管理画面 */}
-        <Route path="/models" element={<ModelManagement />} />
-        
-        {/* APIキー管理画面 */}
-        <Route path="/api/keys" element={<ApiKeys />} />
-        
-        {/* APIログ一覧画面 */}
-        <Route path="/logs" element={<ApiLogs />} />
-        
-        {/* パフォーマンスダッシュボード画面 */}
-        <Route path="/performance" element={<PerformanceDashboard />} />
-        
-        {/* ヘルプ画面 */}
-        <Route path="/help" element={<Help />} />
-        
-        {/* 設定画面 */}
-        <Route path="/settings" element={<Settings />} />
-        
-        {/* アラート設定画面 */}
-        <Route path="/alerts/settings" element={<AlertSettings />} />
-        
-        {/* アラート履歴画面 */}
-        <Route path="/alerts/history" element={<AlertHistory />} />
-        
-        {/* バックアップ・復元画面 */}
-        <Route path="/backup" element={<BackupRestore />} />
-        
-        {/* About画面 */}
-        <Route path="/about" element={<About />} />
-        
-        {/* プライバシーポリシー画面 */}
-        <Route path="/privacy" element={<PrivacyPolicy />} />
-        
-        {/* 利用規約画面 */}
-        <Route path="/terms" element={<TermsOfService />} />
-        
-        {/* バックアップ・復元画面 */}
-        <Route path="/backup" element={<BackupRestore />} />
-        
-        {/* デフォルトルートはホームにリダイレクト */}
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
-      </div>
+              <Routes>
+                {/* ホーム画面 */}
+                <Route path="/" element={<Home />} />
+                
+                {/* Ollamaセットアップ画面 */}
+                <Route path="/ollama-setup" element={<OllamaSetup />} />
+                
+                {/* API作成画面 */}
+                <Route path="/api/create" element={<ApiCreate />} />
+                
+                {/* Webサイトサービスセットアップ画面 */}
+                <Route path="/web-service/setup" element={<WebServiceSetup />} />
+                
+                {/* API一覧画面 */}
+                <Route path="/api/list" element={<ApiList />} />
+                
+                {/* APIテスト画面 */}
+                <Route path="/api/test/:id" element={<ApiTest />} />
+                
+                {/* API情報画面 */}
+                <Route path="/api/details/:id" element={<ApiDetails />} />
+                
+                {/* API設定変更画面 */}
+                <Route path="/api/settings/:id" element={<ApiSettings />} />
+                <Route path="/api/edit/:id" element={<ApiEdit />} />
+                
+                {/* モデル管理画面 */}
+                <Route path="/models" element={<ModelManagement />} />
+                
+                {/* APIキー管理画面 */}
+                <Route path="/api/keys" element={<ApiKeys />} />
+                
+                {/* APIログ一覧画面 */}
+                <Route path="/logs" element={<ApiLogs />} />
+                
+                {/* パフォーマンスダッシュボード画面 */}
+                <Route path="/performance" element={<PerformanceDashboard />} />
+                
+                {/* ヘルプ画面 */}
+                <Route path="/help" element={<Help />} />
+                
+                {/* 設定画面 */}
+                <Route path="/settings" element={<Settings />} />
+                
+                {/* アラート設定画面 */}
+                <Route path="/alerts/settings" element={<AlertSettings />} />
+                
+                {/* アラート履歴画面 */}
+                <Route path="/alerts/history" element={<AlertHistory />} />
+                
+                {/* バックアップ・復元画面 */}
+                <Route path="/backup" element={<BackupRestore />} />
+                
+                {/* About画面 */}
+                <Route path="/about" element={<About />} />
+                
+                {/* プライバシーポリシー画面 */}
+                <Route path="/privacy" element={<PrivacyPolicy />} />
+                
+                {/* 利用規約画面 */}
+                <Route path="/terms" element={<TermsOfService />} />
+                
+                {/* デフォルトルートはホームにリダイレクト */}
+                <Route path="*" element={<Navigate to="/" replace />} />
+              </Routes>
+            </div>
             </NotificationProvider>
           </ThemeProvider>
         </I18nProvider>

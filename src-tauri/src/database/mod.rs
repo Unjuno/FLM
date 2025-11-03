@@ -56,13 +56,33 @@ pub use connection::get_connection;
 /// データベースを初期化
 /// スキーマを作成し、マイグレーションを実行します
 pub fn init_database() -> Result<(), DatabaseError> {
-    let mut conn = connection::get_connection()?;
+    eprintln!("データベース初期化を開始...");
+    
+    let mut conn = connection::get_connection()
+        .map_err(|e| {
+            eprintln!("データベース接続取得エラー: {}", e);
+            e
+        })?;
+    
+    eprintln!("データベース接続を取得しました");
     
     // スキーマの作成
-    schema::create_schema(&conn)?;
+    schema::create_schema(&conn)
+        .map_err(|e| {
+            eprintln!("スキーマ作成エラー: {}", e);
+            e
+        })?;
+    
+    eprintln!("スキーマの作成が完了しました");
     
     // マイグレーションの実行
-    migrations::run_migrations(&mut conn)?;
+    migrations::run_migrations(&mut conn)
+        .map_err(|e| {
+            eprintln!("マイグレーション実行エラー: {}", e);
+            e
+        })?;
+    
+    eprintln!("マイグレーションの実行が完了しました");
     
     Ok(())
 }

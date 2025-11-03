@@ -28,6 +28,151 @@
   --selection-transition: all 0.2s;
 }
 
+/* マルチモーダル機能バッジ */
+.capability-badges {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.capability-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.capability-badge.vision {
+  background: #e3f2fd;
+  color: #1976d2;
+  border: 1px solid #90caf9;
+}
+
+.capability-badge.audio {
+  background: #f3e5f5;
+  color: #7b1fa2;
+  border: 1px solid #ce93d8;
+}
+
+.capability-badge.video {
+  background: #fff3e0;
+  color: #e65100;
+  border: 1px solid #ffb74d;
+}
+
+/* モード選択タブ */
+.model-mode-tabs {
+  display: flex;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-bottom: 1px solid var(--selection-border-light);
+  background: var(--selection-bg-secondary);
+}
+
+.mode-tab {
+  flex: 1;
+  padding: 0.75rem 1rem;
+  border: 2px solid transparent;
+  border-radius: var(--selection-radius);
+  background: transparent;
+  color: var(--selection-text-secondary);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--selection-transition);
+}
+
+.mode-tab:hover {
+  background: var(--selection-bg-tertiary);
+  color: var(--selection-text-primary);
+}
+
+.mode-tab.active {
+  background: var(--selection-bg-primary);
+  border-color: var(--selection-accent);
+  color: var(--selection-accent);
+  font-weight: bold;
+}
+
+/* Webサイト用モデル情報 */
+.sidebar-web-info {
+  padding: 0.75rem;
+  margin: 0.5rem;
+}
+
+/* モデルアイコン */
+.model-icon {
+  display: inline-block;
+  margin-right: 0.25rem;
+  font-size: 1rem;
+}
+
+.model-icon-large {
+  display: inline-block;
+  margin-right: 0.5rem;
+  font-size: 1.5rem;
+}
+
+/* カテゴリ表示 */
+.sidebar-model-category {
+  font-size: 0.75rem;
+  color: var(--selection-text-tertiary);
+  background: var(--selection-bg-tertiary);
+  padding: 0.125rem 0.375rem;
+  border-radius: 3px;
+}
+
+/* 使用例リスト */
+.use-cases-list {
+  list-style: none;
+  padding: 0;
+  margin: 0.5rem 0 0 0;
+}
+
+.use-cases-list li {
+  padding: 0.25rem 0;
+  color: var(--selection-text-secondary);
+  font-size: 0.875rem;
+}
+
+.use-cases-list li:before {
+  content: "✓ ";
+  color: var(--selection-accent);
+  font-weight: bold;
+  margin-right: 0.25rem;
+}
+
+/* 詳細ノート */
+.detail-note {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--selection-info-grid-bg);
+  border-radius: var(--selection-radius);
+  border-left: 3px solid var(--selection-accent);
+}
+
+.detail-note p {
+  margin: 0.5rem 0;
+  color: var(--selection-text-secondary);
+  font-size: 0.875rem;
+  line-height: 1.5;
+}
+
+.detail-note p:first-child {
+  margin-top: 0;
+}
+
+.detail-note p:last-child {
+  margin-bottom: 0;
+}
+
+.detail-info-item.full-width {
+  grid-column: 1 / -1;
+}
+
 .model-selection.lmstudio-layout {
   display: flex;
   height: calc(100vh - 200px);
@@ -54,10 +199,18 @@
   display: flex;
   gap: 0.5rem;
   background: var(--selection-bg-secondary);
+  align-items: center;
+}
+
+.sidebar-header-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
 }
 
 .sidebar-search-input {
   flex: 1;
+  min-width: 0;
   padding: 0.625rem;
   border: 1px solid var(--selection-border-medium);
   border-radius: var(--selection-radius);
@@ -70,6 +223,28 @@
 .sidebar-search-input:focus {
   outline: none;
   border-color: var(--selection-accent);
+}
+
+.sidebar-search-models-button {
+  padding: 0.625rem;
+  border: 1px solid var(--selection-border-medium);
+  border-radius: var(--selection-radius);
+  background: var(--selection-bg-primary);
+  cursor: pointer;
+  font-size: 1rem;
+  transition: var(--selection-transition);
+  width: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--selection-text-primary);
+}
+
+.sidebar-search-models-button:hover {
+  background: var(--selection-primary-button, #2563eb);
+  border-color: var(--selection-primary-button, #2563eb);
+  color: white;
+  transform: scale(1.05);
 }
 
 .sidebar-refresh-button {
@@ -195,6 +370,32 @@
   font-size: 0.875rem;
 }
 
+.sidebar-empty-submessage {
+  font-size: 0.75rem;
+  color: var(--selection-text-tertiary);
+  margin-top: 0.5rem;
+}
+
+.sidebar-empty-search-button {
+  margin-top: 1rem;
+  padding: 0.625rem 1rem;
+  background: var(--selection-primary-button, #2563eb);
+  color: white;
+  border: none;
+  border-radius: var(--selection-radius, 4px);
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--selection-transition, all 0.2s ease);
+  width: 100%;
+}
+
+.sidebar-empty-search-button:hover {
+  background: var(--selection-primary-button-hover, #1d4ed8);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
 .sidebar-error {
   padding: 1rem;
   margin: 0.5rem;
@@ -217,6 +418,14 @@
   background: var(--selection-bg-primary);
   overflow-y: auto;
   position: relative;
+  z-index: 1;
+}
+
+/* エラーメッセージの重複表示を防ぐ */
+.lmstudio-main .error-message {
+  position: relative;
+  z-index: 2;
+  margin: 1.5rem;
 }
 
 .main-model-details {
@@ -413,6 +622,54 @@
   color: var(--selection-text-primary);
 }
 
+.empty-state-actions {
+  margin: 2rem 0;
+  text-align: center;
+}
+
+.search-models-button {
+  padding: 1rem 2rem;
+  background: var(--selection-primary-button, #2563eb);
+  color: white;
+  border: none;
+  border-radius: var(--selection-radius-lg, 8px);
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--selection-transition, all 0.2s ease);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  margin-bottom: 1rem;
+}
+
+.search-models-button:hover {
+  background: var(--selection-primary-button-hover, #1d4ed8);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.15);
+}
+
+.search-models-button:active {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.empty-state-hint {
+  margin: 0.5rem 0 0 0;
+  font-size: 0.875rem;
+  color: var(--selection-text-secondary, #999);
+  font-style: italic;
+}
+
+.hint-note {
+  margin-top: 1.5rem;
+  padding: 1rem;
+  background: var(--selection-info-grid-bg, rgba(37, 99, 235, 0.1));
+  border-left: 3px solid var(--selection-primary-button, #2563eb);
+  border-radius: var(--selection-radius, 4px);
+  color: var(--selection-text-secondary, #666);
+  font-size: 0.875rem;
+  line-height: 1.6;
+}
+
 /* ローディング状態 */
 .model-selection-loading {
   display: flex;
@@ -442,12 +699,11 @@
   .model-selection.lmstudio-layout {
     flex-direction: column;
     height: auto;
-    min-height: auto;
   }
 
   .lmstudio-sidebar {
     width: 100%;
-    min-width: auto;
+    min-width: 0;
     max-height: 400px;
     border-right: none;
     border-bottom: 1px solid var(--selection-border-light);
