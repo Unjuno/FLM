@@ -1,4 +1,4 @@
-/* FLM - モデル選択コンポーネントのスタイル（LM Studio風） */
+/* モデル選択コンポーネントのスタイル（LM Studio風） */
 
 :root {
   --selection-bg-primary: var(--color-bg-primary, #ffffff);
