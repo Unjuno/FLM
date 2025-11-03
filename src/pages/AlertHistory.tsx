@@ -63,7 +63,9 @@ export const AlertHistory: React.FC = () => {
       setApiNames(apiMap);
       setApiList(apis.map(api => ({ id: api.id, name: api.name })));
     } catch (err) {
-      console.error('API一覧の取得に失敗しました:', err);
+      if (import.meta.env.DEV) {
+        console.error('API一覧の取得に失敗しました:', err);
+      }
       showError('API一覧の取得エラー', 'API一覧の取得に失敗しました');
     }
   }, [showError]);
