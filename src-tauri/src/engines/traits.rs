@@ -1,4 +1,4 @@
-// FLM - LLM Engine Trait
+// LLM Engine Trait
 // エンジン抽象化のためのトレイト定義
 
 use crate::utils::error::AppError;

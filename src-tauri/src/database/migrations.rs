@@ -1,4 +1,4 @@
-// FLM - Database Migrations Module
+// Database Migrations Module
 // データベースマイグレーション管理
 
 use rusqlite::Connection;

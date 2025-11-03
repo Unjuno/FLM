@@ -1,4 +1,4 @@
-// FLM - LM Studio Engine Implementation
+// LM Studio Engine Implementation
 // LM StudioエンジンのLLMEngineトレイト実装
 
 use crate::utils::error::AppError;

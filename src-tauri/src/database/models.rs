@@ -1,4 +1,4 @@
-// FLM - Database Models Module
+// Database Models Module
 // データモデル定義
 
 use serde::{Deserialize, Serialize};

@@ -1,4 +1,4 @@
-// FLM - SSL Certificate Management
+// SSL Certificate Management
 // HTTPS用の自己署名証明書を生成・管理します
 
 use crate::database::connection::get_app_data_dir;

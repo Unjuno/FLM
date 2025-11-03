@@ -1,4 +1,4 @@
-// FLM - Engine Models
+// Engine Models
 // エンジン関連の型定義
 
 use serde::{Deserialize, Serialize};

@@ -1,4 +1,4 @@
-// FLM - Setting Repository
+// Setting Repository
 // ユーザー設定のデータアクセス層
 
 use rusqlite::{Connection, params};

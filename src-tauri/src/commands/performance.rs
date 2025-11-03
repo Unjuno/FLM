@@ -1,4 +1,4 @@
-// FLM - パフォーマンス監視コマンド
+// パフォーマンス監視コマンド
 // バックエンドエージェント実装（F007）
 
 use serde::{Deserialize, Serialize};

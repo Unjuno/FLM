@@ -1,4 +1,4 @@
-// FLM - Database Integrity Check
+// Database Integrity Check
 // データベース整合性チェック機能
 // 
 // フェーズ4: データベースエージェント (DB) 実装

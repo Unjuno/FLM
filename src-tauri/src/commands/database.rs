@@ -1,4 +1,4 @@
-// FLM - Database Commands
+// Database Commands
 // データベース関連のIPCコマンド
 // 
 // フェーズ4: データベースエージェント (DB) 実装

@@ -1,4 +1,4 @@
-// FLM - llama.cpp Engine Implementation
+// llama.cpp Engine Implementation
 // llama.cppエンジンのLLMEngineトレイト実装
 
 use crate::utils::error::AppError;

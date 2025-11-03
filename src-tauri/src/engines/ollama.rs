@@ -1,4 +1,4 @@
-// FLM - Ollama Engine Implementation
+// Ollama Engine Implementation
 // OllamaエンジンのLLMEngineトレイト実装
 
 use crate::utils::error::AppError;

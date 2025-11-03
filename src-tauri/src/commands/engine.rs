@@ -1,4 +1,4 @@
-// FLM - Engine Management Commands
+// Engine Management Commands
 // エンジン管理のIPCコマンド
 
 use crate::engines::{EngineManager, EngineDetectionResult, EngineConfig, EngineConfigData};

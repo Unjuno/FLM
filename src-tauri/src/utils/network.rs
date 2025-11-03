@@ -1,4 +1,4 @@
-// FLM - Network Utilities
+// Network Utilities
 // ネットワーク関連のユーティリティ関数
 
 use std::net::Ipv4Addr;

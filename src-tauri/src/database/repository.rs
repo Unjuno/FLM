@@ -1,4 +1,4 @@
-// FLM - Database Repository Module
+// Database Repository Module
 // データアクセス層（Repository パターン）
 
 use rusqlite::{Connection, Row, params};

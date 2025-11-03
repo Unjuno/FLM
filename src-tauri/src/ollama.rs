@@ -1,4 +1,4 @@
-// FLM - Ollama Integration Module
+// Ollama Integration Module
 // バックエンドエージェント (BE) 実装
 // F009: Ollama自動インストール機能（最優先）
 

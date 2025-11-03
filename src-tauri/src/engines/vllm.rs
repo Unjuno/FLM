@@ -1,4 +1,4 @@
-// FLM - vLLM Engine Implementation
+// vLLM Engine Implementation
 // vLLMエンジンのLLMEngineトレイト実装
 
 use crate::utils::error::AppError;

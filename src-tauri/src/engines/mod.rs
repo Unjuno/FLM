@@ -1,4 +1,4 @@
-// FLM - Engine Abstraction Layer
+// Engine Abstraction Layer
 // マルチLLMエンジン対応の基盤モジュール
 
 pub mod traits;

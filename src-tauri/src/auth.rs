@@ -1,4 +1,4 @@
-// FLM - Authentication Proxy Management Module
+// Authentication Proxy Management Module
 // 認証エージェント (AUTH) 実装
 // 認証プロキシサーバーの起動・停止管理
 

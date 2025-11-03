@@ -1,4 +1,4 @@
-// FLM - Model Repository
+// Model Repository
 // モデル情報のデータアクセス層
 
 use rusqlite::{Connection, params};

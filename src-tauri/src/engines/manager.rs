@@ -1,4 +1,4 @@
-// FLM - Engine Manager
+// Engine Manager
 // エンジンの統一管理を行うマネージャー
 
 use std::collections::HashMap;

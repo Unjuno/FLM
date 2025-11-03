@@ -1,4 +1,4 @@
-// FLM - API Key Repository
+// API Key Repository
 // APIキー情報のデータアクセス層
 
 use rusqlite::{Connection, params};

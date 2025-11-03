@@ -1,4 +1,4 @@
-// FLM - Utilities Module
+// Utilities Module
 // ユーティリティ関数のモジュール
 
 pub mod error;

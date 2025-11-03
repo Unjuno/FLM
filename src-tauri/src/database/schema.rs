@@ -1,4 +1,4 @@
-// FLM - Database Schema Module
+// Database Schema Module
 // データベースエージェント実装
 // SQLiteスキーマの作成と管理を行います
 
