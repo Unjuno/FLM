@@ -1,10 +1,12 @@
 // ModelSearch - モデル検索コンポーネント
 
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../../utils/tauri';
 import { listen } from '@tauri-apps/api/event';
 import { ModelDownloadProgress } from './ModelDownloadProgress';
 import { ErrorMessage } from '../common/ErrorMessage';
+import { logger } from '../../utils/logger';
+import { FORMATTING } from '../../constants/config';
 import './ModelSearch.css';
 
 /**
@@ -35,6 +37,8 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({ onModelSelected }) => 
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedSizeFilter, setSelectedSizeFilter] = useState<string>('all');
+  const [selectedUseCase, setSelectedUseCase] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'popular' | 'size' | 'name' | 'newest'>('popular');
   const [selectedModel, setSelectedModel] = useState<ModelInfo | null>(null);
   const [downloadingModel, setDownloadingModel] = useState<string | null>(null);
@@ -53,9 +57,9 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({ onModelSelected }) => 
       setLoading(true);
       setError(null);
 
-      // データベースからモデルカタログを取得
+      // データベースからモデルカタログを取得（フォールバック: オフライン時もキャッシュから取得可能）
       try {
-        const catalogModels = await invoke<Array<{
+        const catalogModels = await safeInvoke<Array<{
           name: string;
           description?: string | null;
           size?: number | null;
@@ -68,7 +72,7 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({ onModelSelected }) => 
         }>>('get_model_catalog');
 
         if (catalogModels && catalogModels.length > 0) {
-          // データベースから取得したモデルを変換
+          // データベースから取得したモデルを変換（キャッシュされた情報を使用）
           const convertedModels: ModelInfo[] = catalogModels.map(model => ({
             name: model.name,
             description: model.description || undefined,
@@ -327,8 +331,14 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({ onModelSelected }) => 
           ]);
         }
       } catch (catalogErr) {
-        // データベースからの取得に失敗した場合は暫定実装を使用
-        console.warn('モデルカタログの取得に失敗しました。暫定リストを使用します:', catalogErr);
+        if (import.meta.env.DEV) {
+          logger.warn('モデルカタログの取得に失敗しました。暫定リストを使用します', 'ModelSearch');
+          if (catalogErr instanceof Error) {
+            logger.error('モデルカタログ取得エラー', catalogErr, 'ModelSearch');
+          } else {
+            logger.warn('モデルカタログ取得エラー（詳細）', 'ModelSearch', String(catalogErr));
+          }
+        }
         setModels([
           {
             name: 'llama3:8b',
@@ -583,6 +593,22 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({ onModelSelected }) => 
     loadModels();
   }, [loadModels]);
 
+  // 人気トップ5を取得（推奨モデルから選出）
+  const popularModels = useMemo(() => {
+    return models
+      .filter(model => model.recommended)
+      .slice(0, 5);
+  }, [models]);
+
+  // 初心者向けモデルを取得（小サイズで推奨のモデル）
+  const beginnerModels = useMemo(() => {
+    return models.filter(model => {
+      if (!model.recommended || !model.size) return false;
+      const sizeGB = model.size / (1024 * 1024 * 1024);
+      return sizeGB < 5; // 5GB未満の推奨モデルを初心者向けとする
+    }).slice(0, 5);
+  }, [models]);
+
   // フィルタとソートを適用（useMemoでメモ化してパフォーマンス最適化）
   const filteredModels = useMemo(() => {
     let filtered = [...models];
@@ -598,6 +624,40 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({ onModelSelected }) => 
     // カテゴリでフィルタ
     if (selectedCategory !== 'all') {
       filtered = filtered.filter(model => model.category === selectedCategory);
+    }
+
+    // サイズでフィルタ（小: 1-3GB、中: 3-7GB、大: 7GB以上）
+    if (selectedSizeFilter !== 'all') {
+      filtered = filtered.filter(model => {
+        if (!model.size) return false;
+        const sizeGB = model.size / (1024 * 1024 * 1024);
+        switch (selectedSizeFilter) {
+          case 'small':
+            return sizeGB >= 1 && sizeGB < 3;
+          case 'medium':
+            return sizeGB >= 3 && sizeGB < 7;
+          case 'large':
+            return sizeGB >= 7;
+          default:
+            return true;
+        }
+      });
+    }
+
+    // 用途でフィルタ（汎用/専門用途）
+    // 専門用途は医療、法律、プログラミングなどの専門的なカテゴリを含むモデル
+    if (selectedUseCase !== 'all') {
+      filtered = filtered.filter(model => {
+        const isGeneral = model.category === 'chat' || model.category === 'qa';
+        const isSpecialized = model.category === 'code' || model.category === 'translation' || model.category === 'summarization';
+        
+        if (selectedUseCase === 'general') {
+          return isGeneral;
+        } else if (selectedUseCase === 'specialized') {
+          return isSpecialized;
+        }
+        return true;
+      });
     }
 
     // ソート
@@ -625,7 +685,7 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({ onModelSelected }) => 
     });
 
     return filtered;
-  }, [models, searchQuery, selectedCategory, sortBy]);
+  }, [models, searchQuery, selectedCategory, selectedSizeFilter, selectedUseCase, sortBy]);
 
   const downloadAbortControllerRef = useRef<AbortController | null>(null);
   const unsubscribeProgressRef = useRef<(() => void) | null>(null);
@@ -647,7 +707,7 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({ onModelSelected }) => 
   // モデルダウンロード開始（useCallbackでメモ化）
   const handleDownload = useCallback(async (model: ModelInfo) => {
     if (!model.size) {
-      setError('モデルサイズ情報がありません。このモデルはダウンロードできません。');
+      setError('モデルサイズ情報がありません。このモデルは取得できません。');
       return;
     }
 
@@ -715,15 +775,15 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({ onModelSelected }) => 
       unsubscribeProgressRef.current = unsubscribe;
 
       // 実際のIPCコマンドを呼び出し
-      await invoke('download_model', {
+      await safeInvoke('download_model', {
         model_name: model.name,
       });
 
       // ダウンロード完了通知
       if (!abortController.signal.aborted) {
         if ('Notification' in window && Notification.permission === 'granted') {
-          new Notification('ダウンロード完了', {
-            body: `${model.name} のダウンロードが完了しました`,
+          new Notification('取得完了', {
+            body: `${model.name} の取得が完了しました`,
             icon: '/icon.png',
           });
         }
@@ -777,7 +837,7 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({ onModelSelected }) => 
     if (downloadStatus === 'complete') {
       timeoutId = setTimeout(() => {
         loadModels();
-      }, 1000);
+      }, FORMATTING.MS_PER_SECOND);
     }
     
     return () => {
@@ -883,6 +943,27 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({ onModelSelected }) => 
             <option value="other">その他</option>
           </select>
           <select
+            value={selectedSizeFilter}
+            onChange={(e) => setSelectedSizeFilter(e.target.value)}
+            className="sidebar-filter"
+            title="サイズ"
+          >
+            <option value="all">全てのサイズ</option>
+            <option value="small">小（1-3GB）</option>
+            <option value="medium">中（3-7GB）</option>
+            <option value="large">大（7GB以上）</option>
+          </select>
+          <select
+            value={selectedUseCase}
+            onChange={(e) => setSelectedUseCase(e.target.value)}
+            className="sidebar-filter"
+            title="用途"
+          >
+            <option value="all">全ての用途</option>
+            <option value="general">汎用</option>
+            <option value="specialized">専門用途</option>
+          </select>
+          <select
             value={sortBy}
             onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
             className="sidebar-filter"
@@ -912,7 +993,7 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({ onModelSelected }) => 
               <div className="sidebar-model-meta">
                 {model.size && (
                   <span className="sidebar-model-size">
-                    {(model.size / (1024 * 1024 * 1024)).toFixed(1)}GB
+                    {(model.size / FORMATTING.BYTES_PER_GB).toFixed(FORMATTING.DECIMAL_PLACES_SHORT)}GB
                   </span>
                 )}
                 {model.recommended && <span className="sidebar-recommended-badge">⭐</span>}
@@ -938,6 +1019,67 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({ onModelSelected }) => 
           />
         )}
 
+        {/* 人気モデル・初心者向けモデルの表示（モデル未選択時） */}
+        {!selectedModel && !loading && (
+          <div className="popular-models-section">
+            {popularModels.length > 0 && (
+              <div className="popular-models-group">
+                <h3 className="popular-models-title">⭐ 人気モデルトップ5</h3>
+                <div className="popular-models-grid">
+                  {popularModels.map((model) => (
+                    <div
+                      key={model.name}
+                      className="popular-model-card"
+                      onClick={() => setSelectedModel(model)}
+                    >
+                      <div className="popular-model-header">
+                        <h4 className="popular-model-name">{model.name}</h4>
+                        <span className="popular-model-badge">⭐ 推奨</span>
+                      </div>
+                      {model.description && (
+                        <p className="popular-model-description">{model.description}</p>
+                      )}
+                      {model.size && (
+                        <div className="popular-model-size">
+                          📦 {(model.size / FORMATTING.BYTES_PER_GB).toFixed(FORMATTING.DECIMAL_PLACES_SHORT)}GB
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {beginnerModels.length > 0 && (
+              <div className="beginner-models-group">
+                <h3 className="beginner-models-title">🎯 初心者向けモデル</h3>
+                <div className="beginner-models-grid">
+                  {beginnerModels.map((model) => (
+                    <div
+                      key={model.name}
+                      className="beginner-model-card"
+                      onClick={() => setSelectedModel(model)}
+                    >
+                      <div className="beginner-model-header">
+                        <h4 className="beginner-model-name">{model.name}</h4>
+                        <span className="beginner-model-badge">🎯 初心者向け</span>
+                      </div>
+                      {model.description && (
+                        <p className="beginner-model-description">{model.description}</p>
+                      )}
+                      {model.size && (
+                        <div className="beginner-model-size">
+                          📦 {(model.size / FORMATTING.BYTES_PER_GB).toFixed(FORMATTING.DECIMAL_PLACES_SHORT)}GB
+                        </div>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
         {/* モデル詳細表示 */}
         {selectedModel ? (
           <div className="main-model-details">
@@ -954,7 +1096,7 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({ onModelSelected }) => 
                   onClick={() => handleDownload(selectedModel)}
                   disabled={downloadingModel === selectedModel.name}
                 >
-                  {downloadingModel === selectedModel.name ? 'ダウンロード中...' : '📥 ダウンロード'}
+                  {downloadingModel === selectedModel.name ? '取得中...' : '📥 モデルを取得'}
                 </button>
                 {onModelSelected && (
                   <button
@@ -989,7 +1131,7 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({ onModelSelected }) => 
                   <div className="detail-info-item">
                     <span className="detail-info-label">パラメータ数</span>
                     <span className="detail-info-value">
-                      {(selectedModel.parameters / 1000000000).toFixed(1)}B
+                      {(selectedModel.parameters / FORMATTING.PARAMETERS_PER_BILLION).toFixed(FORMATTING.DECIMAL_PLACES_SHORT)}B
                     </span>
                   </div>
                 )}
@@ -998,11 +1140,62 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({ onModelSelected }) => 
                   <div className="detail-info-item">
                     <span className="detail-info-label">サイズ</span>
                     <span className="detail-info-value">
-                      {(selectedModel.size / (1024 * 1024 * 1024)).toFixed(2)} GB
+                      {(selectedModel.size / FORMATTING.BYTES_PER_GB).toFixed(FORMATTING.DECIMAL_PLACES)} GB
                     </span>
                   </div>
                 )}
               </div>
+
+              {/* 関連モデル（似たモデルの提案） */}
+              {(() => {
+                // 同じカテゴリまたは類似のパラメータ数のモデルを探す
+                const relatedModels = models
+                  .filter(model => 
+                    model.name !== selectedModel.name && (
+                      model.category === selectedModel.category ||
+                      (selectedModel.parameters && model.parameters && 
+                       Math.abs(model.parameters - selectedModel.parameters) < selectedModel.parameters * 0.5)
+                    )
+                  )
+                  .slice(0, 3); // 最大3つまで表示
+
+                if (relatedModels.length > 0) {
+                  return (
+                    <div className="detail-section">
+                      <h3 className="detail-section-title">関連モデル</h3>
+                      <div className="related-models-grid">
+                        {relatedModels.map((relatedModel) => (
+                          <div
+                            key={relatedModel.name}
+                            className="related-model-card"
+                            onClick={() => setSelectedModel(relatedModel)}
+                          >
+                            <div className="related-model-header">
+                              <h4 className="related-model-name">{relatedModel.name}</h4>
+                              {relatedModel.recommended && (
+                                <span className="related-model-badge">⭐</span>
+                              )}
+                            </div>
+                            {relatedModel.description && (
+                              <p className="related-model-description">
+                                {relatedModel.description.length > 60
+                                  ? relatedModel.description.substring(0, 60) + '...'
+                                  : relatedModel.description}
+                              </p>
+                            )}
+                            {relatedModel.size && (
+                              <div className="related-model-size">
+                                📦 {(relatedModel.size / FORMATTING.BYTES_PER_GB).toFixed(FORMATTING.DECIMAL_PLACES_SHORT)}GB
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
             </div>
           </div>
         ) : (
@@ -1010,13 +1203,45 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({ onModelSelected }) => 
             <div className="empty-state-content">
               <h2>モデルを選択してください</h2>
               <p>左側のサイドバーからモデルを選択すると、詳細情報が表示されます。</p>
+              
+              {/* 初めての方へセクション */}
+              <div className="beginner-guide-section">
+                <h3 className="beginner-guide-title">🎯 初めての方へ</h3>
+                <div className="beginner-guide-content">
+                  <p className="beginner-guide-text">
+                    初めてモデルを使う方は、まず推奨モデルから始めることをおすすめします。
+                    推奨モデルは、一般的な用途で高い性能を発揮するモデルです。
+                  </p>
+                  <div className="beginner-recommended-models">
+                    <h4>推奨モデル</h4>
+                    <ul>
+                      <li><strong>llama3:8b</strong> - 高性能な汎用チャットモデル</li>
+                      <li><strong>codellama:7b</strong> - コード生成に特化</li>
+                      <li><strong>mistral:7b</strong> - 効率的な多目的モデル</li>
+                      <li><strong>phi3:mini</strong> - 軽量高性能モデル</li>
+                    </ul>
+                  </div>
+                  <div className="beginner-help-link">
+                    <a href="#" onClick={(e) => {
+                      e.preventDefault();
+                      alert('どのモデルを選べばいい？\n\n' +
+                        '・チャット・会話: llama3, mistral など\n' +
+                        '・コード生成: codellama など\n' +
+                        '・軽量モデル（メモリが少ない場合）: phi3:mini など\n' +
+                        '・初心者向け: 推奨マーク（⭐）がついているモデル');
+                    }}>
+                      ❓ どのモデルを選べばいい？
+                    </a>
+                  </div>
+                </div>
+              </div>
+              
               <div className="empty-state-hints">
-                <h3>推奨モデル</h3>
+                <h3>モデル選択のヒント</h3>
                 <ul>
-                  <li><strong>llama3:8b</strong> - 高性能な汎用チャットモデル</li>
-                  <li><strong>codellama:7b</strong> - コード生成に特化</li>
-                  <li><strong>mistral:7b</strong> - 効率的な多目的モデル</li>
-                  <li><strong>phi3:mini</strong> - 軽量高性能モデル</li>
+                  <li>モデル名の横にある⭐マークは推奨モデルを示します</li>
+                  <li>サイズが大きいモデルほど高性能ですが、メモリを多く使用します</li>
+                  <li>用途に応じてカテゴリフィルタを使用すると便利です</li>
                 </ul>
               </div>
             </div>

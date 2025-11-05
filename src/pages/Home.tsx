@@ -1,12 +1,13 @@
 // Home - ホーム画面
 
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Tooltip } from '../components/common/Tooltip';
 import { Onboarding, useOnboarding } from '../components/onboarding/Onboarding';
 import { SystemCheck } from '../components/common/SystemCheck';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { safeInvoke } from '../utils/tauri';
+import { logger } from '../utils/logger';
 import './Home.css';
 
 /**
@@ -21,17 +22,17 @@ export const Home: React.FC = () => {
   // グローバルキーボードショートカットを有効化
   useGlobalKeyboardShortcuts();
 
-  const handleCreateApi = () => {
+  const handleCreateApi = useCallback(() => {
     navigate('/api/create');
-  };
+  }, [navigate]);
 
-  const handleViewApis = () => {
+  const handleViewApis = useCallback(() => {
     navigate('/api/list');
-  };
+  }, [navigate]);
 
-  const handleManageModels = () => {
+  const handleManageModels = useCallback(() => {
     navigate('/models');
-  };
+  }, [navigate]);
 
   // クイック作成機能（推奨設定で作成）
   const handleQuickCreate = async () => {
@@ -50,7 +51,7 @@ export const Home: React.FC = () => {
         },
       });
     } catch (err) {
-      console.error('クイック作成エラー:', err);
+      logger.error('クイック作成エラー', err, 'Home');
       // エラー時は通常のAPI作成画面へ
       navigate('/api/create');
     }
@@ -148,7 +149,7 @@ export const Home: React.FC = () => {
           <Tooltip content="APIキーの一覧表示、再生成、削除などの管理操作ができます。セキュリティのため、APIキーは安全に保管してください。" position="right">
             <button
               className="home-action-button"
-              onClick={() => navigate('/api/keys')}
+              onClick={useCallback(() => navigate('/api/keys'), [navigate])}
               aria-label="APIキー管理。APIキーの一覧表示・管理ができます。"
             >
               <span className="button-text">
@@ -161,7 +162,7 @@ export const Home: React.FC = () => {
           <Tooltip content="APIへのリクエストログを表示・検索できます。日時範囲、ステータスコード、パスなどでフィルタリングできます。" position="right">
             <button
               className="home-action-button"
-              onClick={() => navigate('/logs')}
+              onClick={useCallback(() => navigate('/logs'), [navigate])}
               aria-label="APIログ。リクエストログの表示・検索ができます。"
             >
               <span className="button-text">
@@ -174,7 +175,7 @@ export const Home: React.FC = () => {
           <Tooltip content="APIのパフォーマンスメトリクス（レスポンス時間、リクエスト数、CPU/メモリ使用量、エラー率）をリアルタイムで監視できます。" position="right">
             <button
               className="home-action-button"
-              onClick={() => navigate('/performance')}
+              onClick={useCallback(() => navigate('/performance'), [navigate])}
               aria-label="パフォーマンス監視。APIのパフォーマンスメトリクスを監視できます。"
             >
               <span className="button-text">

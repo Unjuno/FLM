@@ -1,6 +1,6 @@
 // ThemeContext - テーマコンテキスト
 
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
 import { safeInvoke, isTauriAvailable } from '../utils/tauri';
 
 /**
@@ -194,13 +194,19 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     root.classList.add(`theme-${actual}`);
   };
 
+  // コンテキスト値をメモ化（不要な再レンダリングを防止）
+  const contextValue = useMemo(
+    () => ({ theme, actualTheme, setTheme, toggleTheme }),
+    [theme, actualTheme, setTheme, toggleTheme]
+  );
+
   // ローディング中は何も表示しない（またはローディング表示）
   if (isLoading) {
     return <>{children}</>; // 簡単な実装としてそのまま表示
   }
 
   return (
-    <ThemeContext.Provider value={{ theme, actualTheme, setTheme, toggleTheme }}>
+    <ThemeContext.Provider value={contextValue}>
       {children}
     </ThemeContext.Provider>
   );

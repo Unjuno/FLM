@@ -281,8 +281,10 @@ export function useForm<T extends Record<string, unknown>>(
           // 最新の値を取得（refを使用）
           await onSubmit(valuesRef.current);
         } catch (error) {
+          // loggerは開発環境でのみエラーを出力するため、条件分岐は不要
           if (import.meta.env.DEV) {
-            console.error('フォーム送信中にエラーが発生しました:', error);
+            const { logger } = await import('../utils/logger');
+            logger.error('フォーム送信中にエラーが発生しました', error, 'useForm');
           }
         }
       }

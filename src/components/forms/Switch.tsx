@@ -36,6 +36,7 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
       required,
       disabled,
       checked,
+      defaultChecked,
       className = '',
       id,
       ...props
@@ -80,9 +81,9 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
               id={switchId}
               className="form-switch-input"
               disabled={disabled}
-              checked={checked ?? false}
+              {...(checked !== undefined ? { checked } : defaultChecked !== undefined ? { defaultChecked } : {})}
               role="switch"
-              {...((checked ?? false) && { 'aria-checked': true })}
+              {...((checked !== undefined ? checked : defaultChecked) && { 'aria-checked': true })}
               {...(error && { 'aria-invalid': true })}
               {...(error && { 'aria-describedby': errorId })}
               {...(!error && helpText && { 'aria-describedby': helpId })}

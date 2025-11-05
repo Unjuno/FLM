@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../utils/tauri';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useNotifications } from '../contexts/NotificationContext';
 import { ErrorMessage } from '../components/common/ErrorMessage';
@@ -63,7 +63,7 @@ export const BackupRestore: React.FC = () => {
       const defaultFileName = `flm-backup-${timestamp}.json`;
 
       // バックアップを作成（output_pathは空文字列でOK、JSONデータを直接取得）
-      const result = await invoke<BackupResponse>('create_backup', {
+      const result = await safeInvoke<BackupResponse>('create_backup', {
         output_path: '', // ファイル保存はオプション、JSONデータを直接取得
       });
 
@@ -146,7 +146,7 @@ export const BackupRestore: React.FC = () => {
       }
 
       // ファイル内容を直接バックエンドに送信して復元
-      const result = await invoke<RestoreResponse>('restore_backup_from_json', {
+      const result = await safeInvoke<RestoreResponse>('restore_backup_from_json', {
         json_data: fileContent,
       });
 

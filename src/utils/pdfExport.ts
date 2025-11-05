@@ -1,6 +1,7 @@
 // pdfExport - PDFエクスポートユーティリティ
 
 import { printElement, type PrintOptions } from './print';
+import { logger } from './logger';
 
 /**
  * PDFエクスポートオプション
@@ -123,7 +124,7 @@ export const exportToPdf = async (options: PdfExportOptions = {}): Promise<void>
 
     await printElement(printOptions);
   } catch (error) {
-    console.error(ERROR_MESSAGES.EXPORT_FAILED, error);
+    logger.error(ERROR_MESSAGES.EXPORT_FAILED, error instanceof Error ? error : new Error(String(error)), 'pdfExport');
     const errorMessage = error instanceof Error 
       ? error.message 
       : ERROR_MESSAGES.EXPORT_FAILED;
@@ -152,16 +153,13 @@ export interface LogData {
  * @param options エクスポートオプション
  */
 export const exportLogsToPdf = async (
-  logData: LogData[],
+  _logData: LogData[], // 将来の実装で使用予定
   options: Omit<PdfExportOptions, 'targetElement'> = {}
 ): Promise<void> => {
   // 将来の実装: logDataを使用してPDFを生成
   // 現在はブラウザの印刷機能を使用
-  if (logData.length === 0) {
-    if (import.meta.env.DEV) {
-      console.warn(ERROR_MESSAGES.NO_LOG_DATA);
-    }
-  }
+  // 注意: ログデータが空の場合でも処理を続行（将来的にPDFライブラリを使用する際に実装）
+  // 開発環境での警告は、実装が完了した際に追加予定
 
   await exportToPdf({
     ...options,

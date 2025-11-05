@@ -1,6 +1,8 @@
 // tauri - Tauri環境の検出と安全なinvoke関数を提供
 
 import { invoke as tauriInvoke } from '@tauri-apps/api/core';
+import { parseError, logError, ErrorCategory } from './errorHandler';
+import { logger } from './logger';
 
 /**
  * Tauri環境が利用可能かどうかをチェック
@@ -37,37 +39,31 @@ export async function safeInvoke<T = unknown>(
   try {
     return await tauriInvoke<T>(cmd, args);
   } catch (error) {
-    // エラーメッセージをユーザーフレンドリーに変換
-    if (error instanceof Error) {
-      const message = error.message;
-      
-      // よくあるエラーをユーザーフレンドリーなメッセージに変換
-      if (message.includes('command') || message.includes('not found')) {
-        throw new Error(
-          'この機能は現在利用できません。アプリケーションを再起動してください。'
-        );
-      }
-      
-      if (message.includes('database') || message.includes('SQL')) {
-        throw new Error(
-          'データベースエラーが発生しました。アプリケーションを再起動してください。'
-        );
-      }
-    }
+    // エラーを解析してログに記録
+    const errorInfo = parseError(error, ErrorCategory.API);
+    logError(errorInfo, `safeInvoke:${cmd}`);
     
-    throw error;
+    // ユーザーフレンドリーなエラーをスロー
+    throw new Error(errorInfo.message);
   }
 }
 
 /**
  * Tauri環境をチェックし、利用できない場合は警告を表示
- * @param featureName 機能名（エラーメッセージ用）
+ * 開発環境でのみ警告を出力します
+ * @param featureName 機能名（エラーメッセージ用、デフォルト: 'この機能'）
  */
 export function checkTauriEnvironment(featureName: string = 'この機能'): void {
   if (!isTauriAvailable()) {
-    if (typeof window !== 'undefined' && (window as any).__DEV__) {
-      console.warn(
-        `${featureName}を使用するには、Tauriアプリケーションとして起動する必要があります。`
+    // 開発環境の判定: テスト環境とVite環境の両方で動作するようにprocess.envを使用
+    // 注: Vite環境ではimport.meta.env.DEVが利用可能だが、Jest環境ではパースエラーになるため
+    // process.env.NODE_ENVを使用（Viteは自動的にprocess.envを設定する）
+    const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
+    
+    if (typeof window !== 'undefined' && isDev) {
+      logger.warn(
+        `${featureName}を使用するには、Tauriアプリケーションとして起動する必要があります。`,
+        'tauri'
       );
     }
   }

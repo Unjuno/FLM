@@ -2,17 +2,18 @@
 
 import React, { useRef, useEffect } from 'react';
 import { useOllamaDownload } from '../../hooks/useOllama';
+import { FORMATTING, FORMAT_STRINGS, OLLAMA_DOWNLOAD } from '../../constants/config';
 import './OllamaDownload.css';
 
 /**
  * ダウンロード進捗情報のフォーマット用ユーティリティ
  */
 function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const k = 1024;
+  if (bytes === 0) return FORMAT_STRINGS.ZERO_BYTES;
+  const k = FORMATTING.BYTES_PER_KB;
   const sizes = ['B', 'KB', 'MB', 'GB'];
   const i = Math.floor(Math.log(bytes) / Math.log(k));
-  return `${(bytes / Math.pow(k, i)).toFixed(2)} ${sizes[i]}`;
+  return `${(bytes / Math.pow(k, i)).toFixed(FORMATTING.DECIMAL_PLACES)} ${sizes[i]}`;
 }
 
 function formatSpeed(bytesPerSec: number): string {
@@ -20,11 +21,11 @@ function formatSpeed(bytesPerSec: number): string {
 }
 
 function formatTime(remainingBytes: number, speedBytesPerSec: number): string {
-  if (speedBytesPerSec === 0 || speedBytesPerSec < 0.1) return '計算中...';
+  if (speedBytesPerSec === 0 || speedBytesPerSec < OLLAMA_DOWNLOAD.MIN_SPEED_THRESHOLD) return FORMAT_STRINGS.CALCULATING;
   const seconds = Math.ceil(remainingBytes / speedBytesPerSec);
-  if (seconds < 60) return `${seconds}秒`;
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
+  if (seconds < FORMATTING.SECONDS_PER_MINUTE) return `${seconds}秒`;
+  const minutes = Math.floor(seconds / FORMATTING.SECONDS_PER_MINUTE);
+  const remainingSeconds = seconds % FORMATTING.SECONDS_PER_MINUTE;
   if (remainingSeconds === 0) {
     return `${minutes}分`;
   }
@@ -90,7 +91,7 @@ export const OllamaDownload: React.FC<OllamaDownloadProps> = ({
 
     useEffect(() => {
       if (progressContainerRef.current) {
-        progressContainerRef.current.style.setProperty('--progress', String(Math.min(progress.progress, 100)));
+        progressContainerRef.current.style.setProperty('--progress', String(Math.min(progress.progress, FORMATTING.PERCENTAGE_MULTIPLIER)));
       }
     }, [progress.progress]);
 
@@ -109,7 +110,7 @@ export const OllamaDownload: React.FC<OllamaDownloadProps> = ({
 
           {/* パーセンテージ表示 */}
           <div className="progress-percentage">
-            {progress.progress.toFixed(1)}%
+            {progress.progress.toFixed(FORMATTING.DECIMAL_PLACES_SHORT)}%
           </div>
 
           {/* 詳細情報 */}

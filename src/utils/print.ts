@@ -21,8 +21,10 @@ export interface PrintOptions {
 
 * 印刷処理の定数
  */
-const PRINT_DELAY_MS = 250;
-const WINDOW_CLOSE_DELAY_MS = 250;
+import { TIMEOUT } from '../constants/config';
+
+const PRINT_DELAY_MS = TIMEOUT.PRINT_DELAY;
+const WINDOW_CLOSE_DELAY_MS = TIMEOUT.WINDOW_CLOSE_DELAY;
 const DEFAULT_PAGE_MARGIN = '1cm';
 const DEFAULT_FONT_SIZE = '12pt';
 const DEFAULT_LINE_HEIGHT = 1.5;
@@ -173,15 +175,23 @@ const handleError = async (
 /**
  * 印刷用HTMLテンプレートを生成
  * @param title ページタイトル
- * @param content 印刷コンテンツ
+ * @param content 印刷コンテンツ（innerHTMLから取得されたHTML文字列）
  * @param styles 追加CSSスタイル
  * @returns 完全なHTML文字列
+ * 
+ * 注意: contentは既存のDOM要素のinnerHTMLから取得されるため、
+ * 信頼されたソースからのコンテンツのみが渡されることを前提としています。
+ * 外部入力や信頼できないデータが含まれる可能性がある場合は、
+ * 事前にサニタイゼーションが必要です。
  */
 const generatePrintHTML = (title: string, content: string, styles: string): string => {
   const escapedTitle = escapeHtml(title);
   const escapedStyles = escapeHtml(styles);
   const currentYear = new Date().getFullYear();
   const printDate = new Date().toLocaleString('ja-JP');
+  
+  // contentはDOM要素のinnerHTMLから取得されるため、そのまま使用
+  // ただし、将来外部入力が含まれる可能性がある場合は、サニタイゼーションが必要
 
   return `<!DOCTYPE html>
 <html>

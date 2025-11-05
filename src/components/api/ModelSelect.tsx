@@ -1,7 +1,7 @@
 // ModelSelect - モデル選択コンポーネント
 
 import React, { useState, useEffect } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../../utils/tauri';
 import type { SelectedModel } from '../../types/api';
 import './ModelSelect.css';
 
@@ -32,7 +32,7 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({ onSelect, onCancel }) 
       try {
         setLoading(true);
         // バックエンドIPCコマンドを呼び出してモデル一覧を取得
-        const modelsList = await invoke<Array<{
+        const modelsList = await safeInvoke<Array<{
           name: string;
           size: number | null;
           modified_at: string;

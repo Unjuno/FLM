@@ -130,6 +130,109 @@
       "loadApisError": "API一覧の取得に失敗しました",
       "noApisSuggestion": "APIがまだ作成されていない場合は、まず「新しいAPIを作成」ボタンからAPIを作成してください。"
     }
+  },
+  "logStatistics": {
+    "title": "統計情報",
+    "loading": "統計情報を読み込んでいます...",
+    "retry": "再試行",
+    "noData": "統計情報がありません",
+    "summary": {
+      "label": "統計サマリー",
+      "totalRequests": {
+        "label": "リクエスト総数"
+      },
+      "avgResponseTime": {
+        "label": "平均レスポンス時間"
+      },
+      "errorRate": {
+        "label": "エラー率",
+        "ariaLabel": "エラー率 {{rate}}パーセント{{warning}}",
+        "warningExceeded": "（警告レベルを超えています）"
+      }
+    },
+    "charts": {
+      "label": "ステータスコード分布グラフ",
+      "barChart": {
+        "title": "ステータスコード分布（棒グラフ）",
+        "ariaLabel": "ステータスコード分布の棒グラフ",
+        "xAxisLabel": "ステータスコード",
+        "yAxisLabel": "リクエスト数"
+      },
+      "pieChart": {
+        "title": "ステータスコード分布（円グラフ）",
+        "ariaLabel": "ステータスコード分布の円グラフ",
+        "dataLabel": "ステータスコード分布"
+      },
+      "noData": "ステータスコード分布データがありません"
+    },
+    "error": {
+      "loadFailed": "統計情報の取得に失敗しました"
+    }
+  },
+  "charts": {
+    "responseTime": {
+      "title": "レスポンス時間",
+      "loading": "レスポンス時間データを読み込んでいます...",
+      "retry": "再試行",
+      "selectApi": "APIを選択してください",
+      "noData": "レスポンス時間データがありません",
+      "error": {
+        "loadFailed": "データの取得に失敗しました"
+      },
+      "ariaLabel": "レスポンス時間グラフ",
+      "xAxisLabel": "時間",
+      "yAxisLabel": "レスポンス時間 (ms)",
+      "legendName": "レスポンス時間",
+      "tooltipTime": "時間: {{time}}"
+    },
+    "errorRate": {
+      "title": "エラー率",
+      "loading": "エラー率データを読み込んでいます...",
+      "retry": "再試行",
+      "noData": "エラー率データがありません",
+      "highErrorRate": "高エラー率",
+      "error": {
+        "loadFailed": "データの取得に失敗しました"
+      },
+      "ariaLabel": "エラー率グラフ",
+      "xAxisLabel": "時間",
+      "yAxisLabel": "エラー率 (%)",
+      "legendName": "エラー率",
+      "legendThreshold": "アラート閾値 ({{threshold}}%)",
+      "tooltipTime": "時間: {{time}}",
+      "autoRefresh": "自動更新: {{interval}}秒間隔"
+    },
+    "requestCount": {
+      "title": "リクエスト数",
+      "loading": "リクエスト数データを読み込んでいます...",
+      "retry": "再試行",
+      "noData": "リクエスト数データがありません",
+      "error": {
+        "loadFailed": "データの取得に失敗しました"
+      },
+      "ariaLabel": "リクエスト数グラフ",
+      "xAxisLabel": "時間",
+      "yAxisLabel": "リクエスト数",
+      "legendName": "リクエスト数",
+      "tooltipTime": "時間: {{time}}"
+    },
+    "resourceUsage": {
+      "title": "CPU/メモリ使用率",
+      "loading": "リソース使用率データを読み込んでいます...",
+      "retry": "再試行",
+      "selectApi": "APIを選択してください",
+      "noData": "リソース使用率データがありません",
+      "error": {
+        "loadFailed": "データの取得に失敗しました"
+      },
+      "ariaLabel": "CPU/メモリ使用率グラフ",
+      "xAxisLabel": "時間",
+      "yAxisLabelCpu": "CPU使用率 (%)",
+      "yAxisLabelMemory": "メモリ使用率 (%)",
+      "legendNameCpu": "CPU使用率",
+      "legendNameMemory": "メモリ使用率",
+      "tooltipTime": "時間: {{time}}"
+    }
   }
 }
 

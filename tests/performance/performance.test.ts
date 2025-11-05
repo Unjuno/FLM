@@ -1,28 +1,19 @@
-/**
- * FLM - パフォーマンステスト
- * 
- * フェーズ4: QAエージェント (QA) 実装
- * アプリケーションのパフォーマンステスト
- */
+// performance - パフォーマンステスト
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
 
-/**
- * パフォーマンステストスイート
- * 
- * テスト項目:
- * - IPC通信の応答時間
- * - データベースクエリのパフォーマンス
- * - API作成・管理操作の応答時間
- */
 describe('パフォーマンステスト', () => {
   beforeAll(() => {
-    console.log('パフォーマンステストを開始します');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('パフォーマンステストを開始します');
+    }
   });
 
   afterAll(() => {
-    console.log('パフォーマンステストを完了しました');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('パフォーマンステストを完了しました');
+    }
   });
 
   /**

@@ -1,38 +1,82 @@
 // ErrorRateChart - エラー率グラフコンポーネント
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import React, { useMemo, memo, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { CHART_CONFIG, CHART_COLORS, FORMATTING } from '../../constants/config';
+import { useI18n } from '../../contexts/I18nContext';
+import { usePerformanceMetrics } from '../../hooks/usePerformanceMetrics';
 import './ErrorRateChart.css';
 
 /**
- * パフォーマンスメトリクス情報
- */
-interface PerformanceMetricInfo {
-  id: number;
-  api_id: string;
-  metric_type: string;
-  value: number;
-  timestamp: string;
-}
-
-/**
  * エラー率グラフコンポーネントのプロパティ
+ * 
+ * @interface ErrorRateChartProps
+ * @property {string} apiId - 表示するAPIのID（必須）
+ * @property {string | null} [startDate] - データ取得の開始日時（ISO 8601形式、オプション）
+ * @property {string | null} [endDate] - データ取得の終了日時（ISO 8601形式、オプション）
+ * @property {boolean} [autoRefresh=true] - 自動更新を有効にするかどうか（デフォルト: true）
+ * @property {number} [refreshInterval=30000] - 自動更新の間隔（ミリ秒、最小値: 1000ms、デフォルト: 30000ms）
+ * @property {number} [alertThreshold=5.0] - アラートを表示するエラー率の閾値（0-100の範囲、デフォルト: 5.0%）
+ * 
+ * @example
+ * ```tsx
+ * <ErrorRateChart
+ *   apiId="api-123"
+ *   startDate="2024-01-01T00:00:00Z"
+ *   endDate="2024-01-31T23:59:59Z"
+ *   autoRefresh={true}
+ *   refreshInterval={30000}
+ *   alertThreshold={5.0}
+ * />
+ * ```
  */
 interface ErrorRateChartProps {
+  /** 表示するAPIのID（必須） */
   apiId: string;
+  /** データ取得の開始日時（ISO 8601形式、オプション） */
   startDate?: string | null;
+  /** データ取得の終了日時（ISO 8601形式、オプション） */
   endDate?: string | null;
+  /** 自動更新を有効にするかどうか（デフォルト: true） */
   autoRefresh?: boolean;
-  refreshInterval?: number; // ミリ秒
-  alertThreshold?: number; // アラート閾値（デフォルト: 5%）
+  /** 自動更新の間隔（ミリ秒、最小値: 1000ms、デフォルト: 30000ms） */
+  refreshInterval?: number;
+  /** アラートを表示するエラー率の閾値（0-100の範囲、デフォルト: 5.0%） */
+  alertThreshold?: number;
 }
 
 /**
  * エラー率グラフコンポーネント
- * エラー率の時系列グラフを表示します
+ * 
+ * APIのエラー率を時系列グラフとして表示します。バックエンドから取得したエラー率データ（0-100の範囲）を
+ * パーセンテージ形式で表示し、設定された閾値を超えた場合にアラートを表示します。
+ * 
+ * 特徴:
+ * - リアルタイム自動更新対応（オプション）
+ * - アラート閾値の設定と表示
+ * - エラーハンドリングと再試行機能
+ * - アクセシビリティ対応（ARIA属性）
+ * - パフォーマンス最適化（React.memo、useMemo、useCallback）
+ * 
+ * @component
+ * @param {ErrorRateChartProps} props - コンポーネントのプロパティ
+ * @returns {JSX.Element} エラー率グラフコンポーネント
+ * 
+ * @example
+ * ```tsx
+ * // 基本的な使用例
+ * <ErrorRateChart apiId="api-123" />
+ * 
+ * // 日時範囲を指定した使用例
+ * <ErrorRateChart
+ *   apiId="api-123"
+ *   startDate="2024-01-01T00:00:00Z"
+ *   endDate="2024-01-31T23:59:59Z"
+ *   alertThreshold={10.0}
+ * />
+ * ```
  */
-export const ErrorRateChart: React.FC<ErrorRateChartProps> = ({
+const ErrorRateChartComponent: React.FC<ErrorRateChartProps> = ({
   apiId,
   startDate,
   endDate,
@@ -40,126 +84,109 @@ export const ErrorRateChart: React.FC<ErrorRateChartProps> = ({
   refreshInterval = 30000,
   alertThreshold = 5.0,
 }) => {
-  const [data, setData] = useState<Array<{ time: string; value: number }>>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { t } = useI18n();
   
-  // アンマウント状態を追跡するためのref
-  const isMountedRef = useRef(true);
+  // alertThresholdのバリデーション（0-100の範囲に制限、無効な値はデフォルト値を使用）
+  const validAlertThreshold = useMemo(() => {
+    if (typeof alertThreshold !== 'number' || isNaN(alertThreshold) || !isFinite(alertThreshold)) {
+      return 5.0;
+    }
+    // 0-100の範囲に制限
+    return Math.max(0, Math.min(100, alertThreshold));
+  }, [alertThreshold]);
 
-  // コンポーネントのアンマウント時にクリーンアップ
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
+  // refreshIntervalのバリデーション（最小値制限、無効な値はデフォルト値を使用）
+  const validRefreshInterval = useMemo(() => {
+    if (typeof refreshInterval !== 'number' || isNaN(refreshInterval) || !isFinite(refreshInterval) || refreshInterval < 1000) {
+      return 30000; // デフォルト: 30秒
+    }
+    return refreshInterval;
+  }, [refreshInterval]);
+  
+  // 値の丸め処理関数（データ取得時に使用、useCallbackでメモ化して無限ループを防止）
+  // エラー率の値を小数点以下2桁に丸める
+  // バックエンドからは0-100の範囲で値が返されるため、その範囲で丸める
+  const valueFormatter = useCallback((value: number): number => {
+    // 無効な値のチェック
+    if (isNaN(value) || !isFinite(value)) {
+      return 0;
+    }
+    // 値の範囲を0-100に制限（バックエンド仕様に準拠）
+    const clampedValue = Math.max(0, Math.min(100, value));
+    // 小数点以下2桁に丸める（パーセンテージ値の丸め処理）
+    return Math.round(clampedValue * FORMATTING.PERCENTAGE_MULTIPLIER) / FORMATTING.PERCENTAGE_MULTIPLIER;
   }, []);
+  
+  // 共通フックを使用してデータを取得
+  const { data, loading, error, loadData, isEmpty } = usePerformanceMetrics({
+    apiId,
+    metricType: 'error_rate',
+    startDate,
+    endDate,
+    autoRefresh,
+    refreshInterval: validRefreshInterval,
+    valueFormatter,
+  });
 
-  // データを取得
-  const loadData = useCallback(async () => {
-    if (!isMountedRef.current) return;
-    
-    if (!apiId || apiId.trim() === '') {
-      if (isMountedRef.current) {
-        setData([]);
-        setLoading(false);
-        setError(null);
-      }
-      return;
-    }
-
-    try {
-      // アンマウントチェック
-      if (!isMountedRef.current) return;
-      
-      setLoading(true);
-      setError(null);
-
-      const request = {
-        api_id: apiId,
-        metric_type: 'error_rate',
-        start_date: startDate || null,
-        end_date: endDate || null,
-      };
-
-      const result = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', { request });
-
-      // APIレスポンスがnullやundefined、または配列でない場合のチェック
-      const safeMetrics: PerformanceMetricInfo[] = Array.isArray(result) ? result : [];
-
-      // データを時間順にソートし、グラフ用フォーマットに変換
-      // error_rateは既に%値として保存されているため、そのまま使用
-      // 無効なデータをフィルタリング
-      const validMetrics = safeMetrics.filter((metric) => {
-        if (!metric.timestamp || typeof metric.value !== 'number' || isNaN(metric.value)) {
-          return false;
-        }
-        const timestamp = new Date(metric.timestamp).getTime();
-        return !isNaN(timestamp);
-      });
-
-      const sortedData = validMetrics
-        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-        .map((metric) => ({
-          time: new Date(metric.timestamp).toLocaleTimeString('ja-JP', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-          }),
-          value: Math.round(metric.value * 100) / 100, // パーセンテージ（小数点以下2桁）
-        }));
-
-      // アンマウントチェック
-      if (!isMountedRef.current) return;
-      setData(sortedData);
-    } catch (err) {
-      // アンマウントチェック
-      if (!isMountedRef.current) return;
-      
-      setError(err instanceof Error ? err.message : 'データの取得に失敗しました');
-      // エラー時も既存のデータを保持する（前回のデータが表示され続ける）
-    } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
-    }
-  }, [apiId, startDate, endDate]);
-
-  // 初回読み込み
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  // 自動更新
-  useEffect(() => {
-    if (!autoRefresh || !apiId) {
-      return;
-    }
-
-    const interval = setInterval(() => {
-      loadData();
-    }, refreshInterval);
-
-    return () => clearInterval(interval);
-  }, [autoRefresh, apiId, refreshInterval, loadData]);
-
-  // 値フォーマット関数（useCallbackでメモ化）
+  // 表示用の値フォーマット関数（Tooltip等で使用、useCallbackでメモ化）
+  // エラー率をパーセンテージ文字列としてフォーマット（例: "5.00%"）
+  // バックエンドからは0-100の範囲で値が返される
   const formatValue = useCallback((value: number): string => {
-    if (value <= 0 || isNaN(value)) {
+    // 無効な値のチェック
+    if (isNaN(value) || !isFinite(value) || value < 0) {
       return '0.00%';
     }
-    return `${value.toFixed(2)}%`;
+    // 値の範囲を0-100に制限（バックエンド仕様に準拠）
+    const clampedValue = Math.max(0, Math.min(100, value));
+    return `${clampedValue.toFixed(2)}%`;
   }, []);
 
-  // アラート閾値を超えているかチェック
-  const hasHighErrorRate = data.some((item) => item.value > alertThreshold);
+  // アラート閾値を超えているかチェック（useMemoでメモ化）
+  // バックエンドからは0-100の範囲で値が返されるため、その範囲で比較
+  const hasHighErrorRate = useMemo(() => {
+    if (!data || data.length === 0) {
+      return false;
+    }
+    return data.some((item) => {
+      const value = item.value;
+      // 値の型チェックと範囲チェック（0-100の範囲内であることを確認）
+      if (typeof value !== 'number' || !isFinite(value) || value < 0 || value > 100) {
+        return false;
+      }
+      return value > validAlertThreshold;
+    });
+  }, [data, validAlertThreshold]);
+
+  // チャートのマージン設定（useMemoでメモ化して再計算を防止）
+  const chartMargin = useMemo(() => ({
+    top: CHART_CONFIG.MARGIN.TOP,
+    right: CHART_CONFIG.MARGIN.RIGHT,
+    left: CHART_CONFIG.MARGIN.LEFT,
+    bottom: CHART_CONFIG.MARGIN.BOTTOM,
+  }), []);
+
+  // YAxisのdomain設定（パーセンテージ値なので0-100の範囲、useMemoでメモ化）
+  const yAxisDomain = useMemo(() => [0, CHART_CONFIG.PERCENTAGE_DOMAIN_MAX] as [number, number], []);
+
+  // 自動更新間隔の表示用テキスト（秒単位、useMemoでメモ化）
+  const refreshIntervalSeconds = useMemo(() => validRefreshInterval / 1000, [validRefreshInterval]);
+
+  if (isEmpty) {
+    return (
+      <div className="error-rate-chart" role="status" aria-live="polite">
+        <div className="empty-container">
+          <p>{t('charts.errorRate.selectApi')}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading && data.length === 0) {
     return (
-      <div className="error-rate-chart">
+      <div className="error-rate-chart" role="status" aria-live="polite" aria-busy="true">
         <div className="loading-container">
-          <div className="loading-spinner"></div>
-          <p>エラー率データを読み込んでいます...</p>
+          <div className="loading-spinner" aria-hidden="true"></div>
+          <p>{t('charts.errorRate.loading')}</p>
         </div>
       </div>
     );
@@ -167,11 +194,16 @@ export const ErrorRateChart: React.FC<ErrorRateChartProps> = ({
 
   if (error) {
     return (
-      <div className="error-rate-chart">
+      <div className="error-rate-chart" role="alert" aria-live="assertive">
         <div className="error-container">
-          <p className="error-message">⚠️ {error}</p>
-          <button className="retry-button" onClick={loadData}>
-            再試行
+          <p className="error-message" role="alert">⚠️ {error}</p>
+          <button 
+            className="retry-button" 
+            onClick={loadData}
+            aria-label={t('charts.errorRate.retry')}
+            type="button"
+          >
+            {t('charts.errorRate.retry')}
           </button>
         </div>
       </div>
@@ -180,82 +212,96 @@ export const ErrorRateChart: React.FC<ErrorRateChartProps> = ({
 
   if (data.length === 0) {
     return (
-      <div className="error-rate-chart">
+      <div className="error-rate-chart" role="status" aria-live="polite">
         <div className="empty-container">
-          <p>エラー率データがありません</p>
+          <p>{t('charts.errorRate.noData')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className={`error-rate-chart ${hasHighErrorRate ? 'alert-active' : ''}`}>
+    <div className={`error-rate-chart ${hasHighErrorRate ? 'alert-active' : ''}`} role="region" aria-labelledby="error-rate-chart-title">
       <div className="chart-header">
-        <h3 className="chart-title">エラー率</h3>
+        <h3 className="chart-title" id="error-rate-chart-title">{t('charts.errorRate.title')}</h3>
         {hasHighErrorRate && (
-          <span className="alert-badge">⚠️ 高エラー率</span>
+          <span className="alert-badge" role="alert" aria-live="polite">⚠️ {t('charts.errorRate.highErrorRate')}</span>
         )}
       </div>
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+      <ResponsiveContainer width="100%" height={CHART_CONFIG.HEIGHT}>
+        <LineChart 
+          data={data} 
+          margin={chartMargin}
+          aria-label={t('charts.errorRate.ariaLabel')}
+        >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis 
             dataKey="time" 
             angle={-45}
             textAnchor="end"
-            height={80}
+            height={CHART_CONFIG.X_AXIS_HEIGHT}
+            aria-label={t('charts.errorRate.xAxisLabel')}
           />
           <YAxis 
-            label={{ value: 'エラー率 (%)', angle: -90, position: 'insideLeft' }}
+            domain={yAxisDomain}
+            label={{ value: t('charts.errorRate.yAxisLabel'), angle: -90, position: 'insideLeft' }}
+            aria-label={t('charts.errorRate.yAxisLabel')}
           />
-          {alertThreshold > 0 && (
+          {validAlertThreshold > 0 && (
             <YAxis 
               yAxisId="threshold"
               orientation="right"
-              domain={[0, 100]}
+              domain={yAxisDomain}
               hide
             />
           )}
           <Tooltip 
-            formatter={(value: number | string | number[]) => {
+            formatter={(value: number | string | number[]): string => {
               // Rechartsのformatterは配列を返すことがあるため、最初の値を取得
               const numValue = Array.isArray(value) ? value[0] : value;
-              if (typeof numValue !== 'number') {
-                return String(numValue);
+              // 無効な値のチェック（formatValue内でもチェックされるが、早期リターンで安全性を向上）
+              if (typeof numValue !== 'number' || isNaN(numValue) || !isFinite(numValue)) {
+                return '0.00%';
               }
+              // formatValue内で範囲チェック（0-100）が行われる
               return formatValue(numValue);
             }}
-            labelFormatter={(label) => `時間: ${label}`}
+            labelFormatter={(label: string): string => t('charts.errorRate.tooltipTime', { time: label })}
           />
           <Legend />
           <Line 
             type="monotone" 
             dataKey="value" 
-            stroke="#f44336" 
-            strokeWidth={2}
-            dot={{ r: 3 }}
-            name="エラー率"
+            stroke={CHART_COLORS.ERROR} 
+            strokeWidth={CHART_CONFIG.STROKE_WIDTH}
+            dot={{ r: CHART_CONFIG.DOT_RADIUS }}
+            name={t('charts.errorRate.legendName')}
+            aria-label={t('charts.errorRate.legendName')}
           />
-          {alertThreshold > 0 && (
+          {validAlertThreshold > 0 && (
             <Line
               yAxisId="threshold"
               type="monotone"
-              dataKey={() => alertThreshold}
-              stroke="#ff9800"
-              strokeWidth={1}
-              strokeDasharray="5 5"
+              dataKey={() => validAlertThreshold}
+              stroke={CHART_COLORS.WARNING}
+              strokeWidth={CHART_CONFIG.THRESHOLD_STROKE_WIDTH}
+              strokeDasharray={CHART_CONFIG.STROKE_DASHARRAY}
               dot={false}
-              name={`アラート閾値 (${alertThreshold}%)`}
+              name={t('charts.errorRate.legendThreshold', { threshold: validAlertThreshold })}
+              aria-label={t('charts.errorRate.legendThreshold', { threshold: validAlertThreshold })}
             />
           )}
         </LineChart>
       </ResponsiveContainer>
       {autoRefresh && (
-        <div className="chart-footer">
-          <span className="auto-refresh-indicator">自動更新: {refreshInterval / 1000}秒間隔</span>
+        <div className="chart-footer" role="status" aria-live="polite">
+          <span className="auto-refresh-indicator">{t('charts.errorRate.autoRefresh', { interval: refreshIntervalSeconds })}</span>
         </div>
       )}
     </div>
   );
 };
+
+// React.memoでメモ化して不要な再レンダリングを防止
+export const ErrorRateChart = memo(ErrorRateChartComponent);
 

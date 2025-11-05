@@ -130,6 +130,109 @@
       "loadApisError": "Failed to load API list",
       "noApisSuggestion": "If no APIs have been created yet, please create an API from the 'Create New API' button first."
     }
+  },
+  "logStatistics": {
+    "title": "Statistics",
+    "loading": "Loading statistics...",
+    "retry": "Retry",
+    "noData": "No statistics available",
+    "summary": {
+      "label": "Statistics Summary",
+      "totalRequests": {
+        "label": "Total Requests"
+      },
+      "avgResponseTime": {
+        "label": "Average Response Time"
+      },
+      "errorRate": {
+        "label": "Error Rate",
+        "ariaLabel": "Error rate {{rate}} percent{{warning}}",
+        "warningExceeded": " (warning threshold exceeded)"
+      }
+    },
+    "charts": {
+      "label": "Status Code Distribution Charts",
+      "barChart": {
+        "title": "Status Code Distribution (Bar Chart)",
+        "ariaLabel": "Status code distribution bar chart",
+        "xAxisLabel": "Status Code",
+        "yAxisLabel": "Request Count"
+      },
+      "pieChart": {
+        "title": "Status Code Distribution (Pie Chart)",
+        "ariaLabel": "Status code distribution pie chart",
+        "dataLabel": "Status Code Distribution"
+      },
+      "noData": "No status code distribution data available"
+    },
+    "error": {
+      "loadFailed": "Failed to load statistics"
+    }
+  },
+  "charts": {
+    "responseTime": {
+      "title": "Response Time",
+      "loading": "Loading response time data...",
+      "retry": "Retry",
+      "selectApi": "Please select an API",
+      "noData": "No response time data available",
+      "error": {
+        "loadFailed": "Failed to load data"
+      },
+      "ariaLabel": "Response time chart",
+      "xAxisLabel": "Time",
+      "yAxisLabel": "Response Time (ms)",
+      "legendName": "Response Time",
+      "tooltipTime": "Time: {{time}}"
+    },
+    "errorRate": {
+      "title": "Error Rate",
+      "loading": "Loading error rate data...",
+      "retry": "Retry",
+      "noData": "No error rate data available",
+      "highErrorRate": "High Error Rate",
+      "error": {
+        "loadFailed": "Failed to load data"
+      },
+      "ariaLabel": "Error rate chart",
+      "xAxisLabel": "Time",
+      "yAxisLabel": "Error Rate (%)",
+      "legendName": "Error Rate",
+      "legendThreshold": "Alert Threshold ({{threshold}}%)",
+      "tooltipTime": "Time: {{time}}",
+      "autoRefresh": "Auto refresh: {{interval}} second interval"
+    },
+    "requestCount": {
+      "title": "Request Count",
+      "loading": "Loading request count data...",
+      "retry": "Retry",
+      "noData": "No request count data available",
+      "error": {
+        "loadFailed": "Failed to load data"
+      },
+      "ariaLabel": "Request count chart",
+      "xAxisLabel": "Time",
+      "yAxisLabel": "Request Count",
+      "legendName": "Request Count",
+      "tooltipTime": "Time: {{time}}"
+    },
+    "resourceUsage": {
+      "title": "CPU/Memory Usage",
+      "loading": "Loading resource usage data...",
+      "retry": "Retry",
+      "selectApi": "Please select an API",
+      "noData": "No resource usage data available",
+      "error": {
+        "loadFailed": "Failed to load data"
+      },
+      "ariaLabel": "CPU/Memory usage chart",
+      "xAxisLabel": "Time",
+      "yAxisLabelCpu": "CPU Usage (%)",
+      "yAxisLabelMemory": "Memory Usage (%)",
+      "legendNameCpu": "CPU Usage",
+      "legendNameMemory": "Memory Usage",
+      "tooltipTime": "Time: {{time}}"
+    }
   }
 }
 

@@ -1,0 +1,11 @@
+node_modules
+dist
+coverage
+src-tauri
+WEB
+*.config.js
+*.config.cjs
+package-lock.json
+Cargo.lock
+*.md
+*.html

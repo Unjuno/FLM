@@ -44,42 +44,30 @@ pub async fn detect_ollama() -> Result<OllamaDetectionResult, AppError> {
         system_path: None,
     };
 
-    // 1. システムパス上のOllamaを検出
-    match detect_ollama_in_path().await {
-        Ok(Some(path)) => {
-            result.installed = true;
-            result.system_path = Some(path.clone());
-            // バージョン情報を取得
-            if let Ok(version) = get_ollama_version(&path).await {
-                result.version = Some(version);
+    // 1. バンドル版Ollamaを検出（最優先）
+    use crate::utils::bundled_ollama;
+    if let Ok(Some(bundled_path)) = bundled_ollama::get_bundled_ollama_path() {
+        result.installed = true;
+        result.portable = true; // バンドル版もポータブル版として扱う
+        result.portable_path = Some(bundled_path.to_string_lossy().to_string());
+        // バージョン情報を取得
+        if let Ok(Some(version)) = bundled_ollama::get_bundled_ollama_version() {
+            result.version = Some(version);
+        }
+        // バンドル版が見つかった場合は、それ以降の検出をスキップして返す
+        // （実行中のOllamaがバンドル版かどうかは確認する）
+        match check_ollama_running().await {
+            Ok(running) => {
+                result.running = running;
+            }
+            Err(e) => {
+                eprintln!("実行中Ollama検出エラー: {}", e);
             }
         }
-        #[allow(non_snake_case)]
-        Ok(None) => {
-            // ポータブル版Ollamaが見つからない場合はスキップ
-        }
-        Err(e) => {
-            eprintln!("システムパス上のOllama検出エラー: {}", e);
-        }
+        return Ok(result);
     }
 
-    // 2. 実行中のOllamaを検出
-    match check_ollama_running().await {
-        Ok(running) => {
-            result.running = running;
-            // 実行中だがバージョンが未取得の場合はAPIから取得
-            if result.running && result.version.is_none() {
-                if let Ok(version) = get_ollama_version_from_api().await {
-                    result.version = Some(version);
-                }
-            }
-        }
-        Err(e) => {
-            eprintln!("実行中Ollama検出エラー: {}", e);
-        }
-    }
-
-    // 3. ポータブル版Ollamaを検出
+    // 2. ポータブル版Ollamaを検出
     match detect_portable_ollama().await {
         Ok(Some(path)) => {
             result.portable = true;
@@ -97,6 +85,43 @@ pub async fn detect_ollama() -> Result<OllamaDetectionResult, AppError> {
         }
         Err(e) => {
             eprintln!("ポータブル版Ollama検出エラー: {}", e);
+        }
+    }
+
+    // 3. システムパス上のOllamaを検出
+    match detect_ollama_in_path().await {
+        Ok(Some(path)) => {
+            result.installed = true;
+            result.system_path = Some(path.clone());
+            // バージョン情報を取得
+            if result.version.is_none() {
+                if let Ok(version) = get_ollama_version(&path).await {
+                    result.version = Some(version);
+                }
+            }
+        }
+        #[allow(non_snake_case)]
+        Ok(None) => {
+            // システムパス上のOllamaが見つからない場合はスキップ
+        }
+        Err(e) => {
+            eprintln!("システムパス上のOllama検出エラー: {}", e);
+        }
+    }
+
+    // 4. 実行中のOllamaを検出
+    match check_ollama_running().await {
+        Ok(running) => {
+            result.running = running;
+            // 実行中だがバージョンが未取得の場合はAPIから取得
+            if result.running && result.version.is_none() {
+                if let Ok(version) = get_ollama_version_from_api().await {
+                    result.version = Some(version);
+                }
+            }
+        }
+        Err(e) => {
+            eprintln!("実行中Ollama検出エラー: {}", e);
         }
     }
 
@@ -357,6 +382,71 @@ async fn get_latest_ollama_download_url() -> Result<(String, String), AppError> 
     Ok((download_url, version))
 }
 
+/// 最新版のバージョンタグを取得（比較用）
+pub async fn get_latest_ollama_version() -> Result<String, AppError> {
+    let client = reqwest::Client::new();
+    let response = client
+        .get("https://api.github.com/repos/ollama/ollama/releases/latest")
+        .header("User-Agent", "FLM/1.0")
+        .send()
+        .await
+        .map_err(|e| AppError::OllamaError {
+            message: format!("GitHub API接続エラー: {}", e),
+        })?;
+
+    if !response.status().is_success() {
+        return Err(AppError::OllamaError {
+            message: format!("GitHub APIエラー: HTTP {}", response.status()),
+        });
+    }
+
+    let json: serde_json::Value = response
+        .json()
+        .await
+        .map_err(|e| AppError::OllamaError {
+            message: format!("JSON解析エラー: {}", e),
+        })?;
+
+    let version = json
+        .get("tag_name")
+        .and_then(|t| t.as_str())
+        .map(|s| s.to_string())
+        .ok_or_else(|| AppError::OllamaError {
+            message: "バージョンタグが見つかりませんでした".to_string(),
+        })?;
+
+    // "v"プレフィックスを削除（例: "v0.1.0" -> "0.1.0"）
+    let version = version.trim_start_matches('v').to_string();
+
+    Ok(version)
+}
+
+/// バージョン比較（現在のバージョンと最新版を比較）
+/// 戻り値: (is_newer_available, current_version, latest_version)
+pub async fn check_ollama_update_available() -> Result<(bool, Option<String>, String), AppError> {
+    // 現在のバージョンを取得
+    let current_version = match detect_ollama().await {
+        Ok(result) => result.version,
+        Err(_) => None,
+    };
+
+    // 最新版を取得
+    let latest_version = get_latest_ollama_version().await?;
+
+    // バージョン比較（シンプルな文字列比較、必要に応じてsemver比較に変更可能）
+    let is_newer_available = if let Some(current) = &current_version {
+        // バージョン文字列を正規化して比較
+        let current_normalized = current.trim_start_matches('v');
+        let latest_normalized = latest_version.trim_start_matches('v');
+        current_normalized != latest_normalized
+    } else {
+        // 現在のバージョンが取得できない場合は、最新版が利用可能と見なす
+        true
+    };
+
+    Ok((is_newer_available, current_version, latest_version))
+}
+
 /// Ollamaをダウンロード
 /// 進捗コールバックを呼び出しながらダウンロードします
 pub async fn download_ollama<F>(mut progress_callback: F) -> Result<String, AppError>
@@ -600,12 +690,16 @@ pub async fn start_ollama(ollama_path: Option<String>) -> Result<u32, AppError> 
     let path = if let Some(p) = ollama_path {
         p
     } else {
-        // デフォルトパスを決定
-        // 1. ポータブル版を優先
-        if let Ok(Some(portable)) = detect_portable_ollama().await {
+        // デフォルトパスを決定（優先順位順）
+        // 1. バンドル版を最優先
+        if let Ok(Some(bundled_path)) = crate::utils::bundled_ollama::get_bundled_ollama_path() {
+            bundled_path.to_string_lossy().to_string()
+        }
+        // 2. ポータブル版
+        else if let Ok(Some(portable)) = detect_portable_ollama().await {
             portable
         }
-        // 2. システムパス上のOllama
+        // 3. システムパス上のOllama
         else if let Ok(Some(system)) = detect_ollama_in_path().await {
             system
         } else {

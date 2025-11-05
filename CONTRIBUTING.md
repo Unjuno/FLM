@@ -20,7 +20,7 @@ FLMプロジェクトへの貢献を歓迎します！
 
 ### 1. バグレポート
 
-バグを発見した場合は、以下の情報を含めて[GitHub Issues](https://github.com/flm/flm/issues)で報告してください：
+バグを発見した場合は、以下の情報を含めて[GitHub Issues](https://github.com/Unjuno/FLM/issues)で報告してください：
 
 - バグの説明
 - 再現手順
@@ -33,7 +33,7 @@ FLMプロジェクトへの貢献を歓迎します！
 
 ### 2. 機能リクエスト
 
-新しい機能の提案は、[GitHub Issues](https://github.com/flm/flm/issues)で作成してください：
+新しい機能の提案は、[GitHub Issues](https://github.com/Unjuno/FLM/issues)で作成してください：
 
 - 機能の説明と目的
 - 使用例
@@ -46,8 +46,8 @@ FLMプロジェクトへの貢献を歓迎します！
 
 1. リポジトリをクローン
    ```bash
-   git clone https://github.com/flm/flm.git
-   cd flm
+   git clone https://github.com/Unjuno/FLM.git
+   cd FLLM
    ```
 
 2. 依存関係のインストール
@@ -216,8 +216,8 @@ npm run test:coverage
 
 質問や相談がある場合は、以下でお気軽にご連絡ください：
 
-- [GitHub Discussions](https://github.com/flm/flm/discussions)
-- [GitHub Issues](https://github.com/flm/flm/issues)
+- [GitHub Discussions](https://github.com/Unjuno/FLM/discussions)
+- [GitHub Issues](https://github.com/Unjuno/FLM/issues)
 
 ---
 

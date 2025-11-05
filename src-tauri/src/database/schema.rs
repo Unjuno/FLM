@@ -282,6 +282,216 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         [],
     )?;
     
+    // API Security Settings テーブル（セキュリティ強化機能）
+    conn.execute(
+        r#"
+        CREATE TABLE IF NOT EXISTS api_security_settings (
+            api_id TEXT PRIMARY KEY,
+            ip_whitelist TEXT,  -- JSON配列形式: ["192.168.1.1", "10.0.0.0/8"]
+            rate_limit_enabled INTEGER DEFAULT 0,
+            rate_limit_requests INTEGER DEFAULT 100,  -- リクエスト数
+            rate_limit_window_seconds INTEGER DEFAULT 60,  -- 時間窓（秒）
+            key_rotation_enabled INTEGER DEFAULT 0,
+            key_rotation_interval_days INTEGER DEFAULT 30,  -- ローテーション間隔（日）
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (api_id) REFERENCES apis(id) ON DELETE CASCADE
+        )
+        "#,
+        [],
+    )?;
+    
+    // API Security Settings テーブルのインデックス
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_api_security_settings_api_id ON api_security_settings(api_id)",
+        [],
+    )?;
+    
+    // Rate Limit Tracking テーブル（レート制限の追跡用）
+    conn.execute(
+        r#"
+        CREATE TABLE IF NOT EXISTS rate_limit_tracking (
+            id TEXT PRIMARY KEY,
+            api_id TEXT NOT NULL,
+            identifier TEXT NOT NULL,  -- APIキーハッシュまたはIPアドレス
+            request_count INTEGER DEFAULT 1,
+            window_start TEXT NOT NULL,  -- 時間窓の開始時刻 (ISO 8601)
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (api_id) REFERENCES apis(id) ON DELETE CASCADE,
+            UNIQUE(api_id, identifier, window_start)
+        )
+        "#,
+        [],
+    )?;
+    
+    // Rate Limit Tracking テーブルのインデックス
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_rate_limit_tracking_api_id ON rate_limit_tracking(api_id)",
+        [],
+    )?;
+    
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_rate_limit_tracking_identifier ON rate_limit_tracking(identifier)",
+        [],
+    )?;
+    
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_rate_limit_tracking_window ON rate_limit_tracking(api_id, identifier, window_start)",
+        [],
+    )?;
+    
+    // OAuth2 Tokens テーブル（v2.0: OAuth2認証対応）
+    conn.execute(
+        r#"
+        CREATE TABLE IF NOT EXISTS oauth_tokens (
+            id TEXT PRIMARY KEY,
+            api_id TEXT NOT NULL,
+            access_token TEXT NOT NULL,
+            refresh_token TEXT,
+            token_type TEXT NOT NULL DEFAULT 'Bearer',
+            expires_at TEXT,
+            scope TEXT,  -- JSON配列形式: ["read", "write"]
+            client_id TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (api_id) REFERENCES apis(id) ON DELETE CASCADE
+        )
+        "#,
+        [],
+    )?;
+    
+    // OAuth2 Tokens テーブルのインデックス
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_oauth_tokens_api_id ON oauth_tokens(api_id)",
+        [],
+    )?;
+    
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_oauth_tokens_access_token ON oauth_tokens(access_token)",
+        [],
+    )?;
+    
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_oauth_tokens_expires_at ON oauth_tokens(expires_at)",
+        [],
+    )?;
+
+    // Model Reviews テーブル（v2.0: モデルレビュー機能）
+    conn.execute(
+        r#"
+        CREATE TABLE IF NOT EXISTS model_reviews (
+            id TEXT PRIMARY KEY,
+            model_name TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
+            review_text TEXT,
+            tags TEXT,  -- JSON配列形式: ["fast", "accurate", "memory-efficient"]
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            CHECK (rating >= 1 AND rating <= 5)
+        )
+        "#,
+        [],
+    )?;
+
+    // Model Reviews テーブルのインデックス
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_model_reviews_model_name ON model_reviews(model_name)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_model_reviews_user_id ON model_reviews(user_id)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_model_reviews_rating ON model_reviews(rating)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_model_reviews_created_at ON model_reviews(created_at)",
+        [],
+    )?;
+
+    // Audit Logs テーブル（v2.0: 監査ログ機能）
+    conn.execute(
+        r#"
+        CREATE TABLE IF NOT EXISTS audit_logs (
+            id TEXT PRIMARY KEY,
+            api_id TEXT NOT NULL,
+            user_id TEXT,
+            action TEXT NOT NULL,
+            resource_type TEXT NOT NULL,
+            resource_id TEXT,
+            details TEXT,  -- JSON形式で詳細情報を保存
+            ip_address TEXT,
+            user_agent TEXT,
+            timestamp TEXT NOT NULL,
+            success INTEGER NOT NULL DEFAULT 1,
+            FOREIGN KEY (api_id) REFERENCES apis(id) ON DELETE CASCADE
+        )
+        "#,
+        [],
+    )?;
+
+    // Audit Logs テーブルのインデックス
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_audit_logs_api_id ON audit_logs(api_id)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_audit_logs_user_id ON audit_logs(user_id)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_audit_logs_action ON audit_logs(action)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_audit_logs_timestamp ON audit_logs(timestamp)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_audit_logs_api_timestamp ON audit_logs(api_id, timestamp)",
+        [],
+    )?;
+
+    // Plugins テーブル（v2.0: プラグインアーキテクチャ）
+    conn.execute(
+        r#"
+        CREATE TABLE IF NOT EXISTS plugins (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            version TEXT NOT NULL,
+            author TEXT NOT NULL,
+            description TEXT,
+            enabled INTEGER NOT NULL DEFAULT 1,
+            plugin_type TEXT NOT NULL,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            CHECK (plugin_type IN ('engine', 'model', 'auth', 'logging', 'custom'))
+        )
+        "#,
+        [],
+    )?;
+
+    // Plugins テーブルのインデックス
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_plugins_enabled ON plugins(enabled)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_plugins_type ON plugins(plugin_type)",
+        [],
+    )?;
+
     // Migrations テーブル
     conn.execute(
         r#"

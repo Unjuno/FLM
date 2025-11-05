@@ -99,16 +99,25 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
         ));
     }
     
-    // 6. ポート番号のデフォルト値
+    // 6. エンジン設定の検証（モデルパラメータ、メモリ設定、マルチモーダル設定）
+    if let Some(ref engine_config_json) = config.engine_config {
+        use crate::utils::model_params;
+        model_params::validate_engine_config(engine_config_json.as_str()).map_err(|e| {
+            format!("エンジン設定の検証に失敗しました（API名: {name}、エンジン: {engine}）: {e}", 
+                name = config.name, engine = engine_type)
+        })?;
+    }
+    
+    // 7. ポート番号のデフォルト値
     let port = config.port.unwrap_or(8080) as i32;
     
-    // 7. 認証設定のデフォルト値
+    // 8. 認証設定のデフォルト値
     let enable_auth = config.enable_auth.unwrap_or(true);
     
-    // 8. API ID生成
+    // 9. API ID生成
     let api_id = Uuid::new_v4().to_string();
     
-    // 9. API設定を作成
+    // 10. API設定を作成
     let api = Api {
         id: api_id.clone(),
         name: config.name.clone(),
@@ -122,13 +131,13 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
         updated_at: Utc::now(),
     };
     
-    // 8. データベースに保存
+    // 11. データベースに保存
     let api_repo = ApiRepository::new(&conn);
     api_repo.create(&api).map_err(|_| {
         "APIの設定を保存できませんでした。アプリを再起動して再度お試しください。".to_string()
     })?;
     
-    // 9. APIキー生成（認証が有効な場合）
+    // 12. APIキー生成（認証が有効な場合）
     let api_key = if enable_auth {
         use crate::database::encryption;
         use rand::RngCore;
@@ -179,7 +188,7 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
         None
     };
     
-    // 10. エンドポイントURL生成（HTTPSとローカルIPも含む）
+    // 13. エンドポイントURL生成（HTTPSとローカルIPも含む）
     use crate::utils::network;
     // API作成時は証明書がまだ生成されていないため、Noneを渡す（起動時に自動生成される）
     let endpoint = network::format_endpoint_url(port as u16, None);
@@ -315,7 +324,7 @@ pub async fn start_api(api_id: String) -> Result<(), String> {
         
         engine_manager.start_engine(engine_type_str, Some(engine_config)).await
             .map_err(|e| {
-                format!("エンジンの起動に失敗しました: {}. 手動でエンジンを起動してから再度お試しください。", e)
+                format!("エンジンの起動に失敗しました: {e}. 手動でエンジンを起動してから再度お試しください。")
             })?;
     }
     
@@ -332,8 +341,14 @@ pub async fn start_api(api_id: String) -> Result<(), String> {
         // 認証プロキシサーバーはデータベースから直接APIキーのハッシュを確認するため、
         // APIキーを環境変数として渡す必要はない
         // API IDはリクエストログ記録用に環境変数として渡す
-        // エンジン別のベースURLを環境変数として渡す
-        auth::start_auth_proxy(port, None, Some(engine_base_url.clone()), Some(api_id.clone())).await.map_err(|_| {
+        // エンジン別のベースURLとエンジンタイプを環境変数として渡す
+        auth::start_auth_proxy(
+            port, 
+            None, 
+            Some(engine_base_url.clone()), 
+            Some(api_id.clone()),
+            engine_type.clone()
+        ).await.map_err(|_| {
             "セキュリティ機能の起動に失敗しました。ポート番号が他のアプリで使用されていないか確認してください。".to_string()
         })?;
     }
@@ -410,6 +425,78 @@ pub async fn stop_api(api_id: String) -> Result<(), String> {
             })
         }
     }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
+    
+    Ok(())
+}
+
+/// 実行中のすべてのAPIを停止する（アプリケーション終了時のクリーンアップ用）
+/// 
+/// この関数は、アプリケーション終了時に実行中のすべてのAPIを停止します。
+/// - 認証プロキシプロセス（Node.jsプロセス）を終了
+/// - データベースのステータスを「stopped」に更新
+/// 
+/// エラーが発生しても処理を続行し、すべてのAPIに対して停止処理を試みます。
+pub async fn stop_all_running_apis() -> Result<(), String> {
+    // 1. 実行中のAPI一覧を取得
+    let running_apis = tokio::task::spawn_blocking(|| {
+        let conn = get_connection().map_err(|_| {
+            "データの読み込みに失敗しました。アプリを再起動して再度お試しください。".to_string()
+        })?;
+        
+        let api_repo = ApiRepository::new(&conn);
+        let apis = api_repo.find_all().map_err(|_| {
+            "API一覧の取得に失敗しました。アプリを再起動して再度お試しください。".to_string()
+        })?;
+        
+        // 実行中のAPIのみをフィルタリング
+        let running: Vec<(String, u16)> = apis
+            .into_iter()
+            .filter(|api| api.status == ApiStatus::Running)
+            .map(|api| (api.id, api.port as u16))
+            .collect();
+        
+        Ok::<Vec<(String, u16)>, String>(running)
+    }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
+    
+    // 2. 各APIを停止
+    for (api_id, port) in running_apis {
+        // 認証プロキシを停止
+        use crate::auth;
+        if let Err(e) = auth::stop_auth_proxy_by_port(port).await {
+            eprintln!("警告: ポート {} の認証プロキシ停止に失敗しました: {:?}", port, e);
+            // エラーが発生しても処理を続行
+        }
+        
+        // ステータスを更新（同期的に実行）
+        let api_id_clone = api_id.clone();
+        match tokio::task::spawn_blocking(move || {
+            let conn = get_connection().map_err(|_| {
+                "データの読み込みに失敗しました。アプリを再起動して再度お試しください。".to_string()
+            })?;
+            
+            let api_repo = ApiRepository::new(&conn);
+            let mut api = api_repo.find_by_id(&api_id_clone).map_err(|_| {
+                "指定されたAPIが見つかりませんでした。API一覧を確認してください。".to_string()
+            })?;
+            
+            api.status = ApiStatus::Stopped;
+            api.updated_at = Utc::now();
+            
+            api_repo.update(&api).map_err(|_| {
+                "APIの状態を更新できませんでした。アプリを再起動して再度お試しください。".to_string()
+            })
+        }).await {
+            Ok(Ok(_)) => {
+                // 成功
+            }
+            Ok(Err(e)) => {
+                eprintln!("警告: API {} のステータス更新に失敗しました: {}", api_id, e);
+            }
+            Err(e) => {
+                eprintln!("警告: API {} のステータス更新タスクが失敗しました: {}", api_id, e);
+            }
+        }
+    }
     
     Ok(())
 }
@@ -521,6 +608,14 @@ pub struct ApiDetailsResponse {
 /// API設定更新コマンド
 #[tauri::command]
 pub async fn update_api(api_id: String, config: ApiUpdateConfig) -> Result<(), String> {
+    // エンジン設定（engine_config）の検証（モデルパラメータ、メモリ設定、マルチモーダル設定）
+    if let Some(ref engine_config_json) = config.engine_config {
+        use crate::utils::model_params;
+        model_params::validate_engine_config(engine_config_json.as_str()).map_err(|e| {
+            format!("エンジン設定の検証に失敗しました（API ID: {}）: {e}", api_id)
+        })?;
+    }
+    
     // データベース操作を同期的に実行（非Send型のため）
     let (was_running, old_port, _enable_auth) = tokio::task::spawn_blocking({
         let api_id = api_id.clone();
@@ -574,6 +669,13 @@ pub async fn update_api(api_id: String, config: ApiUpdateConfig) -> Result<(), S
                     needs_restart = true;
                 }
             }
+            if let Some(engine_config) = config.engine_config {
+                api.engine_config = Some(engine_config);
+                // エンジン設定が変更された場合は再起動が必要
+                if was_running_flag {
+                    needs_restart = true;
+                }
+            }
             
             api.updated_at = Utc::now();
             
@@ -591,10 +693,57 @@ pub async fn update_api(api_id: String, config: ApiUpdateConfig) -> Result<(), S
         use crate::auth;
         let _ = auth::stop_auth_proxy_by_port(old_port as u16).await;
         
-        // 2. 新しい設定で再起動
+        // 2. エンジンタイプとベースURLを取得（再起動時に必要）
+        let (engine_type_for_restart, engine_base_url_for_restart) = tokio::task::spawn_blocking({
+            let api_id = api_id.clone();
+            move || {
+                let conn = get_connection().map_err(|_| {
+                    "データの読み込みに失敗しました".to_string()
+                })?;
+                let api_repo = ApiRepository::new(&conn);
+                let api = api_repo.find_by_id(&api_id).map_err(|_| {
+                    "APIが見つかりませんでした".to_string()
+                })?;
+                
+                // エンジンベースURLを取得
+                let engine_base_url = api.engine_type.as_deref()
+                    .map(|et| {
+                        match et {
+                            "ollama" => {
+                                use crate::engines::{ollama::OllamaEngine, traits::LLMEngine};
+                                OllamaEngine::new().get_base_url()
+                            },
+                            "lm_studio" => {
+                                use crate::engines::{lm_studio::LMStudioEngine, traits::LLMEngine};
+                                LMStudioEngine::new().get_base_url()
+                            },
+                            "vllm" => {
+                                use crate::engines::{vllm::VLLMEngine, traits::LLMEngine};
+                                VLLMEngine::new().get_base_url()
+                            },
+                            "llama_cpp" => {
+                                use crate::engines::{llama_cpp::LlamaCppEngine, traits::LLMEngine};
+                                LlamaCppEngine::new().get_base_url()
+                            },
+                            _ => "http://localhost:11434".to_string(),
+                        }
+                    })
+                    .unwrap_or_else(|| "http://localhost:11434".to_string());
+                
+                Ok::<(Option<String>, String), String>((api.engine_type, engine_base_url))
+            }
+        }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
+        
+        // 3. 新しい設定で再起動
         // ポート番号が変更された場合、新しいポートで起動する必要がある
         if new_enable_auth {
-            auth::start_auth_proxy(new_port as u16, None, None, Some(api_id.clone())).await.map_err(|_| {
+            auth::start_auth_proxy(
+                new_port as u16, 
+                None, 
+                Some(engine_base_url_for_restart.clone()), 
+                Some(api_id.clone()),
+                engine_type_for_restart.clone()
+            ).await.map_err(|_| {
                 "セキュリティ機能の再起動に失敗しました。ポート番号が他のアプリで使用されていないか確認してください。".to_string()
             })?;
         }
@@ -609,6 +758,7 @@ pub struct ApiUpdateConfig {
     pub name: Option<String>,
     pub port: Option<u16>,
     pub enable_auth: Option<bool>,
+    pub engine_config: Option<String>, // エンジン固有設定（JSON形式）
 }
 
 /// APIキー取得コマンド
@@ -868,8 +1018,9 @@ pub async fn download_model(
         .await
         .map_err(|_| "AIエンジンに接続できませんでした。AIエンジンが正常に起動しているか確認してください。".to_string())?;
     
-    if !response.status().is_success() {
-        return Err(format!("AIモデルのダウンロードに失敗しました（エラーコード: {}）。AIエンジンが正常に動作しているか確認してください。", response.status()));
+    let status = response.status();
+    if !status.is_success() {
+        return Err(format!("AIモデルのダウンロードに失敗しました（エラーコード: {status}）。AIエンジンが正常に動作しているか確認してください。"));
     }
     
     // ストリーミングレスポンスを処理
@@ -1066,7 +1217,7 @@ pub async fn download_model(
              downloaded_bytes: total_downloaded,
              total_bytes: total_size,
              speed_bytes_per_sec: 0.0,
-             message: Some(format!("モデル '{}' のダウンロードが完了しました", model_name)),
+             message: Some(format!("モデル '{model_name}' のダウンロードが完了しました")),
          };
          let _ = app_handle.emit("model_download_progress", &final_progress);
      }
@@ -1099,8 +1250,9 @@ pub async fn delete_model(model_name: String) -> Result<(), String> {
         .await
         .map_err(|_| "AIエンジンに接続できませんでした。AIエンジンが正常に起動しているか確認してください。".to_string())?;
     
-    if !response.status().is_success() {
-        return Err(format!("AIモデルの削除に失敗しました（エラーコード: {}）。AIエンジンが正常に動作しているか確認してください。", response.status()));
+    let status = response.status();
+    if !status.is_success() {
+        return Err(format!("AIモデルの削除に失敗しました（エラーコード: {status}）。AIエンジンが正常に動作しているか確認してください。"));
     }
     
     // データベースからも削除
@@ -1291,9 +1443,16 @@ pub struct RequestLogInfo {
     pub created_at: String,
 }
 
-/// リクエストログ一覧取得コマンド（F006の基盤 + フィルタ機能拡張）
+/// リクエストログ一覧取得レスポンス（CODE-002修正: 総件数を含む）
+#[derive(Debug, Serialize, Deserialize)]
+pub struct GetRequestLogsResponse {
+    pub logs: Vec<RequestLogInfo>,
+    pub total_count: i64,
+}
+
+/// リクエストログ一覧取得コマンド（F006の基盤 + フィルタ機能拡張 + CODE-002修正）
 #[tauri::command]
-pub async fn get_request_logs(request: GetRequestLogsRequest) -> Result<Vec<RequestLogInfo>, String> {
+pub async fn get_request_logs(request: GetRequestLogsRequest) -> Result<GetRequestLogsResponse, String> {
     let conn = get_connection().map_err(|_| {
         "データの読み込みに失敗しました。アプリを再起動して再度お試しください。".to_string()
     })?;
@@ -1313,6 +1472,17 @@ pub async fn get_request_logs(request: GetRequestLogsRequest) -> Result<Vec<Requ
         format!("リクエストログの取得に失敗しました: {e}")
     })?;
     
+    // 総件数を取得（CODE-002修正: 正確な総件数を取得）
+    let total_count = log_repo.count_with_filters(
+        request.api_id.as_deref(),
+        request.start_date.as_deref(),
+        request.end_date.as_deref(),
+        request.status_codes.as_deref(),
+        request.path_filter.as_deref(),
+    ).map_err(|e| {
+        format!("ログ総件数の取得に失敗しました: {e}")
+    })?;
+    
     let result: Vec<RequestLogInfo> = logs.into_iter().map(|log| {
         RequestLogInfo {
             id: log.id,
@@ -1327,7 +1497,10 @@ pub async fn get_request_logs(request: GetRequestLogsRequest) -> Result<Vec<Requ
         }
     }).collect();
     
-    Ok(result)
+    Ok(GetRequestLogsResponse {
+        logs: result,
+        total_count,
+    })
 }
 
 /// ログ統計情報リクエスト
@@ -1465,7 +1638,7 @@ pub async fn export_logs(request: ExportLogsRequest) -> Result<ExportLogsRespons
             })?
         },
         _ => {
-            return Err(format!("無効なフォーマットです。'csv' または 'json' を指定してください。"));
+            return Err("無効なフォーマットです。'csv' または 'json' を指定してください。".to_string());
         }
     };
     
@@ -1531,7 +1704,7 @@ pub async fn export_api_settings(request: ExportApiSettingsRequest) -> Result<St
             match api_repo.find_by_id(&api_id) {
                 Ok(api) => result.push(api),
                 Err(crate::database::DatabaseError::NotFound(_)) => {
-                    return Err(format!("API ID '{}' が見つかりません", api_id));
+                    return Err(format!("API ID '{api_id}' が見つかりません"));
                 },
                 Err(e) => {
                     return Err(format!("API '{api_id}' の取得に失敗しました: {e}"));
@@ -1542,7 +1715,7 @@ pub async fn export_api_settings(request: ExportApiSettingsRequest) -> Result<St
     } else {
         // すべてのAPIを取得
         api_repo.find_all().map_err(|e| {
-            format!("API一覧の取得に失敗しました: {}", e)
+            format!("API一覧の取得に失敗しました: {e}")
         })?
     };
     
@@ -1568,7 +1741,7 @@ pub async fn export_api_settings(request: ExportApiSettingsRequest) -> Result<St
     
     // JSON形式でエクスポート
     serde_json::to_string_pretty(&export_data).map_err(|e| {
-        format!("JSON変換に失敗しました: {}", e)
+        format!("JSON変換に失敗しました: {e}")
     })
 }
 

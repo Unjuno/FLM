@@ -2,6 +2,10 @@
 
 import React, { useState } from 'react';
 import type { ApiCreationResult } from '../../types/api';
+import { generateSampleCode } from '../../utils/apiCodeGenerator';
+import { SAMPLE_DATA, TIMEOUT } from '../../constants/config';
+import type { ApiInfo } from '../../types/api';
+import { logger } from '../../utils/logger';
 import './ApiCreationSuccess.css';
 
 /**
@@ -21,66 +25,30 @@ export const ApiCreationSuccess: React.FC<ApiCreationSuccessProps> = ({ result, 
     try {
       await navigator.clipboard.writeText(text);
       setCopied(type);
-      setTimeout(() => setCopied(null), 2000);
+      setTimeout(() => setCopied(null), TIMEOUT.COPY_NOTIFICATION);
     } catch (err) {
-      console.error('コピーに失敗しました:', err);
+      logger.error('コピーに失敗しました', err instanceof Error ? err : new Error(String(err)), 'ApiCreationSuccess');
     }
+  };
+
+  // apiCodeGeneratorを使用してサンプルコードを生成
+  const apiInfoForGenerator: ApiInfo = {
+    id: result.id,
+    name: result.name,
+    endpoint: result.endpoint,
+    port: result.port,
+    status: 'running',
+    model_name: SAMPLE_DATA.DEFAULT_MODEL,
+    created_at: new Date().toISOString(),
   };
 
   const getActiveCode = (): string => {
-    switch (activeTab) {
-      case 'curl':
-        return sampleCurl;
-      case 'python':
-        return samplePython;
-      case 'javascript':
-        return sampleJavaScript;
-    }
+    return generateSampleCode(activeTab, {
+      apiInfo: apiInfoForGenerator,
+      apiKey: result.apiKey,
+      sampleMessage: SAMPLE_DATA.MESSAGE_EN_FULL,
+    });
   };
-
-  const sampleCurl = `curl -X POST ${result.endpoint}/v1/chat/completions \\
-  -H "Content-Type: application/json" \\
-  -H "Authorization: Bearer ${result.apiKey || 'YOUR_API_KEY'}" \\
-  -d '{
-    "model": "local-llm",
-    "messages": [
-      {"role": "user", "content": "Hello, how are you?"}
-    ]
-  }'`;
-
-  const samplePython = `import requests
-
-response = requests.post(
-    "${result.endpoint}/v1/chat/completions",
-    headers={
-        "Content-Type": "application/json",
-        "Authorization": "Bearer ${result.apiKey || 'YOUR_API_KEY'}"
-    },
-    json={
-        "model": "local-llm",
-        "messages": [
-            {"role": "user", "content": "Hello, how are you?"}
-        ]
-    }
-)
-
-print(response.json())`;
-
-  const sampleJavaScript = `fetch('${result.endpoint}/v1/chat/completions', {
-  method: 'POST',
-  headers: {
-    'Content-Type': 'application/json',
-    'Authorization': 'Bearer ${result.apiKey || 'YOUR_API_KEY'}'
-  },
-  body: JSON.stringify({
-    model: 'local-llm',
-    messages: [
-      { role: 'user', content: 'Hello, how are you?' }
-    ]
-  })
-})
-.then(response => response.json())
-.then(data => console.log(data));`;
 
   return (
     <div className="api-creation-success">

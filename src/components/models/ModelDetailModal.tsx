@@ -30,12 +30,16 @@ interface ModelDetailModalProps {
   model: ModelInfo;
   onClose: () => void;
   onDownload: () => void;
+  allModels?: ModelInfo[];
+  onSelectModel?: (model: ModelInfo) => void;
 }
 
 export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
   model,
   onClose,
   onDownload,
+  allModels = [],
+  onSelectModel,
 }) => {
   // サイズをフォーマット
   const formatSize = (bytes?: number): string => {
@@ -180,6 +184,62 @@ export const ModelDetailModal: React.FC<ModelDetailModalProps> = ({
               </div>
             </section>
           )}
+
+          {/* 関連モデル（似たモデルの提案） */}
+          {allModels.length > 0 && (() => {
+            // 同じカテゴリまたは類似のパラメータ数のモデルを探す
+            const relatedModels = allModels
+              .filter(m => 
+                m.name !== model.name && (
+                  m.category === model.category ||
+                  (model.parameters && m.parameters && 
+                   Math.abs(m.parameters - model.parameters) < model.parameters * 0.5)
+                )
+              )
+              .slice(0, 3); // 最大3つまで表示
+
+            if (relatedModels.length > 0) {
+              return (
+                <section className="detail-section">
+                  <h3>関連モデル</h3>
+                  <div className="related-models-list">
+                    {relatedModels.map((relatedModel) => (
+                      <div
+                        key={relatedModel.name}
+                        className="related-model-item"
+                        onClick={() => {
+                          if (onSelectModel) {
+                            onSelectModel(relatedModel);
+                            onClose();
+                          }
+                        }}
+                      >
+                        <div className="related-model-header">
+                          <span className="related-model-name">{relatedModel.name}</span>
+                          {relatedModel.recommended && (
+                            <span className="related-model-badge">⭐</span>
+                          )}
+                        </div>
+                        {relatedModel.description && (
+                          <p className="related-model-description">
+                            {relatedModel.description.length > 80
+                              ? relatedModel.description.substring(0, 80) + '...'
+                              : relatedModel.description}
+                          </p>
+                        )}
+                        {relatedModel.size && (
+                          <div className="related-model-size">
+                            📦 {(relatedModel.size / (1024 * 1024 * 1024)).toFixed(2)} GB
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </section>
+              );
+            }
+            return null;
+          })()}
         </div>
 
         <div className="modal-actions">

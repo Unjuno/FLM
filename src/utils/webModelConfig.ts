@@ -1,6 +1,7 @@
 // webModelConfig - Webサイト用モデル設定の読み込み・バリデーション
 
 import type { WebModelConfig, WebModelDefinition } from '../types/webModel';
+import { PORT_RANGE } from '../constants/config';
 
 /**
  * デフォルト設定ファイルのパス
@@ -28,7 +29,9 @@ export async function loadWebModelConfig(
 
     return config;
   } catch (error) {
-    console.error('Webサイト用モデル設定の読み込みエラー:', error);
+    if (import.meta.env.DEV) {
+      console.error('Webサイト用モデル設定の読み込みエラー:', error);
+    }
     throw new Error(
       `設定ファイルの読み込みに失敗しました: ${error instanceof Error ? error.message : '不明なエラー'}`
     );
@@ -38,21 +41,27 @@ export async function loadWebModelConfig(
 /**
  * 設定ファイルのバリデーション
  */
-export function validateConfig(config: any): asserts config is WebModelConfig {
+export function validateConfig(config: unknown): asserts config is WebModelConfig {
+  if (typeof config !== 'object' || config === null) {
+    throw new Error('設定ファイルはオブジェクトである必要があります');
+  }
+  
+  const configObj = config as Record<string, unknown>;
+  
   // 必須フィールドのチェック
-  if (!config.version || typeof config.version !== 'string') {
+  if (!configObj.version || typeof configObj.version !== 'string') {
     throw new Error('設定ファイルにversionフィールドが必要です');
   }
 
-  if (!config.lastUpdated || typeof config.lastUpdated !== 'string') {
+  if (!configObj.lastUpdated || typeof configObj.lastUpdated !== 'string') {
     throw new Error('設定ファイルにlastUpdatedフィールドが必要です');
   }
 
-  if (!Array.isArray(config.models)) {
+  if (!Array.isArray(configObj.models)) {
     throw new Error('設定ファイルにmodels配列が必要です');
   }
 
-  if (config.models.length === 0) {
+  if (configObj.models.length === 0) {
     throw new Error('設定ファイルにモデル定義が1つ以上必要です');
   }
 
@@ -60,64 +69,74 @@ export function validateConfig(config: any): asserts config is WebModelConfig {
   const modelIds = new Set<string>();
   const modelNameEnginePairs = new Set<string>();
 
-  config.models.forEach((model: any, index: number) => {
+  configObj.models.forEach((model: unknown, index: number) => {
+    if (typeof model !== 'object' || model === null) {
+      throw new Error(`モデル定義 ${index + 1}: モデル定義はオブジェクトである必要があります`);
+    }
+    
+    const modelObj = model as Record<string, unknown>;
     // 必須フィールドのチェック
-    if (!model.id || typeof model.id !== 'string') {
+    if (!modelObj.id || typeof modelObj.id !== 'string') {
       throw new Error(`モデル定義 ${index + 1}: idフィールドが必要です`);
     }
 
-    if (!model.name || typeof model.name !== 'string') {
+    if (!modelObj.name || typeof modelObj.name !== 'string') {
       throw new Error(`モデル定義 ${index + 1}: nameフィールドが必要です`);
     }
 
-    if (!model.modelName || typeof model.modelName !== 'string') {
+    if (!modelObj.modelName || typeof modelObj.modelName !== 'string') {
       throw new Error(`モデル定義 ${index + 1}: modelNameフィールドが必要です`);
     }
 
-    if (!model.engine || typeof model.engine !== 'string') {
+    if (!modelObj.engine || typeof modelObj.engine !== 'string') {
       throw new Error(`モデル定義 ${index + 1}: engineフィールドが必要です`);
     }
 
-    if (!model.description || typeof model.description !== 'string') {
+    if (!modelObj.description || typeof modelObj.description !== 'string') {
       throw new Error(`モデル定義 ${index + 1}: descriptionフィールドが必要です`);
     }
 
-    if (!model.category || typeof model.category !== 'string') {
+    if (!modelObj.category || typeof modelObj.category !== 'string') {
       throw new Error(`モデル定義 ${index + 1}: categoryフィールドが必要です`);
     }
 
-    if (!model.defaultSettings || typeof model.defaultSettings !== 'object') {
+    if (!modelObj.defaultSettings || typeof modelObj.defaultSettings !== 'object' || modelObj.defaultSettings === null) {
       throw new Error(`モデル定義 ${index + 1}: defaultSettingsオブジェクトが必要です`);
     }
 
     // IDの一意性チェック
-    if (modelIds.has(model.id)) {
-      throw new Error(`モデル定義 ${index + 1}: id "${model.id}" が重複しています`);
+    const modelId = modelObj.id;
+    if (modelIds.has(modelId)) {
+      throw new Error(`モデル定義 ${index + 1}: id "${modelId}" が重複しています`);
     }
-    modelIds.add(model.id);
+    modelIds.add(modelId);
 
     // モデル名+エンジンの一意性チェック
-    const pairKey = `${model.modelName}:${model.engine}`;
+    const modelName = modelObj.modelName;
+    const engine = modelObj.engine;
+    const pairKey = `${modelName}:${engine}`;
     if (modelNameEnginePairs.has(pairKey)) {
       throw new Error(
-        `モデル定義 ${index + 1}: モデル名 "${model.modelName}" とエンジン "${model.engine}" の組み合わせが重複しています`
+        `モデル定義 ${index + 1}: モデル名 "${modelName}" とエンジン "${engine}" の組み合わせが重複しています`
       );
     }
     modelNameEnginePairs.add(pairKey);
 
     // ポート番号の範囲チェック
-    if (model.defaultSettings.port !== undefined) {
-      const port = model.defaultSettings.port;
-      if (typeof port !== 'number' || port < 1024 || port > 65535) {
+    const defaultSettings = modelObj.defaultSettings as Record<string, unknown>;
+    if (defaultSettings.port !== undefined) {
+      const port = defaultSettings.port;
+      if (typeof port !== 'number' || port < PORT_RANGE.MIN || port > PORT_RANGE.MAX) {
         throw new Error(
-          `モデル定義 ${index + 1}: portは1024-65535の範囲である必要があります`
+          `モデル定義 ${index + 1}: portは${PORT_RANGE.MIN}-${PORT_RANGE.MAX}の範囲である必要があります`
         );
       }
     }
 
     // カテゴリの妥当性チェック
     const validCategories = ['chat', 'code', 'vision', 'audio', 'multimodal'];
-    if (!validCategories.includes(model.category)) {
+    const category = modelObj.category;
+    if (!validCategories.includes(category)) {
       throw new Error(
         `モデル定義 ${index + 1}: categoryは ${validCategories.join(', ')} のいずれかである必要があります`
       );

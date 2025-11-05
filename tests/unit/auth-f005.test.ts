@@ -1,28 +1,17 @@
-/**
- * FLM - 認証機能（F005）単体テスト
- * 
- * フェーズ3: QAエージェント (QA) 実装
- * 認証機能の単体テスト
- */
+// auth-f005 - 認証機能（F005）の単体テスト
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
-
-/**
- * 認証機能（F005）単体テストスイート
- * 
- * テスト項目:
- * - APIキー生成機能
- * - APIキー再生成機能
- * - APIキー検証機能
- * - Bearer Token認証
- */
 describe('F005: Authentication Functionality Unit Tests', () => {
   beforeAll(() => {
-    console.log('認証機能単体テストを開始します');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('認証機能単体テストを開始します');
+    }
   });
 
   afterAll(() => {
-    console.log('認証機能単体テストを完了しました');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('認証機能単体テストを完了しました');
+    }
   });
 
   /**

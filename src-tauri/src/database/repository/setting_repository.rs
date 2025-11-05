@@ -20,7 +20,7 @@ impl SettingRepository {
                 key: row.get(0)?,
                 value: row.get(1)?,
                 updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(2)?)
-                    .unwrap()
+                    .map_err(|e| DatabaseError::Other(format!("Invalid updated_at format: {e}")))?
                     .with_timezone(&Utc),
             })
         })?;
@@ -44,7 +44,7 @@ impl SettingRepository {
                 key: row.get(0)?,
                 value: row.get(1)?,
                 updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(2)?)
-                    .unwrap()
+                    .map_err(|e| DatabaseError::Other(format!("Invalid updated_at format: {e}")))?
                     .with_timezone(&Utc),
             })
         });

@@ -97,13 +97,24 @@ export const ModelCard: React.FC<ModelCardProps> = ({
             <span className="info-value">{formatParameters(model.parameters)}</span>
           </div>
         )}
-        {model.size && (
-          <div className="info-item">
-            <span className="info-icon">📦</span>
-            <span className="info-label">サイズ:</span>
-            <span className="info-value">{formatSize(model.size)}</span>
-          </div>
-        )}
+        {model.size && (() => {
+          const sizeGB = model.size / (1024 * 1024 * 1024);
+          let sizeIcon = '📦';
+          if (sizeGB < 3) {
+            sizeIcon = '📦 小';
+          } else if (sizeGB < 7) {
+            sizeIcon = '📦 中';
+          } else {
+            sizeIcon = '📦 大';
+          }
+          return (
+            <div className="info-item">
+              <span className="info-icon">{sizeIcon}</span>
+              <span className="info-label">サイズ:</span>
+              <span className="info-value">{formatSize(model.size)}</span>
+            </div>
+          );
+        })()}
         {model.recommended && (
           <div className="info-item">
             <span className="info-icon">⭐</span>
@@ -133,7 +144,7 @@ export const ModelCard: React.FC<ModelCardProps> = ({
           onClick={onDownload}
           disabled={isDownloading}
         >
-          {isDownloading ? 'ダウンロード中...' : '📥 ダウンロード'}
+          {isDownloading ? '取得中...' : '📥 モデルを取得'}
         </button>
       </div>
     </div>

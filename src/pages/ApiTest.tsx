@@ -2,8 +2,10 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../utils/tauri';
 import { InfoBanner } from '../components/common/InfoBanner';
+import { MESSAGE_LIMITS, HTTP_HEADERS, API_ENDPOINTS } from '../constants/config';
+import { logger } from '../utils/logger';
 import './ApiTest.css';
 
 /**
@@ -45,7 +47,7 @@ export const ApiTest: React.FC = () => {
 
     try {
       // バックエンドのIPCコマンドを呼び出してAPI詳細を取得（APIキーを含む）
-      const apiDetails = await invoke<{
+      const apiDetails = await safeInvoke<{
         id: string;
         name: string;
         endpoint: string;
@@ -65,7 +67,7 @@ export const ApiTest: React.FC = () => {
         model_name: apiDetails.model_name,
       });
     } catch (err) {
-      console.error('API情報の取得に失敗しました:', err);
+      logger.error('API情報の取得に失敗しました', err, 'ApiTest');
     }
   };
 
@@ -73,9 +75,20 @@ export const ApiTest: React.FC = () => {
   const handleSend = async () => {
     if (!inputText.trim() || !apiInfo || loading) return;
 
+    // 入力検証: メッセージ長の制限
+    const trimmedInput = inputText.trim();
+    if (trimmedInput.length === 0) {
+      return;
+    }
+    
+    if (trimmedInput.length > MESSAGE_LIMITS.MAX_LENGTH) {
+      alert(`メッセージが長すぎます。${MESSAGE_LIMITS.MAX_LENGTH.toLocaleString()}文字以下で入力してください。`);
+      return;
+    }
+
     const userMessage: ChatMessage = {
       role: 'user',
-      content: inputText,
+      content: trimmedInput,
       timestamp: new Date(),
     };
 
@@ -85,19 +98,22 @@ export const ApiTest: React.FC = () => {
 
     try {
       // APIリクエスト送信
-      const response = await fetch(`${apiInfo.endpoint}/v1/chat/completions`, {
+      const response = await fetch(`${apiInfo.endpoint}${API_ENDPOINTS.CHAT_COMPLETIONS}`, {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          [HTTP_HEADERS.CONTENT_TYPE]: HTTP_HEADERS.CONTENT_TYPE_JSON,
           ...(apiInfo.apiKey && {
-            'Authorization': `Bearer ${apiInfo.apiKey}`,
+            [HTTP_HEADERS.AUTHORIZATION]: `${HTTP_HEADERS.AUTHORIZATION_PREFIX}${apiInfo.apiKey}`,
           }),
         },
         body: JSON.stringify({
           model: apiInfo.model_name, // API作成時に指定されたモデル名を使用
           messages: [
-            ...messages.map(m => ({ role: m.role, content: m.content })),
-            { role: 'user', content: userMessage.content },
+            ...messages.map(m => ({ 
+              role: m.role as 'user' | 'assistant' | 'system', 
+              content: typeof m.content === 'string' ? m.content : String(m.content)
+            })),
+            { role: 'user' as const, content: userMessage.content },
           ],
         }),
       });
@@ -107,11 +123,22 @@ export const ApiTest: React.FC = () => {
       }
 
       const data = await response.json();
+      
+      // レスポンスの構造を安全にチェック
+      if (!data || !Array.isArray(data.choices) || data.choices.length === 0) {
+        throw new Error('APIレスポンスが無効です: choicesが空または存在しません');
+      }
+      
+      const firstChoice = data.choices[0];
+      if (!firstChoice || !firstChoice.message || typeof firstChoice.message.content !== 'string') {
+        throw new Error('APIレスポンスが無効です: message.contentが存在しません');
+      }
+      
       const assistantMessage: ChatMessage = {
         role: 'assistant',
-        content: data.choices[0]?.message?.content || 'レスポンスが空です',
+        content: firstChoice.message.content,
         timestamp: new Date(),
-        tokens: data.usage?.total_tokens,
+        tokens: data.usage?.total_tokens ?? undefined,
       };
 
       setMessages(prev => [...prev, assistantMessage]);

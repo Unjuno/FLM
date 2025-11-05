@@ -1,31 +1,18 @@
-/**
- * FLM - Ollama自動インストール機能テスト
- * 
- * フェーズ2: QAエージェント (QA) 実装
- * Ollama自動インストール機能のテスト（Windows環境想定）
- */
+// ollama-installation - Ollama自動インストール機能のテスト
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
-
-/**
- * Ollama自動インストール機能テストスイート
- * 
- * テスト項目:
- * - Ollama検出機能
- * - Ollama自動ダウンロード機能
- * - Ollama自動起動機能
- * - エラーハンドリング
- */
 describe('Ollama Auto-Installation Tests', () => {
   beforeAll(() => {
-    // テスト前の初期化処理
-    console.log('Ollama自動インストール機能テストを開始します');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('Ollama自動インストール機能テストを開始します');
+    }
   });
 
   afterAll(() => {
-    // テスト後のクリーンアップ処理
-    console.log('Ollama自動インストール機能テストを完了しました');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('Ollama自動インストール機能テストを完了しました');
+    }
   });
 
   /**
@@ -57,7 +44,9 @@ describe('Ollama Auto-Installation Tests', () => {
           ).toBe(true);
         }
       } catch (error) {
-        console.warn('Ollama検出テストをスキップ:', error);
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('Ollama検出テストをスキップ:', error);
+        }
         expect(true).toBe(true);
       }
     });
@@ -77,7 +66,9 @@ describe('Ollama Auto-Installation Tests', () => {
       } catch (error) {
         // 検出機能自体がエラーを返すべきではない
         // ただし、システム環境によってはエラーが発生する可能性もある
-        console.warn('Ollama検出でエラーが発生:', error);
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('Ollama検出でエラーが発生:', error);
+        }
         expect(true).toBe(true);
       }
     });
@@ -141,16 +132,22 @@ describe('Ollama Auto-Installation Tests', () => {
             expect(newStatus).toBeDefined();
           } catch (error) {
             // 起動に失敗する可能性がある（Ollamaがインストールされていないなど）
-            console.warn('Ollama起動テストをスキップ:', error);
+            if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+              console.warn('Ollama起動テストをスキップ:', error);
+            }
             expect(true).toBe(true);
           }
         } else {
           // 既に起動している場合はスキップ
-          console.log('Ollamaは既に起動しています');
+          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+            console.log('Ollamaは既に起動しています');
+          }
           expect(true).toBe(true);
         }
       } catch (error) {
-        console.warn('Ollama起動テストをスキップ:', error);
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('Ollama起動テストをスキップ:', error);
+        }
         expect(true).toBe(true);
       }
     });
@@ -171,7 +168,9 @@ describe('Ollama Auto-Installation Tests', () => {
         expect(status).toBeDefined();
       } catch (error) {
         // 停止に失敗する可能性がある（既に停止しているなど）
-        console.warn('Ollama停止テストをスキップ:', error);
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('Ollama停止テストをスキップ:', error);
+        }
         expect(true).toBe(true);
       }
     });

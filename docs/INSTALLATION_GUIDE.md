@@ -1,4 +1,4 @@
-# FLM - インストールガイド
+# インストールガイド
 
 ## 📦 インストール方法
 
@@ -30,7 +30,7 @@ FLMをインストールする方法を説明します。
 
 1. **ダウンロード**
    - [公式Webサイト](https://flm.github.io/download)から最新版のインストーラーをダウンロード
-   - または、[GitHub Releases](https://github.com/flm/flm/releases)からダウンロード
+   - または、[GitHub Releases](https://github.com/Unjuno/FLM/releases)からダウンロード
 
 2. **インストール**
    - ダウンロードした `.exe` ファイルを実行
@@ -161,7 +161,7 @@ v1.1以降で自動アップデート機能を実装予定です。
    - [FAQ](./FAQ.md)でよくある問題を確認
 
 4. **問題を報告**
-   - [GitHub Issues](https://github.com/flm/flm/issues)で問題を報告
+   - [GitHub Issues](https://github.com/Unjuno/FLM/issues)で問題を報告
 
 ---
 

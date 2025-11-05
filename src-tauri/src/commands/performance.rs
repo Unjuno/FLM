@@ -1,3 +1,4 @@
+
 // パフォーマンス監視コマンド
 // バックエンドエージェント実装（F007）
 
@@ -19,7 +20,7 @@ pub struct RecordPerformanceMetricRequest {
 #[tauri::command]
 pub async fn record_performance_metric(request: RecordPerformanceMetricRequest) -> Result<(), String> {
     // バリデーション
-    let valid_types = ["request_count", "avg_response_time", "error_rate", "cpu_usage", "memory_usage"];
+    let valid_types = ["request_count", "avg_response_time", "error_rate", "cpu_usage", "memory_usage", "token_usage"];
     if !valid_types.contains(&request.metric_type.as_str()) {
         return Err(format!(
             "無効なメトリクスタイプです。有効なタイプ: {}",
@@ -130,6 +131,7 @@ pub struct PerformanceSummary {
     pub error_rate: f64,
     pub avg_cpu_usage: f64,
     pub avg_memory_usage: f64,
+    pub total_token_usage: i64,
 }
 
 /// パフォーマンスサマリー取得コマンド
@@ -167,12 +169,16 @@ pub async fn get_performance_summary(request: GetPerformanceSummaryRequest) -> R
     let memory_metrics = metric_repo.find_by_api_id_and_range(&request.api_id, Some(&start_date), None, Some("memory_usage"))
         .map_err(|_| "メモリ使用量メトリクスの取得に失敗しました".to_string())?;
     
+    let token_usage_metrics = metric_repo.find_by_api_id_and_range(&request.api_id, Some(&start_date), None, Some("token_usage"))
+        .map_err(|_| "トークン使用量メトリクスの取得に失敗しました".to_string())?;
+    
     // 期間で既にフィルタリング済みなのでそのまま使用
-    let filtered_response_time = response_time_metrics;
-    let filtered_request_count = request_count_metrics;
-    let filtered_error_rate = error_rate_metrics;
-    let filtered_cpu = cpu_metrics;
-    let filtered_memory = memory_metrics;
+    let filtered_response_time: Vec<_> = response_time_metrics;
+    let filtered_request_count: Vec<_> = request_count_metrics;
+    let filtered_error_rate: Vec<_> = error_rate_metrics;
+    let filtered_cpu: Vec<_> = cpu_metrics;
+    let filtered_memory: Vec<_> = memory_metrics;
+    let filtered_token_usage: Vec<_> = token_usage_metrics;
     
     // 統計を計算
     let avg_response_time = if !filtered_response_time.is_empty() {
@@ -199,25 +205,29 @@ pub async fn get_performance_summary(request: GetPerformanceSummaryRequest) -> R
         .sum();
     
     let error_rate = if !filtered_error_rate.is_empty() {
-        let len = filtered_error_rate.len() as f64;
+        let len: f64 = filtered_error_rate.len() as f64;
         filtered_error_rate.iter().map(|m| m.value).sum::<f64>() / len
     } else {
         0.0
     };
     
     let avg_cpu_usage = if !filtered_cpu.is_empty() {
-        let len = filtered_cpu.len() as f64;
+        let len: f64 = filtered_cpu.len() as f64;
         filtered_cpu.iter().map(|m| m.value).sum::<f64>() / len
     } else {
         0.0
     };
     
     let avg_memory_usage = if !filtered_memory.is_empty() {
-        let len = filtered_memory.len() as f64;
+        let len: f64 = filtered_memory.len() as f64;
         filtered_memory.iter().map(|m| m.value).sum::<f64>() / len
     } else {
         0.0
     };
+    
+    let total_token_usage: i64 = filtered_token_usage.iter()
+        .map(|m| m.value as i64)
+        .sum();
     
     Ok(PerformanceSummary {
         avg_response_time,
@@ -227,6 +237,7 @@ pub async fn get_performance_summary(request: GetPerformanceSummaryRequest) -> R
         error_rate,
         avg_cpu_usage,
         avg_memory_usage,
+        total_token_usage,
     })
 }
 

@@ -1,8 +1,10 @@
 // SystemCheck - システムリソースチェックコンポーネント
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { safeInvoke } from '../../utils/tauri';
 import { ErrorMessage } from './ErrorMessage';
+import { FORMATTING } from '../../constants/config';
+import { logger } from '../../utils/logger';
 import './SystemCheck.css';
 
 /**
@@ -75,8 +77,8 @@ export const SystemCheck: React.FC<SystemCheckProps> = ({
         }
       } catch (err) {
         const errorMessage = err instanceof Error ? err.message : 'システム情報の取得に失敗しました';
+        logger.error('システム情報の取得に失敗しました', err, 'SystemCheck');
         setError(errorMessage);
-        console.error('システム情報取得エラー:', err);
       } finally {
         setLoading(false);
       }
@@ -85,13 +87,13 @@ export const SystemCheck: React.FC<SystemCheckProps> = ({
     loadSystemInfo();
   }, [showRecommendations]);
 
-  // バイト数をGBに変換
-  const bytesToGB = (bytes: number): string => {
-    return (bytes / (1024 * 1024 * 1024)).toFixed(2);
-  };
+  // バイト数をGBに変換（useCallbackでメモ化）
+  const bytesToGB = useCallback((bytes: number): string => {
+    return (bytes / FORMATTING.BYTES_PER_GB).toFixed(FORMATTING.DECIMAL_PLACES);
+  }, []);
 
-  // リソースレベルのラベルを取得
-  const getResourceLevelLabel = (level: string): string => {
+  // リソースレベルのラベルを取得（useCallbackでメモ化）
+  const getResourceLevelLabel = useCallback((level: string): string => {
     switch (level) {
       case 'very_high':
         return '非常に高性能';
@@ -104,10 +106,10 @@ export const SystemCheck: React.FC<SystemCheckProps> = ({
       default:
         return '不明';
     }
-  };
+  }, []);
 
-  // 用途ラベルを取得
-  const getUseCaseLabel = (useCase: string): string => {
+  // 用途ラベルを取得（useCallbackでメモ化）
+  const getUseCaseLabel = useCallback((useCase: string): string => {
     switch (useCase) {
       case 'chat':
         return 'チャット';
@@ -120,7 +122,7 @@ export const SystemCheck: React.FC<SystemCheckProps> = ({
       default:
         return useCase;
     }
-  };
+  }, []);
 
   if (loading) {
     return (
@@ -181,7 +183,7 @@ export const SystemCheck: React.FC<SystemCheckProps> = ({
             <div className="resource-value">
               {resources.cpu_cores} コア
               <span className="resource-detail">
-                （使用率: {resources.cpu_usage.toFixed(1)}%）
+                （使用率: {resources.cpu_usage.toFixed(FORMATTING.DECIMAL_PLACES_SHORT)}%）
               </span>
             </div>
           </div>

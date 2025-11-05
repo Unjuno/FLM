@@ -26,7 +26,7 @@ impl ModelCatalogRepository {
                 author: row.get(6)?,
                 license: row.get(7)?,
                 updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
-                    .unwrap()
+                    .map_err(|e| DatabaseError::Other(format!("Invalid updated_at format: {e}")))?
                     .with_timezone(&Utc),
             })
         })?;
@@ -56,7 +56,7 @@ impl ModelCatalogRepository {
                 author: row.get(6)?,
                 license: row.get(7)?,
                 updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
-                    .unwrap()
+                    .map_err(|e| DatabaseError::Other(format!("Invalid updated_at format: {e}")))?
                     .with_timezone(&Utc),
             })
         });
@@ -126,10 +126,13 @@ impl InstalledModelRepository {
                 name: row.get(0)?,
                 size: row.get(1)?,
                 installed_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(2)?)
-                    .unwrap()
+                    .map_err(|e| DatabaseError::Other(format!("Invalid installed_at format: {e}")))?
                     .with_timezone(&Utc),
                 last_used_at: row.get::<_, Option<String>>(3)?
-                    .map(|s| DateTime::parse_from_rfc3339(&s).unwrap().with_timezone(&Utc)),
+                    .map(|s| DateTime::parse_from_rfc3339(&s)
+                        .map_err(|e| DatabaseError::Other(format!("Invalid last_used_at format: {e}")))
+                        .and_then(|dt| Ok(dt.with_timezone(&Utc))))
+                    .transpose()?,
                 usage_count: row.get(4)?,
             })
         })?;
@@ -153,10 +156,13 @@ impl InstalledModelRepository {
                 name: row.get(0)?,
                 size: row.get(1)?,
                 installed_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(2)?)
-                    .unwrap()
+                    .map_err(|e| DatabaseError::Other(format!("Invalid installed_at format: {e}")))?
                     .with_timezone(&Utc),
                 last_used_at: row.get::<_, Option<String>>(3)?
-                    .map(|s| DateTime::parse_from_rfc3339(&s).unwrap().with_timezone(&Utc)),
+                    .map(|s| DateTime::parse_from_rfc3339(&s)
+                        .map_err(|e| DatabaseError::Other(format!("Invalid last_used_at format: {e}")))
+                        .and_then(|dt| Ok(dt.with_timezone(&Utc))))
+                    .transpose()?,
                 usage_count: row.get(4)?,
             })
         });

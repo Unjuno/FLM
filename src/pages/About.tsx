@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../utils/tauri';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { logger } from '../utils/logger';
 import './About.css';
 
 /**
@@ -31,10 +32,10 @@ export const About: React.FC = () => {
   useEffect(() => {
     const loadAppInfo = async () => {
       try {
-        const info = await invoke<AppInfo>('get_app_info');
+        const info = await safeInvoke<AppInfo>('get_app_info');
         setAppInfo(info);
       } catch (err) {
-        console.error('アプリケーション情報の取得に失敗しました:', err);
+        logger.error('アプリケーション情報の取得に失敗しました', err, 'About');
       } finally {
         setLoading(false);
       }

@@ -1,6 +1,7 @@
 // NotificationContext - 通知コンテキスト
 
-import React, { createContext, useContext, useState, useCallback } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import { NOTIFICATION } from '../constants/config';
 import type { NotificationItem, NotificationType } from '../components/common/Notification';
 
 /**
@@ -47,7 +48,7 @@ interface NotificationProviderProps {
  */
 export const NotificationProvider: React.FC<NotificationProviderProps> = ({
   children,
-  maxNotifications = 5,
+  maxNotifications = NOTIFICATION.MAX_NOTIFICATIONS,
 }) => {
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
 
@@ -67,7 +68,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
         type,
         title,
         message,
-        duration: duration !== undefined ? duration : 5000, // デフォルト5秒
+        duration: duration !== undefined ? duration : NOTIFICATION.DEFAULT_DURATION,
         timestamp: Date.now(),
       };
 
@@ -95,8 +96,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
    */
   const showError = useCallback(
     (title: string, message?: string, duration?: number) => {
-      // エラーは長めに表示（デフォルト8秒）
-      showNotification('error', title, message, duration !== undefined ? duration : 8000);
+      // エラーは長めに表示
+      showNotification('error', title, message, duration !== undefined ? duration : NOTIFICATION.ERROR_DURATION);
     },
     [showNotification]
   );
@@ -135,15 +136,19 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
     setNotifications([]);
   }, []);
 
-  const value: NotificationContextValue = {
-    showNotification,
-    showSuccess,
-    showError,
-    showWarning,
-    showInfo,
-    removeNotification,
-    clearAll,
-  };
+  // コンテキスト値をメモ化（不要な再レンダリングを防止）
+  const value: NotificationContextValue = useMemo(
+    () => ({
+      showNotification,
+      showSuccess,
+      showError,
+      showWarning,
+      showInfo,
+      removeNotification,
+      clearAll,
+    }),
+    [showNotification, showSuccess, showError, showWarning, showInfo, removeNotification, clearAll]
+  );
 
   return (
     <NotificationContext.Provider value={value}>

@@ -2,10 +2,12 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../utils/tauri';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { logger } from '../utils/logger';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useNotifications } from '../contexts/NotificationContext';
+import type { ApiInfo } from '../types/api';
 import './AlertHistory.css';
 
 /**
@@ -22,13 +24,6 @@ interface AlertHistoryInfo {
   resolved_at: string | null;
 }
 
-/**
- * API情報
- */
-interface ApiInfo {
-  id: string;
-  name: string;
-}
 
 /**
  * アラート履歴ページ
@@ -54,17 +49,14 @@ export const AlertHistory: React.FC = () => {
    */
   const loadApiList = useCallback(async () => {
     try {
-      const apis = await invoke<Array<{
-        id: string;
-        name: string;
-      }>>('list_apis');
+      const apis = await safeInvoke<ApiInfo[]>('list_apis');
       const apiMap = new Map<string, string>();
       apis.forEach(api => apiMap.set(api.id, api.name));
       setApiNames(apiMap);
-      setApiList(apis.map(api => ({ id: api.id, name: api.name })));
+      setApiList(apis);
     } catch (err) {
       if (import.meta.env.DEV) {
-        console.error('API一覧の取得に失敗しました:', err);
+        logger.error('API一覧の取得に失敗しました', err instanceof Error ? err : new Error(String(err)), 'AlertHistory');
       }
       showError('API一覧の取得エラー', 'API一覧の取得に失敗しました');
     }
@@ -83,7 +75,7 @@ export const AlertHistory: React.FC = () => {
       setLoading(true);
       setError(null);
 
-      const result = await invoke<AlertHistoryInfo[]>('get_alert_history', {
+      const result = await safeInvoke<AlertHistoryInfo[]>('get_alert_history', {
         request: {
           api_id: selectedApiId,
           unresolved_only: showUnresolvedOnly,
@@ -148,7 +140,7 @@ export const AlertHistory: React.FC = () => {
    */
   const handleResolve = useCallback(async (alertId: string) => {
     try {
-      await invoke('resolve_alert', { alert_id: alertId });
+      await safeInvoke('resolve_alert', { alert_id: alertId });
       showSuccess('アラートを解決済みとしてマークしました');
       loadAlertHistory(); // 履歴を再読み込み
     } catch (err) {
@@ -169,7 +161,7 @@ export const AlertHistory: React.FC = () => {
     }
 
     try {
-      const resolvedCount = await invoke<number>('resolve_alerts', { 
+      const resolvedCount = await safeInvoke<number>('resolve_alerts', { 
         alert_ids: Array.from(selectedAlerts) 
       });
       setSelectedAlerts(new Set()); // 選択をクリア

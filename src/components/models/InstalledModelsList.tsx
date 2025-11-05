@@ -1,7 +1,7 @@
 // InstalledModelsList - インストール済みモデル一覧コンポーネント
 
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../../utils/tauri';
 import { ModelCard } from './ModelCard';
 import './InstalledModelsList.css';
 
@@ -40,7 +40,7 @@ export const InstalledModelsList: React.FC<InstalledModelsListProps> = ({
       setError(null);
 
       // バックエンドのIPCコマンドを呼び出し
-      const result = await invoke<Array<{
+      const result = await safeInvoke<Array<{
         name: string;
         size: number;
         parameters?: number;
@@ -116,7 +116,7 @@ export const InstalledModelsList: React.FC<InstalledModelsListProps> = ({
 
     try {
       // バックエンドのdelete_modelコマンドを呼び出し
-      await invoke('delete_model', { name: modelName });
+      await safeInvoke('delete_model', { name: modelName });
 
       // 一覧を更新
       await loadInstalledModels();

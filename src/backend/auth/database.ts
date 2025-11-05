@@ -39,8 +39,10 @@ function getDatabase(): Promise<sqlite3.Database> {
             if (!fs.existsSync(dbDir)) {
                 fs.mkdirSync(dbDir, { recursive: true });
             }
-        } catch (err: any) {
-            console.warn('データベースディレクトリ作成エラー:', err);
+        } catch (err: unknown) {
+            if (process.env.NODE_ENV === 'development') {
+                console.warn('データベースディレクトリ作成エラー:', err instanceof Error ? err.message : String(err));
+            }
         }
         
         const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READONLY, (err) => {
@@ -68,8 +70,10 @@ function getDatabaseReadWrite(): Promise<sqlite3.Database> {
             if (!fs.existsSync(dbDir)) {
                 fs.mkdirSync(dbDir, { recursive: true });
             }
-        } catch (err: any) {
-            console.warn('データベースディレクトリ作成エラー:', err);
+        } catch (err: unknown) {
+            if (process.env.NODE_ENV === 'development') {
+                console.warn('データベースディレクトリ作成エラー:', err instanceof Error ? err.message : String(err));
+            }
         }
         
         const db = new sqlite3.Database(dbPath, sqlite3.OPEN_READWRITE | sqlite3.OPEN_CREATE, (err) => {
@@ -96,12 +100,12 @@ export async function getApiKeyHash(apiKeyHash: string): Promise<string | null> 
         db.get(
             'SELECT key_hash FROM api_keys WHERE key_hash = ?',
             [apiKeyHash],
-            (err, row: any) => {
+            (err, row: { key_hash?: string } | undefined) => {
                 db.close();
                 if (err) {
                     reject(err);
                 } else if (row) {
-                    resolve(row.key_hash);
+                    resolve(row.key_hash ?? null);
                 } else {
                     resolve(null);
                 }
@@ -122,12 +126,51 @@ export async function getApiKeyHashByApiId(apiId: string): Promise<string | null
         db.get(
             'SELECT key_hash FROM api_keys WHERE api_id = ?',
             [apiId],
-            (err, row: any) => {
+            (err, row: { key_hash?: string } | undefined) => {
                 db.close();
                 if (err) {
                     reject(err);
                 } else if (row) {
-                    resolve(row.key_hash);
+                    resolve(row.key_hash ?? null);
+                } else {
+                    resolve(null);
+                }
+            }
+        );
+    });
+}
+
+/**
+ * API情報インターフェース
+ */
+export interface ApiInfo {
+    id: string;
+    engine_type: string | null;
+    engine_config: string | null;
+}
+
+/**
+ * API IDからAPI情報を取得
+ * @param apiId API ID
+ * @returns API情報（エンジンタイプなど）
+ */
+export async function getApiInfo(apiId: string): Promise<ApiInfo | null> {
+    const db = await getDatabase();
+    
+    return new Promise((resolve, reject) => {
+        db.get(
+            'SELECT id, engine_type, engine_config FROM apis WHERE id = ?',
+            [apiId],
+            (err, row: { id?: string; engine_type?: string | null; engine_config?: string | null } | undefined) => {
+                db.close();
+                if (err) {
+                    reject(err);
+                } else if (row && row.id) {
+                    resolve({
+                        id: row.id,
+                        engine_type: row.engine_type ?? null,
+                        engine_config: row.engine_config ?? null
+                    });
                 } else {
                     resolve(null);
                 }
@@ -180,7 +223,10 @@ export async function saveRequestLog(params: SaveRequestLogParams): Promise<bool
                 db.close();
                 if (err) {
                     // エラーはログに出力するが、リクエスト処理は続行する
-                    console.error('[REQUEST_LOG] ログ保存エラー:', err);
+                    // 本番環境ではログ出力を制限
+                    if (process.env.NODE_ENV === 'development') {
+                        console.error('[REQUEST_LOG] ログ保存エラー:', err);
+                    }
                     resolve(false);
                 } else {
                     resolve(true);
@@ -262,11 +308,11 @@ export async function getAlertSettings(apiId: string | null): Promise<AlertSetti
                 db.get(
                     'SELECT value FROM user_settings WHERE key = ?',
                     [`${prefix}${key}`],
-                    (err: Error | null, row: any) => {
+                    (err: Error | null, row: { value?: string } | undefined) => {
                         if (err) {
                             rej(err);
                         } else if (row) {
-                            res(row.value);
+                            res(row.value ?? null);
                         } else {
                             res(null);
                         }

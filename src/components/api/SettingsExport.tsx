@@ -1,7 +1,8 @@
 // SettingsExport - 設定エクスポート・インポートコンポーネント
 
 import React, { useState, useRef } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../../utils/tauri';
+import { logger } from '../../utils/logger';
 import './SettingsExport.css';
 
 /**
@@ -41,7 +42,7 @@ export const SettingsExport: React.FC<SettingsExportProps> = ({
       setSuccessMessage(null);
 
       // export_api_settings IPCコマンドを呼び出し
-      const jsonData = await invoke<string>('export_api_settings', {
+      const jsonData = await safeInvoke<string>('export_api_settings', {
         request: {
           api_ids: selectedApiIds && selectedApiIds.length > 0 ? selectedApiIds : null,
         },
@@ -70,7 +71,7 @@ export const SettingsExport: React.FC<SettingsExportProps> = ({
       setSuccessMessage(`${apiCountText}のAPI設定をエクスポートしました`);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'エクスポートに失敗しました');
-      console.error('設定エクスポートエラー:', err);
+      logger.error('設定エクスポートエラー', err, 'SettingsExport');
     } finally {
       setExporting(false);
     }
@@ -111,7 +112,7 @@ export const SettingsExport: React.FC<SettingsExportProps> = ({
       await handleImportWithResolutionDirectly(fileContent, 'skip');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'インポートに失敗しました');
-      console.error('設定インポートエラー:', err);
+      logger.error('設定インポートエラー', err, 'SettingsExport');
       
       // ファイル入力をリセット
       if (fileInputRef.current) {
@@ -132,7 +133,7 @@ export const SettingsExport: React.FC<SettingsExportProps> = ({
       setSuccessMessage(null);
 
       // import_api_settings IPCコマンドを呼び出し
-      const result = await invoke<{
+      const result = await safeInvoke<{
         imported: number;
         skipped: number;
         renamed: number;
@@ -157,7 +158,7 @@ export const SettingsExport: React.FC<SettingsExportProps> = ({
       }
       if (result.errors.length > 0) {
         messages.push(`エラー: ${result.errors.length}件`);
-        console.error('インポートエラー:', result.errors);
+        logger.error('インポートエラー', result.errors, 'SettingsExport');
       }
 
       if (messages.length > 0) {
@@ -177,7 +178,7 @@ export const SettingsExport: React.FC<SettingsExportProps> = ({
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'インポートに失敗しました');
-      console.error('設定インポートエラー:', err);
+      logger.error('設定インポートエラー', err, 'SettingsExport');
       
       // ファイル入力をリセット
       if (fileInputRef.current) {

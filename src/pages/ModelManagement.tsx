@@ -4,6 +4,10 @@ import React, { useState } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { ModelSearch } from '../components/models/ModelSearch';
 import { InstalledModelsList } from '../components/models/InstalledModelsList';
+import { HuggingFaceSearch } from '../components/models/HuggingFaceSearch';
+import { ModelfileEditor } from '../components/models/ModelfileEditor';
+import { ModelConverter } from '../components/models/ModelConverter';
+import { ModelSharing } from '../components/models/ModelSharing';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import type { SelectedModel } from '../types/api';
 import './ModelManagement.css';
@@ -11,11 +15,12 @@ import './ModelManagement.css';
 /**
  * モデル管理ページ
  * モデル検索・ダウンロード・インストール済みモデルの管理を行います
+ * v2.0: LLMSTUDIO風の高度なモデル管理機能を追加
  */
 export const ModelManagement: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<'search' | 'installed'>('search');
+  const [activeTab, setActiveTab] = useState<'search' | 'installed' | 'huggingface' | 'modelfile' | 'converter' | 'sharing'>('search');
   
   // 遷移元の情報を取得（API作成画面から来た場合）
   const returnTo = location.state?.returnTo;
@@ -91,6 +96,30 @@ export const ModelManagement: React.FC = () => {
             >
               📦 インストール済み
             </button>
+            <button
+              className={`tab-button ${activeTab === 'huggingface' ? 'active' : ''}`}
+              onClick={() => setActiveTab('huggingface')}
+            >
+              🤗 Hugging Face検索
+            </button>
+            <button
+              className={`tab-button ${activeTab === 'modelfile' ? 'active' : ''}`}
+              onClick={() => setActiveTab('modelfile')}
+            >
+              📝 Modelfile作成
+            </button>
+            <button
+              className={`tab-button ${activeTab === 'converter' ? 'active' : ''}`}
+              onClick={() => setActiveTab('converter')}
+            >
+              🔄 モデル変換
+            </button>
+            <button
+              className={`tab-button ${activeTab === 'sharing' ? 'active' : ''}`}
+              onClick={() => setActiveTab('sharing')}
+            >
+              📤 モデル共有
+            </button>
           </div>
         </header>
 
@@ -101,6 +130,22 @@ export const ModelManagement: React.FC = () => {
 
           {activeTab === 'installed' && (
             <InstalledModelsList onModelSelected={handleModelSelected} />
+          )}
+
+          {activeTab === 'huggingface' && (
+            <HuggingFaceSearch />
+          )}
+
+          {activeTab === 'modelfile' && (
+            <ModelfileEditor />
+          )}
+
+          {activeTab === 'converter' && (
+            <ModelConverter />
+          )}
+
+          {activeTab === 'sharing' && (
+            <ModelSharing />
           )}
         </div>
       </div>

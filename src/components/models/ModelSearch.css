@@ -336,6 +336,61 @@
   font-weight: 600;
 }
 
+/* 関連モデル */
+.related-models-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.related-model-card {
+  border: 1px solid var(--search-border-light);
+  border-radius: 8px;
+  padding: 1rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  background: var(--search-bg-primary);
+}
+
+.related-model-card:hover {
+  background: var(--search-bg-tertiary);
+  border-color: var(--search-primary);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.related-model-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.5rem;
+}
+
+.related-model-name {
+  font-weight: 600;
+  color: var(--search-text-primary);
+  font-size: 1rem;
+  margin: 0;
+}
+
+.related-model-badge {
+  font-size: 0.875rem;
+}
+
+.related-model-description {
+  color: var(--search-text-secondary);
+  font-size: 0.9rem;
+  margin: 0.5rem 0;
+  line-height: 1.5;
+}
+
+.related-model-size {
+  color: var(--search-text-secondary);
+  font-size: 0.875rem;
+  margin-top: 0.5rem;
+}
+
 .main-empty-state {
   display: flex;
   align-items: center;
@@ -385,6 +440,85 @@
   margin-bottom: 0.5rem;
   color: var(--search-text-secondary);
   font-size: 0.875rem;
+}
+
+/* 初めての方へセクション */
+.beginner-guide-section {
+  background: linear-gradient(135deg, var(--search-info-grid-bg) 0%, var(--search-bg-tertiary) 100%);
+  padding: 2rem;
+  border-radius: var(--search-radius-lg);
+  margin: 2rem 0;
+  border: 2px solid var(--search-primary);
+}
+
+.beginner-guide-title {
+  margin: 0 0 1rem 0;
+  font-size: 1.25rem;
+  color: var(--search-text-primary);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.beginner-guide-content {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.beginner-guide-text {
+  margin: 0;
+  color: var(--search-text-secondary);
+  font-size: 0.9375rem;
+  line-height: 1.6;
+}
+
+.beginner-recommended-models {
+  background: var(--search-bg-primary);
+  padding: 1.25rem;
+  border-radius: var(--search-radius);
+  border-left: 4px solid var(--search-primary);
+}
+
+.beginner-recommended-models h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  color: var(--search-text-primary);
+}
+
+.beginner-recommended-models ul {
+  margin: 0;
+  padding-left: 1.5rem;
+  list-style: disc;
+}
+
+.beginner-recommended-models li {
+  margin-bottom: 0.5rem;
+  color: var(--search-text-secondary);
+  font-size: 0.875rem;
+}
+
+.beginner-help-link {
+  text-align: center;
+}
+
+.beginner-help-link a {
+  display: inline-block;
+  color: var(--search-primary);
+  text-decoration: none;
+  font-size: 0.9375rem;
+  font-weight: 500;
+  padding: 0.75rem 1.5rem;
+  border: 2px solid var(--search-primary);
+  border-radius: var(--search-radius);
+  transition: all 0.2s;
+}
+
+.beginner-help-link a:hover {
+  background: var(--search-primary);
+  color: white;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
 }
 
 .empty-state-hints li strong {
@@ -493,4 +627,104 @@
   --search-text-tertiary: var(--color-text-tertiary, #999);
   --search-active-bg: #1e3a5f;
   --search-info-grid-bg: var(--color-bg-secondary, #252525);
+}
+
+/* 人気モデル・初心者向けモデルセクション */
+.popular-models-section {
+  padding: var(--spacing-xl);
+}
+
+.popular-models-group,
+.beginner-models-group {
+  margin-bottom: var(--spacing-2xl);
+}
+
+.popular-models-title,
+.beginner-models-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--search-text-primary);
+  margin: 0 0 var(--spacing-lg) 0;
+}
+
+.popular-models-grid,
+.beginner-models-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: var(--spacing-lg);
+}
+
+.popular-model-card,
+.beginner-model-card {
+  padding: var(--spacing-lg);
+  border: 2px solid var(--search-border-light);
+  border-radius: var(--search-radius-lg);
+  background: var(--search-bg-secondary);
+  cursor: pointer;
+  transition: var(--search-transition);
+  box-shadow: var(--shadow-sm);
+}
+
+.popular-model-card:hover,
+.beginner-model-card:hover {
+  border-color: var(--search-accent);
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-md);
+}
+
+.popular-model-header,
+.beginner-model-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-md);
+  gap: var(--spacing-sm);
+}
+
+.popular-model-name,
+.beginner-model-name {
+  font-size: 1.125rem;
+  font-weight: 600;
+  color: var(--search-text-primary);
+  margin: 0;
+  flex: 1;
+}
+
+.popular-model-badge {
+  background: linear-gradient(135deg, #ffc107 0%, #ff9800 100%);
+  color: #333;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--search-radius);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.beginner-model-badge {
+  background: linear-gradient(135deg, #4caf50 0%, #45a049 100%);
+  color: white;
+  padding: 0.25rem 0.5rem;
+  border-radius: var(--search-radius);
+  font-size: 0.75rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.popular-model-description,
+.beginner-model-description {
+  font-size: 0.875rem;
+  color: var(--search-text-secondary);
+  margin: 0 0 var(--spacing-sm) 0;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.popular-model-size,
+.beginner-model-size {
+  font-size: 0.875rem;
+  color: var(--search-text-secondary);
+  font-weight: 500;
 }

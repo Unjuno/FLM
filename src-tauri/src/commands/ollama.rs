@@ -75,3 +75,58 @@ pub async fn stop_ollama() -> Result<(), AppError> {
     Ok(())
 }
 
+/// Ollamaのアップデート確認
+/// 現在のバージョンと最新版を比較して、アップデートが利用可能かチェック
+#[tauri::command]
+pub async fn check_ollama_update() -> Result<OllamaUpdateCheck, AppError> {
+    let (is_newer_available, current_version, latest_version) = ollama::check_ollama_update_available().await?;
+    
+    Ok(OllamaUpdateCheck {
+        update_available: is_newer_available,
+        current_version,
+        latest_version,
+    })
+}
+
+/// Ollamaアップデートチェック結果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OllamaUpdateCheck {
+    pub update_available: bool,
+    pub current_version: Option<String>,
+    pub latest_version: String,
+}
+
+/// Ollamaのアップデート実行
+/// 既存のOllamaを停止し、最新版をダウンロードして更新します
+#[tauri::command]
+pub async fn update_ollama(
+    app: AppHandle,
+) -> Result<String, AppError> {
+    // 1. 既存のOllamaを停止
+    let was_running = ollama::check_ollama_running().await.unwrap_or(false);
+    if was_running {
+        ollama::stop_ollama().await?;
+        // 停止確認のため少し待機
+        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+    }
+
+    // 2. 最新版をダウンロード
+    let app_handle = app.clone();
+    let new_path = ollama::download_ollama(move |progress| {
+        // 進捗をイベントとして送信
+        let _ = app_handle.emit("ollama_update_progress", &progress);
+        Ok(())
+    }).await?;
+
+    // 3. 更新前のバックアップ（オプション、将来実装）
+    // 現在は既存のファイルを上書きするため、バックアップは実装していない
+
+    // 4. 更新後のOllamaを起動（元々実行中だった場合）
+    if was_running {
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
+        ollama::start_ollama(Some(new_path.clone())).await?;
+    }
+
+    Ok(new_path)
+}
+

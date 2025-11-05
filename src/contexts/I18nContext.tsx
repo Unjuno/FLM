@@ -40,7 +40,8 @@ export const I18nProvider: React.FC<I18nProviderProps> = ({ children }) => {
       // Tauri環境が利用可能かチェック
       if (!isTauriAvailable()) {
         // 開発環境（ブラウザなど）ではデフォルトの言語を使用
-        if (import.meta.env.DEV) {
+        const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
+        if (isDev) {
           console.warn('Tauri環境が利用できないため、デフォルト言語を使用します');
         }
         return;
@@ -54,13 +55,14 @@ export const I18nProvider: React.FC<I18nProviderProps> = ({ children }) => {
       } catch (error) {
         // エラーの詳細情報をログに出力（開発環境では無視）
         const errorMessage = error instanceof Error ? error.message : String(error);
+        const isDev = process.env.NODE_ENV === 'development' || process.env.NODE_ENV !== 'production';
         // invokeが未定義の場合の特別な処理
         if (errorMessage.includes('invoke') || errorMessage.includes('undefined') || errorMessage.includes('Cannot read properties') || errorMessage.includes('アプリケーションが正しく起動')) {
-          if (import.meta.env.DEV) {
+          if (isDev) {
             console.warn('Tauri環境が初期化されていません。デフォルト言語を使用します');
           }
         } else {
-          if (import.meta.env.DEV) {
+          if (isDev) {
             console.error('言語設定の読み込みに失敗しました:', errorMessage);
           }
         }

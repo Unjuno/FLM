@@ -49,15 +49,15 @@ export const ApiCreationProgress: React.FC<ApiCreationProgressProps> = ({ progre
         <div className="progress-steps">
           <div className={`progress-step-item ${progress.progress >= 20 ? 'completed' : ''}`}>
             <span className="step-number">1</span>
-            <span className="step-label">Ollama確認</span>
+            <span className="step-label">エンジン確認</span>
           </div>
           <div className={`progress-step-item ${progress.progress >= 40 ? 'completed' : ''}`}>
             <span className="step-number">2</span>
-            <span className="step-label">認証プロキシ起動</span>
+            <span className="step-label">設定保存</span>
           </div>
           <div className={`progress-step-item ${progress.progress >= 60 ? 'completed' : ''}`}>
             <span className="step-number">3</span>
-            <span className="step-label">設定保存</span>
+            <span className="step-label">認証プロキシ起動</span>
           </div>
           <div className={`progress-step-item ${progress.progress >= 100 ? 'completed' : ''}`}>
             <span className="step-number">4</span>

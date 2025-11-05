@@ -86,7 +86,13 @@ async function generateCertificateWithOpenSSL(
         
         await execAsync(opensslCmd);
         
-        // ファイルが生成されたか確認
+        // ファイルが生成されたか確認（ファイルシステムの反映を待つ）
+        let retries = 10;
+        while (retries > 0 && (!fs.existsSync(certPath) || !fs.existsSync(keyPath))) {
+            await new Promise(resolve => setTimeout(resolve, 100));
+            retries--;
+        }
+        
         if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
             throw new Error('証明書ファイルの生成に失敗しました');
         }
@@ -105,7 +111,7 @@ async function generateCertificateWithOpenSSL(
  */
 async function generateCertificateWithNodeForge(
     apiId: string,
-    port: number,
+    _port: number,
     localIp?: string
 ): Promise<{ certPath: string; keyPath: string }> {
     const certDir = getCertDir();

@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../utils/tauri';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { SecuritySettingsSection } from '../components/api/SecuritySettings';
+import { PORT_RANGE, API_NAME } from '../constants/config';
+import type { ApiUpdateRequest } from '../types/api';
 import './ApiEdit.css';
 
 /**
@@ -44,7 +47,7 @@ export const ApiEdit: React.FC = () => {
       setError(null);
 
       // バックエンドのIPCコマンドを呼び出し（list_apisから該当APIを取得）
-      const apis = await invoke<Array<{
+      const apis = await safeInvoke<Array<{
         id: string;
         name: string;
         endpoint: string;
@@ -79,12 +82,17 @@ export const ApiEdit: React.FC = () => {
   const validate = (): boolean => {
     const newErrors: { [key: string]: string } = {};
 
-    if (!settings.name.trim()) {
+    const trimmedName = settings.name.trim();
+    if (!trimmedName) {
       newErrors.name = 'API名を入力してください';
+    } else if (trimmedName.length < API_NAME.MIN_LENGTH) {
+      newErrors.name = `API名は${API_NAME.MIN_LENGTH}文字以上で入力してください`;
+    } else if (trimmedName.length > API_NAME.MAX_LENGTH) {
+      newErrors.name = `API名は${API_NAME.MAX_LENGTH}文字以下で入力してください`;
     }
 
-    if (settings.port < 1024 || settings.port > 65535) {
-      newErrors.port = 'ポート番号は1024-65535の範囲で入力してください';
+    if (settings.port < PORT_RANGE.MIN || settings.port > PORT_RANGE.MAX) {
+      newErrors.port = `ポート番号は${PORT_RANGE.MIN}-${PORT_RANGE.MAX}の範囲で入力してください`;
     }
 
     setErrors(newErrors);
@@ -100,14 +108,15 @@ export const ApiEdit: React.FC = () => {
       setError(null);
 
       // バックエンドのupdate_apiコマンドを呼び出し
-      await invoke('update_api', { 
+      const updateRequest: ApiUpdateRequest = {
         api_id: id,
         config: {
           name: settings.name,
           port: settings.port,
           enable_auth: settings.enableAuth,
         },
-      });
+      };
+      await safeInvoke('update_api', updateRequest as unknown as Record<string, unknown>);
 
       // 成功したら詳細画面に遷移
       navigate(`/api/details/${id}`);
@@ -133,7 +142,7 @@ export const ApiEdit: React.FC = () => {
       setError(null);
 
       // バックエンドのregenerate_api_keyコマンドを呼び出し
-      const newApiKey = await invoke<string>('regenerate_api_key', { api_id: id });
+      const newApiKey = await safeInvoke<string>('regenerate_api_key', { api_id: id });
 
       // 新しいAPIキーを表示
       alert(`APIキーが再生成されました。\n新しいAPIキー: ${newApiKey}\n\nこのキーは今回のみ表示されます。コピーして安全な場所に保存してください。`);
@@ -194,6 +203,7 @@ export const ApiEdit: React.FC = () => {
                 className={`form-input ${errors.name ? 'error' : ''}`}
                 value={settings.name}
                 onChange={(e) => setSettings({ ...settings, name: e.target.value })}
+                maxLength={API_NAME.MAX_LENGTH}
                 required
               />
               {errors.name && <span className="form-error">{errors.name}</span>}
@@ -208,9 +218,9 @@ export const ApiEdit: React.FC = () => {
                 type="number"
                 className={`form-input ${errors.port ? 'error' : ''}`}
                 value={settings.port}
-                onChange={(e) => setSettings({ ...settings, port: parseInt(e.target.value) || 8080 })}
-                min={1024}
-                max={65535}
+                onChange={(e) => setSettings({ ...settings, port: parseInt(e.target.value) || PORT_RANGE.DEFAULT })}
+                min={PORT_RANGE.MIN}
+                max={PORT_RANGE.MAX}
                 required
               />
               {errors.port && <span className="form-error">{errors.port}</span>}
@@ -255,6 +265,8 @@ export const ApiEdit: React.FC = () => {
                 APIキーを再生成すると、現在のAPIキーは無効になります。新しいAPIキーを安全に保存してください。
               </small>
             </div>
+
+            <SecuritySettingsSection apiId={id || ''} />
           </div>
 
           <div className="form-actions">

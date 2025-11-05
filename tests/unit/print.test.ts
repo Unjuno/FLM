@@ -1,6 +1,4 @@
-// FLM - 印刷ユーティリティのユニットテスト
-// QA + FE 実装
-// TEST-013-03: ユニットテスト追加
+// print - 印刷ユーティリティのユニットテスト
 
 /**
  * @jest-environment jsdom
@@ -14,7 +12,7 @@ const mockClose = jest.fn();
 const mockWrite = jest.fn();
 const mockDocumentClose = jest.fn();
 
-interface MockWindow extends Partial<Window> {
+interface MockWindow {
   document: {
     write: jest.Mock;
     close: jest.Mock;
@@ -29,10 +27,16 @@ describe('print.ts', () => {
   let mockWindow: MockWindow;
 
   beforeEach(() => {
+    // モック関数をリセット
+    mockPrint.mockClear();
+    mockClose.mockClear();
+    mockWrite.mockClear();
+    mockDocumentClose.mockClear();
+    
     // window.printをモック
     window.print = mockPrint;
     
-    // window.openをモック
+    // window.openをモック（printElement内でonloadが設定されるため、参照を保持）
     mockWindow = {
       document: {
         write: mockWrite,
@@ -44,14 +48,18 @@ describe('print.ts', () => {
       close: mockClose,
     };
     
-    window.open = jest.fn(() => mockWindow as Window);
+    // window.openが返すWindowオブジェクトは、mockWindowへの参照を持つ
+    window.open = jest.fn(() => {
+      // printElement内でonloadが設定されるため、同じオブジェクト参照を返す
+      return mockWindow as unknown as Window;
+    });
     
     // タイマーをモック
     jest.useFakeTimers();
   });
 
   afterEach(() => {
-    jest.restoreAllMocks();
+    jest.clearAllMocks();
     jest.useRealTimers();
   });
 
@@ -59,18 +67,28 @@ describe('print.ts', () => {
     it('デフォルトオプションでbody全体を印刷する', async () => {
       document.body.innerHTML = '<div>テストコンテンツ</div>';
       
+      // printElementは非同期関数だが、内部の同期処理（window.open, document.write, onload設定）は即座に実行される
       const printPromise = printElement({});
       
-      // ウィンドウが開かれることを確認
+      // ウィンドウが開かれることを確認（printElement内で同期的に実行される）
       expect(window.open).toHaveBeenCalledWith('', '_blank');
       
-      // onloadが呼ばれるまで待つ
+      // document.writeが呼ばれたことを確認（printElement内で同期的に実行される）
+      expect(mockWindow.document.write).toHaveBeenCalled();
+      
+      // onloadが設定されていることを確認（printElement内でdocument.writeの後に設定される）
+      // 注意: printElement内でprintWindow.onloadが設定されるため、mockWindow.onloadも設定される
+      expect(mockWindow.onload).not.toBeNull();
+      expect(typeof mockWindow.onload).toBe('function');
+      
+      // onloadを実行して印刷処理を開始
       if (mockWindow.onload) {
         mockWindow.onload();
       }
       
-      // タイマーを進める
-      jest.advanceTimersByTime(500);
+      // タイマーを進める（PRINT_DELAY_MS + WINDOW_CLOSE_DELAY_MS）
+      jest.advanceTimersByTime(500); // PRINT_DELAY_MS
+      jest.advanceTimersByTime(1000); // WINDOW_CLOSE_DELAY_MS
       
       await printPromise;
       
@@ -100,30 +118,42 @@ describe('print.ts', () => {
     it('カスタムタイトルを指定できる', async () => {
       document.body.innerHTML = '<div>コンテンツ</div>';
       
+      // printElementは非同期関数だが、内部の同期処理（window.open, document.write, onload設定）は即座に実行される
       const printPromise = printElement({ title: 'カスタムタイトル' });
       
+      // ウィンドウが開かれることを確認（printElement内で同期的に実行される）
+      expect(window.open).toHaveBeenCalledWith('', '_blank');
+      
+      // document.writeが呼ばれたことを確認（printElement内で同期的に実行される）
+      expect(mockWindow.document.write).toHaveBeenCalled();
+      const writtenContent = mockWindow.document.write.mock.calls[0]?.[0];
+      expect(writtenContent).toContain('カスタムタイトル');
+      
+      // onloadが設定されていることを確認（printElement内でdocument.writeの後に設定される）
+      expect(mockWindow.onload).not.toBeNull();
+      expect(typeof mockWindow.onload).toBe('function');
+      
+      // onloadを実行して印刷処理を開始
       if (mockWindow.onload) {
         mockWindow.onload();
       }
       
-      jest.advanceTimersByTime(500);
+      // タイマーを進める（PRINT_DELAY_MS + WINDOW_CLOSE_DELAY_MS）
+      jest.advanceTimersByTime(500); // PRINT_DELAY_MS
+      jest.advanceTimersByTime(1000); // WINDOW_CLOSE_DELAY_MS
       
       await printPromise;
-      
-      // タイトルが含まれることを確認
-      const writtenContent = mockWindow.document.write.mock.calls[0]?.[0];
-      expect(writtenContent).toContain('カスタムタイトル');
     });
 
     it('beforePrintコールバックを実行する', async () => {
-      const beforePrint = jest.fn();
+      const beforePrint = jest.fn<() => void | Promise<void>>();
       
       document.body.innerHTML = '<div>コンテンツ</div>';
       
       const printPromise = printElement({ beforePrint });
       
-      await new Promise(resolve => setTimeout(resolve, 0));
-      
+      // beforePrintコールバックは同期的に実行されるため、即座にチェック
+      // printElementは同期的にbeforePrintを呼び出すため、awaitは不要
       expect(beforePrint).toHaveBeenCalled();
       
       if (mockWindow.onload) {
@@ -136,7 +166,7 @@ describe('print.ts', () => {
     });
 
     it('afterPrintコールバックを実行する', async () => {
-      const afterPrint = jest.fn();
+      const afterPrint = jest.fn<() => void | Promise<void>>();
       
       document.body.innerHTML = '<div>コンテンツ</div>';
       
@@ -185,35 +215,73 @@ describe('print.ts', () => {
     it('現在のページを印刷する', async () => {
       document.body.innerHTML = '<div>ページコンテンツ</div>';
       
+      // printPageは非同期関数で、内部でprintElementを呼び出す
+      // printElement内でbeforePrint（同期的、awaitされる）→ window.open → document.write → onload設定が実行される
       const printPromise = printPage();
       
+      // printElement内でbeforePrintがawaitされるため、マイクロタスクキューが処理されるまで待つ
+      // jest.useFakeTimers()を使っている場合、Promise.resolve()は即座に実行されるが、
+      // 念のため複数のマイクロタスクを処理する
+      await Promise.resolve();
+      await Promise.resolve();
+      
+      // ウィンドウが開かれることを確認（printElement内で同期的に実行される）
+      expect(window.open).toHaveBeenCalledWith('', '_blank');
+      
+      // document.writeが呼ばれたことを確認（printElement内で同期的に実行される）
+      expect(mockWindow.document.write).toHaveBeenCalled();
+      
+      // onloadが設定されていることを確認（printElement内でdocument.writeの後に設定される）
+      expect(mockWindow.onload).not.toBeNull();
+      expect(typeof mockWindow.onload).toBe('function');
+      
+      // onloadを実行して印刷処理を開始
       if (mockWindow.onload) {
         mockWindow.onload();
       }
       
-      jest.advanceTimersByTime(500);
+      jest.advanceTimersByTime(500); // PRINT_DELAY_MS
+      jest.advanceTimersByTime(1000); // WINDOW_CLOSE_DELAY_MS
       
       await printPromise;
       
-      expect(window.open).toHaveBeenCalled();
       expect(mockWindow.print).toHaveBeenCalled();
     });
 
     it('カスタムタイトルを指定できる', async () => {
       document.body.innerHTML = '<div>ページコンテンツ</div>';
       
+      // printPageは非同期関数で、内部でprintElementを呼び出す
+      // printElement内でbeforePrint（同期的、awaitされる）→ window.open → document.write → onload設定が実行される
       const printPromise = printPage('カスタムページタイトル');
       
+      // printElement内でbeforePrintがawaitされるため、マイクロタスクキューが処理されるまで待つ
+      // jest.useFakeTimers()を使っている場合、Promise.resolve()は即座に実行されるが、
+      // 念のため複数のマイクロタスクを処理する
+      await Promise.resolve();
+      await Promise.resolve();
+      
+      // ウィンドウが開かれることを確認（printElement内で同期的に実行される）
+      expect(window.open).toHaveBeenCalledWith('', '_blank');
+      
+      // document.writeが呼ばれたことを確認（printElement内で同期的に実行される）
+      expect(mockWindow.document.write).toHaveBeenCalled();
+      const writtenContent = mockWindow.document.write.mock.calls[0]?.[0];
+      expect(writtenContent).toContain('カスタムページタイトル');
+      
+      // onloadが設定されていることを確認（printElement内でdocument.writeの後に設定される）
+      expect(mockWindow.onload).not.toBeNull();
+      expect(typeof mockWindow.onload).toBe('function');
+      
+      // onloadを実行して印刷処理を開始
       if (mockWindow.onload) {
         mockWindow.onload();
       }
       
-      jest.advanceTimersByTime(500);
+      jest.advanceTimersByTime(500); // PRINT_DELAY_MS
+      jest.advanceTimersByTime(1000); // WINDOW_CLOSE_DELAY_MS
       
       await printPromise;
-      
-      const writtenContent = mockWindow.document.write.mock.calls[0]?.[0];
-      expect(writtenContent).toContain('カスタムページタイトル');
     });
   });
 
@@ -223,11 +291,15 @@ describe('print.ts', () => {
       
       const printPromise = printSelector('.content');
       
+      // document.writeが呼ばれるまで少し待つ（同期的に実行される）
+      jest.advanceTimersByTime(0);
+      
       if (mockWindow.onload) {
         mockWindow.onload();
       }
       
-      jest.advanceTimersByTime(500);
+      jest.advanceTimersByTime(500); // PRINT_DELAY_MS
+      jest.advanceTimersByTime(1000); // WINDOW_CLOSE_DELAY_MS
       
       await printPromise;
       
@@ -240,16 +312,23 @@ describe('print.ts', () => {
       
       const printPromise = printSelector('.content', 'セレクタタイトル');
       
+      // document.writeが呼ばれるまで少し待つ（同期的に実行される）
+      jest.advanceTimersByTime(0);
+      
+      // タイトルが含まれることを確認
+      expect(mockWindow.document.write).toHaveBeenCalled();
+      const writtenContent = mockWindow.document.write.mock.calls[0]?.[0];
+      expect(writtenContent).toContain('セレクタタイトル');
+      
+      // onloadを呼んでからタイマーを進める
       if (mockWindow.onload) {
         mockWindow.onload();
       }
       
-      jest.advanceTimersByTime(500);
+      jest.advanceTimersByTime(500); // PRINT_DELAY_MS
+      jest.advanceTimersByTime(1000); // WINDOW_CLOSE_DELAY_MS
       
       await printPromise;
-      
-      const writtenContent = mockWindow.document.write.mock.calls[0]?.[0];
-      expect(writtenContent).toContain('セレクタタイトル');
     });
   });
 });

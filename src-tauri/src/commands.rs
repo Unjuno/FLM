@@ -11,6 +11,7 @@ pub mod engine;
 pub mod system;
 pub mod port;
 pub mod suggestions;
+pub mod remote_sync;
 
 /// 基本的なテストコマンド（greetコマンド）
 /// フロントエンドから渡された名前を使用して挨拶メッセージを返す

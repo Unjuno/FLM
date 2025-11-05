@@ -1,6 +1,9 @@
 // LogDetail - ログ詳細表示コンポーネント
 
 import React, { useState, useMemo } from 'react';
+import { HTTP_STATUS, TIMEOUT } from '../../constants/config';
+import { formatDateTime, formatResponseTime, formatJSON } from '../../utils/formatters';
+import { logger } from '../../utils/logger';
 import './LogDetail.css';
 
 /**
@@ -26,59 +29,19 @@ interface LogDetailProps {
   onClose: () => void;
 }
 
-/**
- * JSONをフォーマット（読みやすく）
- */
-const formatJSON = (jsonString: string | null): string => {
-  if (!jsonString) return '';
-  
-  try {
-    const parsed = JSON.parse(jsonString);
-    return JSON.stringify(parsed, null, 2);
-  } catch {
-    return jsonString;
-  }
-};
 
 /**
  * ステータスコードに応じたクラス名を取得
  */
 const getStatusClass = (status: number | null): string => {
   if (status === null) return 'status-unknown';
-  if (status >= 200 && status < 300) return 'status-success';
-  if (status >= 300 && status < 400) return 'status-redirect';
-  if (status >= 400 && status < 500) return 'status-client-error';
-  if (status >= 500) return 'status-server-error';
+  if (status >= HTTP_STATUS.OK && status < 300) return 'status-success';
+  if (status >= 300 && status < HTTP_STATUS.MIN_ERROR_CODE) return 'status-redirect';
+  if (status >= HTTP_STATUS.MIN_ERROR_CODE && status < 500) return 'status-client-error';
+  if (status >= HTTP_STATUS.INTERNAL_SERVER_ERROR) return 'status-server-error';
   return 'status-unknown';
 };
 
-/**
- * 日時をフォーマット
- */
-const formatDateTime = (dateString: string): string => {
-  try {
-    const date = new Date(dateString);
-    return date.toLocaleString('ja-JP', {
-      year: 'numeric',
-      month: '2-digit',
-      day: '2-digit',
-      hour: '2-digit',
-      minute: '2-digit',
-      second: '2-digit',
-    });
-  } catch {
-    return dateString;
-  }
-};
-
-/**
- * レスポンス時間をフォーマット
- */
-const formatResponseTime = (ms: number | null): string => {
-  if (!ms) return 'N/A';
-  if (ms < 1000) return `${ms}ms`;
-  return `${(ms / 1000).toFixed(2)}s`;
-};
 
 /**
  * ログ詳細モーダルコンポーネント
@@ -99,9 +62,9 @@ export const LogDetail: React.FC<LogDetailProps> = ({ log, onClose }) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopiedField(fieldName);
-      setTimeout(() => setCopiedField(null), 2000);
+      setTimeout(() => setCopiedField(null), TIMEOUT.COPY_NOTIFICATION);
     } catch (err) {
-      console.error('コピーに失敗しました:', err);
+      logger.error('コピーに失敗しました', err instanceof Error ? err : new Error(String(err)), 'LogDetail');
     }
   };
 

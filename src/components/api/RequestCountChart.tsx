@@ -1,7 +1,6 @@
 // RequestCountChart - リクエスト数グラフコンポーネント
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import React, { memo, useCallback } from 'react';
 import {
   LineChart,
   Line,
@@ -12,18 +11,10 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { CHART_CONFIG, CHART_COLORS } from '../../constants/config';
+import { useI18n } from '../../contexts/I18nContext';
+import { usePerformanceMetrics } from '../../hooks/usePerformanceMetrics';
 import './RequestCountChart.css';
-
-/**
- * パフォーマンスメトリクス情報
- */
-interface PerformanceMetricInfo {
-  id: number;
-  api_id: string;
-  metric_type: string;
-  value: number;
-  timestamp: string;
-}
 
 /**
  * リクエスト数グラフコンポーネントのプロパティ
@@ -40,88 +31,47 @@ interface RequestCountChartProps {
  * リクエスト数グラフコンポーネント
  * リクエスト数の時系列グラフを表示します
  */
-export const RequestCountChart: React.FC<RequestCountChartProps> = ({
+const RequestCountChartComponent: React.FC<RequestCountChartProps> = ({
   apiId,
   startDate = null,
   endDate = null,
   autoRefresh = true,
   refreshInterval = 30000,
 }) => {
-  const [data, setData] = useState<Array<{ time: string; value: number }>>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { t } = useI18n();
+  
+  // 共通フックを使用してデータを取得
+  const { data, loading, error, loadData, isEmpty } = usePerformanceMetrics({
+    apiId,
+    metricType: 'request_count',
+    startDate,
+    endDate,
+    autoRefresh,
+    refreshInterval,
+    // 整数値として保存（フォーマット関数なし）
+  });
 
-  // データを取得
-  const loadData = useCallback(async () => {
-    if (!apiId) {
-      setData([]);
-      setLoading(false);
-      return;
-    }
-
-    try {
-      setLoading(true);
-      setError(null);
-
-      const request = {
-        api_id: apiId,
-        metric_type: 'request_count',
-        start_date: startDate || null,
-        end_date: endDate || null,
-      };
-
-      const result = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', { request });
-      
-      // データを時間順にソートし、グラフ用フォーマットに変換
-      const sortedData = result
-        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-        .map((metric) => ({
-          time: new Date(metric.timestamp).toLocaleTimeString('ja-JP', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-          }),
-          value: Math.round(metric.value), // 整数値
-        }));
-
-      setData(sortedData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'データの取得に失敗しました');
-      // エラー時も既存のデータを保持する（前回のデータが表示され続ける）
-    } finally {
-      setLoading(false);
-    }
-  }, [apiId, startDate, endDate]);
-
-  // 初回読み込み
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  // 自動更新
-  useEffect(() => {
-    if (!autoRefresh || !apiId) {
-      return;
-    }
-
-    const interval = setInterval(() => {
-      loadData();
-    }, refreshInterval);
-
-    return () => clearInterval(interval);
-  }, [autoRefresh, apiId, refreshInterval, loadData]);
-
-  // 値フォーマット関数
-  const formatValue = (value: number): string => {
+  // 値フォーマット関数（useCallbackでメモ化）
+  const formatValue = useCallback((value: number): string => {
     return `${value}回`;
-  };
+  }, []);
+
+  if (isEmpty) {
+    return (
+      <div className="request-count-chart-container" role="status" aria-live="polite">
+        <div className="chart-empty">
+          <p>{t('charts.requestCount.selectApi')}</p>
+        </div>
+      </div>
+    );
+  }
 
   if (loading && data.length === 0) {
     return (
-      <div className="request-count-chart-container">
+      <div className="request-count-chart-container" role="status" aria-live="polite" aria-busy="true">
         <div className="chart-loading">
-          <div className="loading-spinner"></div>
-          <p>リクエスト数データを読み込んでいます...</p>
+          <div className="loading-spinner" aria-hidden="true"></div>
+          <p>{t('charts.requestCount.loading')}</p>
         </div>
       </div>
     );
@@ -129,11 +79,16 @@ export const RequestCountChart: React.FC<RequestCountChartProps> = ({
 
   if (error) {
     return (
-      <div className="request-count-chart-container">
+      <div className="request-count-chart-container" role="alert" aria-live="assertive">
         <div className="chart-error">
-          <p>⚠️ {error}</p>
-          <button className="retry-button" onClick={loadData}>
-            再試行
+          <p className="error-message" role="alert">⚠️ {error}</p>
+          <button 
+            className="retry-button" 
+            onClick={loadData}
+            aria-label={t('charts.requestCount.retry')}
+            type="button"
+          >
+            {t('charts.requestCount.retry')}
           </button>
         </div>
       </div>
@@ -142,42 +97,49 @@ export const RequestCountChart: React.FC<RequestCountChartProps> = ({
 
   if (data.length === 0) {
     return (
-      <div className="request-count-chart-container">
+      <div className="request-count-chart-container" role="status" aria-live="polite">
         <div className="chart-empty">
-          <p>リクエスト数データがありません</p>
+          <p>{t('charts.requestCount.noData')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="request-count-chart-container">
-      <h3 className="chart-title">リクエスト数</h3>
+    <div className="request-count-chart-container" role="region" aria-labelledby="request-count-chart-title">
+      <h3 className="chart-title" id="request-count-chart-title">{t('charts.requestCount.title')}</h3>
       <div className="chart-wrapper">
-        <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+        <ResponsiveContainer width="100%" height={CHART_CONFIG.HEIGHT}>
+        <LineChart 
+          data={data} 
+          margin={{ top: CHART_CONFIG.MARGIN.TOP, right: CHART_CONFIG.MARGIN.RIGHT, left: CHART_CONFIG.MARGIN.LEFT, bottom: CHART_CONFIG.MARGIN.BOTTOM }}
+          aria-label={t('charts.requestCount.ariaLabel')}
+        >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis 
             dataKey="time" 
             angle={-45}
             textAnchor="end"
-            height={80}
+            height={CHART_CONFIG.X_AXIS_HEIGHT}
+            aria-label={t('charts.requestCount.xAxisLabel')}
           />
           <YAxis 
-            label={{ value: 'リクエスト数', angle: -90, position: 'insideLeft' }}
+            label={{ value: t('charts.requestCount.yAxisLabel'), angle: -90, position: 'insideLeft' }}
+            aria-label={t('charts.requestCount.yAxisLabel')}
           />
           <Tooltip 
             formatter={(value: number) => formatValue(value)}
-            labelFormatter={(label) => `時間: ${label}`}
+            labelFormatter={(label) => t('charts.requestCount.tooltipTime', { time: label })}
           />
           <Legend />
           <Line 
             type="monotone" 
             dataKey="value" 
-            stroke="#4caf50" 
-            strokeWidth={2}
-            dot={{ r: 3 }}
-            name="リクエスト数"
+            stroke={CHART_COLORS.SUCCESS} 
+            strokeWidth={CHART_CONFIG.STROKE_WIDTH}
+            dot={{ r: CHART_CONFIG.DOT_RADIUS }}
+            name={t('charts.requestCount.legendName')}
+            aria-label={t('charts.requestCount.legendName')}
           />
         </LineChart>
       </ResponsiveContainer>
@@ -185,3 +147,6 @@ export const RequestCountChart: React.FC<RequestCountChartProps> = ({
     </div>
   );
 };
+
+// React.memoでメモ化して不要な再レンダリングを防止
+export const RequestCountChart = memo(RequestCountChartComponent);

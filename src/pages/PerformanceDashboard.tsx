@@ -13,21 +13,10 @@ import { Tooltip } from '../components/common/Tooltip';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useI18n } from '../contexts/I18nContext';
 import { printSelector } from '../utils/print';
+import { REFRESH_INTERVALS } from '../constants/config';
+import { logger } from '../utils/logger';
+import type { ApiInfo } from '../types/api';
 import './PerformanceDashboard.css';
-
-/**
- * API情報
- */
-interface ApiInfo {
-  id: string;
-  name: string;
-  model_name: string;
-  port: number;
-  status: string;
-  endpoint: string;
-  created_at: string;
-  updated_at: string;
-}
 
 /**
  * 期間選択オプション
@@ -83,7 +72,7 @@ export const PerformanceDashboard: React.FC = () => {
         name: api.name,
         model_name: api.model_name,
         port: api.port,
-        status: api.status,
+        status: (api.status === 'running' ? 'running' : 'stopped') as 'running' | 'stopped',
         endpoint: api.endpoint,
         created_at: api.created_at,
         updated_at: api.updated_at,
@@ -112,22 +101,12 @@ export const PerformanceDashboard: React.FC = () => {
         // invokeが未定義の場合の特別な処理
         if (errorMessage.includes('invoke') || errorMessage.includes('undefined') || errorMessage.includes('Cannot read properties') || errorMessage.includes('アプリケーションが正しく起動')) {
           errorMessage = 'Tauri環境が初期化されていません。アプリケーションを再起動してください。';
-          if (import.meta.env.DEV) {
-            console.warn('Tauri環境が初期化されていません');
-          }
+          logger.warn('Tauri環境が初期化されていません', 'PerformanceDashboard');
         } else {
-          if (import.meta.env.DEV) {
-            console.error('API一覧取得エラー詳細:', {
-              message: err.message,
-              stack: err.stack,
-              name: err.name,
-            });
-          }
+          logger.error('API一覧取得エラー詳細', err instanceof Error ? err : new Error(String(err)), 'PerformanceDashboard');
         }
       } else {
-        if (import.meta.env.DEV) {
-          console.error('API一覧取得エラー（非Error型）:', err);
-        }
+        logger.error('API一覧取得エラー（非Error型）', err, 'PerformanceDashboard');
         errorMessage = String(err);
       }
       
@@ -300,7 +279,7 @@ export const PerformanceDashboard: React.FC = () => {
                 apiId={selectedApiId}
                 period={selectedPeriod}
                 autoRefresh={true}
-                refreshInterval={30000}
+                refreshInterval={REFRESH_INTERVALS.PERFORMANCE}
               />
 
               {/* グラフセクション */}
@@ -312,7 +291,7 @@ export const PerformanceDashboard: React.FC = () => {
                     startDate={dateRange.startDate}
                     endDate={dateRange.endDate}
                     autoRefresh={true}
-                    refreshInterval={30000}
+                    refreshInterval={REFRESH_INTERVALS.PERFORMANCE}
                   />
                 </div>
 
@@ -323,7 +302,7 @@ export const PerformanceDashboard: React.FC = () => {
                     startDate={dateRange.startDate}
                     endDate={dateRange.endDate}
                     autoRefresh={true}
-                    refreshInterval={30000}
+                    refreshInterval={REFRESH_INTERVALS.PERFORMANCE}
                   />
                 </div>
 
@@ -334,7 +313,7 @@ export const PerformanceDashboard: React.FC = () => {
                     startDate={dateRange.startDate}
                     endDate={dateRange.endDate}
                     autoRefresh={true}
-                    refreshInterval={30000}
+                    refreshInterval={REFRESH_INTERVALS.PERFORMANCE}
                   />
                 </div>
 
@@ -345,7 +324,7 @@ export const PerformanceDashboard: React.FC = () => {
                     startDate={dateRange.startDate}
                     endDate={dateRange.endDate}
                     autoRefresh={true}
-                    refreshInterval={30000}
+                    refreshInterval={REFRESH_INTERVALS.PERFORMANCE}
                     alertThreshold={5.0}
                   />
                 </div>

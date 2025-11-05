@@ -64,6 +64,22 @@ impl std::fmt::Display for AppError {
 
 impl std::error::Error for AppError {}
 
+impl From<rusqlite::Error> for AppError {
+    fn from(err: rusqlite::Error) -> Self {
+        AppError::DatabaseError {
+            message: err.to_string(),
+        }
+    }
+}
+
+impl From<std::io::Error> for AppError {
+    fn from(err: std::io::Error) -> Self {
+        AppError::IoError {
+            message: err.to_string(),
+        }
+    }
+}
+
 impl Clone for AppError {
     fn clone(&self) -> Self {
         match self {

@@ -1,9 +1,10 @@
 // LogExport - ログエクスポートコンポーネント
 
 import React, { useState, useCallback } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../../utils/tauri';
 import { Tooltip } from '../common/Tooltip';
 import { exportLogsToPdf } from '../../utils/pdfExport';
+import { logger } from '../../utils/logger';
 
 /**
  * ログフィルタの型定義
@@ -49,7 +50,9 @@ interface ExportResponse {
 /**
  * 定数定義
  */
-const DEFAULT_ERROR_CODES = [400, 401, 403, 404, 500, 502, 503];
+import { HTTP_STATUS } from '../../constants/config';
+
+const DEFAULT_ERROR_CODES: number[] = [...HTTP_STATUS.DEFAULT_ERROR_CODES];
 const MIME_TYPES = {
   csv: 'text/csv;charset=utf-8;',
   json: 'application/json;charset=utf-8;',
@@ -82,9 +85,9 @@ export const LogExport: React.FC<LogExportProps> = ({
   const getFilteredStatusCodes = useCallback((): number[] | null => {
     if (filter.errorsOnly) {
       const errorCodes = filter.statusCodes.length > 0
-        ? filter.statusCodes.filter(code => code >= 400)
-        : DEFAULT_ERROR_CODES;
-      return errorCodes.length > 0 ? errorCodes : DEFAULT_ERROR_CODES;
+        ? filter.statusCodes.filter(code => code >= HTTP_STATUS.MIN_ERROR_CODE)
+        : [...DEFAULT_ERROR_CODES];
+      return errorCodes.length > 0 ? errorCodes : [...DEFAULT_ERROR_CODES];
     }
     return filter.statusCodes.length > 0 ? filter.statusCodes : null;
   }, [filter.errorsOnly, filter.statusCodes]);
@@ -135,11 +138,11 @@ export const LogExport: React.FC<LogExportProps> = ({
       setError(null);
 
       const request = buildExportRequest(format);
-      const response = await invoke<ExportResponse>('export_logs', { request });
+      const response = await safeInvoke<ExportResponse>('export_logs', { request });
 
       downloadFile(response.data, format);
 
-      console.log(`ログデータをエクスポートしました: ${response.count}件 (${format.toUpperCase()})`);
+      logger.info(`ログデータをエクスポートしました: ${response.count}件 (${format.toUpperCase()})`, 'LogExport');
       
       if (onExportComplete) {
         onExportComplete(response.count);
@@ -147,7 +150,7 @@ export const LogExport: React.FC<LogExportProps> = ({
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : ERROR_MESSAGES.EXPORT_FAILED;
       setError(errorMessage);
-      console.error('ログエクスポートエラー:', err);
+      logger.error('ログエクスポートエラー', err, 'LogExport');
     } finally {
       setExporting(false);
     }
@@ -168,7 +171,7 @@ export const LogExport: React.FC<LogExportProps> = ({
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : ERROR_MESSAGES.PDF_EXPORT_FAILED;
       setError(errorMessage);
-      console.error('PDFエクスポートエラー:', err);
+      logger.error('PDFエクスポートエラー', err, 'LogExport');
     } finally {
       setExporting(false);
     }

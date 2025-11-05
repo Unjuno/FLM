@@ -1,7 +1,8 @@
 // PerformanceSummary - パフォーマンス統計サマリーコンポーネント
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../../utils/tauri';
+import { REFRESH_INTERVALS, FORMATTING, UI_WARNING_THRESHOLDS } from '../../constants/config';
 import './PerformanceSummary.css';
 
 /**
@@ -15,6 +16,7 @@ interface PerformanceSummary {
   error_rate: number;
   avg_cpu_usage: number;
   avg_memory_usage: number;
+  total_token_usage: number;
 }
 
 /**
@@ -44,7 +46,7 @@ export const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({
   apiId,
   period,
   autoRefresh = true,
-  refreshInterval = 30000,
+  refreshInterval = REFRESH_INTERVALS.PERFORMANCE,
 }) => {
   const [summary, setSummary] = useState<PerformanceSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -66,7 +68,7 @@ export const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({
         api_id: apiId,
         period: period,
       };
-      const result = await invoke<PerformanceSummary>('get_performance_summary', request);
+      const result = await safeInvoke<PerformanceSummary>('get_performance_summary', request);
       setSummary(result);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'サマリーの取得に失敗しました');
@@ -141,43 +143,49 @@ export const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({
 
         <div className="summary-card">
           <div className="card-label">平均レスポンス時間</div>
-          <div className="card-value">{summary.avg_response_time.toFixed(2)}</div>
+          <div className="card-value">{summary.avg_response_time.toFixed(FORMATTING.DECIMAL_PLACES)}</div>
           <div className="card-unit">ms</div>
         </div>
 
         <div className="summary-card">
           <div className="card-label">最大レスポンス時間</div>
-          <div className="card-value">{summary.max_response_time.toFixed(2)}</div>
+          <div className="card-value">{summary.max_response_time.toFixed(FORMATTING.DECIMAL_PLACES)}</div>
           <div className="card-unit">ms</div>
         </div>
 
         <div className="summary-card">
           <div className="card-label">最小レスポンス時間</div>
-          <div className="card-value">{summary.min_response_time.toFixed(2)}</div>
+          <div className="card-value">{summary.min_response_time.toFixed(FORMATTING.DECIMAL_PLACES)}</div>
           <div className="card-unit">ms</div>
         </div>
 
-        <div className={`summary-card ${summary.error_rate > 5 ? 'alert' : ''}`}>
+        <div className={`summary-card ${summary.error_rate > UI_WARNING_THRESHOLDS.ERROR_RATE_HIGH ? 'alert' : ''}`}>
           <div className="card-label">エラー率</div>
-          <div className="card-value">{summary.error_rate.toFixed(2)}</div>
+          <div className="card-value">{summary.error_rate.toFixed(FORMATTING.DECIMAL_PLACES)}</div>
           <div className="card-unit">%</div>
         </div>
 
         <div className="summary-card">
           <div className="card-label">平均CPU使用率</div>
-          <div className="card-value">{summary.avg_cpu_usage.toFixed(2)}</div>
+          <div className="card-value">{summary.avg_cpu_usage.toFixed(FORMATTING.DECIMAL_PLACES)}</div>
           <div className="card-unit">%</div>
         </div>
 
         <div className="summary-card">
           <div className="card-label">平均メモリ使用量</div>
-          <div className="card-value">{summary.avg_memory_usage.toFixed(2)}</div>
+          <div className="card-value">{summary.avg_memory_usage.toFixed(FORMATTING.DECIMAL_PLACES)}</div>
           <div className="card-unit">MB</div>
+        </div>
+
+        <div className="summary-card">
+          <div className="card-label">トークン使用量</div>
+          <div className="card-value">{summary.total_token_usage.toLocaleString()}</div>
+          <div className="card-unit">トークン</div>
         </div>
       </div>
       {autoRefresh && (
         <div className="summary-footer">
-          <span className="auto-refresh-indicator">自動更新: {refreshInterval / 1000}秒間隔</span>
+          <span className="auto-refresh-indicator">自動更新: {refreshInterval / FORMATTING.MS_PER_SECOND}秒間隔</span>
         </div>
       )}
     </div>

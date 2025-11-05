@@ -1,29 +1,19 @@
-/**
- * FLM - セキュリティテスト
- * 
- * フェーズ4: QAエージェント (QA) 実装
- * アプリケーションのセキュリティテスト
- */
+// security - セキュリティテスト
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
 
-/**
- * セキュリティテストスイート
- * 
- * テスト項目:
- * - APIキーの暗号化検証
- * - 認証の実装確認
- * - 入力値の検証
- * - エラーメッセージからの情報漏洩チェック
- */
 describe('セキュリティテスト', () => {
   beforeAll(() => {
-    console.log('セキュリティテストを開始します');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('セキュリティテストを開始します');
+    }
   });
 
   afterAll(() => {
-    console.log('セキュリティテストを完了しました');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('セキュリティテストを完了しました');
+    }
   });
 
   /**
@@ -189,7 +179,8 @@ describe('セキュリティテスト', () => {
         const errorMessage = String(error);
         
         // システムパスが含まれていないことを確認
-        expect(errorMessage).not.toMatch(/C:\\\\|\\/usr\\/|C:\\/|\\.exe|\\.dll/i);
+        const systemPathPattern = new RegExp('C:\\\\|/usr/|\\.exe|\\.dll', 'i');
+        expect(errorMessage).not.toMatch(systemPathPattern);
       }
     });
 

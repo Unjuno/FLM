@@ -1,9 +1,4 @@
-/**
- * FLM - APIコマンド単体テスト
- * 
- * フェーズ3: QAエージェント (QA) 実装
- * API作成、管理機能のテスト
- */
+// api-commands - APIコマンド単体テスト
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 
@@ -19,12 +14,16 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 describe('API Commands Unit Tests', () => {
   beforeAll(() => {
     // テスト前の初期化処理
-    console.log('APIコマンドテストを開始します');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('APIコマンドテストを開始します');
+    }
   });
 
   afterAll(() => {
     // テスト後のクリーンアップ処理
-    console.log('APIコマンドテストを完了しました');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('APIコマンドテストを完了しました');
+    }
   });
 
   /**

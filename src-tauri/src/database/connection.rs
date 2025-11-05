@@ -54,27 +54,27 @@ pub fn get_connection() -> Result<DatabaseConnection, crate::database::DatabaseE
     // 親ディレクトリが存在しない場合は作成
     if let Some(parent) = db_path.parent() {
         std::fs::create_dir_all(parent)
-            .map_err(|_| crate::database::DatabaseError::ConnectionFailed(
-                "データ保存用のフォルダを作成できませんでした。".to_string()
+            .map_err(|e| crate::database::DatabaseError::ConnectionFailed(
+                format!("データ保存用のフォルダを作成できませんでした: {}", e)
             ))?;
     }
     
     // データベース接続を開く
     let conn = Connection::open(&db_path)
-        .map_err(|_| crate::database::DatabaseError::ConnectionFailed(
-            "データの読み込み・保存に失敗しました。アプリを再起動して再度お試しください。".to_string()
+        .map_err(|e| crate::database::DatabaseError::ConnectionFailed(
+            format!("データベース接続に失敗しました: {}", e)
         ))?;
     
     // 外部キー制約を有効化
     conn.execute("PRAGMA foreign_keys = ON", [])
-        .map_err(|_| crate::database::DatabaseError::ConnectionFailed(
-            "データの整合性チェックに失敗しました。アプリを再起動して再度お試しください。".to_string()
+        .map_err(|e| crate::database::DatabaseError::ConnectionFailed(
+            format!("外部キー制約の有効化に失敗しました: {}", e)
         ))?;
     
     // WALモードを有効化（パフォーマンス向上）
     conn.execute("PRAGMA journal_mode = WAL", [])
-        .map_err(|_| crate::database::DatabaseError::ConnectionFailed(
-            "データの最適化に失敗しました。アプリを再起動して再度お試しください。".to_string()
+        .map_err(|e| crate::database::DatabaseError::ConnectionFailed(
+            format!("WALモードの有効化に失敗しました: {}", e)
         ))?;
     
     Ok(conn)

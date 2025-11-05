@@ -1,27 +1,17 @@
-/**
- * FLM - データベース単体テスト
- * 
- * フェーズ2, 3: QAエージェント (QA) 実装
- * データベーススキーマ、リポジトリのテスト
- */
+// database - データベースの単体テスト
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
-
-/**
- * データベーススキーマテストスイート
- * 
- * テスト項目:
- * - テーブル構造の検証
- * - 制約の検証
- * - インデックスの検証
- */
 describe('Database Schema Tests', () => {
   beforeAll(() => {
-    console.log('データベーススキーマテストを開始します');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('データベーススキーマテストを開始します');
+    }
   });
 
   afterAll(() => {
-    console.log('データベーススキーマテストを完了しました');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('データベーススキーマテストを完了しました');
+    }
   });
 
   /**
@@ -32,7 +22,7 @@ describe('Database Schema Tests', () => {
       const requiredFields = [
         'id',
         'name',
-        'model',
+        'model_name', // model から model_name に変更（実際のスキーマに合わせる）
         'port',
         'enable_auth',
         'status',
@@ -43,7 +33,11 @@ describe('Database Schema Tests', () => {
       requiredFields.forEach(field => {
         expect(field).toBeDefined();
         expect(typeof field).toBe('string');
+        expect(field.length).toBeGreaterThan(0);
       });
+
+      // 必須フィールドの数を確認
+      expect(requiredFields.length).toBeGreaterThanOrEqual(8);
     });
 
     it('should validate port constraints', () => {

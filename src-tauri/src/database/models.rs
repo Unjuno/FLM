@@ -138,3 +138,28 @@ pub struct AlertHistory {
     pub timestamp: DateTime<Utc>,
     pub resolved_at: Option<DateTime<Utc>>,
 }
+
+/// APIセキュリティ設定情報
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ApiSecuritySettings {
+    pub api_id: String,
+    pub ip_whitelist: Option<String>, // JSON配列形式
+    pub rate_limit_enabled: bool,
+    pub rate_limit_requests: i32,
+    pub rate_limit_window_seconds: i32,
+    pub key_rotation_enabled: bool,
+    pub key_rotation_interval_days: i32,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
+}
+
+/// レート制限追跡情報
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct RateLimitTracking {
+    pub id: String,
+    pub api_id: String,
+    pub identifier: String, // APIキーハッシュまたはIPアドレス
+    pub request_count: i32,
+    pub window_start: DateTime<Utc>,
+    pub created_at: DateTime<Utc>,
+}

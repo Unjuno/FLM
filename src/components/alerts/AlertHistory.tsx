@@ -1,8 +1,9 @@
 // AlertHistory - アラート履歴コンポーネント
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../../utils/tauri';
 import { useNotifications } from '../../contexts/NotificationContext';
+import { logger } from '../../utils/logger';
 import './AlertHistory.css';
 
 /**
@@ -47,7 +48,7 @@ export const AlertHistorySection: React.FC<AlertHistorySectionProps> = ({
   const loadHistory = useCallback(async () => {
     try {
       setLoading(true);
-      const result = await invoke<AlertHistoryInfo[]>('get_alert_history', {
+      const result = await safeInvoke<AlertHistoryInfo[]>('get_alert_history', {
         request: {
           api_id: isGlobalSettings ? null : apiId,
           unresolved_only: !showResolved,
@@ -56,9 +57,7 @@ export const AlertHistorySection: React.FC<AlertHistorySectionProps> = ({
       });
       setHistory(result);
     } catch (err) {
-      if (import.meta.env.DEV) {
-        console.error('アラート履歴の読み込みに失敗しました:', err);
-      }
+      logger.error('アラート履歴の読み込みに失敗しました', err, 'AlertHistory');
       const errorMessage = err instanceof Error ? err.message : 'アラート履歴の読み込みに失敗しました';
       showError('アラート履歴の読み込みエラー', errorMessage);
     } finally {
@@ -71,7 +70,7 @@ export const AlertHistorySection: React.FC<AlertHistorySectionProps> = ({
    */
   const loadApiList = useCallback(async () => {
     try {
-      const apis = await invoke<Array<{
+      const apis = await safeInvoke<Array<{
         id: string;
         name: string;
       }>>('list_apis');
@@ -79,9 +78,7 @@ export const AlertHistorySection: React.FC<AlertHistorySectionProps> = ({
       apis.forEach(api => apiMap.set(api.id, api.name));
       setApiNames(apiMap);
     } catch (err) {
-      if (import.meta.env.DEV) {
-        console.error('API一覧の取得に失敗しました:', err);
-      }
+      logger.error('API一覧の取得に失敗しました', err, 'AlertHistory');
       // API名の取得に失敗しても履歴表示は継続できるため、エラー通知は省略
     }
   }, []);
@@ -99,13 +96,11 @@ export const AlertHistorySection: React.FC<AlertHistorySectionProps> = ({
    */
   const handleResolve = useCallback(async (alertId: string) => {
     try {
-      await invoke('resolve_alert', { alert_id: alertId });
+      await safeInvoke('resolve_alert', { alert_id: alertId });
       showSuccess('アラートを解決済みとしてマークしました');
       loadHistory(); // 履歴を再読み込み
     } catch (err) {
-      if (import.meta.env.DEV) {
-        console.error('アラートの解決に失敗しました:', err);
-      }
+      logger.error('アラートの解決に失敗しました', err, 'AlertHistory');
       const errorMessage = err instanceof Error ? err.message : 'アラートの解決に失敗しました';
       showError('アラートの解決エラー', errorMessage);
     }
@@ -122,14 +117,12 @@ export const AlertHistorySection: React.FC<AlertHistorySectionProps> = ({
     }
 
     try {
-      const resolvedCount = await invoke<number>('resolve_alerts', { alert_ids: alertIds });
+      const resolvedCount = await safeInvoke<number>('resolve_alerts', { alert_ids: alertIds });
       showSuccess('アラート一括解決完了', `${resolvedCount}件のアラートを解決済みとしてマークしました`);
       setSelectedAlerts(new Set()); // 選択をクリア
       loadHistory(); // 履歴を再読み込み
     } catch (err) {
-      if (import.meta.env.DEV) {
-        console.error('アラートの一括解決に失敗しました:', err);
-      }
+      logger.error('アラートの一括解決に失敗しました', err, 'AlertHistory');
       const errorMessage = err instanceof Error ? err.message : 'アラートの一括解決に失敗しました';
       showError('アラート一括解決エラー', errorMessage);
     }

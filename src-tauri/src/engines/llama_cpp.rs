@@ -80,11 +80,14 @@ impl LLMEngine for LlamaCppEngine {
         let installed = path.is_some();
         let running = self.is_running().await.unwrap_or(false);
         
+        // バージョン取得は未実装（将来実装予定）
+        let version = None;
+        
         Ok(EngineDetectionResult {
             engine_type: "llama_cpp".to_string(),
             installed,
             running,
-            version: None,
+            version,
             path,
             message: if !installed {
                 Some("llama.cppサーバーが見つかりません。先にインストールしてください。".to_string())
@@ -95,6 +98,9 @@ impl LLMEngine for LlamaCppEngine {
             },
         })
     }
+    
+    // 注意: get_version_from_apiはLLMEngineトレイトに定義されていないため削除
+    // 必要に応じて、将来的にトレイトに追加するか、別の関数として実装
     
     async fn start(&self, config: &EngineConfig) -> Result<u32, AppError> {
         // detect_llama_cpp_serverを実行してパスを取得

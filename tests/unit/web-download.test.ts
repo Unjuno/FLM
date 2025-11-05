@@ -1,15 +1,4 @@
-/**
- * FLM - WEBダウンロード機能の単体テスト
- * 
- * QAエージェント (QA) 実装
- * WEBサイトのダウンロードページJavaScript機能のテスト
- * 
- * テスト内容:
- * - OS検出機能
- * - GitHub Releases API連携
- * - プラットフォーム別アセット分類
- * - エラーハンドリング
- */
+// web-download - WEBダウンロード機能の単体テスト
 
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
 

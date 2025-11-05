@@ -94,7 +94,62 @@ export interface ApiInfo {
   endpoint: string;
   port: number;
   status: 'running' | 'stopped';
-  model: string;
+  model_name: string; // モデル名（統一されたプロパティ名）
   created_at: string;
+  updated_at?: string; // 更新日時（オプション）
+}
+
+/**
+ * API作成リクエスト
+ */
+export interface ApiCreateRequest {
+  name: string;
+  model_name: string;
+  port: number;
+  enable_auth: boolean;
+  engine_type: string;
+  engine_config?: string | null;
+}
+
+/**
+ * API作成レスポンス
+ */
+export interface ApiCreateResponse {
+  id: string;
+  name: string;
+  endpoint: string;
+  api_key: string | null;
+  model_name: string;
+  port: number;
+  status: string;
+}
+
+/**
+ * API詳細レスポンス（APIキーを含む）
+ */
+export interface ApiDetailsResponse {
+  id: string;
+  name: string;
+  endpoint: string;
+  model_name: string;
+  port: number;
+  enable_auth: boolean;
+  status: string;
+  api_key: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+/**
+ * API更新リクエスト
+ */
+export interface ApiUpdateRequest {
+  api_id: string;
+  config: {
+    name?: string;
+    port?: number;
+    enable_auth?: boolean;
+    engine_config?: string | null; // エンジン固有設定（JSON形式）
+  };
 }
 

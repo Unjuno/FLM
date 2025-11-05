@@ -3,6 +3,8 @@
 import type { WebModelDefinition } from '../types/webModel';
 import type { WebServiceRequirements, ModelSelectionResult } from '../types/webService';
 import { loadWebModelConfig } from './webModelConfig';
+import { PORT_RANGE, FORMATTING } from '../constants/config';
+import { logger } from './logger';
 
 /**
  * 要件に基づいて最適なモデルを選定
@@ -17,7 +19,7 @@ export async function selectBestModel(
     // モデルリストの存在確認
     if (!webModelConfig.models || webModelConfig.models.length === 0) {
       if (import.meta.env.DEV) {
-        console.warn('利用可能なモデルが設定されていません');
+        logger.warn('利用可能なモデルが設定されていません', 'modelSelector');
       }
       return null;
     }
@@ -126,10 +128,10 @@ export async function selectBestModel(
           model.size && 
           typeof model.size === 'number' && 
           isFinite(model.size)) {
-        const modelSizeGB = model.size / (1024 * 1024 * 1024);
+        const modelSizeGB = model.size / FORMATTING.BYTES_PER_GB;
         if (isFinite(modelSizeGB) && modelSizeGB > requirements.maxModelSize) {
           score -= 30;
-          reasons.push(`モデルサイズが制限を超える（${modelSizeGB.toFixed(1)}GB > ${requirements.maxModelSize}GB）`);
+          reasons.push(`モデルサイズが制限を超える（${modelSizeGB.toFixed(FORMATTING.DECIMAL_PLACES_SHORT)}GB > ${requirements.maxModelSize}GB）`);
         }
       }
       
@@ -186,13 +188,13 @@ export async function selectBestModel(
       throw new Error(`モデル "${selectedModel.name}" にdefaultSettingsが設定されていません`);
     }
     
-    // ポート番号の妥当性チェック（1024-65535の範囲）
-    let port = requirements.preferredPort ?? selectedModel.defaultSettings.port ?? 8080;
-    if (typeof port !== 'number' || !isFinite(port) || port < 1024 || port > 65535) {
+    // ポート番号の妥当性チェック
+    let port = requirements.preferredPort ?? selectedModel.defaultSettings.port ?? PORT_RANGE.DEFAULT;
+    if (typeof port !== 'number' || !isFinite(port) || port < PORT_RANGE.MIN || port > PORT_RANGE.MAX) {
       if (import.meta.env.DEV) {
-        console.warn(`無効なポート番号: ${port}。デフォルト値8080を使用します。`);
+        console.warn(`無効なポート番号: ${port}。デフォルト値${PORT_RANGE.DEFAULT}を使用します。`);
       }
-      port = 8080;
+      port = PORT_RANGE.DEFAULT;
     }
     
     // 設定を構築（安全にアクセス）
@@ -263,7 +265,7 @@ export async function getSystemResources(): Promise<{
     
     // 利用可能メモリをGBに変換（available_memoryはバイト単位）
     // 注意: モデル選定には利用可能メモリを使用する（実際に使用できるメモリ量）
-    let availableMemoryGB = resources.available_memory / (1024 * 1024 * 1024);
+    let availableMemoryGB = resources.available_memory / FORMATTING.BYTES_PER_GB;
     
     // NaNや負の値のチェック
     if (!isFinite(availableMemoryGB) || availableMemoryGB < 0) {

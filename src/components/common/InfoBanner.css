@@ -122,6 +122,7 @@
   color: #2e7d32;
 }
 
+/* ダークモード対応 */
 @media (prefers-color-scheme: dark) {
   .info-banner-info {
     background-color: #1a237e;
@@ -162,5 +163,45 @@
   .info-banner-success .info-banner-title {
     color: #a5d6a7;
   }
+}
+
+[data-theme="dark"] .info-banner-info {
+  background-color: #1a237e;
+  border-left-color: #2196f3;
+  color: #90caf9;
+}
+
+[data-theme="dark"] .info-banner-info .info-banner-title {
+  color: #bbdefb;
+}
+
+[data-theme="dark"] .info-banner-tip {
+  background-color: #3e2723;
+  border-left-color: #ffc107;
+  color: #ffd54f;
+}
+
+[data-theme="dark"] .info-banner-tip .info-banner-title {
+  color: #fff176;
+}
+
+[data-theme="dark"] .info-banner-warning {
+  background-color: #3e2723;
+  border-left-color: #ff9800;
+  color: #ffb74d;
+}
+
+[data-theme="dark"] .info-banner-warning .info-banner-title {
+  color: #ffcc80;
+}
+
+[data-theme="dark"] .info-banner-success {
+  background-color: #1b5e20;
+  border-left-color: #4caf50;
+  color: #81c784;
+}
+
+[data-theme="dark"] .info-banner-success .info-banner-title {
+  color: #a5d6a7;
 }
 

@@ -2,13 +2,17 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../utils/tauri';
+import { generateSampleCode } from '../utils/apiCodeGenerator';
+import { SAMPLE_DATA } from '../constants/config';
+import type { ApiInfo } from '../types/api';
+import { logger } from '../utils/logger';
 import './ApiDetails.css';
 
 /**
- * API情報
+ * API詳細情報（ローカル定義）
  */
-interface ApiInfo {
+interface ApiDetailsLocalInfo {
   id: string;
   name: string;
   endpoint: string;
@@ -27,7 +31,7 @@ interface ApiInfo {
 export const ApiDetails: React.FC = () => {
   const { id: apiId } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [apiInfo, setApiInfo] = useState<ApiInfo | null>(null);
+  const [apiInfo, setApiInfo] = useState<ApiDetailsLocalInfo | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [showApiKey, setShowApiKey] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -40,14 +44,19 @@ export const ApiDetails: React.FC = () => {
     }
   }, [apiId]);
 
-  const loadApiInfo = async () => {
+  /**
+   * API情報を読み込む
+   * API IDからAPI一覧を取得し、該当するAPI情報を設定します
+   * @throws APIが見つからない場合や取得に失敗した場合にエラーを設定
+   */
+  const loadApiInfo = async (): Promise<void> => {
     try {
       setLoading(true);
       setError(null);
 
       // API一覧から該当APIを取得
-      const apis = await invoke<ApiInfo[]>('list_apis');
-      const api = apis.find(a => a.id === apiId);
+      const apis = await safeInvoke<ApiDetailsLocalInfo[]>('list_apis');
+      const api = apis.find((a: ApiDetailsLocalInfo) => a.id === apiId);
 
       if (!api) {
         setError('APIが見つかりませんでした');
@@ -73,7 +82,12 @@ export const ApiDetails: React.FC = () => {
     }
   };
 
-  const loadApiKey = async () => {
+  /**
+   * APIキーを読み込む
+   * 認証が有効なAPIの場合のみAPIキーを取得します
+   * @throws APIキーの取得に失敗した場合にエラーを設定
+   */
+  const loadApiKey = async (): Promise<void> => {
     if (!apiId || !apiInfo?.enable_auth) {
       return;
     }
@@ -85,10 +99,12 @@ export const ApiDetails: React.FC = () => {
       // バックエンドのget_api_keyコマンドを呼び出し
       if (apiInfo.enable_auth) {
         try {
-          const key = await invoke<string | null>('get_api_key', { api_id: apiId });
+          const key = await safeInvoke<string | null>('get_api_key', { api_id: apiId });
           setApiKey(key || '***（APIキーが見つかりませんでした）***');
         } catch (err) {
-          console.error('APIキーの取得に失敗しました:', err);
+          if (import.meta.env.DEV) {
+            logger.error('APIキーの取得に失敗しました', err instanceof Error ? err : new Error(String(err)), 'ApiDetails');
+          }
           setApiKey('***（セキュリティ保護のため表示できません）***');
         }
       } else {
@@ -101,7 +117,12 @@ export const ApiDetails: React.FC = () => {
     }
   };
 
-  const handleCopy = async (text: string) => {
+  /**
+   * テキストをクリップボードにコピー
+   * @param text コピーするテキスト
+   * @throws クリップボードへのアクセスが失敗した場合にアラートを表示
+   */
+  const handleCopy = async (text: string): Promise<void> => {
     try {
       await navigator.clipboard.writeText(text);
       alert('クリップボードにコピーしました');
@@ -110,62 +131,31 @@ export const ApiDetails: React.FC = () => {
     }
   };
 
-  const generateSampleCode = (language: 'curl' | 'python' | 'javascript') => {
+  /**
+   * API呼び出し用のサンプルコードを生成
+   * @param language 生成する言語（'curl' | 'python' | 'javascript'）
+   * @returns サンプルコード文字列（apiInfoが存在しない場合は空文字列）
+   */
+  const getSampleCode = (language: 'curl' | 'python' | 'javascript'): string => {
     if (!apiInfo) return '';
 
-    const endpoint = apiInfo.endpoint;
-    const apiKeyValue = apiInfo.enable_auth ? (apiKey || 'YOUR_API_KEY') : '';
-    const model = apiInfo.model_name;
+    // apiCodeGeneratorを使用してサンプルコードを生成
+    const apiInfoForGenerator: ApiInfo = {
+      id: apiInfo.id,
+      name: apiInfo.name,
+      endpoint: apiInfo.endpoint,
+      port: apiInfo.port,
+      status: apiInfo.status === 'running' ? 'running' : 'stopped',
+      model_name: apiInfo.model_name,
+      created_at: apiInfo.created_at,
+      updated_at: apiInfo.updated_at,
+    };
 
-    switch (language) {
-      case 'curl':
-        return `curl ${endpoint}/v1/chat/completions \\
-  -H "Content-Type: application/json" \\
-  ${apiInfo.enable_auth ? `-H "Authorization: Bearer ${apiKeyValue}" \\` : ''}
-  -d '{
-    "model": "${model}",
-    "messages": [
-      {"role": "user", "content": "Hello!"}
-    ]
-  }'`;
-      
-      case 'python':
-        return `import requests
-
-response = requests.post(
-    "${endpoint}/v1/chat/completions",
-    headers={
-        "Content-Type": "application/json"${apiInfo.enable_auth ? `,
-        "Authorization": "Bearer ${apiKeyValue}"` : ''}
-    },
-    json={
-        "model": "${model}",
-        "messages": [
-            {"role": "user", "content": "Hello!"}
-        ]
-    }
-)
-
-print(response.json())`;
-      
-      case 'javascript':
-        return `const response = await fetch("${endpoint}/v1/chat/completions", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"${apiInfo.enable_auth ? `,
-    "Authorization": "Bearer ${apiKeyValue}"` : ''}
-  },
-  body: JSON.stringify({
-    model: "${model}",
-    messages: [
-      { role: "user", content: "Hello!" }
-    ]
-  })
-});
-
-const data = await response.json();
-console.log(data);`;
-    }
+    return generateSampleCode(language, {
+      apiInfo: apiInfoForGenerator,
+      apiKey: apiInfo.enable_auth ? (apiKey || undefined) : undefined,
+      sampleMessage: SAMPLE_DATA.MESSAGE,
+    });
   };
 
   if (loading) {
@@ -316,13 +306,13 @@ console.log(data);`;
                     <span className="code-language">{lang}</span>
                     <button
                       className="copy-button"
-                      onClick={() => handleCopy(generateSampleCode(lang))}
+                      onClick={() => handleCopy(getSampleCode(lang))}
                     >
                       📋 コピー
                     </button>
                   </div>
                   <pre className="code-block">
-                    <code>{generateSampleCode(lang)}</code>
+                    <code>{getSampleCode(lang)}</code>
                   </pre>
                 </div>
               ))}

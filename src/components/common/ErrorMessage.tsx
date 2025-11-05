@@ -1,6 +1,7 @@
 // ErrorMessage - エラーメッセージコンポーネント
 
 import React from 'react';
+import { PORT_RANGE } from '../../constants/config';
 import './ErrorMessage.css';
 
 /**
@@ -111,7 +112,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
     if (friendlyMessage.includes('port') && friendlyMessage.includes('already')) {
       friendlyMessage = 'このポート番号は既に使用されています。別のポート番号を試してください。';
     } else if (friendlyMessage.includes('port') && friendlyMessage.includes('invalid')) {
-      friendlyMessage = 'ポート番号は1024から65535の間の数字を入力してください。';
+      friendlyMessage = `ポート番号は${PORT_RANGE.MIN}から${PORT_RANGE.MAX}の間の数字を入力してください。`;
     }
 
     // データベース関連

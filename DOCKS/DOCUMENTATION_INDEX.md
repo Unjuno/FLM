@@ -36,10 +36,27 @@
 - **[README.md](./README.md)** - DOCKSディレクトリの説明
 
 #### 📦 開発履歴（アーカイブ）
-v1.0リリース完了後の開発履歴ドキュメントは `archive/` ディレクトリに移動しました：
+v1.0リリース完了後の開発フェーズ用ドキュメントは `archive/` ディレクトリにアーカイブされています：
+
+**エージェント・開発管理**:
 - **[archive/AGENT_ARCHITECTURE.md](./archive/AGENT_ARCHITECTURE.md)** - AIエージェント構成設計書（開発フェーズ用）
 - **[archive/AGENT_CHECKLIST.md](./archive/AGENT_CHECKLIST.md)** - エージェント別タスクチェックリスト（開発フェーズ用）
+- **[archive/AGENT_TASK_LIST.md](./archive/AGENT_TASK_LIST.md)** - エージェント別タスクリスト（開発フェーズ用）
 - **[archive/PROJECT_COMPLETION_GUIDE.md](./archive/PROJECT_COMPLETION_GUIDE.md)** - プロジェクト完成までの手順書（開発フェーズ用）
+
+**タスク管理・ステータス**（完了済み）:
+- **[archive/COMPLETE_TASK_LIST.md](./archive/COMPLETE_TASK_LIST.md)** - 完全タスクリスト（ロール別、v1.1実装タスク含む）
+- **[archive/FINAL_STATUS_REPORT.md](./archive/FINAL_STATUS_REPORT.md)** - v1.1実装完了最終ステータスレポート
+- **[archive/PROBLEM_LIST.md](./archive/PROBLEM_LIST.md)** - 問題リスト（潜在的な問題・デザイン問題）
+
+**実装レビュー**（完了済み）:
+- **[archive/SPECIFICATION_IMPLEMENTATION_REVIEW.md](./archive/SPECIFICATION_IMPLEMENTATION_REVIEW.md)** - 仕様書と実装の確認レポート
+
+**完了レポート**:
+- **[archive/reports/](./archive/reports/)** - 実装完了レポート（17ファイル）
+  - 詳細は [archive/reports/README.md](./archive/reports/README.md) を参照
+
+**注意**: これらは開発履歴として保持されていますが、現在の開発では通常参照しません。最新の情報については、メインのドキュメントを参照してください。
 
 ---
 
@@ -81,11 +98,28 @@ v1.0リリース完了後の開発履歴ドキュメントは `docs/archive/` �
 
 ### 📖 ルートディレクトリのドキュメント
 
+#### プロジェクト基本情報
 - **[README.md](../README.md)** - プロジェクトREADME（プロジェクト概要、技術スタック、セットアップ）
 - **[CHANGELOG.md](../CHANGELOG.md)** - 変更履歴（すべての重要な変更の記録）
 - **[RELEASE_NOTES.md](../RELEASE_NOTES.md)** - リリースノート（v1.0.0）
 - **[CONTRIBUTING.md](../CONTRIBUTING.md)** - コントリビューションガイド
 - **[LICENSE](../LICENSE)** - MIT License
+- **[SECURITY_POLICY.md](../SECURITY_POLICY.md)** - セキュリティポリシー
+
+#### 実装完了レポート
+- **[DEVELOPER_EXPERT_ULTIMATE_COMPREHENSIVE_REPORT.md](../DEVELOPER_EXPERT_ULTIMATE_COMPREHENSIVE_REPORT.md)** - 開発者専門家による究極包括レポート（最新・最も詳細）
+
+#### テスト関連
+- **[FINAL_TEST_REPORT.md](../FINAL_TEST_REPORT.md)** - 最終テスト実行レポート（最新）
+- **[TESTING_GUIDE.md](../TESTING_GUIDE.md)** - テストガイド
+- **[TEST_EXECUTION_GUIDE.md](../TEST_EXECUTION_GUIDE.md)** - テスト実行ガイド（証明書生成機能専用）
+- **[QUICK_TEST_GUIDE.md](../QUICK_TEST_GUIDE.md)** - クイックテストガイド
+
+**注意**: 古いテストレポート（`TEST_EXECUTION_REPORT.md`、`TEST_RESULTS.md`）は`DOCKS/archive/reports/`にアーカイブされています。
+
+#### その他
+- **[APP_INFO.md](../APP_INFO.md)** - アプリケーション情報（種類、セキュリティ）
+- **[USAGE_STATUS.md](../USAGE_STATUS.md)** - 使用可能状況レポート
 
 ---
 
@@ -138,30 +172,25 @@ v1.0リリース完了後の開発履歴ドキュメントは `docs/archive/` �
 
 ---
 
-## 🗂️ ファイル構造の推奨
+## 🗂️ ファイル構造（現在の状態）
 
 ### 現在の構造
 ```
 FLLM/
 ├── DOCKS/              # 設計・仕様・アーキテクチャ
+│   ├── ARCHITECTURE.md # システムアーキテクチャ設計書
+│   ├── INTERFACE_SPEC.md # モジュール間インターフェース仕様
+│   └── ...             # その他の設計ドキュメント
 ├── docs/               # ユーザー向け・開発者向け
-├── ARCHITECTURE.md     # ルート（重複の可能性）
-└── INTERFACE_SPEC.md   # ルート（重複の可能性）
+├── tests/              # テストスイート
+└── ...                 # その他のディレクトリ
 ```
 
-### 整理の推奨事項
+### 整理済み
 
-1. **ルートディレクトリの重複ファイルを確認**
-   - `ARCHITECTURE.md` と `DOCKS/ARCHITECTURE.md` の整合性を確認
-   - `INTERFACE_SPEC.md` と `DOCKS/INTERFACE_SPEC.md` の整合性を確認
-
-2. **シンボリックリンクまたはREADMEでの参照**
-   - ルートの `ARCHITECTURE.md` と `INTERFACE_SPEC.md` は `DOCKS/` への参照のみにする
-   - または、シンボリックリンクを使用
-
-3. **ドキュメントの命名規則統一**
-   - 英語名を優先
-   - 日本語名のファイルは必要最小限に
+- ✅ すべての設計ドキュメントは `DOCKS/` ディレクトリに配置されています
+- ✅ ルートディレクトリには重複ファイルはありません
+- ✅ ドキュメントの命名規則は統一されています（英語名を優先、必要に応じて日本語名）
 
 ---
 

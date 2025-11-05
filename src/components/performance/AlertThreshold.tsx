@@ -2,6 +2,7 @@
 
 import React from 'react';
 import './AlertThreshold.css';
+import { ALERT_THRESHOLDS, INPUT_STEPS, FORMATTING } from '../../constants/config';
 
 /**
  * アラート閾値設定のプロパティ
@@ -38,12 +39,32 @@ export const AlertThreshold: React.FC<AlertThresholdProps> = ({
   max,
   unit = '',
 }) => {
-  // タイプに応じたデフォルト値
+  // タイプに応じたデフォルト値（定数から取得）
   const defaults = {
-    response_time: { min: 100, max: 60000, unit: 'ms', label: 'レスポンス時間' },
-    error_rate: { min: 0, max: 100, unit: '%', label: 'エラー率' },
-    cpu_usage: { min: 0, max: 100, unit: '%', label: 'CPU使用率' },
-    memory_usage: { min: 0, max: 100, unit: '%', label: 'メモリ使用率' },
+    response_time: { 
+      min: ALERT_THRESHOLDS.RESPONSE_TIME.MIN, 
+      max: ALERT_THRESHOLDS.RESPONSE_TIME.MAX, 
+      unit: ALERT_THRESHOLDS.RESPONSE_TIME.UNIT, 
+      label: ALERT_THRESHOLDS.RESPONSE_TIME.LABEL 
+    },
+    error_rate: { 
+      min: ALERT_THRESHOLDS.ERROR_RATE.MIN, 
+      max: ALERT_THRESHOLDS.ERROR_RATE.MAX, 
+      unit: ALERT_THRESHOLDS.ERROR_RATE.UNIT, 
+      label: ALERT_THRESHOLDS.ERROR_RATE.LABEL 
+    },
+    cpu_usage: { 
+      min: ALERT_THRESHOLDS.CPU_USAGE.MIN, 
+      max: ALERT_THRESHOLDS.CPU_USAGE.MAX, 
+      unit: ALERT_THRESHOLDS.CPU_USAGE.UNIT, 
+      label: ALERT_THRESHOLDS.CPU_USAGE.LABEL 
+    },
+    memory_usage: { 
+      min: ALERT_THRESHOLDS.MEMORY_USAGE.MIN, 
+      max: ALERT_THRESHOLDS.MEMORY_USAGE.MAX, 
+      unit: ALERT_THRESHOLDS.MEMORY_USAGE.UNIT, 
+      label: ALERT_THRESHOLDS.MEMORY_USAGE.LABEL 
+    },
   };
 
   const config = defaults[type];
@@ -52,10 +73,10 @@ export const AlertThreshold: React.FC<AlertThresholdProps> = ({
   const displayUnit = unit || config.unit;
 
   // エラー率の場合は0-1の範囲で扱うが、表示は0-100%で行う
-  const displayValue = type === 'error_rate' ? threshold * 100 : threshold;
+  const displayValue = type === 'error_rate' ? threshold * FORMATTING.PERCENTAGE_MULTIPLIER : threshold;
   const handleDisplayChange = (value: number) => {
     if (type === 'error_rate') {
-      onChange(value / 100); // 0-1の範囲に変換
+      onChange(value / FORMATTING.PERCENTAGE_MULTIPLIER); // 0-1の範囲に変換
     } else {
       onChange(value);
     }
@@ -78,9 +99,9 @@ export const AlertThreshold: React.FC<AlertThresholdProps> = ({
         <div className="alert-threshold-controls">
           <input
             type="number"
-            min={type === 'error_rate' ? minValue * 100 : minValue}
-            max={type === 'error_rate' ? maxValue * 100 : maxValue}
-            step={type === 'error_rate' ? 0.1 : type === 'response_time' ? 100 : 1}
+            min={type === 'error_rate' ? minValue * FORMATTING.PERCENTAGE_MULTIPLIER : minValue}
+            max={type === 'error_rate' ? maxValue * FORMATTING.PERCENTAGE_MULTIPLIER : maxValue}
+            step={type === 'error_rate' ? INPUT_STEPS.ERROR_RATE : type === 'response_time' ? INPUT_STEPS.RESPONSE_TIME : INPUT_STEPS.DEFAULT}
             value={displayValue}
             onChange={(e) => handleDisplayChange(parseFloat(e.target.value) || 0)}
             className="alert-threshold-input"
@@ -91,9 +112,9 @@ export const AlertThreshold: React.FC<AlertThresholdProps> = ({
           <span className="alert-threshold-unit">{displayUnit}</span>
           <input
             type="range"
-            min={type === 'error_rate' ? minValue * 100 : minValue}
-            max={type === 'error_rate' ? maxValue * 100 : maxValue}
-            step={type === 'error_rate' ? 0.1 : type === 'response_time' ? 100 : 1}
+            min={type === 'error_rate' ? minValue * FORMATTING.PERCENTAGE_MULTIPLIER : minValue}
+            max={type === 'error_rate' ? maxValue * FORMATTING.PERCENTAGE_MULTIPLIER : maxValue}
+            step={type === 'error_rate' ? INPUT_STEPS.ERROR_RATE : type === 'response_time' ? INPUT_STEPS.RESPONSE_TIME : INPUT_STEPS.DEFAULT}
             value={displayValue}
             onChange={(e) => handleDisplayChange(parseFloat(e.target.value) || 0)}
             className="alert-threshold-slider"

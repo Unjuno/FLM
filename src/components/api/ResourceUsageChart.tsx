@@ -1,7 +1,6 @@
 // ResourceUsageChart - CPU/メモリ使用率グラフコンポーネント
 
-import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import React, { useCallback, memo } from 'react';
 import {
   LineChart,
   Line,
@@ -12,18 +11,10 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { CHART_CONFIG, CHART_COLORS } from '../../constants/config';
+import { useI18n } from '../../contexts/I18nContext';
+import { useResourceUsageMetrics } from '../../hooks/useResourceUsageMetrics';
 import './ResourceUsageChart.css';
-
-/**
- * パフォーマンスメトリクス情報
- */
-interface PerformanceMetricInfo {
-  id: number;
-  api_id: string;
-  metric_type: string;
-  value: number;
-  timestamp: string;
-}
 
 /**
  * CPU/メモリ使用率グラフコンポーネントのプロパティ
@@ -40,183 +31,23 @@ interface ResourceUsageChartProps {
  * CPU/メモリ使用率グラフコンポーネント
  * CPUとメモリの使用率を時系列グラフで表示します
  */
-export const ResourceUsageChart: React.FC<ResourceUsageChartProps> = ({
+const ResourceUsageChartComponent: React.FC<ResourceUsageChartProps> = ({
   apiId,
   startDate = null,
   endDate = null,
   autoRefresh = true,
   refreshInterval = 30000,
 }) => {
-  const [data, setData] = useState<Array<{ time: string; cpu: number; memory: number }>>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { t } = useI18n();
   
-  // アンマウント状態を追跡するためのref
-  const isMountedRef = useRef(true);
-
-  // コンポーネントのアンマウント時にクリーンアップ
-  useEffect(() => {
-    isMountedRef.current = true;
-    return () => {
-      isMountedRef.current = false;
-    };
-  }, []);
-
-  // データを取得
-  const loadData = useCallback(async () => {
-    if (!isMountedRef.current) return;
-    
-    if (!apiId || apiId.trim() === '') {
-      if (isMountedRef.current) {
-        setData([]);
-        setLoading(false);
-        setError(null);
-      }
-      return;
-    }
-
-    try {
-      // アンマウントチェック（state更新前）
-      if (!isMountedRef.current) return;
-      
-      setLoading(true);
-      setError(null);
-
-      // CPU使用率とメモリ使用率を同時に取得
-      const [cpuMetrics, memoryMetrics] = await Promise.all([
-        invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-          request: {
-            api_id: apiId,
-            metric_type: 'cpu_usage',
-            start_date: startDate || null,
-            end_date: endDate || null,
-          },
-        }),
-        invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-          request: {
-            api_id: apiId,
-            metric_type: 'memory_usage',
-            start_date: startDate || null,
-            end_date: endDate || null,
-          },
-        }),
-      ]);
-
-      // アンマウントチェック（API呼び出し後）
-      if (!isMountedRef.current) return;
-
-      // APIレスポンスがnullやundefined、または配列でない場合のチェック
-      const safeCpuMetrics: PerformanceMetricInfo[] = Array.isArray(cpuMetrics) ? cpuMetrics : [];
-      const safeMemoryMetrics: PerformanceMetricInfo[] = Array.isArray(memoryMetrics) ? memoryMetrics : [];
-
-      // タイムスタンプをキーとしてデータをマージ
-      const dataMap = new Map<number, { timestamp: string; cpu?: number; memory?: number }>();
-
-      safeCpuMetrics.forEach((metric) => {
-        // timestampとvalueのバリデーション
-        if (!metric.timestamp || typeof metric.value !== 'number' || isNaN(metric.value)) {
-          return; // 無効なデータはスキップ
-        }
-
-        const timestamp = new Date(metric.timestamp).getTime();
-        if (isNaN(timestamp)) {
-          return; // 無効なタイムスタンプはスキップ
-        }
-
-        if (!dataMap.has(timestamp)) {
-          dataMap.set(timestamp, {
-            timestamp: new Date(metric.timestamp).toLocaleTimeString('ja-JP', {
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit',
-            }),
-          });
-        }
-        const entry = dataMap.get(timestamp);
-        if (entry) {
-          // CPU使用率はパーセンテージ（0-100）で保存されている
-          entry.cpu = Math.round(metric.value * 100) / 100;
-        }
-      });
-
-      safeMemoryMetrics.forEach((metric) => {
-        // timestampとvalueのバリデーション
-        if (!metric.timestamp || typeof metric.value !== 'number' || isNaN(metric.value)) {
-          return; // 無効なデータはスキップ
-        }
-
-        const timestamp = new Date(metric.timestamp).getTime();
-        if (isNaN(timestamp)) {
-          return; // 無効なタイムスタンプはスキップ
-        }
-
-        if (!dataMap.has(timestamp)) {
-          dataMap.set(timestamp, {
-            timestamp: new Date(metric.timestamp).toLocaleTimeString('ja-JP', {
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit',
-            }),
-          });
-        }
-        const entry = dataMap.get(timestamp);
-        if (entry) {
-          // メモリ使用率は既にパーセンテージ（0-100）で保存されている
-          entry.memory = Math.round(metric.value * 100) / 100;
-        }
-      });
-
-      // マップを配列に変換し、タイムスタンプでソート
-      const sortedData = Array.from(dataMap.entries())
-        .map(([timestamp, values]) => ({
-          time: values.timestamp,
-          cpu: values.cpu ?? 0,
-          memory: values.memory ?? 0,
-          timestamp,
-        }))
-        .sort((a, b) => a.timestamp - b.timestamp)
-        .map(({ timestamp, ...rest }) => rest);
-
-      // アンマウントチェック
-      if (!isMountedRef.current) return;
-      setData(sortedData);
-    } catch (err) {
-      // アンマウントチェック
-      if (!isMountedRef.current) return;
-      
-      setError(err instanceof Error ? err.message : 'データの取得に失敗しました');
-      // エラー時も既存のデータを保持する（前回のデータが表示され続ける）
-    } finally {
-      if (isMountedRef.current) {
-        setLoading(false);
-      }
-    }
-  }, [apiId, startDate, endDate]);
-
-  // 初回読み込み
-  useEffect(() => {
-    // apiIdが空の場合はデータを取得しない
-    if (apiId && apiId.trim() !== '') {
-      loadData();
-    } else {
-      setLoading(false);
-      setData([]);
-      setError(null);
-    }
-  }, [apiId, loadData]);
-
-  // 自動更新
-  useEffect(() => {
-    if (!autoRefresh || !apiId || apiId.trim() === '') {
-      return;
-    }
-
-    const interval = setInterval(() => {
-      loadData();
-    }, refreshInterval);
-
-    return () => clearInterval(interval);
-  }, [autoRefresh, apiId, refreshInterval, loadData]);
+  // 共通フックを使用してデータを取得
+  const { data, loading, error, loadData, isEmpty } = useResourceUsageMetrics({
+    apiId,
+    startDate,
+    endDate,
+    autoRefresh,
+    refreshInterval,
+  });
 
   // CPU使用率フォーマット関数（useCallbackでメモ化）
   const formatCpu = useCallback((value: number): string => {
@@ -236,11 +67,11 @@ export const ResourceUsageChart: React.FC<ResourceUsageChartProps> = ({
   }, []);
 
   // apiIdが空の場合は早期リターン
-  if (!apiId || apiId.trim() === '') {
+  if (isEmpty) {
     return (
-      <div className="resource-usage-chart">
+      <div className="resource-usage-chart" role="status" aria-live="polite">
         <div className="empty-container">
-          <p>APIを選択してください</p>
+          <p>{t('charts.resourceUsage.selectApi')}</p>
         </div>
       </div>
     );
@@ -248,10 +79,10 @@ export const ResourceUsageChart: React.FC<ResourceUsageChartProps> = ({
 
   if (loading && data.length === 0) {
     return (
-      <div className="resource-usage-chart">
+      <div className="resource-usage-chart" role="status" aria-live="polite" aria-busy="true">
         <div className="loading-container">
-          <div className="loading-spinner"></div>
-          <p>リソース使用率データを読み込んでいます...</p>
+          <div className="loading-spinner" aria-hidden="true"></div>
+          <p>{t('charts.resourceUsage.loading')}</p>
         </div>
       </div>
     );
@@ -259,11 +90,16 @@ export const ResourceUsageChart: React.FC<ResourceUsageChartProps> = ({
 
   if (error) {
     return (
-      <div className="resource-usage-chart">
+      <div className="resource-usage-chart" role="alert" aria-live="assertive">
         <div className="error-container">
-          <p className="error-message">⚠️ {error}</p>
-          <button className="retry-button" onClick={loadData}>
-            再試行
+          <p className="error-message" role="alert">⚠️ {error}</p>
+          <button 
+            className="retry-button" 
+            onClick={loadData}
+            aria-label={t('charts.resourceUsage.retry')}
+            type="button"
+          >
+            {t('charts.resourceUsage.retry')}
           </button>
         </div>
       </div>
@@ -272,35 +108,42 @@ export const ResourceUsageChart: React.FC<ResourceUsageChartProps> = ({
 
   if (data.length === 0) {
     return (
-      <div className="resource-usage-chart">
+      <div className="resource-usage-chart" role="status" aria-live="polite">
         <div className="empty-container">
-          <p>リソース使用率データがありません</p>
+          <p>{t('charts.resourceUsage.noData')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="resource-usage-chart">
-      <h3 className="chart-title">CPU/メモリ使用率</h3>
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+    <div className="resource-usage-chart" role="region" aria-labelledby="resource-usage-chart-title">
+      <h3 className="chart-title" id="resource-usage-chart-title">{t('charts.resourceUsage.title')}</h3>
+      <ResponsiveContainer width="100%" height={CHART_CONFIG.HEIGHT}>
+        <LineChart 
+          data={data} 
+          margin={{ top: CHART_CONFIG.MARGIN.TOP, right: CHART_CONFIG.MARGIN.RIGHT, left: CHART_CONFIG.MARGIN.LEFT, bottom: CHART_CONFIG.MARGIN.BOTTOM }}
+          aria-label={t('charts.resourceUsage.ariaLabel')}
+        >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis 
             dataKey="time" 
             angle={-45}
             textAnchor="end"
-            height={80}
+            height={CHART_CONFIG.X_AXIS_HEIGHT}
+            aria-label={t('charts.resourceUsage.xAxisLabel')}
           />
           <YAxis 
             yAxisId="cpu"
             orientation="left"
-            label={{ value: 'CPU使用率 (%)', angle: -90, position: 'insideLeft' }}
+            label={{ value: t('charts.resourceUsage.yAxisLabelCpu'), angle: -90, position: 'insideLeft' }}
+            aria-label={t('charts.resourceUsage.yAxisLabelCpu')}
           />
           <YAxis 
             yAxisId="memory"
             orientation="right"
-            label={{ value: 'メモリ使用率 (%)', angle: 90, position: 'insideRight' }}
+            label={{ value: t('charts.resourceUsage.yAxisLabelMemory'), angle: 90, position: 'insideRight' }}
+            aria-label={t('charts.resourceUsage.yAxisLabelMemory')}
           />
           <Tooltip 
             formatter={(value: number | string | number[], name: string) => {
@@ -309,37 +152,42 @@ export const ResourceUsageChart: React.FC<ResourceUsageChartProps> = ({
               if (typeof numValue !== 'number' || isNaN(numValue)) {
                 return '0%';
               }
-              if (name === 'cpu' || name === 'CPU使用率') {
+              if (name === 'cpu' || name === t('charts.resourceUsage.legendNameCpu')) {
                 return formatCpu(numValue);
               }
-              if (name === 'memory' || name === 'メモリ使用率') {
+              if (name === 'memory' || name === t('charts.resourceUsage.legendNameMemory')) {
                 return formatMemory(numValue);
               }
               return String(numValue);
             }}
-            labelFormatter={(label) => `時間: ${label}`}
+            labelFormatter={(label) => t('charts.resourceUsage.tooltipTime', { time: label })}
           />
           <Legend />
           <Line 
             yAxisId="cpu"
             type="monotone" 
             dataKey="cpu" 
-            stroke="#ff9800" 
-            strokeWidth={2}
-            dot={{ r: 3 }}
-            name="CPU使用率"
+            stroke={CHART_COLORS.ORANGE} 
+            strokeWidth={CHART_CONFIG.STROKE_WIDTH}
+            dot={{ r: CHART_CONFIG.DOT_RADIUS }}
+            name={t('charts.resourceUsage.legendNameCpu')}
+            aria-label={t('charts.resourceUsage.legendNameCpu')}
           />
           <Line 
             yAxisId="memory"
             type="monotone" 
             dataKey="memory" 
-            stroke="#2196f3" 
-            strokeWidth={2}
-            dot={{ r: 3 }}
-            name="メモリ使用率"
+            stroke={CHART_COLORS.BLUE} 
+            strokeWidth={CHART_CONFIG.STROKE_WIDTH}
+            dot={{ r: CHART_CONFIG.DOT_RADIUS }}
+            name={t('charts.resourceUsage.legendNameMemory')}
+            aria-label={t('charts.resourceUsage.legendNameMemory')}
           />
         </LineChart>
       </ResponsiveContainer>
     </div>
   );
 };
+
+// React.memoでメモ化して不要な再レンダリングを防止
+export const ResourceUsageChart = memo(ResourceUsageChartComponent);

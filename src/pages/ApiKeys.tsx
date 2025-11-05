@@ -2,8 +2,11 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../utils/tauri';
+import { API_KEY, DISPLAY_LIMITS, TIMEOUT } from '../constants/config';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { formatDateTime } from '../utils/formatters';
+import { logger } from '../utils/logger';
 import './ApiKeys.css';
 
 /**
@@ -44,7 +47,7 @@ export const ApiKeys: React.FC = () => {
       // バックエンドのIPCコマンドを呼び出し
       // list_apisコマンドでAPI一覧を取得し、認証が有効なAPIに対して
       // 必要に応じてget_api_keyコマンドで個別にAPIキーを取得します
-      const apis = await invoke<Array<{
+      const apis = await safeInvoke<Array<{
         id: string;
         name: string;
         endpoint: string;
@@ -75,10 +78,12 @@ export const ApiKeys: React.FC = () => {
   const loadApiKey = async (apiId: string) => {
     try {
       // バックエンドのget_api_keyコマンドを呼び出し
-      const key = await invoke<string | null>('get_api_key', { api_id: apiId });
+      const key = await safeInvoke<string | null>('get_api_key', { api_id: apiId });
       return key;
     } catch (err) {
-      console.error('APIキーの取得に失敗しました:', err);
+      if (import.meta.env.DEV) {
+        logger.error('APIキーの取得に失敗しました', err instanceof Error ? err : new Error(String(err)), 'ApiKeys');
+      }
       return null;
     }
   };
@@ -110,7 +115,7 @@ export const ApiKeys: React.FC = () => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(apiId);
-      setTimeout(() => setCopied(null), 2000);
+      setTimeout(() => setCopied(null), TIMEOUT.COPY_NOTIFICATION);
     } catch (err) {
       setError('クリップボードへのコピーに失敗しました');
     }
@@ -126,10 +131,11 @@ export const ApiKeys: React.FC = () => {
       setError(null);
 
       // バックエンドのregenerate_api_keyコマンドを呼び出し
-      const newKey = await invoke<string>('regenerate_api_key', { api_id: apiId });
+      await safeInvoke<string>('regenerate_api_key', { api_id: apiId });
 
-      // 新しいAPIキーを表示
-      alert(`APIキーを再生成しました。新しいAPIキーを安全に保存してください。\n\n新しいAPIキー: ${newKey}`);
+      // 新しいAPIキーを表示（ユーザーに確認を促す）
+      // セキュリティのため、alertには表示せず、状態に保存して画面に表示
+      alert('APIキーを再生成しました。新しいAPIキーは下記に表示されます。安全に保存してください。');
       
       // 一覧を更新
       await loadApiKeys();
@@ -149,7 +155,7 @@ export const ApiKeys: React.FC = () => {
       setError(null);
       
       // バックエンドのdelete_api_keyコマンドを呼び出し
-      await invoke('delete_api_key', { api_id: apiId });
+      await safeInvoke('delete_api_key', { api_id: apiId });
 
       // 一覧を更新
       await loadApiKeys();
@@ -158,20 +164,13 @@ export const ApiKeys: React.FC = () => {
     }
   };
 
-  // フォーマットされた日時を取得
-  const formatDateTime = (dateString: string): string => {
-    try {
-      return new Date(dateString).toLocaleString('ja-JP');
-    } catch {
-      return dateString;
-    }
-  };
+  // formatDateTimeはutils/formattersからインポート
 
   // APIキーを部分的にマスク
   const maskApiKey = (key: string | null): string => {
-    if (!key) return '••••••••••••••••••••••••••••••••';
-    if (key.length <= 8) return '••••••••';
-    return `${key.substring(0, 4)}••••••••${key.substring(key.length - 4)}`;
+    if (!key) return '•'.repeat(API_KEY.DEFAULT_LENGTH);
+    if (key.length <= DISPLAY_LIMITS.API_KEY_SHORT_LENGTH) return '•'.repeat(DISPLAY_LIMITS.API_KEY_SHORT_LENGTH);
+    return `${key.substring(0, DISPLAY_LIMITS.API_KEY_VISIBLE_START)}••••••••${key.substring(key.length - DISPLAY_LIMITS.API_KEY_VISIBLE_END)}`;
   };
 
   if (loading) {

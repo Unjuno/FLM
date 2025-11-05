@@ -1,12 +1,4 @@
-/**
- * FLM - F006: ログ表示機能 E2Eテスト
- * 
- * QAエージェント (QA) 実装
- * ログ表示UIのE2Eテスト
- * 
- * 注意: TauriアプリケーションのE2Eテストは、実際のUI操作ではなく、
- * フロントエンドからバックエンドへの完全なフローのテストとして実装します
- */
+// f006-logs-display - ログ表示機能のE2Eテスト
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
@@ -49,9 +41,10 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
   let testApiId: string | null = null;
 
   beforeAll(async () => {
-    console.log('F006 ログ表示機能E2Eテストを開始します');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('F006 ログ表示機能E2Eテストを開始します');
+    }
     
-    // テスト用のAPIを作成
     try {
       const result = await invoke<{
         id: string;
@@ -69,7 +62,9 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
       });
       
       testApiId = result.id;
-      console.log(`テスト用APIを作成しました: ${testApiId}`);
+      if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        console.log(`テスト用APIを作成しました: ${testApiId}`);
+      }
 
       // テスト用のログデータを複数作成
       const logsToCreate = [
@@ -117,27 +112,38 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
             },
           });
         } catch (error) {
-          console.warn('ログ保存エラー:', error);
+          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+            console.warn('ログ保存エラー:', error);
+          }
         }
       }
 
-      console.log(`${logsToCreate.length}件のログを作成しました`);
+      if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        console.log(`${logsToCreate.length}件のログを作成しました`);
+      }
     } catch (error) {
-      console.warn('テスト用APIの作成に失敗しました:', error);
+      if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        console.warn('テスト用APIの作成に失敗しました:', error);
+      }
     }
   });
 
   afterAll(async () => {
-    // テストで作成したAPIをクリーンアップ
     if (testApiId) {
       try {
         await invoke('delete_api', { api_id: testApiId });
-        console.log(`テスト用APIを削除しました: ${testApiId}`);
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.log(`テスト用APIを削除しました: ${testApiId}`);
+        }
       } catch (error) {
-        console.warn('テスト後のクリーンアップに失敗しました:', error);
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト後のクリーンアップに失敗しました:', error);
+        }
       }
     }
-    console.log('F006 ログ表示機能E2Eテストを完了しました');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('F006 ログ表示機能E2Eテストを完了しました');
+    }
   });
 
   /**
@@ -146,7 +152,9 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
   describe('ログ一覧表示フロー', () => {
     it('should display logs list with pagination', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、スキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが作成されていないため、スキップします');
+        }
         return;
       }
 
@@ -187,7 +195,9 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
 
     it('should display logs sorted by created_at DESC', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、スキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが作成されていないため、スキップします');
+        }
         return;
       }
 
@@ -218,7 +228,9 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
   describe('フィルタ機能フロー', () => {
     it('should filter logs by status code and display results', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、スキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが作成されていないため、スキップします');
+        }
         return;
       }
 
@@ -257,7 +269,9 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
 
     it('should filter logs by date range and display results', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、スキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが作成されていないため、スキップします');
+        }
         return;
       }
 
@@ -286,7 +300,9 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
 
     it('should filter logs by path and display results', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、スキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが作成されていないため、スキップします');
+        }
         return;
       }
 
@@ -309,7 +325,9 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
 
     it('should combine multiple filters and display results', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、スキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが作成されていないため、スキップします');
+        }
         return;
       }
 
@@ -347,7 +365,9 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
   describe('詳細表示フロー', () => {
     it('should retrieve and display log details', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、スキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが作成されていないため、スキップします');
+        }
         return;
       }
 
@@ -389,7 +409,9 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
   describe('統計情報表示フロー', () => {
     it('should retrieve and display statistics summary', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、スキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが作成されていないため、スキップします');
+        }
         return;
       }
 
@@ -423,7 +445,9 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
 
     it('should update statistics when filters are applied', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、スキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが作成されていないため、スキップします');
+        }
         return;
       }
 
@@ -462,7 +486,9 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
   describe('完全なフロー: ログ一覧 → フィルタ → 詳細表示 → 統計表示', () => {
     it('should complete full workflow from list to statistics', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、スキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが作成されていないため、スキップします');
+        }
         return;
       }
 

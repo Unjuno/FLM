@@ -79,11 +79,14 @@ impl LLMEngine for VLLMEngine {
         let docker_running = Self::check_docker_container().await;
         let running = self.is_running().await.unwrap_or(false);
         
+        // バージョン取得は未実装（将来実装予定）
+        let version = None;
+        
         Ok(EngineDetectionResult {
             engine_type: "vllm".to_string(),
             installed: python_installed || docker_running,
             running,
-            version: None,
+            version,
             path: if python_installed { Self::check_vllm_installed().await } else { None },
             message: if !python_installed && !docker_running {
                 Some("vLLMがインストールされていません。PythonパッケージまたはDockerコンテナとしてインストールしてください。".to_string())
@@ -94,6 +97,9 @@ impl LLMEngine for VLLMEngine {
             },
         })
     }
+    
+    // 注意: get_version_from_apiはLLMEngineトレイトに定義されていないため削除
+    // 必要に応じて、将来的にトレイトに追加するか、別の関数として実装
     
     async fn start(&self, _config: &EngineConfig) -> Result<u32, AppError> {
         // vLLMは通常、ユーザーが手動で起動する必要がある

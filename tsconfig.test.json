@@ -1,0 +1,12 @@
+{
+  "extends": "./tsconfig.json",
+  "compilerOptions": {
+    "types": ["jest", "@testing-library/jest-dom", "jest-axe"],
+    "typeRoots": ["./node_modules/@types", "./tests/types", "./tests"]
+  },
+  "include": [
+    "tests/**/*",
+    "src/**/*"
+  ]
+}
+

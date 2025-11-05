@@ -1,0 +1,117 @@
+/* SecuritySettings - セキュリティ設定コンポーネントのスタイル */
+
+.security-settings-section {
+  margin-top: 2rem;
+}
+
+.security-settings-loading {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.security-settings-group {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background: var(--bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+}
+
+.security-settings-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.security-settings-description {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+/* IPホワイトリスト */
+.ip-whitelist-input-group {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.ip-whitelist-input-group .form-input {
+  flex: 1;
+}
+
+.ip-whitelist-list {
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.ip-whitelist-list-title {
+  font-size: 0.875rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+  color: var(--text-primary);
+}
+
+.ip-whitelist-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.ip-whitelist-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  background: var(--bg-primary);
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+}
+
+.ip-whitelist-address {
+  font-family: monospace;
+  font-size: 0.875rem;
+  color: var(--text-primary);
+}
+
+.button-danger-small {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+  background: var(--danger-color);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.button-danger-small:hover:not(:disabled) {
+  background: var(--danger-color-hover);
+}
+
+.button-danger-small:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .ip-whitelist-input-group {
+    flex-direction: column;
+  }
+
+  .ip-whitelist-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .button-danger-small {
+    width: 100%;
+  }
+}
+

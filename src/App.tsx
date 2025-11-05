@@ -19,6 +19,16 @@ import { Settings } from "./pages/Settings";
 import { AlertSettings } from "./pages/AlertSettings";
 import { AlertHistory } from "./pages/AlertHistory";
 import { BackupRestore } from "./pages/BackupRestore";
+import { SchedulerSettings } from "./pages/SchedulerSettings";
+import { CertificateManagement } from "./pages/CertificateManagement";
+import { TeamManagement } from "./pages/TeamManagement";
+import { ModelReviews } from "./pages/ModelReviews";
+import { AuditLogs } from "./pages/AuditLogs";
+import { OAuthSettings } from "./pages/OAuthSettings";
+import { RBACSettings } from "./pages/RBACSettings";
+import { PluginManagement } from "./pages/PluginManagement";
+import { EngineManagement } from "./pages/EngineManagement";
+import { ModelCatalogManagement } from "./pages/ModelCatalogManagement";
 import { About } from "./pages/About";
 import { PrivacyPolicy } from "./pages/PrivacyPolicy";
 import { TermsOfService } from "./pages/TermsOfService";
@@ -95,6 +105,36 @@ function App() {
                 
                 {/* バックアップ・復元画面 */}
                 <Route path="/backup" element={<BackupRestore />} />
+                
+                {/* スケジューラ設定画面 */}
+                <Route path="/scheduler" element={<SchedulerSettings />} />
+                
+                {/* 証明書管理画面 */}
+                <Route path="/certificates" element={<CertificateManagement />} />
+                
+                {/* チーム管理画面 */}
+                <Route path="/teams" element={<TeamManagement />} />
+                
+                {/* モデルレビュー画面 */}
+                <Route path="/models/reviews" element={<ModelReviews />} />
+                
+                {/* 監査ログ画面 */}
+                <Route path="/audit-logs" element={<AuditLogs />} />
+                
+                {/* OAuth認証設定画面 */}
+                <Route path="/oauth" element={<OAuthSettings />} />
+                
+                {/* RBAC設定画面 */}
+                <Route path="/rbac" element={<RBACSettings />} />
+                
+                {/* プラグイン管理画面 */}
+                <Route path="/plugins" element={<PluginManagement />} />
+                
+                {/* エンジン管理画面 */}
+                <Route path="/engines" element={<EngineManagement />} />
+                
+                {/* モデルカタログ管理画面 */}
+                <Route path="/models/catalog" element={<ModelCatalogManagement />} />
                 
                 {/* About画面 */}
                 <Route path="/about" element={<About />} />

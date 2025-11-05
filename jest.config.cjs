@@ -1,8 +1,6 @@
 /**
- * FLM - Jest設定ファイル
- * 
- * フェーズ1: QAエージェント (QA) 実装
- * Jestテストフレームワークの設定
+ * Jest設定ファイル
+ * テストフレームワークの設定
  */
 
 module.exports = {
@@ -14,9 +12,21 @@ module.exports = {
       displayName: 'node',
       preset: 'ts-jest',
       testEnvironment: 'node',
-      testMatch: ['<rootDir>/tests/**/*.test.ts', '!<rootDir>/tests/unit/print.test.ts', '!<rootDir>/tests/unit/pdfExport.test.ts', '!<rootDir>/tests/e2e/**/*.test.ts'],
+      testMatch: [
+        '<rootDir>/tests/unit/**/*.test.ts',
+        '<rootDir>/tests/setup/**/*.test.ts'
+      ],
+      testPathIgnorePatterns: [
+        '/tests/unit/print.test.ts',
+        '/tests/unit/pdfExport.test.ts',
+        '/tests/unit/Select.test.tsx',
+        '/tests/unit/LogStatistics.test.tsx',
+        '/tests/integration/',
+        '/tests/e2e/',
+        '/tests/performance/'
+      ],
       transform: {
-        '^.+\\.ts$': ['ts-jest', {
+        '^.+\\.(ts|tsx)$': ['ts-jest', {
           tsconfig: {
             esModuleInterop: true,
             allowSyntheticDefaultImports: true,
@@ -34,21 +44,36 @@ module.exports = {
       displayName: 'jsdom',
       preset: 'ts-jest',
       testEnvironment: 'jsdom',
-      testMatch: ['<rootDir>/tests/unit/print.test.ts', '<rootDir>/tests/unit/pdfExport.test.ts'],
+      testMatch: [
+        '<rootDir>/tests/unit/print.test.ts',
+        '<rootDir>/tests/unit/pdfExport.test.ts',
+        '<rootDir>/tests/unit/**/*.test.tsx',
+        '<rootDir>/tests/integration/**/*.test.ts',
+        '<rootDir>/tests/performance/**/*.test.ts',
+        '<rootDir>/tests/accessibility/**/*.test.tsx',
+        '<rootDir>/tests/api/**/*.test.ts',
+        '<rootDir>/tests/security/**/*.test.ts'
+      ],
       transform: {
-        '^.+\\.ts$': ['ts-jest', {
-          tsconfig: {
-            esModuleInterop: true,
-            allowSyntheticDefaultImports: true,
-            moduleResolution: 'node',
-          },
+        '^.+\\.(ts|tsx)$': ['ts-jest', {
+          tsconfig: '<rootDir>/tsconfig.test.json',
         }],
       },
       moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
       moduleNameMapper: {
         '^@/(.*)$': '<rootDir>/src/$1',
         '^(.+)\\.js$': '$1',
+        '\\.(css|less|scss|sass)$': '<rootDir>/tests/setup/cssMock.js',
       },
+      globals: {
+        'import.meta': {
+          env: {
+            DEV: false,
+          },
+        },
+      },
+      // Tauri APIのモック設定を確実に適用
+      setupFiles: ['<rootDir>/tests/setup/tauri-mock.ts'],
     },
     {
       displayName: 'e2e',
@@ -56,7 +81,7 @@ module.exports = {
       testEnvironment: 'jsdom',
       testMatch: ['<rootDir>/tests/e2e/**/*.test.ts'],
       transform: {
-        '^.+\\.ts$': ['ts-jest', {
+        '^.+\\.(ts|tsx)$': ['ts-jest', {
           tsconfig: {
             esModuleInterop: true,
             allowSyntheticDefaultImports: true,
@@ -96,6 +121,7 @@ module.exports = {
     '^@/(.*)$': '<rootDir>/src/$1',
     '^(.+)\\.js$': '$1',
   },
+  setupFiles: ['<rootDir>/tests/setup/tauri-mock.ts'],
   setupFilesAfterEnv: ['<rootDir>/tests/setup/jest.setup.ts'],
   testTimeout: 10000,
 };

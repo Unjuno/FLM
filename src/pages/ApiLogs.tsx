@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../utils/tauri';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { LogFilter, LogFilterState } from '../components/api/LogFilter';
 import { LogStatistics } from '../components/api/LogStatistics';
@@ -12,6 +12,10 @@ import { LogDelete } from '../components/api/LogDelete';
 import { Tooltip } from '../components/common/Tooltip';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { printSelector } from '../utils/print';
+import { PAGINATION, REFRESH_INTERVALS, HTTP_STATUS, DISPLAY_LIMITS } from '../constants/config';
+import type { ApiInfo } from '../types/api';
+import { formatDateTime, formatResponseTime } from '../utils/formatters';
+import { logger } from '../utils/logger';
 import './ApiLogs.css';
 
 /**
@@ -29,19 +33,6 @@ interface RequestLogInfo {
   created_at: string;
 }
 
-/**
- * API情報
- */
-interface ApiInfo {
-  id: string;
-  name: string;
-  model_name: string;
-  port: number;
-  status: string;
-  endpoint: string;
-  created_at: string;
-  updated_at: string;
-}
 
 /**
  * ログ一覧ページ
@@ -54,7 +45,7 @@ export const ApiLogs: React.FC = () => {
   const [logs, setLogs] = useState<RequestLogInfo[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState<number>(PAGINATION.DEFAULT_PAGE);
   const [totalLogs, setTotalLogs] = useState(0);
   const [selectedLog, setSelectedLog] = useState<RequestLogInfo | null>(null);
   const [autoRefresh, setAutoRefresh] = useState(true);
@@ -68,13 +59,13 @@ export const ApiLogs: React.FC = () => {
     pathFilter: '',
     errorsOnly: false,
   });
-  const POLLING_INTERVAL = 30000; // 30秒
-  const itemsPerPage = 20;
+  const POLLING_INTERVAL = REFRESH_INTERVALS.LOGS;
+  const itemsPerPage = PAGINATION.DEFAULT_ITEMS_PER_PAGE;
 
   // API一覧を取得
   const loadApis = useCallback(async () => {
     try {
-      const result = await invoke<ApiInfo[]>('list_apis');
+      const result = await safeInvoke<ApiInfo[]>('list_apis');
       setApis(result);
       
       // APIが1つ以上ある場合は、最初のAPIを選択（初期化時のみ）
@@ -85,7 +76,9 @@ export const ApiLogs: React.FC = () => {
         return prev;
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'API一覧の取得に失敗しました');
+      const errorMessage = err instanceof Error ? err.message : 'API一覧の取得に失敗しました';
+      logger.error('API一覧の取得に失敗しました', err, 'ApiLogs');
+      setError(errorMessage);
       setLoading(false);
     }
   }, []);
@@ -135,25 +128,46 @@ export const ApiLogs: React.FC = () => {
         request.path_filter = currentFilter.pathFilter;
       }
 
-      const result = await invoke<RequestLogInfo[]>('get_request_logs', { request });
+      // CODE-002修正: レスポンスに総件数が含まれるようになった
+      const result = await safeInvoke<{
+        logs: RequestLogInfo[];
+        total_count: number;
+      }>('get_request_logs', { request });
+      
+      // null/undefinedチェック
+      if (!result || !Array.isArray(result.logs)) {
+        logger.warn('ログ取得結果が無効です', 'ApiLogs', result);
+        setLogs([]);
+        setTotalLogs(0);
+        return;
+      }
       
       // エラーのみ表示フィルタ（フロントエンド側で適用）
-      let filteredResult = result;
+      let filteredResult = result.logs;
       if (currentFilter.errorsOnly) {
-        filteredResult = result.filter(log => log.response_status !== null && log.response_status >= 400);
+        filteredResult = result.logs.filter(log => log.response_status !== null && log.response_status >= HTTP_STATUS.MIN_ERROR_CODE);
+        // エラーのみ表示フィルタ適用時は、総件数も再計算が必要だが、
+        // バックエンドで正確な総件数を取得するのは困難なため、フロントエンド側でフィルタ後の件数を表示
+        // 注意: これは正確な総件数ではなく、現在のページのフィルタ後の件数
+        setTotalLogs(filteredResult.length < itemsPerPage 
+          ? (page - 1) * itemsPerPage + filteredResult.length 
+          : page * itemsPerPage + 1);
+      } else {
+        // CODE-002修正: バックエンドから正確な総件数を取得
+        setTotalLogs(result.total_count);
       }
       
       setLogs(filteredResult);
-      // 総件数は取得したログ数から推定（実際には別途取得が必要な場合あり）
-      setTotalLogs(filteredResult.length >= itemsPerPage ? page * itemsPerPage + 1 : (page - 1) * itemsPerPage + filteredResult.length);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'ログの取得に失敗しました');
+      const errorMessage = err instanceof Error ? err.message : 'ログの取得に失敗しました';
+      logger.error('ログの取得に失敗しました', err, 'ApiLogs');
+      setError(errorMessage);
       setLogs([]);
       setTotalLogs(0);
     } finally {
       setLoading(false);
     }
-  }, [filter]);
+  }, [filter, itemsPerPage]);
 
   // 初期化とAPI一覧取得
   useEffect(() => {
@@ -169,16 +183,7 @@ export const ApiLogs: React.FC = () => {
       setTotalLogs(0);
       setLoading(false);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedApiId, currentPage]);
-  
-  // フィルタ変更時にログを再取得
-  useEffect(() => {
-    if (selectedApiId) {
-      loadLogs(selectedApiId, currentPage, filter);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [filter]);
+  }, [selectedApiId, currentPage, filter, loadLogs]);
 
   // リアルタイム更新（ポーリング）
   useEffect(() => {
@@ -195,7 +200,7 @@ export const ApiLogs: React.FC = () => {
     return () => {
       clearInterval(interval);
     };
-  }, [autoRefresh, selectedApiId, currentPage]);
+  }, [autoRefresh, selectedApiId, currentPage, filter, loadLogs]);
 
   // ページが非表示の場合はポーリングを停止
   useEffect(() => {
@@ -214,36 +219,41 @@ export const ApiLogs: React.FC = () => {
     };
   }, [selectedApiId]);
 
-  // API選択変更ハンドラ
-  const handleApiChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+  // API選択変更ハンドラ（useCallbackでメモ化）
+  const handleApiChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
     setSelectedApiId(event.target.value);
     setCurrentPage(1); // ページをリセット
-  };
+  }, []);
 
-  // ページ変更ハンドラ
-  const handlePageChange = (page: number) => {
+  // ページ変更ハンドラ（useCallbackでメモ化）
+  const handlePageChange = useCallback((page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
-  };
+  }, []);
 
-  // ステータスコードの色を取得
-  const getStatusColor = (status: number | null): string => {
+  // ログ選択ハンドラ（useCallbackでメモ化）
+  const handleLogClick = useCallback((log: RequestLogInfo) => {
+    setSelectedLog(log);
+  }, []);
+
+  // ステータスコードの色を取得（useCallbackでメモ化）
+  const getStatusColor = useCallback((status: number | null): string => {
     if (!status) return 'gray';
-    if (status >= 200 && status < 300) return 'green';
-    if (status >= 300 && status < 400) return 'blue';
-    if (status >= 400 && status < 500) return 'orange';
-    if (status >= 500) return 'red';
+    if (status >= HTTP_STATUS.OK && status < 300) return 'green';
+    if (status >= 300 && status < HTTP_STATUS.MIN_ERROR_CODE) return 'blue';
+    if (status >= HTTP_STATUS.MIN_ERROR_CODE && status < 500) return 'orange';
+    if (status >= HTTP_STATUS.INTERNAL_SERVER_ERROR) return 'red';
     return 'gray';
-  };
+  }, []);
 
-  // ステータスコードのテキストを取得
-  const getStatusText = (status: number | null): string => {
+  // ステータスコードのテキストを取得（useCallbackでメモ化）
+  const getStatusText = useCallback((status: number | null): string => {
     if (!status) return '-';
     return status.toString();
-  };
+  }, []);
 
-  // メソッドの色を取得
-  const getMethodColor = (method: string): string => {
+  // メソッドの色を取得（useCallbackでメモ化）
+  const getMethodColor = useCallback((method: string): string => {
     switch (method.toUpperCase()) {
       case 'GET':
         return 'blue';
@@ -258,27 +268,13 @@ export const ApiLogs: React.FC = () => {
       default:
         return 'gray';
     }
-  };
+  }, []);
 
-  // 日時をフォーマット
-  const formatDateTime = (dateString: string): string => {
-    try {
-      const date = new Date(dateString);
-      return date.toLocaleString('ja-JP', {
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        second: '2-digit',
-      });
-    } catch {
-      return dateString;
-    }
-  };
 
-  // 選択されたAPIの情報を取得
-  const selectedApi = apis.find(api => api.id === selectedApiId);
+  // 選択されたAPIの情報を取得（useMemoでメモ化）
+  const selectedApi = useMemo(() => {
+    return apis.find(api => api.id === selectedApiId);
+  }, [apis, selectedApiId]);
 
   // フィルタリングされたログ（バックエンド側でフィルタリング済み、errorsOnlyのみフロントエンド側で処理）
   const filteredLogs = useMemo(() => {
@@ -298,11 +294,19 @@ export const ApiLogs: React.FC = () => {
     setCurrentPage(1); // フィルタ変更時はページをリセット
   }, []);
 
-  // ページネーション計算（フィルタ後のログ数を使用）
-  const filteredTotalLogs = filteredLogs.length;
-  const totalPages = Math.ceil(filteredTotalLogs / itemsPerPage);
-  const startPage = Math.max(1, currentPage - 2);
-  const endPage = Math.min(totalPages, currentPage + 2);
+  // ページネーション計算（useMemoでメモ化）
+  const { totalPages, startPage, endPage } = useMemo(() => {
+    const filteredTotalLogs = filteredLogs.length;
+    const totalPages = Math.ceil(filteredTotalLogs / itemsPerPage);
+    const startPage = Math.max(PAGINATION.MIN_PAGE, currentPage - PAGINATION.PAGE_RANGE_DISPLAY);
+    const endPage = Math.min(totalPages, currentPage + PAGINATION.PAGE_RANGE_DISPLAY);
+    return { totalPages, startPage, endPage };
+  }, [filteredLogs.length, currentPage, itemsPerPage]);
+
+  // 表示用ログリスト（ページネーション適用）（useMemoでメモ化）
+  const displayedLogs = useMemo(() => {
+    return filteredLogs.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
+  }, [filteredLogs, currentPage, itemsPerPage]);
 
   if (loading && logs.length === 0) {
     return (
@@ -393,9 +397,7 @@ export const ApiLogs: React.FC = () => {
                   apiId={selectedApiId}
                   filter={filter}
                   onExportComplete={(count) => {
-                    if (import.meta.env.DEV) {
-                      console.log(`${count}件のログをエクスポートしました`);
-                    }
+                    logger.info(`${count}件のログをエクスポートしました`, 'ApiLogs');
                   }}
                 />
               </div>
@@ -403,9 +405,7 @@ export const ApiLogs: React.FC = () => {
                 <LogDelete
                   apiId={selectedApiId}
                   onDeleteComplete={(count) => {
-                    if (import.meta.env.DEV) {
-                      console.log(`${count}件のログを削除しました`);
-                    }
+                    logger.info(`${count}件のログを削除しました`, 'ApiLogs');
                     // ログ一覧を再読み込み
                     if (selectedApiId) {
                       loadLogs(selectedApiId, currentPage);
@@ -427,6 +427,8 @@ export const ApiLogs: React.FC = () => {
                 value={selectedApiId}
                 onChange={handleApiChange}
                 className="api-select"
+                title="表示するAPI"
+                aria-label="表示するAPI"
               >
                 <option value="">すべてのAPI</option>
                 {apis.map((api) => (
@@ -475,15 +477,13 @@ export const ApiLogs: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredLogs
-                      .slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage)
-                      .map((log) => (
+                    {displayedLogs.map((log) => (
                       <tr 
                         key={log.id} 
                         className="log-row log-row-clickable"
-                        onClick={() => setSelectedLog(log)}
+                        onClick={() => handleLogClick(log)}
                       >
-                        <td className="log-id">{log.id.substring(0, 8)}...</td>
+                        <td className="log-id">{log.id.substring(0, DISPLAY_LIMITS.LOG_ID_LENGTH)}...</td>
                         <td>
                           <span className={`method-badge method-${getMethodColor(log.method)}`}>
                             {log.method}
@@ -496,12 +496,12 @@ export const ApiLogs: React.FC = () => {
                           </span>
                         </td>
                         <td className="log-response-time">
-                          {log.response_time_ms !== null ? `${log.response_time_ms}ms` : '-'}
+                          {formatResponseTime(log.response_time_ms)}
                         </td>
                         <td className="log-error">
                           {log.error_message ? (
                             <span className="error-indicator" title={log.error_message}>
-                              ⚠️ {log.error_message.substring(0, 20)}...
+                              ⚠️ {log.error_message.substring(0, DISPLAY_LIMITS.ERROR_MESSAGE_LENGTH)}...
                             </span>
                           ) : (
                             '-'

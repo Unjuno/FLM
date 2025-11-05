@@ -2,24 +2,21 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../utils/tauri';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { SettingsExport } from '../components/api/SettingsExport';
 import { Tooltip } from '../components/common/Tooltip';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import type { ApiInfo as BaseApiInfo } from '../types/api';
+import { REFRESH_INTERVALS } from '../constants/config';
+import { logger } from '../utils/logger';
 import './ApiList.css';
 
 /**
- * API情報
+ * API情報（拡張版 - errorステータスを含む）
  */
-interface ApiInfo {
-  id: string;
-  name: string;
-  model: string;
-  port: number;
+interface ApiInfoExtended extends Omit<BaseApiInfo, 'status'> {
   status: 'running' | 'stopped' | 'error';
-  endpoint: string;
-  created_at: string;
 }
 
 /**
@@ -28,7 +25,7 @@ interface ApiInfo {
  */
 export const ApiList: React.FC = () => {
   const navigate = useNavigate();
-  const [apis, setApis] = useState<ApiInfo[]>([]);
+  const [apis, setApis] = useState<ApiInfoExtended[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [selectedApiIds, setSelectedApiIds] = useState<Set<string>>(new Set());
@@ -43,7 +40,7 @@ export const ApiList: React.FC = () => {
       setError(null);
 
       // バックエンドのIPCコマンドを呼び出し
-      const result = await invoke<Array<{
+      const result = await safeInvoke<Array<{
         id: string;
         name: string;
         endpoint: string;
@@ -56,10 +53,10 @@ export const ApiList: React.FC = () => {
       }>>('list_apis');
 
       // レスポンスをApiInfo形式に変換
-      const apiInfos: ApiInfo[] = result.map(api => ({
+      const apiInfos: ApiInfoExtended[] = result.map(api => ({
         id: api.id,
         name: api.name,
-        model: api.model_name,
+        model_name: api.model_name,
         port: api.port,
         status: (api.status === 'running' ? 'running' : 
                  api.status === 'stopped' ? 'stopped' : 'error') as 'running' | 'stopped' | 'error',
@@ -78,13 +75,13 @@ export const ApiList: React.FC = () => {
   useEffect(() => {
     loadApis();
     
-    // ステータスを定期的に更新（5秒ごと）
+    // ステータスを定期的に更新
     const interval = setInterval(() => {
       // ページが非表示の場合は更新をスキップ
       if (!document.hidden) {
         loadApis();
       }
-    }, 5000);
+    }, REFRESH_INTERVALS.API_LIST);
 
     return () => clearInterval(interval);
   }, [loadApis]);
@@ -112,9 +109,9 @@ export const ApiList: React.FC = () => {
       
       // バックエンドのIPCコマンドを呼び出し
       if (currentStatus === 'running') {
-        await invoke('stop_api', { api_id: apiId });
+        await safeInvoke('stop_api', { api_id: apiId });
       } else {
-        await invoke('start_api', { api_id: apiId });
+        await safeInvoke('start_api', { api_id: apiId });
       }
       
       // 一覧を再読み込み
@@ -126,18 +123,33 @@ export const ApiList: React.FC = () => {
   }, [loadApis]);
 
   // APIの削除（useCallbackでメモ化）
-  const handleDelete = useCallback(async (apiId: string, apiName: string) => {
-    const confirmed = window.confirm(
-      `API "${apiName}" を削除しますか？\n\nこの操作は取り消せません。関連するプロセスも停止されます。`
-    );
-
+  const handleDelete = useCallback(async (apiId: string, apiName: string, modelName?: string) => {
+    // モデル削除オプションを含む確認メッセージ
+    let confirmMessage = `API "${apiName}" を削除しますか？\n\nこの操作は取り消せません。関連するプロセスも停止されます。`;
+    
+    if (modelName) {
+      confirmMessage += `\n\nこのAPIが使用しているモデル "${modelName}" も削除しますか？\n（他のAPIで使用されていない場合のみ削除されます）`;
+    }
+    
+    const confirmed = window.confirm(confirmMessage);
     if (!confirmed) return;
+
+    // モデル削除オプションを確認
+    let deleteModel = false;
+    if (modelName) {
+      deleteModel = window.confirm(
+        `モデル "${modelName}" も削除しますか？\n（他のAPIで使用されていない場合のみ削除されます）`
+      );
+    }
 
     try {
       setError(null);
       
-      // バックエンドIPCコマンドを呼び出し
-      await invoke('delete_api', { api_id: apiId });
+      // バックエンドIPCコマンドを呼び出し（モデル削除オプションを含む）
+      await safeInvoke('delete_api', { 
+        api_id: apiId,
+        delete_model: deleteModel,
+      });
 
       // 一覧を再読み込み
       await loadApis();
@@ -240,9 +252,7 @@ export const ApiList: React.FC = () => {
                 loadApis();
                 // 選択をクリア
                 setSelectedApiIds(new Set());
-                if (import.meta.env.DEV) {
-                  console.log(`インポート完了: ${result.imported}件追加、${result.skipped}件スキップ、${result.renamed}件リネーム`);
-                }
+                logger.info(`インポート完了: ${result.imported}件追加、${result.skipped}件スキップ、${result.renamed}件リネーム`, 'ApiList');
               }}
             />
           </div>
@@ -293,7 +303,7 @@ export const ApiList: React.FC = () => {
                 <div className="api-info">
                   <div className="info-row">
                     <span className="info-label">モデル:</span>
-                    <span className="info-value">{api.model}</span>
+                    <span className="info-value">{api.model_name}</span>
                   </div>
                   <div className="info-row">
                     <span className="info-label">エンドポイント:</span>
@@ -354,7 +364,7 @@ export const ApiList: React.FC = () => {
                   <Tooltip content="このAPIを削除します。関連するプロセスも停止され、この操作は取り消せません。" position="top">
                     <button
                       className="action-button delete"
-                      onClick={() => handleDelete(api.id, api.name)}
+                      onClick={() => handleDelete(api.id, api.name, api.model_name)}
                     >
                       削除
                     </button>

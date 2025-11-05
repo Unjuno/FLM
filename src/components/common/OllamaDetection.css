@@ -94,6 +94,90 @@
   margin: 0.5rem 0 0 0;
 }
 
+/* システムインストールガイド */
+.system-install-guide {
+  margin-top: 1.5rem;
+  width: 100%;
+  max-width: 600px;
+  text-align: left;
+}
+
+.guide-section {
+  background-color: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.guide-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 1.1rem;
+  color: #f57c00;
+  font-weight: 600;
+}
+
+.guide-warning {
+  margin: 0.5rem 0 1rem 0;
+  color: #d32f2f;
+  font-size: 0.95rem;
+}
+
+.guide-steps {
+  margin-top: 1rem;
+}
+
+.guide-steps h5 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  color: #0f0f0f;
+  font-weight: 500;
+}
+
+.install-steps-list {
+  margin: 0.5rem 0;
+  padding-left: 1.5rem;
+  color: #333;
+}
+
+.install-steps-list li {
+  margin-bottom: 0.75rem;
+  line-height: 1.6;
+}
+
+.install-substeps {
+  margin-top: 0.5rem;
+  padding-left: 1.25rem;
+  list-style-type: disc;
+}
+
+.install-substeps li {
+  margin-bottom: 0.25rem;
+  font-size: 0.9rem;
+}
+
+.install-link {
+  color: #396cd8;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+.install-link:hover {
+  text-decoration: underline;
+}
+
+.guide-alternative {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 193, 7, 0.2);
+}
+
+.alternative-note {
+  margin: 0;
+  color: #2e7d32;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
 @media (prefers-color-scheme: dark) {
   .detection-message {
     color: #f6f6f6;
@@ -107,6 +191,31 @@
   .path-info,
   .not-found-submessage {
     color: #aaa;
+  }
+
+  .guide-section {
+    background-color: rgba(255, 193, 7, 0.15);
+    border-color: rgba(255, 193, 7, 0.4);
+  }
+
+  .guide-title {
+    color: #ffb74d;
+  }
+
+  .guide-steps h5 {
+    color: #f6f6f6;
+  }
+
+  .install-steps-list {
+    color: #e0e0e0;
+  }
+
+  .install-link {
+    color: #64b5f6;
+  }
+
+  .alternative-note {
+    color: #81c784;
   }
 }
 

@@ -2,13 +2,15 @@
 
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../utils/tauri';
 import { AlertThreshold } from '../components/performance/AlertThreshold';
 import { AlertHistorySection } from '../components/alerts/AlertHistory';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { InfoBanner } from '../components/common/InfoBanner';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { useNotifications } from '../contexts/NotificationContext';
+import { ALERT_DEFAULTS, TIMEOUT } from '../constants/config';
+import { logger } from '../utils/logger';
 import './AlertSettings.css';
 
 /**
@@ -24,7 +26,7 @@ interface AlertSettings {
 }
 
 /**
- * API情報
+ * API情報（ローカル定義）
  */
 interface ApiInfo {
   id: string;
@@ -43,7 +45,7 @@ export const AlertSettings: React.FC = () => {
   const [isGlobalSettings, setIsGlobalSettings] = useState(true);
   const [settings, setSettings] = useState<AlertSettings>({
     api_id: null,
-    response_time_threshold: 5000, // デフォルト: 5秒
+    response_time_threshold: ALERT_DEFAULTS.RESPONSE_TIME_THRESHOLD, // デフォルト: 5秒
     error_rate_threshold: 0.1, // デフォルト: 10%
     cpu_usage_threshold: 80, // デフォルト: 80%
     memory_usage_threshold: 80, // デフォルト: 80%
@@ -78,13 +80,13 @@ export const AlertSettings: React.FC = () => {
    */
   const loadApiList = async () => {
     try {
-      const apis = await invoke<Array<{
+      const apis = await safeInvoke<Array<{
         id: string;
         name: string;
       }>>('list_apis');
       setApiList(apis.map(api => ({ id: api.id, name: api.name })));
     } catch (err) {
-      console.error('API一覧の取得に失敗しました:', err);
+      logger.error('API一覧の取得に失敗しました', err, 'AlertSettings');
     }
   };
 
@@ -97,7 +99,7 @@ export const AlertSettings: React.FC = () => {
       setError(null);
 
       const apiId = isGlobalSettings ? null : selectedApiId;
-      const result = await invoke<AlertSettings>('get_alert_settings', {
+      const result = await safeInvoke<AlertSettings>('get_alert_settings', {
         api_id: apiId,
       });
 
@@ -135,12 +137,12 @@ export const AlertSettings: React.FC = () => {
         notifications_enabled: settings.notifications_enabled,
       };
 
-      await invoke('update_alert_settings', { settings: settingsToSave });
+      await safeInvoke('update_alert_settings', { settings: settingsToSave });
       setSuccessMessage('アラート設定を保存しました');
       showSuccess('アラート設定を保存しました');
       
       // 5秒後に成功メッセージを非表示
-      setTimeout(() => setSuccessMessage(null), 5000);
+      setTimeout(() => setSuccessMessage(null), TIMEOUT.SUCCESS_MESSAGE);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : '設定の保存に失敗しました';
       setError(errorMessage);
@@ -160,7 +162,7 @@ export const AlertSettings: React.FC = () => {
 
     setSettings({
       api_id: isGlobalSettings ? null : selectedApiId,
-      response_time_threshold: 5000,
+      response_time_threshold: ALERT_DEFAULTS.RESPONSE_TIME_THRESHOLD,
       error_rate_threshold: 0.1,
       cpu_usage_threshold: 80,
       memory_usage_threshold: 80,
@@ -277,7 +279,7 @@ export const AlertSettings: React.FC = () => {
             <div className="alert-settings-thresholds">
               <AlertThreshold
                 type="response_time"
-                threshold={settings.response_time_threshold || 5000}
+                threshold={settings.response_time_threshold || ALERT_DEFAULTS.RESPONSE_TIME_THRESHOLD}
                 onChange={(value) => setSettings({ ...settings, response_time_threshold: value })}
                 enabled={enabledStates.response_time}
                 onEnabledChange={(enabled) =>

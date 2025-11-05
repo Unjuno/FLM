@@ -1,35 +1,26 @@
-/**
- * FLM - Ollama自動起動機能 E2Eテスト
- * 
- * フェーズ3: QAエージェント (QA) 実装
- * Ollama自動起動機能のE2Eテスト（実際のアプリケーションでの動作確認）
- */
+// ollama-auto-start - Ollama自動起動機能のE2Eテスト
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
-
-/**
- * Ollama自動起動機能E2Eテストスイート
- * 
- * テスト項目:
- * - 実際のアプリケーションでのOllama自動起動動作
- * - モデル選択画面での自動起動動作
- * - エラーハンドリングとユーザー体験の検証
- */
 describe('Ollama自動起動機能 E2Eテスト', () => {
   let initialOllamaState: 'running' | 'stopped' | 'unknown' = 'unknown';
 
   beforeAll(async () => {
-    console.log('Ollama自動起動機能E2Eテストを開始します');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('Ollama自動起動機能E2Eテストを開始します');
+    }
     
-    // テスト開始時のOllamaの状態を記録
     try {
       const isRunning = await invoke<boolean>('check_ollama_running');
       initialOllamaState = isRunning ? 'running' : 'stopped';
-      console.log(`テスト開始時: Ollamaは${initialOllamaState}状態でした`);
+      if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        console.log(`テスト開始時: Ollamaは${initialOllamaState}状態でした`);
+      }
     } catch {
       initialOllamaState = 'unknown';
-      console.log('テスト開始時: Ollamaの状態を確認できませんでした');
+      if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        console.log('テスト開始時: Ollamaの状態を確認できませんでした');
+      }
     }
   });
 
@@ -53,10 +44,14 @@ describe('Ollama自動起動機能 E2Eテスト', () => {
         }
       }
     } catch (error) {
-      console.warn('テスト後のクリーンアップでエラー:', error);
+      if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        console.warn('テスト後のクリーンアップでエラー:', error);
+      }
     }
     
-    console.log('Ollama自動起動機能E2Eテストを完了しました');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('Ollama自動起動機能E2Eテストを完了しました');
+    }
   });
 
   /**
@@ -69,13 +64,17 @@ describe('Ollama自動起動機能 E2Eテスト', () => {
         try {
           await invoke('stop_ollama');
           await new Promise(resolve => setTimeout(resolve, 2000));
-          console.log('ステップ1: Ollamaを停止しました');
+          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+            console.log('ステップ1: Ollamaを停止しました');
+          }
         } catch (error) {
           const errorMessage = error instanceof Error ? error.message : String(error);
           if (!errorMessage.includes('既に停止') && !errorMessage.includes('not running')) {
             throw error;
           }
-          console.log('ステップ1: Ollamaは既に停止していました');
+          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+            console.log('ステップ1: Ollamaは既に停止していました');
+          }
         }
 
         // ステップ2: モデル一覧取得を試みる（自動起動が発生する場面をシミュレート）
@@ -84,33 +83,44 @@ describe('Ollama自動起動機能 E2Eテスト', () => {
 
         try {
           models = await invoke<Array<{ name: string }>>('get_models_list');
-          console.log('ステップ2: モデル一覧を取得できました（Ollamaは既に実行中でした）');
+          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+            console.log('ステップ2: モデル一覧を取得できました（Ollamaは既に実行中でした）');
+          }
         } catch (error) {
           firstAttemptFailed = true;
           const errorMessage = error instanceof Error ? error.message : String(error);
-          console.log(`ステップ2: モデル一覧取得に失敗しました: ${errorMessage}`);
+          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+            console.log(`ステップ2: モデル一覧取得に失敗しました: ${errorMessage}`);
+          }
           
-          // ステップ3: 自動起動をシミュレート（実際のアプリでは自動的に実行される）
-          console.log('ステップ3: Ollamaを自動起動します...');
+          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+            console.log('ステップ3: Ollamaを自動起動します...');
+          }
           
           try {
             await invoke('start_ollama');
-            // 起動完了を待つ（実際のアプリでは2秒待機）
             await new Promise(resolve => setTimeout(resolve, 3000));
-            console.log('ステップ3: Ollamaの起動が完了しました');
+            if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+              console.log('ステップ3: Ollamaの起動が完了しました');
+            }
           } catch (startError) {
             const startErrorMessage = startError instanceof Error ? startError.message : String(startError);
             if (startErrorMessage.includes('既に実行中')) {
-              console.log('ステップ3: Ollamaは既に実行中でした');
+              if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+                console.log('ステップ3: Ollamaは既に実行中でした');
+              }
             } else {
               throw startError;
             }
           }
 
-          // ステップ4: 再度モデル一覧を取得（自動起動後の再試行をシミュレート）
-          console.log('ステップ4: モデル一覧を再取得します...');
+          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+            console.log('ステップ4: モデル一覧を再取得します...');
+          }
           models = await invoke<Array<{ name: string }>>('get_models_list');
-          console.log('ステップ4: モデル一覧の再取得に成功しました');
+          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+            console.log('ステップ4: モデル一覧の再取得に成功しました');
+          }
         }
 
         // ステップ5: 結果の検証
@@ -118,13 +128,18 @@ describe('Ollama自動起動機能 E2Eテスト', () => {
         expect(Array.isArray(models)).toBe(true);
         
         if (firstAttemptFailed) {
-          console.log('✅ 自動起動フローが正常に動作しました');
+          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+            console.log('✅ 自動起動フローが正常に動作しました');
+          }
         } else {
-          console.log('ℹ️ Ollamaは既に実行中でした（自動起動は不要でした）');
+          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+            console.log('ℹ️ Ollamaは既に実行中でした（自動起動は不要でした）');
+          }
         }
       } catch (error) {
-        // テスト環境によってはOllamaが利用できない場合がある
-        console.warn('E2Eテストでエラー:', error);
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('E2Eテストでエラー:', error);
+        }
         // E2Eテストでは環境によって失敗する可能性があるため、警告のみ
       }
     }, 60000);
@@ -150,7 +165,9 @@ describe('Ollama自動起動機能 E2Eテスト', () => {
         expect(typeof errorMessage).toBe('string');
         expect(errorMessage.length).toBeGreaterThan(0);
         
-        console.log(`エラーメッセージ: ${errorMessage}`);
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.log(`エラーメッセージ: ${errorMessage}`);
+        }
       }
     }, 30000);
 
@@ -171,9 +188,13 @@ describe('Ollama自動起動機能 E2Eテスト', () => {
         
         // 「既に実行中」の場合は正常な動作
         if (errorMessage.includes('既に実行中')) {
-          console.log('Ollamaは既に実行中でした（正常な動作）');
+          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+            console.log('Ollamaは既に実行中でした（正常な動作）');
+          }
         } else {
-          console.log(`Ollama起動エラー: ${errorMessage}`);
+          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+            console.log(`Ollama起動エラー: ${errorMessage}`);
+          }
         }
       }
     }, 30000);
@@ -206,10 +227,14 @@ describe('Ollama自動起動機能 E2Eテスト', () => {
         // 4. パフォーマンスの検証（5秒以内に完了することを期待）
         expect(duration).toBeLessThan(5000);
         
-        console.log(`モデル一覧取得時間: ${duration}ms`);
-        console.log(`取得されたモデル数: ${models.length}`);
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.log(`モデル一覧取得時間: ${duration}ms`);
+          console.log(`取得されたモデル数: ${models.length}`);
+        }
       } catch (error) {
-        console.warn('ユーザー体験検証テストでエラー:', error);
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('ユーザー体験検証テストでエラー:', error);
+        }
       }
     }, 30000);
   });

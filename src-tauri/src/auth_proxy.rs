@@ -98,6 +98,7 @@ pub async fn start_auth_proxy(
     api_key: Option<String>,
     ollama_url: Option<String>,
     api_id: Option<String>,
+    engine_type: Option<String>,
 ) -> Result<AuthProxyProcess, AppError> {
     // 1. 認証プロキシサーバーのパスを取得
     let (node_command, server_args) = get_auth_proxy_command()?;
@@ -119,6 +120,13 @@ pub async fn start_auth_proxy(
     } else {
         cmd.env("OLLAMA_URL", "http://localhost:11434");
         cmd.env("ENGINE_BASE_URL", "http://localhost:11434");
+    }
+    
+    // エンジンタイプを環境変数として設定（プロキシサーバーでエンドポイントを切り替えるため）
+    if let Some(et) = engine_type {
+        cmd.env("ENGINE_TYPE", et);
+    } else {
+        cmd.env("ENGINE_TYPE", "ollama"); // デフォルトはOllama
     }
     
     // API IDを環境変数として設定（リクエストログ記録用）

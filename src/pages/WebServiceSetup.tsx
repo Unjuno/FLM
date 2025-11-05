@@ -6,6 +6,7 @@ import { selectBestModel, getSystemResources } from '../utils/modelSelector';
 import type { WebServiceRequirements, ModelSelectionResult, AutoApiCreationResult } from '../types/webService';
 import { safeInvoke } from '../utils/tauri';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { logger } from '../utils/logger';
 import './WebServiceSetup.css';
 
 export const WebServiceSetup: React.FC = () => {
@@ -38,9 +39,7 @@ export const WebServiceSetup: React.FC = () => {
       }));
       setError(null); // 成功時はエラーをクリア
     } catch (err) {
-      if (import.meta.env.DEV) {
-        console.error('システムリソース取得エラー:', err);
-      }
+      logger.error('システムリソース取得エラー', err, 'WebServiceSetup');
       const errorMessage = err instanceof Error ? err.message : 'システムリソースの取得に失敗しました';
       // Tauri環境が初期化されていない場合は、より明確なメッセージを表示
       if (errorMessage.includes('Tauri環境が初期化されていません')) {
@@ -158,11 +157,9 @@ export const WebServiceSetup: React.FC = () => {
             engineConfigJson = JSON.stringify(mergedConfig);
           }
         } catch (err) {
-          if (import.meta.env.DEV) {
-            console.error('engine_configの構築に失敗:', err);
-          }
+          logger.error('engine_configの構築に失敗', err, 'WebServiceSetup');
           // エラーが発生した場合は、基本的な設定のみを含める
-          const fallbackConfig: any = {};
+          const fallbackConfig: Record<string, unknown> = {};
           if (selectedModel.config.modelParameters && Object.keys(selectedModel.config.modelParameters).length > 0) {
             fallbackConfig.model_parameters = selectedModel.config.modelParameters;
           }
@@ -180,13 +177,11 @@ export const WebServiceSetup: React.FC = () => {
       }
       
       // デバッグ: 送信するデータをログ出力（開発環境のみ）
-      if (import.meta.env.DEV) {
-        console.log('WebServiceSetup - API作成 - 送信する設定:', {
-          ...apiConfig,
-          engine_config: engineConfigJson,
-          engine_config_length: engineConfigJson ? engineConfigJson.length : 0,
-        });
-      }
+      logger.debug('WebServiceSetup - API作成 - 送信する設定', 'WebServiceSetup', {
+        ...apiConfig,
+        engine_config: engineConfigJson,
+        engine_config_length: engineConfigJson ? engineConfigJson.length : 0,
+      });
       
       // API作成
       const result = await safeInvoke<{
@@ -203,9 +198,7 @@ export const WebServiceSetup: React.FC = () => {
       try {
         await safeInvoke('start_api', { apiId: result.id });
       } catch (startError) {
-        if (import.meta.env.DEV) {
-          console.warn('API起動に失敗しましたが、作成は成功しています:', startError);
-        }
+        logger.warn('API起動に失敗しましたが、作成は成功しています', 'WebServiceSetup', startError);
       }
       
       setCreationResult({

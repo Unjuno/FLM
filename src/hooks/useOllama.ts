@@ -1,9 +1,9 @@
 // Ollama関連のカスタムフック
 // IPC通信を扱うフック
 
-import { useState, useEffect, useCallback } from 'react';
-import { invoke } from '@tauri-apps/api/core';
-import { listen } from '@tauri-apps/api/event';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { safeInvoke } from '../utils/tauri';
+import { listen, type UnlistenFn } from '@tauri-apps/api/event';
 import type { OllamaStatus, DownloadProgress } from '../types/ollama';
 
 /**
@@ -20,7 +20,7 @@ export function useOllamaDetection() {
     
     try {
       // バックエンドのコマンド名は detect_ollama
-      const result = await invoke<OllamaStatus>('detect_ollama');
+      const result = await safeInvoke<OllamaStatus>('detect_ollama');
       setStatus(result);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Ollamaの検出に失敗しました';
@@ -52,12 +52,23 @@ export function useOllamaDownload() {
   const [progress, setProgress] = useState<DownloadProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [downloadPath, setDownloadPath] = useState<string | null>(null);
+  const unlistenRef = useRef<UnlistenFn | null>(null);
 
   const download = useCallback(async (platform?: string) => {
     setDownloadStatus('downloading');
     setError(null);
     setProgress(null);
     setDownloadPath(null);
+
+    // 既存のリスナーをクリーンアップ
+    if (unlistenRef.current) {
+      try {
+        await unlistenRef.current();
+      } catch (err) {
+        // クリーンアップエラーは無視
+      }
+      unlistenRef.current = null;
+    }
 
     try {
       // 進捗イベントのリスナーを設定
@@ -74,19 +85,48 @@ export function useOllamaDownload() {
         }
       });
 
+      // リスナーの参照を保存
+      unlistenRef.current = unlistenProgress;
+
       // ダウンロード開始（進捗はイベント経由で受信）
-      const downloadPath = await invoke<string>('download_ollama', { platform: platform || null });
+      const downloadPath = await safeInvoke<string>('download_ollama', { platform: platform || null });
       setDownloadPath(downloadPath);
-      
-      // イベントリスナーのクリーンアップ（少し遅延してクリーンアップ）
-      setTimeout(async () => {
-        await unlistenProgress();
-      }, 1000);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'ダウンロードに失敗しました';
       setError(errorMessage);
       setDownloadStatus('error');
+      
+      // エラー時もリスナーをクリーンアップ
+      if (unlistenRef.current) {
+        try {
+          // UnlistenFnは通常Promise<void>を返す
+          await unlistenRef.current();
+        } catch (cleanupErr) {
+          // クリーンアップエラーは無視（型チェックを回避するためanyを使用）
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const ignored = cleanupErr as any;
+          void ignored;
+        }
+        unlistenRef.current = null;
+      }
     }
+  }, []);
+
+  // コンポーネントのアンマウント時にイベントリスナーをクリーンアップ
+  useEffect(() => {
+    return () => {
+      if (unlistenRef.current) {
+        // アンマウント時は同期的にクリーンアップできないため、Promiseを無視
+        // UnlistenFnがPromiseを返す場合でも、アンマウント時の非同期処理は完了を待たない
+        try {
+          // eslint-disable-next-line @typescript-eslint/no-floating-promises
+          unlistenRef.current();
+        } catch {
+          // クリーンアップエラーは無視
+        }
+        unlistenRef.current = null;
+      }
+    };
   }, []);
 
   const reset = useCallback(() => {
@@ -119,7 +159,7 @@ export function useOllamaProcess() {
     setError(null);
 
     try {
-      await invoke('start_ollama');
+      await safeInvoke('start_ollama');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Ollamaの起動に失敗しました';
       setError(errorMessage);
@@ -134,7 +174,7 @@ export function useOllamaProcess() {
     setError(null);
 
     try {
-      await invoke('stop_ollama');
+      await safeInvoke('stop_ollama');
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Ollamaの停止に失敗しました';
       setError(errorMessage);

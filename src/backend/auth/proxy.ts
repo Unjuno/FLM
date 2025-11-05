@@ -1,13 +1,16 @@
 // proxy - express-http-proxyを使用したプロキシミドルウェア
 
 import { Request, Response } from 'express';
+import { IncomingMessage } from 'http';
 import proxy from 'express-http-proxy';
-import { ProxyOptions } from 'express-http-proxy/types';
 
 interface ProxyConfig {
     transformRequest?: (req: Request) => Request;
     transformResponse?: (body: string) => string;
 }
+
+// ヘッダーの型定義（express-http-proxyの型定義と互換性を持つ）
+type OutgoingHttpHeaders = Record<string, string | number | string[] | undefined>;
 
 /**
  * プロキシミドルウェアを作成
@@ -21,7 +24,7 @@ export function createProxyMiddleware(targetUrl: string, config?: ProxyConfig) {
         parseReqBody: true,
         
         // リクエストヘッダーを転送（Authorizationヘッダーは除外）
-        userResHeaderDecorator: (headers: any, userReq: Request) => {
+        userResHeaderDecorator: (headers: OutgoingHttpHeaders, userReq: Request): OutgoingHttpHeaders => {
             // CORSヘッダーを追加
             headers['Access-Control-Allow-Origin'] = '*';
             headers['Access-Control-Allow-Methods'] = 'GET, POST, PUT, DELETE, OPTIONS';
@@ -30,8 +33,10 @@ export function createProxyMiddleware(targetUrl: string, config?: ProxyConfig) {
         },
         
         // リクエスト変換（設定されている場合）
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         proxyReqOptDecorator: (proxyReqOpts: any, srcReq: Request) => {
-            // Authorizationヘッダーを削除（Ollamaには送らない）
+            // Authorizationヘッダーを削除（LLMエンジンには認証情報を送らない）
+            // 認証はプロキシサーバーで処理されるため、バックエンドエンジンには送信しない
             if (proxyReqOpts.headers) {
                 delete proxyReqOpts.headers['authorization'];
                 delete proxyReqOpts.headers['Authorization'];
@@ -50,7 +55,7 @@ export function createProxyMiddleware(targetUrl: string, config?: ProxyConfig) {
         },
         
         // レスポンス変換（設定されている場合）
-        userResDecorator: (proxyRes: Response, proxyResData: Buffer, userReq: Request, userRes: Response) => {
+        userResDecorator: (proxyRes: IncomingMessage, proxyResData: Buffer, userReq: Request, userRes: Response): string | Buffer => {
             const bodyString = proxyResData.toString('utf8');
             
             if (config?.transformResponse) {
@@ -62,14 +67,18 @@ export function createProxyMiddleware(targetUrl: string, config?: ProxyConfig) {
         
         // エラーハンドリング
         proxyErrorHandler: (err: Error, res: Response) => {
-            console.error('プロキシエラー:', err);
+            // バックエンド環境ではconsoleを使用（loggerはフロントエンド専用）
+            if (process.env.NODE_ENV === 'development') {
+                console.error('[PROXY ERROR]', err);
+            }
             
             if (!res.headersSent) {
+                // エラーメッセージは呼び出し側で設定されるため、ここでは汎用的なメッセージを使用
                 res.status(502).json({
                     error: {
-                        message: 'Ollamaサーバーへの接続に失敗しました。Ollamaが起動していることを確認してください。',
+                        message: 'LLMエンジンサーバーへの接続に失敗しました。エンジンが起動していることを確認してください。',
                         type: 'proxy_error',
-                        code: 'ollama_connection_failed'
+                        code: 'engine_connection_failed'
                     }
                 });
             }
@@ -80,11 +89,11 @@ export function createProxyMiddleware(targetUrl: string, config?: ProxyConfig) {
         
         // リクエストログ（開発時のみ）
         ...(process.env.NODE_ENV === 'development' && {
-            proxyReqPathResolver: (req: Request) => {
+            proxyReqPathResolver: (req: Request): string => {
                 console.log(`[PROXY] ${req.method} ${req.path} -> ${targetUrl}`);
                 return req.path;
             }
         })
-    } as ProxyOptions);
+    });
 }
 

@@ -10,7 +10,11 @@ import { ApiCreationSuccess } from '../components/api/ApiCreationSuccess';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { InfoBanner } from '../components/common/InfoBanner';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
-import type { SelectedModel, ApiConfig, ApiCreationResult } from '../types/api';
+import { TIMEOUT } from '../constants/config';
+import { logger } from '../utils/logger';
+import type { SelectedModel, ApiConfig, ApiCreationResult, ApiCreateRequest, ApiCreateResponse } from '../types/api';
+import { listen } from '@tauri-apps/api/event';
+import type { DownloadProgress } from '../types/ollama';
 import './ApiCreate.css';
 
 /**
@@ -67,17 +71,40 @@ export const ApiCreate: React.FC = () => {
       
       setProgress({ step: `${engineName}確認中...`, progress: 0 });
 
+      // Ollamaの場合、インストール進捗をリッスン
+      let unlistenProgress: (() => void) | null = null;
+      if (engineType === 'ollama') {
+        try {
+          unlistenProgress = await listen<DownloadProgress>('ollama_download_progress', (event) => {
+            const progressData = event.payload;
+            if (progressData.status === 'downloading' || progressData.status === 'extracting') {
+              const progressPercent = progressData.progress || 0;
+              setProgress({
+                step: progressData.status === 'extracting' 
+                  ? 'Ollamaをインストール中...' 
+                  : `Ollamaをダウンロード中... (${Math.round(progressPercent)}%)`,
+                progress: Math.min(progressPercent, 90), // 最大90%まで（残りは起動処理）
+              });
+            } else if (progressData.status === 'completed') {
+              setProgress({ step: 'Ollamaを起動中...', progress: 95 });
+            }
+          });
+        } catch (err) {
+          logger.warn('Ollama進捗イベントのリッスンに失敗', String(err), 'ApiCreate');
+        }
+      }
+
       // ステップ1: エンジン確認
       setProgress({ step: `${engineName}確認中...`, progress: 20 });
-      await new Promise(resolve => setTimeout(resolve, 300)); // UI更新のための短い待機
+      await new Promise(resolve => setTimeout(resolve, TIMEOUT.UI_UPDATE_DELAY)); // UI更新のための短い待機
 
       // ステップ2: API設定保存中
       setProgress({ step: 'API設定を保存中...', progress: 40 });
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, TIMEOUT.UI_UPDATE_DELAY));
 
       // ステップ3: 認証プロキシ起動中
       setProgress({ step: '認証プロキシ起動中...', progress: 60 });
-      await new Promise(resolve => setTimeout(resolve, 300));
+      await new Promise(resolve => setTimeout(resolve, TIMEOUT.UI_UPDATE_DELAY));
 
       // engine_configを構築（既存のengineConfigとmodelParameters、multimodalをマージ）
       let engineConfigJson: string | null = null;
@@ -107,9 +134,9 @@ export const ApiCreate: React.FC = () => {
           
           engineConfigJson = JSON.stringify(mergedConfig);
         } catch (err) {
-          console.error('engine_configの構築に失敗:', err);
+          logger.error('engine_configの構築に失敗', err, 'ApiCreate');
           // エラーが発生した場合は、基本的な設定のみを含める
-          const fallbackConfig: any = {};
+          const fallbackConfig: Record<string, unknown> = {};
           if (config.modelParameters && Object.keys(config.modelParameters).length > 0) {
             fallbackConfig.model_parameters = config.modelParameters;
           }
@@ -121,14 +148,7 @@ export const ApiCreate: React.FC = () => {
       }
 
       // バックエンドに送信するデータを構築
-      const apiCreatePayload: {
-        name: string;
-        model_name: string;
-        port: number;
-        enable_auth: boolean;
-        engine_type: string;
-        engine_config?: string | null;
-      } = {
+      const apiCreatePayload: ApiCreateRequest = {
         name: config.name,
         model_name: selectedModel.name,
         port: config.port,
@@ -142,27 +162,17 @@ export const ApiCreate: React.FC = () => {
       }
       
       // デバッグ: 送信するデータをログ出力（開発環境のみ）
-      if (import.meta.env.DEV) {
-        console.log('API作成 - 送信する設定:', {
-          ...apiCreatePayload,
-          engine_config: engineConfigJson,
-          model_parameters: config.modelParameters,
-          multimodal: config.multimodal,
-          engine_config_length: engineConfigJson ? engineConfigJson.length : 0,
-        });
-      }
+      logger.debug('API作成 - 送信する設定:', {
+        ...apiCreatePayload,
+        engine_config: engineConfigJson,
+        model_parameters: config.modelParameters,
+        multimodal: config.multimodal,
+        engine_config_length: engineConfigJson ? engineConfigJson.length : 0,
+      });
 
       // バックエンドのIPCコマンドを呼び出し
       // Rust側のApiCreateConfig構造体と一致させる
-      const response = await safeInvoke<{
-        id: string;
-        name: string;
-        endpoint: string;
-        api_key: string | null;
-        model_name: string;
-        port: number;
-        status: string;
-      }>('create_api', apiCreatePayload);
+      const response = await safeInvoke<ApiCreateResponse>('create_api', apiCreatePayload as unknown as Record<string, unknown>);
 
       // レスポンスをApiCreationResultに変換
       const result: ApiCreationResult = {
@@ -178,18 +188,23 @@ export const ApiCreate: React.FC = () => {
 
       setCreationResult(result);
       setCurrentStep(CreationStep.Success);
+      
+      // 進捗イベントリスナーをクリーンアップ
+      if (unlistenProgress) {
+        try {
+          unlistenProgress();
+        } catch (cleanupErr) {
+          logger.warn('進捗イベントリスナーのクリーンアップエラー', String(cleanupErr), 'ApiCreate');
+        }
+      }
     } catch (err) {
       // エラーの詳細情報を取得
       let errorMessage = 'API作成中にエラーが発生しました';
       if (err instanceof Error) {
         errorMessage = err.message;
-        console.error('API作成エラー詳細:', {
-          message: err.message,
-          stack: err.stack,
-          name: err.name,
-        });
+        logger.error('API作成エラー詳細', err, 'ApiCreate');
       } else {
-        console.error('API作成エラー（非Error型）:', err);
+        logger.error('API作成エラー（非Error型）', err instanceof Error ? err : new Error(String(err)), 'ApiCreate');
         errorMessage = String(err);
       }
       
@@ -201,7 +216,14 @@ export const ApiCreate: React.FC = () => {
 
   // クイック作成モードとモデル選択の処理
   useEffect(() => {
-    const state = location.state as any;
+    interface LocationState {
+      quickCreate?: boolean;
+      recommendedModel?: string;
+      selectedModelName?: string;
+      selectedModel?: SelectedModel;
+      engineType?: string;
+    }
+    const state = location.state as LocationState | null | undefined;
     
     // stateが存在しない場合は何もしない
     if (!state) {
@@ -288,7 +310,7 @@ export const ApiCreate: React.FC = () => {
       // startApiCreationを非同期で実行
       // エラーが発生した場合は、エラー状態を設定して設定画面に戻る
       startApiCreation(config).catch((err) => {
-        console.error('API作成の開始に失敗:', err);
+        logger.error('API作成の開始に失敗', err, 'ApiCreate');
         const errorMessage = err instanceof Error ? err.message : 'API作成の開始に失敗しました';
         setError(errorMessage);
         setCurrentStep(CreationStep.Configuration);

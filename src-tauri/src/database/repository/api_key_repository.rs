@@ -21,7 +21,7 @@ impl ApiKeyRepository {
                 api_id: row.get(1)?,
                 api_key_encrypted: String::from_utf8_lossy(&row.get::<_, Vec<u8>>(2)?).to_string(),
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(3)?)
-                    .unwrap()
+                    .map_err(|e| DatabaseError::Other(format!("Invalid created_at format: {e}")))?
                     .with_timezone(&Utc),
             })
         });
@@ -45,7 +45,7 @@ impl ApiKeyRepository {
                 api_id: row.get(1)?,
                 api_key_encrypted: String::from_utf8_lossy(&row.get::<_, Vec<u8>>(2)?).to_string(),
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(3)?)
-                    .unwrap()
+                    .map_err(|e| DatabaseError::Other(format!("Invalid created_at format: {e}")))?
                     .with_timezone(&Utc),
             })
         });

@@ -2,6 +2,8 @@
 
 import React, { useState } from 'react';
 import type { SelectedModel, ApiConfig } from '../../types/api';
+import { useApiConfigValidation } from '../../hooks/useApiConfigValidation';
+import { PORT_RANGE, API_NAME } from '../../constants/config';
 import './ApiSettings.css';
 
 interface ApiSettingsProps {
@@ -24,28 +26,12 @@ export const ApiSettings: React.FC<ApiSettingsProps> = ({
   onCancel,
 }) => {
   const [config, setConfig] = useState<ApiConfig>(initialConfig);
-  const [errors, setErrors] = useState<{ [key: string]: string }>({});
-
-  // バリデーション
-  const validate = (): boolean => {
-    const newErrors: { [key: string]: string } = {};
-
-    if (!config.name.trim()) {
-      newErrors.name = 'API名を入力してください';
-    }
-
-    if (config.port < 1 || config.port > 65535) {
-      newErrors.port = 'ポート番号は1～65535の範囲で入力してください';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
+  const validation = useApiConfigValidation(config);
 
   // 送信処理
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (validate()) {
+    if (validation.isValid) {
       onSubmit(config);
     }
   };
@@ -67,13 +53,14 @@ export const ApiSettings: React.FC<ApiSettingsProps> = ({
           <input
             id="api-name"
             type="text"
-            className={`form-input ${errors.name ? 'error' : ''}`}
+            className={`form-input ${validation.errors.name ? 'error' : ''}`}
             value={config.name}
             onChange={(e) => setConfig({ ...config, name: e.target.value })}
             placeholder="LocalAI API"
+            maxLength={API_NAME.MAX_LENGTH}
             required
           />
-          {errors.name && <span className="form-error">{errors.name}</span>}
+          {validation.errors.name && <span className="form-error">{validation.errors.name}</span>}
           <p className="form-help">
             このAPIを識別するための名前です。後で変更できます。
           </p>
@@ -86,14 +73,14 @@ export const ApiSettings: React.FC<ApiSettingsProps> = ({
           <input
             id="api-port"
             type="number"
-            className={`form-input ${errors.port ? 'error' : ''}`}
+            className={`form-input ${validation.errors.port ? 'error' : ''}`}
             value={config.port}
-            onChange={(e) => setConfig({ ...config, port: parseInt(e.target.value) || 8080 })}
-            min="1"
-            max="65535"
+            onChange={(e) => setConfig({ ...config, port: parseInt(e.target.value) || PORT_RANGE.DEFAULT })}
+            min={PORT_RANGE.MIN}
+            max={PORT_RANGE.MAX}
             required
           />
-          {errors.port && <span className="form-error">{errors.port}</span>}
+          {validation.errors.port && <span className="form-error">{validation.errors.port}</span>}
           <p className="form-help">
             APIがリッスンするポート番号です。他のアプリケーションで使用されていないポートを選択してください。
           </p>

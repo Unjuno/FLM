@@ -1,9 +1,4 @@
-/**
- * FLM - Ollama自動インストール機能統合テスト
- * 
- * フェーズ2: QAエージェント (QA) 実装
- * Ollama自動インストール機能のテスト（Windows環境対応）
- */
+// ollama-install - Ollama自動インストール機能の統合テスト
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 
@@ -18,11 +13,15 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
  */
 describe('Ollama Auto-Install Integration Tests', () => {
   beforeAll(() => {
-    console.log('Ollama自動インストールテストを開始します');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('Ollama自動インストールテストを開始します');
+    }
   });
 
   afterAll(() => {
-    console.log('Ollama自動インストールテストを完了しました');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('Ollama自動インストールテストを完了しました');
+    }
   });
 
   /**

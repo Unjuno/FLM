@@ -1,7 +1,6 @@
 // ResponseTimeChart - レスポンス時間グラフコンポーネント
 
-import React, { useState, useEffect, useCallback } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import React, { memo, useCallback } from 'react';
 import {
   LineChart,
   Line,
@@ -12,18 +11,10 @@ import {
   Legend,
   ResponsiveContainer,
 } from 'recharts';
+import { CHART_CONFIG, CHART_COLORS } from '../../constants/config';
+import { useI18n } from '../../contexts/I18nContext';
+import { usePerformanceMetrics } from '../../hooks/usePerformanceMetrics';
 import './ResponseTimeChart.css';
-
-/**
- * パフォーマンスメトリクス情報
- */
-interface PerformanceMetricInfo {
-  id: number;
-  api_id: string;
-  metric_type: string;
-  value: number;
-  timestamp: string;
-}
 
 /**
  * レスポンス時間グラフコンポーネントのプロパティ
@@ -40,92 +31,46 @@ interface ResponseTimeChartProps {
  * レスポンス時間グラフコンポーネント
  * レスポンス時間の時系列グラフを表示します
  */
-export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({
+const ResponseTimeChartComponent: React.FC<ResponseTimeChartProps> = ({
   apiId,
   startDate = null,
   endDate = null,
   autoRefresh = true,
   refreshInterval = 30000,
 }) => {
-  const [data, setData] = useState<Array<{ time: string; value: number }>>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  // データを取得
-  const loadData = useCallback(async () => {
-    if (!apiId) {
-      setData([]);
-      setLoading(false);
-      return;
+  const { t } = useI18n();
+  
+  // 値フォーマット関数（useCallbackでメモ化して、無限ループを防止）
+  // レスポンス時間はミリ秒単位なので、そのまま使用（フォーマットは表示時のみ）
+  const valueFormatter = useCallback((value: number): number => {
+    if (isNaN(value) || !isFinite(value)) {
+      return 0;
     }
+    // 整数値に丸める（ミリ秒単位）
+    return Math.round(value);
+  }, []);
+  
+  // 共通フックを使用してデータを取得
+  const { data, loading, error, loadData, isEmpty } = usePerformanceMetrics({
+    apiId,
+    metricType: 'avg_response_time',
+    startDate,
+    endDate,
+    autoRefresh,
+    refreshInterval,
+    valueFormatter,
+  });
 
-    try {
-      setLoading(true);
-      setError(null);
-
-      const request = {
-        api_id: apiId,
-        metric_type: 'avg_response_time',
-        start_date: startDate || null,
-        end_date: endDate || null,
-      };
-
-      const result = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', { request });
-      
-      // データを時間順にソートし、グラフ用フォーマットに変換
-      const sortedData = result
-        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-        .map((metric) => ({
-          time: new Date(metric.timestamp).toLocaleTimeString('ja-JP', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-          }),
-          value: Math.round(metric.value * 100) / 100, // 小数点以下2桁
-        }));
-
-      setData(sortedData);
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'データの取得に失敗しました');
-      // エラー時も既存のデータを保持する（前回のデータが表示され続ける）
-    } finally {
-      setLoading(false);
-    }
-  }, [apiId, startDate, endDate]);
-
-  // 初回読み込み
-  useEffect(() => {
-    loadData();
-  }, [loadData]);
-
-  // 自動更新
-  useEffect(() => {
-    if (!autoRefresh || !apiId) {
-      return;
-    }
-
-    const interval = setInterval(() => {
-      loadData();
-    }, refreshInterval);
-
-    return () => clearInterval(interval);
-  }, [autoRefresh, apiId, refreshInterval, loadData]);
-
-  // 時間フォーマット関数
-  const formatTime = (time: string): string => {
-    return time;
-  };
-
-  // 値フォーマット関数
-  const formatValue = (value: number): string => {
+  // 値フォーマット関数（useCallbackでメモ化）
+  const formatValue = useCallback((value: number): string => {
     return `${value}ms`;
-  };
+  }, []);
 
-  if (!apiId) {
+  if (isEmpty) {
     return (
-      <div className="response-time-chart-container">
+      <div className="response-time-chart-container" role="status" aria-live="polite">
         <div className="chart-empty">
-          <p>APIを選択してください</p>
+          <p>{t('charts.responseTime.selectApi')}</p>
         </div>
       </div>
     );
@@ -133,10 +78,10 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({
 
   if (loading && data.length === 0) {
     return (
-      <div className="response-time-chart">
+      <div className="response-time-chart" role="status" aria-live="polite" aria-busy="true">
         <div className="chart-loading">
-          <div className="loading-spinner"></div>
-          <p>レスポンス時間データを読み込んでいます...</p>
+          <div className="loading-spinner" aria-hidden="true"></div>
+          <p>{t('charts.responseTime.loading')}</p>
         </div>
       </div>
     );
@@ -144,11 +89,16 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({
 
   if (error) {
     return (
-      <div className="response-time-chart">
+      <div className="response-time-chart" role="alert" aria-live="assertive">
         <div className="chart-error">
-          <p>⚠️ {error}</p>
-          <button className="retry-button" onClick={loadData}>
-            再試行
+          <p className="error-message" role="alert">⚠️ {error}</p>
+          <button 
+            className="retry-button" 
+            onClick={loadData}
+            aria-label={t('charts.responseTime.retry')}
+            type="button"
+          >
+            {t('charts.responseTime.retry')}
           </button>
         </div>
       </div>
@@ -157,45 +107,54 @@ export const ResponseTimeChart: React.FC<ResponseTimeChartProps> = ({
 
   if (data.length === 0) {
     return (
-      <div className="response-time-chart">
+      <div className="response-time-chart" role="status" aria-live="polite">
         <div className="chart-empty">
-          <p>レスポンス時間データがありません</p>
+          <p>{t('charts.responseTime.noData')}</p>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="response-time-chart">
-      <h3 className="chart-title">レスポンス時間</h3>
-      <ResponsiveContainer width="100%" height={300}>
-        <LineChart data={data} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
+    <div className="response-time-chart" role="region" aria-labelledby="response-time-chart-title">
+      <h3 className="chart-title" id="response-time-chart-title">{t('charts.responseTime.title')}</h3>
+      <ResponsiveContainer width="100%" height={CHART_CONFIG.HEIGHT}>
+        <LineChart 
+          data={data} 
+          margin={{ top: CHART_CONFIG.MARGIN.TOP, right: CHART_CONFIG.MARGIN.RIGHT, left: CHART_CONFIG.MARGIN.LEFT, bottom: CHART_CONFIG.MARGIN.BOTTOM }}
+          aria-label={t('charts.responseTime.ariaLabel')}
+        >
           <CartesianGrid strokeDasharray="3 3" />
           <XAxis 
             dataKey="time" 
-            tickFormatter={formatTime}
             angle={-45}
             textAnchor="end"
-            height={80}
+            height={CHART_CONFIG.X_AXIS_HEIGHT}
+            aria-label={t('charts.responseTime.xAxisLabel')}
           />
           <YAxis 
-            label={{ value: 'レスポンス時間 (ms)', angle: -90, position: 'insideLeft' }}
+            label={{ value: t('charts.responseTime.yAxisLabel'), angle: -90, position: 'insideLeft' }}
+            aria-label={t('charts.responseTime.yAxisLabel')}
           />
           <Tooltip 
             formatter={(value: number) => formatValue(value)}
-            labelFormatter={(label) => `時間: ${label}`}
+            labelFormatter={(label) => t('charts.responseTime.tooltipTime', { time: label })}
           />
           <Legend />
           <Line 
             type="monotone" 
             dataKey="value" 
-            stroke="#667eea" 
-            strokeWidth={2}
-            dot={{ r: 3 }}
-            name="レスポンス時間"
+            stroke={CHART_COLORS.PRIMARY} 
+            strokeWidth={CHART_CONFIG.STROKE_WIDTH}
+            dot={{ r: CHART_CONFIG.DOT_RADIUS }}
+            name={t('charts.responseTime.legendName')}
+            aria-label={t('charts.responseTime.legendName')}
           />
         </LineChart>
       </ResponsiveContainer>
     </div>
   );
 };
+
+// React.memoでメモ化して不要な再レンダリングを防止
+export const ResponseTimeChart = memo(ResponseTimeChartComponent);

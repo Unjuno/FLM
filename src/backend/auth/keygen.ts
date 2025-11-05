@@ -1,6 +1,7 @@
 // keygen - APIキーの生成・検証機能
 
 import crypto from 'crypto';
+import { API_KEY } from '../../constants/config.js';
 
 /**
  * APIキーを生成
@@ -8,9 +9,9 @@ import crypto from 'crypto';
  * @param length キーの長さ（デフォルト: 32）
  * @returns 生成されたAPIキー
  */
-export function generateApiKey(length: number = 32): string {
-    if (length < 32) {
-        throw new Error('APIキーの長さは32文字以上である必要があります。');
+export function generateApiKey(length: number = API_KEY.DEFAULT_LENGTH): string {
+    if (length < API_KEY.MIN_LENGTH) {
+        throw new Error(`APIキーの長さは${API_KEY.MIN_LENGTH}文字以上である必要があります。`);
     }
     
     // ランダムバイトを生成（Base64URLエンコード）
@@ -40,13 +41,34 @@ export function hashApiKey(apiKey: string): string {
 /**
  * APIキーを検証
  * データベースから取得したハッシュと比較
+ * タイミング攻撃を防ぐため、定数時間比較を使用
  * @param apiKey 検証するAPIキー
  * @param storedHash データベースに保存されているハッシュ
  * @returns 検証結果
  */
 export function verifyApiKey(apiKey: string, storedHash: string): boolean {
     const computedHash = hashApiKey(apiKey);
-    return computedHash === storedHash;
+    
+    // タイミング攻撃を防ぐため、定数時間比較を使用
+    // ハッシュ値は16進数文字列なので、Bufferに変換して比較
+    if (computedHash.length !== storedHash.length) {
+        // 長さが異なる場合は、タイミング情報を漏らさないようにダミー比較を実行
+        crypto.timingSafeEqual(
+            Buffer.from(computedHash),
+            Buffer.from(storedHash.substring(0, computedHash.length))
+        );
+        return false;
+    }
+    
+    try {
+        return crypto.timingSafeEqual(
+            Buffer.from(computedHash),
+            Buffer.from(storedHash)
+        );
+    } catch (error) {
+        // エラー時は安全のためfalseを返す
+        return false;
+    }
 }
 
 /**
@@ -86,7 +108,29 @@ export async function validateApiKey(apiKey: string): Promise<boolean> {
         }
         
         // ハッシュを比較（定数時間比較でタイミング攻撃を防止）
-        return apiKeyHash.toLowerCase() === storedHash.toLowerCase();
+        // 大文字小文字を区別しない比較のため、両方を小文字に変換してから比較
+        const normalizedApiKeyHash = apiKeyHash.toLowerCase();
+        const normalizedStoredHash = storedHash.toLowerCase();
+        
+        // タイミング攻撃を防ぐため、定数時間比較を使用
+        if (normalizedApiKeyHash.length !== normalizedStoredHash.length) {
+            // 長さが異なる場合は、タイミング情報を漏らさないようにダミー比較を実行
+            crypto.timingSafeEqual(
+                Buffer.from(normalizedApiKeyHash),
+                Buffer.from(normalizedStoredHash.substring(0, normalizedApiKeyHash.length))
+            );
+            return false;
+        }
+        
+        try {
+            return crypto.timingSafeEqual(
+                Buffer.from(normalizedApiKeyHash),
+                Buffer.from(normalizedStoredHash)
+            );
+        } catch (error) {
+            // エラー時は安全のためfalseを返す
+            return false;
+        }
     } catch (error) {
         if (process.env.NODE_ENV === 'development') {
           console.error('APIキー検証エラー:', error);

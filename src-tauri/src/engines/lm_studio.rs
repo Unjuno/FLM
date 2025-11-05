@@ -1,3 +1,7 @@
+
+
+
+
 // LM Studio Engine Implementation
 // LM StudioエンジンのLLMEngineトレイト実装
 
@@ -67,11 +71,14 @@ impl LLMEngine for LMStudioEngine {
         let installed = path.is_some();
         let running = self.is_running().await.unwrap_or(false);
         
+        // バージョン取得は未実装（将来実装予定）
+        let version = None;
+        
         Ok(EngineDetectionResult {
             engine_type: "lm_studio".to_string(),
             installed,
             running,
-            version: None, // LM Studioのバージョン取得は複雑なため、省略
+            version,
             path,
             message: if installed && !running {
                 Some("LM Studioがインストールされていますが、起動していません。".to_string())
@@ -82,6 +89,9 @@ impl LLMEngine for LMStudioEngine {
             },
         })
     }
+    
+    // 注意: get_version_from_apiはLLMEngineトレイトに定義されていないため削除
+    // 必要に応じて、将来的にトレイトに追加するか、別の関数として実装
     
     async fn start(&self, _config: &EngineConfig) -> Result<u32, AppError> {
         // LM Studioは手動で起動する必要がある

@@ -3,13 +3,17 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../../utils/tauri';
-import { invoke } from '@tauri-apps/api/core';
+// import { listen } from '@tauri-apps/api/event';
 import { ErrorMessage } from '../common/ErrorMessage';
 import { InfoBanner } from '../common/InfoBanner';
+// import { ModelDownloadProgress } from '../models/ModelDownloadProgress';
 import type { SelectedModel, ModelCapabilities } from '../../types/api';
 import { loadWebModelConfig } from '../../utils/webModelConfig';
 import type { WebModelDefinition } from '../../types/webModel';
 import { useOllamaProcess } from '../../hooks/useOllama';
+import { FORMATTING, TIMEOUT } from '../../constants/config';
+import { formatBytes, formatDate } from '../../utils/formatters';
+import { logger } from '../../utils/logger';
 import './ModelSelection.css';
 
 /**
@@ -63,6 +67,10 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
   const [webModelLoading, setWebModelLoading] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [selectedWebModel, _setSelectedWebModel] = useState<WebModelDefinition | null>(null);
+  const [installedModelNames, setInstalledModelNames] = useState<Set<string>>(new Set());
+  // installedModelNamesは将来使用予定（モデルのインストール状態を表示するため）
+  // const [downloadingModel, setDownloadingModel] = useState<string | null>(null);
+  // const [downloadProgress, setDownloadProgress] = useState<{ progress: number; status: string } | null>(null);
   
   // アンマウント状態を追跡するためのref
   const isMountedRef = useRef(true);
@@ -110,10 +118,10 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
   // 利用可能なエンジン一覧を取得（useCallbackでメモ化）
   const loadAvailableEngines = useCallback(async () => {
     try {
-      const engines = await invoke<string[]>('get_available_engines');
+      const engines = await safeInvoke<string[]>('get_available_engines');
       setAvailableEngines(engines);
     } catch (err) {
-      console.error('エンジン一覧の取得に失敗:', err);
+      logger.error('エンジン一覧の取得に失敗', err, 'ModelSelection');
       setAvailableEngines(['ollama']);
     }
   }, []);
@@ -125,7 +133,9 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
       const config = await loadWebModelConfig();
       setWebModels(config.models);
     } catch (err) {
-      console.error('Webサイト用モデル設定の読み込みに失敗:', err);
+      if (import.meta.env.DEV) {
+        logger.error('Webサイト用モデル設定の読み込みに失敗', err instanceof Error ? err : new Error(String(err)), 'ModelSelection');
+      }
       setWebModels([]);
     } finally {
       setWebModelLoading(false);
@@ -145,6 +155,60 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
   useEffect(() => {
     loadAvailableEngines();
   }, [loadAvailableEngines]);
+
+  // エンジン選択時にインストール状態を確認
+  const [engineDetectionResult, setEngineDetectionResult] = useState<{
+    installed: boolean;
+    running: boolean;
+    message?: string;
+  } | null>(null);
+  const [checkingEngine, setCheckingEngine] = useState(false);
+
+  // エンジンタイプが変更されたときにインストール状態を確認
+  useEffect(() => {
+    const checkEngineStatus = async () => {
+      if (!selectedEngine || selectedEngine === 'ollama') {
+        // Ollamaは自動インストールされるため、特別なチェックは不要
+        setEngineDetectionResult(null);
+        return;
+      }
+
+      try {
+        setCheckingEngine(true);
+        const result = await safeInvoke<{
+          engine_type: string;
+          installed: boolean;
+          running: boolean;
+          version?: string | null;
+          path?: string | null;
+          message?: string | null;
+        }>('detect_engine', { engine_type: selectedEngine });
+
+        if (isMountedRef.current) {
+          setEngineDetectionResult({
+            installed: result.installed,
+            running: result.running,
+            message: result.message || undefined,
+          });
+        }
+      } catch (err) {
+        logger.error('エンジン検出エラー', err, 'ModelSelection');
+        if (isMountedRef.current) {
+          setEngineDetectionResult({
+            installed: false,
+            running: false,
+            message: 'エンジンの検出に失敗しました',
+          });
+        }
+      } finally {
+        if (isMountedRef.current) {
+          setCheckingEngine(false);
+        }
+      }
+    };
+
+    checkEngineStatus();
+  }, [selectedEngine]);
 
   // 既に選択されているモデルがある場合は、ローカル状態を初期化
   useEffect(() => {
@@ -260,7 +324,7 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
           // Ollamaを自動起動
           await startOllama();
           // 起動成功後、少し待ってから再読み込み
-          await new Promise(resolve => setTimeout(resolve, 2000));
+          await new Promise(resolve => setTimeout(resolve, TIMEOUT.RETRY_DELAY));
           // 再読み込み（エラーはクリア済み）
           await loadModels();
           return; // 成功した場合はエラーを表示しない
@@ -310,6 +374,27 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
     loadModels();
   }, [loadModels]);
 
+  // インストール済みモデル名のリストを取得
+  useEffect(() => {
+    if (selectedEngine === 'ollama') {
+      const loadInstalledModels = async () => {
+        try {
+          const installed = await safeInvoke<Array<{ name: string }>>('get_installed_models');
+          setInstalledModelNames(new Set(installed.map(m => m.name)));
+        } catch (err) {
+          // エラーが発生しても続行（インストール済みリストが取得できないだけ）
+          logger.warn('インストール済みモデル一覧の取得に失敗', err instanceof Error ? err.message : String(err), 'ModelSelection');
+        }
+      };
+      loadInstalledModels();
+    }
+  }, [selectedEngine]);
+
+  // モデルがインストール済みかどうかを確認（将来使用予定）
+  // const _isModelInstalled = useCallback((modelName: string): boolean => {
+  //   return installedModelNames.has(modelName);
+  // }, [installedModelNames]);
+
   // 検索フィルタ（useMemoでメモ化）
   const filteredModels = useMemo(() => {
     return models.filter(model =>
@@ -317,15 +402,7 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
     );
   }, [models, searchQuery]);
 
-  // サイズをフォーマット
-  const formatSize = (bytes: number): string => {
-    const gb = bytes / (1024 * 1024 * 1024);
-    if (gb >= 1) {
-      return `${gb.toFixed(2)} GB`;
-    }
-    const mb = bytes / (1024 * 1024);
-    return `${mb.toFixed(2)} MB`;
-  };
+  // formatSizeはformatBytesユーティリティを使用（メモ化不要）
 
   // 推奨モデルかどうか
   const isRecommended = (modelName: string): boolean => {
@@ -355,22 +432,6 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
     if (name.includes('code') || name.includes('coder')) return 'コード生成';
     if (name.includes('chat')) return 'チャット';
     return '汎用';
-  }, []);
-
-  // 日付文字列をフォーマット（エラーハンドリング付き）
-  const formatDate = useCallback((dateString: string): string => {
-    if (!dateString || dateString.trim() === '') {
-      return '不明';
-    }
-    try {
-      const date = new Date(dateString);
-      if (isNaN(date.getTime())) {
-        return '不明';
-      }
-      return date.toLocaleDateString('ja-JP');
-    } catch {
-      return '不明';
-    }
   }, []);
 
   // ローディング中はエラーメッセージを非表示にする（エラーがない場合のみローディング表示）
@@ -482,7 +543,7 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
               <div className="sidebar-model-meta">
                 {model.size > 0 && (
                   <span className="sidebar-model-size">
-                    {(model.size / (1024 * 1024 * 1024)).toFixed(1)}GB
+                    {(model.size / FORMATTING.BYTES_PER_GB).toFixed(FORMATTING.DECIMAL_PLACES_SHORT)}GB
                   </span>
                 )}
                 {isRecommended(model.name) && <span className="sidebar-recommended-badge">⭐</span>}
@@ -494,6 +555,36 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
 
       {/* メインエリア */}
       <div className="lmstudio-main">
+        {/* エンジンインストール状態の警告 */}
+        {engineDetectionResult && !checkingEngine && !engineDetectionResult.installed && (
+          <InfoBanner
+            type="warning"
+            title={`${ENGINE_NAMES[selectedEngine] || selectedEngine}がインストールされていません`}
+            message={
+              (engineDetectionResult.message || 
+                `${ENGINE_NAMES[selectedEngine] || selectedEngine}を手動でインストールしてから、モデルを選択してください。`) +
+              (selectedEngine === 'lm_studio' 
+                ? ' LM Studio公式サイト（https://lmstudio.ai）からインストールしてください。'
+                : selectedEngine === 'vllm'
+                ? ' vLLMをPythonパッケージ（pip install vllm）またはDockerコンテナとしてインストールしてください。'
+                : selectedEngine === 'llama_cpp'
+                ? ' llama.cppをシステムパスにインストールしてください。'
+                : '')
+            }
+            dismissible={false}
+          />
+        )}
+
+        {engineDetectionResult && !checkingEngine && engineDetectionResult.installed && !engineDetectionResult.running && (
+          <InfoBanner
+            type="info"
+            title={`${ENGINE_NAMES[selectedEngine] || selectedEngine}が起動していません`}
+            message={engineDetectionResult.message || 
+              `${ENGINE_NAMES[selectedEngine] || selectedEngine}を起動してから、モデルを選択してください。`}
+            dismissible={false}
+          />
+        )}
+
         {/* エラーメッセージ */}
         {error && (() => {
           // エラーがエンジン起動に関するものかチェック
@@ -665,7 +756,7 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
                   <div className="detail-info-item">
                     <span className="detail-info-label">サイズ</span>
                     <span className="detail-info-value">
-                      {formatSize(localSelectedModel.size)}
+                      {formatBytes(localSelectedModel.size, FORMATTING.DECIMAL_PLACES_SHORT)}
                     </span>
                   </div>
                 )}

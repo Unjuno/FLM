@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../utils/tauri';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { PORT_RANGE, API_NAME } from '../constants/config';
 import './ApiSettings.css';
 
 /**
@@ -14,6 +15,7 @@ interface ApiSettings {
   name: string;
   port: number;
   enableAuth: boolean;
+  modelName?: string;
 }
 
 /**
@@ -41,7 +43,7 @@ export const ApiSettings: React.FC = () => {
       setLoading(true);
       
       // バックエンドのIPCコマンドを呼び出し（list_apisから該当APIを取得）
-      const apis = await invoke<Array<{
+      interface ApiListItem {
         id: string;
         name: string;
         endpoint: string;
@@ -51,9 +53,10 @@ export const ApiSettings: React.FC = () => {
         status: string;
         created_at: string;
         updated_at: string;
-      }>>('list_apis');
+      }
+      const apis = await safeInvoke<ApiListItem[]>('list_apis');
 
-      const api = apis.find((a) => a.id === id);
+      const api = apis.find((a: ApiListItem) => a.id === id);
       
       if (!api) {
         setError('APIが見つかりませんでした');
@@ -65,6 +68,7 @@ export const ApiSettings: React.FC = () => {
         name: api.name,
         port: api.port,
         enableAuth: api.enable_auth,
+        modelName: api.model_name,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : '設定の読み込みに失敗しました');
@@ -82,12 +86,17 @@ export const ApiSettings: React.FC = () => {
       return false;
     }
 
-    if (!settings.name.trim()) {
+    const trimmedName = settings.name.trim();
+    if (!trimmedName) {
       newErrors.name = 'API名を入力してください';
+    } else if (trimmedName.length < API_NAME.MIN_LENGTH) {
+      newErrors.name = `API名は${API_NAME.MIN_LENGTH}文字以上で入力してください`;
+    } else if (trimmedName.length > API_NAME.MAX_LENGTH) {
+      newErrors.name = `API名は${API_NAME.MAX_LENGTH}文字以下で入力してください`;
     }
 
-    if (settings.port < 1024 || settings.port > 65535) {
-      newErrors.port = 'ポート番号は1024-65535の範囲で入力してください';
+    if (settings.port < PORT_RANGE.MIN || settings.port > PORT_RANGE.MAX) {
+      newErrors.port = `ポート番号は${PORT_RANGE.MIN}-${PORT_RANGE.MAX}の範囲で入力してください`;
     }
 
     setErrors(newErrors);
@@ -104,7 +113,7 @@ export const ApiSettings: React.FC = () => {
 
       // バックエンドのupdate_apiコマンドを呼び出し
       // ポート番号や認証設定が変更された場合、バックエンド側で自動的に再起動が行われます
-      await invoke('update_api', {
+      await safeInvoke('update_api', {
         api_id: id,
         config: {
           name: settings.name,
@@ -132,7 +141,7 @@ export const ApiSettings: React.FC = () => {
       setError(null);
 
       // バックエンドのregenerate_api_keyコマンドを呼び出し
-      const newKey = await invoke<string>('regenerate_api_key', { api_id: id });
+      const newKey = await safeInvoke<string>('regenerate_api_key', { api_id: id });
 
       // 新しいAPIキーを表示
       alert(`APIキーが再生成されました。\n新しいAPIキー: ${newKey}\n\nこのキーは今回のみ表示されます。コピーして安全な場所に保存してください。`);
@@ -148,19 +157,34 @@ export const ApiSettings: React.FC = () => {
 
   // APIを削除
   const handleDelete = async () => {
-    if (!id) return;
+    if (!id || !settings) return;
 
-    const confirmMessage = 'このAPIを削除しますか？この操作は取り消せません。';
+    let confirmMessage = 'このAPIを削除しますか？この操作は取り消せません。';
+    if (settings.modelName) {
+      confirmMessage += `\n\nこのAPIが使用しているモデル "${settings.modelName}" も削除しますか？\n（他のAPIで使用されていない場合のみ削除されます）`;
+    }
+    
     if (!window.confirm(confirmMessage)) {
       return;
+    }
+
+    // モデル削除オプションを確認
+    let deleteModel = false;
+    if (settings.modelName) {
+      deleteModel = window.confirm(
+        `モデル "${settings.modelName}" も削除しますか？\n（他のAPIで使用されていない場合のみ削除されます）`
+      );
     }
 
     try {
       setSaving(true);
       setError(null);
 
-      // バックエンドのdelete_apiコマンドを呼び出し
-      await invoke('delete_api', { api_id: id });
+      // バックエンドのdelete_apiコマンドを呼び出し（モデル削除オプションを含む）
+      await safeInvoke('delete_api', { 
+        api_id: id,
+        delete_model: deleteModel,
+      });
 
       // API一覧に戻る
       navigate('/api/list');
@@ -230,6 +254,7 @@ export const ApiSettings: React.FC = () => {
                 value={settings.name}
                 onChange={(e) => setSettings({ ...settings, name: e.target.value })}
                 className={errors.name ? 'error' : ''}
+                maxLength={API_NAME.MAX_LENGTH}
               />
               {errors.name && <span className="error-message-text">{errors.name}</span>}
             </div>
@@ -242,9 +267,9 @@ export const ApiSettings: React.FC = () => {
                 id="api-port"
                 type="number"
                 value={settings.port}
-                onChange={(e) => setSettings({ ...settings, port: parseInt(e.target.value) || 8080 })}
-                min={1024}
-                max={65535}
+                onChange={(e) => setSettings({ ...settings, port: parseInt(e.target.value) || PORT_RANGE.DEFAULT })}
+                min={PORT_RANGE.MIN}
+                max={PORT_RANGE.MAX}
                 className={errors.port ? 'error' : ''}
               />
               {errors.port && <span className="error-message-text">{errors.port}</span>}

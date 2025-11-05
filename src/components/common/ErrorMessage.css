@@ -190,6 +190,7 @@
   color: #c62828;
 }
 
+/* ダークモード対応 */
 @media (prefers-color-scheme: dark) {
   .error-message {
     background-color: #3f2a2a;
@@ -220,5 +221,35 @@
     background-color: rgba(255, 255, 255, 0.1);
     color: #fff;
   }
+}
+
+[data-theme="dark"] .error-message {
+  background-color: #3f2a2a;
+  border-left-color: #f44336;
+}
+
+[data-theme="dark"] .error-text {
+  color: #ffcdd2;
+}
+
+[data-theme="dark"] .error-title {
+  color: #ffcdd2;
+}
+
+[data-theme="dark"] .error-suggestion {
+  background-color: rgba(255, 255, 255, 0.1);
+}
+
+[data-theme="dark"] .suggestion-text {
+  color: #e0e0e0;
+}
+
+[data-theme="dark"] .error-close-button {
+  color: #aaa;
+}
+
+[data-theme="dark"] .error-close-button:hover {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
 }
 

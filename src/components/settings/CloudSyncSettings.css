@@ -1,0 +1,53 @@
+/* CloudSyncSettings - クラウド同期設定コンポーネントのスタイル */
+
+.cloud-sync-settings-section {
+  margin-top: 2rem;
+}
+
+.cloud-sync-settings-loading {
+  padding: 2rem;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.settings-section-description {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+  margin-bottom: 1.5rem;
+  line-height: 1.5;
+}
+
+.cloud-sync-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  margin-bottom: 1rem;
+}
+
+.cloud-sync-actions .settings-button {
+  flex: 1;
+}
+
+.settings-select {
+  width: 100%;
+  padding: 0.5rem;
+  font-size: 1rem;
+  border: 1px solid var(--border-color);
+  border-radius: 4px;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+.settings-select:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.2);
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .cloud-sync-actions {
+    flex-direction: column;
+  }
+}
+

@@ -1,0 +1,151 @@
+/* SchedulerSettings - スケジューラ設定ページのスタイル */
+
+.scheduler-settings-page {
+  min-height: 100vh;
+  background: var(--bg-primary);
+  padding: 2rem;
+}
+
+.scheduler-settings-container {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.scheduler-settings-header {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.scheduler-settings-header h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.scheduler-description {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  margin-bottom: 2rem;
+  line-height: 1.5;
+}
+
+.schedule-tasks-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.schedule-task-item {
+  background: var(--bg-secondary);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+}
+
+.schedule-task-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.schedule-task-title {
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.schedule-task-toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.schedule-task-toggle input[type="checkbox"] {
+  width: 1.25rem;
+  height: 1.25rem;
+  cursor: pointer;
+}
+
+.schedule-task-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.schedule-task-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.schedule-task-label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.schedule-task-interval-input {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.schedule-task-interval-input .form-input {
+  flex: 1;
+  max-width: 200px;
+}
+
+.schedule-task-interval-display {
+  font-size: 0.875rem;
+  color: var(--text-secondary);
+}
+
+.schedule-task-info {
+  display: flex;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.schedule-task-info-label {
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.schedule-task-info-value {
+  color: var(--text-primary);
+}
+
+.schedule-task-actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .scheduler-settings-page {
+    padding: 1rem;
+  }
+
+  .schedule-task-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 1rem;
+  }
+
+  .schedule-task-interval-input {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .schedule-task-actions {
+    flex-direction: column;
+  }
+}
+

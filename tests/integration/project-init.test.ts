@@ -1,13 +1,8 @@
-/**
- * FLM - プロジェクト初期化確認テスト
- * 
- * フェーズ1: QAエージェント (QA) 実装
- * プロジェクト初期化の確認と検証
- */
+// project-init - プロジェクト初期化確認のテスト
 
 import { describe, it, expect } from '@jest/globals';
-import fs from 'fs';
-import path from 'path';
+import * as fs from 'fs';
+import * as path from 'path';
 
 /**
  * プロジェクト構造の検証テスト

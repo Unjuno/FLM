@@ -116,7 +116,9 @@ where
 {
     // トランザクション内で実行
     let mut tx = conn.transaction()
-        .map_err(|_| DatabaseError::MigrationFailed("データベースの更新を開始できませんでした。アプリを再起動して再度お試しください。".to_string()))?;
+        .map_err(|e| DatabaseError::MigrationFailed(
+            format!("データベースの更新を開始できませんでした: {}", e)
+        ))?;
     
     // マイグレーション関数を実行
     migration_fn(&mut tx)?;
@@ -126,11 +128,15 @@ where
     tx.execute(
         "INSERT INTO migrations (version, name, applied_at) VALUES (?1, ?2, ?3)",
         [&version.to_string(), name, &now],
-    ).map_err(|_| DatabaseError::MigrationFailed("更新履歴の記録に失敗しました。アプリを再起動して再度お試しください。".to_string()))?;
+    ).map_err(|e| DatabaseError::MigrationFailed(
+        format!("更新履歴の記録に失敗しました: {}", e)
+    ))?;
     
     // トランザクションをコミット
     tx.commit()
-        .map_err(|_| DatabaseError::MigrationFailed("データベースの更新を完了できませんでした。アプリを再起動して再度お試しください。".to_string()))?;
+        .map_err(|e| DatabaseError::MigrationFailed(
+            format!("データベースの更新を完了できませんでした: {}", e)
+        ))?;
     
     Ok(())
 }

@@ -1,6 +1,7 @@
 // Notification - 通知コンポーネント
 
 import React, { useEffect, useState } from 'react';
+import { NOTIFICATION, TIMEOUT } from '../../constants/config';
 import './Notification.css';
 
 /**
@@ -41,7 +42,7 @@ export const Notification: React.FC<NotificationProps> = ({
   // アニメーション用の表示制御
   useEffect(() => {
     // マウント時にアニメーション開始
-    const timer = setTimeout(() => setIsVisible(true), 10);
+    const timer = setTimeout(() => setIsVisible(true), TIMEOUT.VISIBILITY_DELAY);
     return () => clearTimeout(timer);
   }, []);
 
@@ -51,7 +52,7 @@ export const Notification: React.FC<NotificationProps> = ({
       return; // 自動非表示しない
     }
 
-    const duration = notification.duration || 5000; // デフォルト5秒
+    const duration = notification.duration || NOTIFICATION.DEFAULT_DURATION;
     const timer = setTimeout(() => {
       handleClose();
     }, duration);
@@ -67,7 +68,7 @@ export const Notification: React.FC<NotificationProps> = ({
     // アニメーション完了後に削除
     setTimeout(() => {
       onClose(notification.id);
-    }, 300); // CSSアニメーション時間に合わせる
+    }, TIMEOUT.ANIMATION_DURATION);
   };
 
   // タイプに応じたアイコンを取得

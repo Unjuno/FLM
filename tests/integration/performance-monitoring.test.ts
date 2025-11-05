@@ -1,11 +1,6 @@
-/**
- * FLM - F007: パフォーマンス監視機能 統合テスト
- * 
- * QAエージェント (QA) 実装
- * パフォーマンス監視機能のバックエンド統合テスト
- */
+// performance-monitoring - パフォーマンス監視機能の統合テスト
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
 
 /**
@@ -60,9 +55,10 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
   let testMetricIds: number[] = [];
 
   beforeAll(async () => {
-    console.log('F007 パフォーマンス監視機能統合テストを開始します');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('F007 パフォーマンス監視機能統合テストを開始します');
+    }
     
-    // テスト用のAPIを作成
     try {
       const result = await invoke<ApiInfo>('create_api', {
         config: {
@@ -73,18 +69,25 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
         },
       });
       testApiId = result.id;
-      console.log(`テスト用APIを作成しました: ${testApiId}`);
+      if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        console.log(`テスト用APIを作成しました: ${testApiId}`);
+      }
     } catch (error) {
-      console.warn('テスト用APIの作成に失敗しました（既存APIを使用）:', error);
-      // 既存のAPIを取得
+      if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        console.warn('テスト用APIの作成に失敗しました（既存APIを使用）:', error);
+      }
       try {
         const apis = await invoke<ApiInfo[]>('list_apis');
         if (apis.length > 0) {
           testApiId = apis[0].id;
-          console.log(`既存のAPIを使用します: ${testApiId}`);
+          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+            console.log(`既存のAPIを使用します: ${testApiId}`);
+          }
         }
       } catch (err) {
-        console.error('APIの取得に失敗しました:', err);
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.error('APIの取得に失敗しました:', err);
+        }
       }
     }
 
@@ -165,12 +168,18 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
               testMetricIds.push(createdMetrics[createdMetrics.length - 1].id);
             }
           } catch (err) {
-            console.warn('メトリクスの作成に失敗しました:', err);
+            if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+              console.warn('メトリクスの作成に失敗しました:', err);
+            }
           }
         }
-        console.log(`テスト用メトリクスを ${testMetricIds.length} 件作成しました`);
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.log(`テスト用メトリクスを ${testMetricIds.length} 件作成しました`);
+        }
       } catch (error) {
-        console.warn('テスト用メトリクスの作成に失敗しました:', error);
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用メトリクスの作成に失敗しました:', error);
+        }
       }
     }
   });
@@ -189,13 +198,19 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
           // 既に停止している可能性がある
         }
         await invoke('delete_api', { apiId: testApiId });
-        console.log('テスト用APIを削除しました');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.log('テスト用APIを削除しました');
+        }
       } catch (error) {
-        console.warn('テスト用APIの削除に失敗しました:', error);
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIの削除に失敗しました:', error);
+        }
       }
     }
 
-    console.log('F007 パフォーマンス監視機能統合テストを完了しました');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('F007 パフォーマンス監視機能統合テストを完了しました');
+    }
   });
 
   /**
@@ -204,7 +219,9 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
   describe('record_performance_metric のテスト', () => {
     it('should record performance metric successfully', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        }
         return;
       }
 
@@ -233,7 +250,9 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
     it('should record different metric types', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        }
         return;
       }
 
@@ -295,7 +314,9 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
   describe('get_performance_metrics のテスト', () => {
     it('should retrieve all metrics for an API', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        }
         return;
       }
 
@@ -324,7 +345,9 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
     it('should filter metrics by type', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        }
         return;
       }
 
@@ -349,7 +372,9 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
     it('should filter metrics by date range', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        }
         return;
       }
 
@@ -379,7 +404,9 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
     it('should filter metrics by type and date range', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        }
         return;
       }
 
@@ -433,7 +460,9 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
   describe('get_performance_summary のテスト', () => {
     it('should retrieve performance summary', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        }
         return;
       }
 
@@ -475,7 +504,9 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
     it('should calculate summary with date range filter', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        }
         return;
       }
 
@@ -495,7 +526,9 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
     it('should return zero values for API with no metrics', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        }
         return;
       }
 
@@ -526,7 +559,9 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
         // クリーンアップ
         await invoke('delete_api', { apiId: newApiId });
       } catch (error) {
-        console.warn('テスト用APIの作成/削除に失敗しました:', error);
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIの作成/削除に失敗しました:', error);
+        }
         if (newApiId) {
           try {
             await invoke('delete_api', { apiId: newApiId });
@@ -544,7 +579,9 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
   describe('エッジケーステスト', () => {
     it('should handle empty metrics list', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        }
         return;
       }
 
@@ -577,7 +614,9 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
         // クリーンアップ
         await invoke('delete_api', { apiId: newApiId });
       } catch (error) {
-        console.warn('テスト用APIの作成/削除に失敗しました:', error);
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIの作成/削除に失敗しました:', error);
+        }
         if (newApiId) {
           try {
             await invoke('delete_api', { apiId: newApiId });
@@ -590,7 +629,9 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
     it('should handle invalid date range (start > end)', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        }
         return;
       }
 
@@ -615,7 +656,9 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
     it('should handle future date range', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        }
         return;
       }
 
@@ -640,7 +683,9 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
     it('should handle negative values gracefully', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        }
         return;
       }
 

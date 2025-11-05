@@ -1,8 +1,9 @@
 // LogDelete - ログ削除コンポーネント
 
 import React, { useState } from 'react';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../../utils/tauri';
 import { Tooltip } from '../common/Tooltip';
+import { logger } from '../../utils/logger';
 import './LogDelete.css';
 
 /**
@@ -64,7 +65,7 @@ export const LogDelete: React.FC<LogDeleteProps> = ({
         api_id: apiId,
         before_date: beforeDate,
       };
-      const response = await invoke<{
+      const response = await safeInvoke<{
         deleted_count: number;
       }>('delete_logs', { request });
 
@@ -81,7 +82,7 @@ export const LogDelete: React.FC<LogDeleteProps> = ({
       setConfirmText('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ログの削除に失敗しました');
-      console.error('ログ削除エラー:', err);
+      logger.error('ログ削除エラー', err, 'LogDelete');
     } finally {
       setDeleting(false);
     }

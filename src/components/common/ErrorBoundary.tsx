@@ -2,6 +2,7 @@
 
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { ErrorMessage } from './ErrorMessage';
+import { logger } from '../../utils/logger';
 import './ErrorBoundary.css';
 
 /**
@@ -71,35 +72,38 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
     // 本番環境では、エラー追跡サービスに送信することも可能
     // 例: Sentry, LogRocket など
-    if (process.env.NODE_ENV === 'production') {
+    // 注意: import.meta.env.DEVを使用（Vite環境）
+    if (!import.meta.env.DEV) {
       this.logErrorToExternalService(error, errorInfo);
     }
   }
 
   /**
-   * コンソールにエラーを記録
+   * コンソールにエラーを記録（開発環境のみ）
    */
   private logErrorToConsole(error: Error, errorInfo: ErrorInfo) {
-    console.error('ErrorBoundary caught an error:', error);
-    console.error('Error Info:', errorInfo);
-    console.error('Component Stack:', errorInfo.componentStack);
+    if (import.meta.env.DEV) {
+      logger.error('ErrorBoundary caught an error', error, 'ErrorBoundary');
+      logger.error('Error Info', errorInfo, 'ErrorBoundary');
+      logger.debug('Component Stack', errorInfo.componentStack, 'ErrorBoundary');
+    }
   }
 
   /**
-   * 外部サービスにエラーを送信（本番環境のみ）
+   * 外部サービスにエラーを送信（開発環境のみ）
    * 
    * 注意: 現時点ではコンソールにのみ記録します。
    * 将来的にエラー追跡サービス（Sentry、LogRocket等）への統合を検討します。
    */
   private logErrorToExternalService(error: Error, errorInfo: ErrorInfo) {
-    // 現時点ではコンソールにのみ記録
-    // 将来的にエラー追跡サービス（Sentry、LogRocket等）に統合可能
-    console.error('Production Error:', {
-      message: error.message,
-      stack: error.stack,
-      componentStack: errorInfo.componentStack,
-      timestamp: new Date().toISOString(),
-    });
+    if (!import.meta.env.DEV) {
+      logger.error('Production Error', {
+        message: error.message,
+        stack: error.stack,
+        componentStack: errorInfo.componentStack,
+        timestamp: new Date().toISOString(),
+      }, 'ErrorBoundary');
+    }
   }
 
   /**
@@ -136,7 +140,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
       // デフォルトのエラーUIを表示
       const error = this.state.error;
-      const isDevelopment = process.env.NODE_ENV === 'development';
+      const isDevelopment = import.meta.env.DEV;
 
       return (
         <div className="error-boundary">

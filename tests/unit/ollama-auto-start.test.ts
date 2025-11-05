@@ -1,21 +1,6 @@
-/**
- * FLM - Ollama自動起動機能 ユニットテスト
- * 
- * フェーズ3: QAエージェント (QA) 実装
- * Ollama自動起動機能のユニットテスト
- */
+// ollama-auto-start - Ollama自動起動機能のユニットテスト
 
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-
-/**
- * 自動起動ロジックのユニットテスト
- * 注意: Reactコンポーネントの完全なテストにはReact Testing Libraryが必要ですが、
- * ここではロジック部分のみをテストします
- */
-
-/**
- * 自動起動エラー検出ロジックのテスト
- */
 function isEngineNotRunningError(errorMessage: string, selectedEngine: string, engineName: string): boolean {
   const errorLower = errorMessage.toLowerCase();
   return (

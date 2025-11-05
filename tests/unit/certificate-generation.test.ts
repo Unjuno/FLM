@@ -1,9 +1,4 @@
-/**
- * FLM - 証明書自動生成機能単体テスト
- * 
- * フェーズ3: QAエージェント (QA) 実装
- * 証明書自動生成機能の単体テスト
- */
+// certificate-generation - 証明書自動生成機能の単体テスト
 
 import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
 import fs from 'fs';
@@ -28,25 +23,24 @@ let testCertDir: string;
  */
 describe('Certificate Generation Unit Tests', () => {
   beforeAll(() => {
-    console.log('証明書自動生成機能単体テストを開始します');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('証明書自動生成機能単体テストを開始します');
+    }
     
-    // テスト用の一時データディレクトリを作成
     testDataDir = path.join(os.tmpdir(), 'flm-test-certificates');
     testCertDir = path.join(testDataDir, 'certificates');
-    
-    // 環境変数を設定してテスト用ディレクトリを使用
     process.env.FLM_DATA_DIR = testDataDir;
     
-    // テスト用ディレクトリが存在しない場合は作成
     if (!fs.existsSync(testCertDir)) {
       fs.mkdirSync(testCertDir, { recursive: true });
     }
   });
 
   afterAll(() => {
-    console.log('証明書自動生成機能単体テストを完了しました');
+    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      console.log('証明書自動生成機能単体テストを完了しました');
+    }
     
-    // テスト用ファイルを削除
     try {
       if (fs.existsSync(testCertDir)) {
         const files = fs.readdirSync(testCertDir);
@@ -59,10 +53,11 @@ describe('Certificate Generation Unit Tests', () => {
         fs.rmdirSync(testDataDir);
       }
     } catch (err) {
-      console.warn('テスト用ファイルの削除に失敗:', err);
+      if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        console.warn('テスト用ファイルの削除に失敗:', err);
+      }
     }
     
-    // 環境変数をクリア
     delete process.env.FLM_DATA_DIR;
   });
 

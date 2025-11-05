@@ -1,11 +1,13 @@
 // ApiConfigForm - API設定フォームコンポーネント
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { safeInvoke } from '../../utils/tauri';
 import { Tooltip } from '../common/Tooltip';
 import { ENGINE_NAMES } from './ModelSelection';
 import type { SelectedModel, ApiConfig, ModelParameters, MemorySettings, MultimodalSettings } from '../../types/api';
 import { loadWebModelConfig, findModelById } from '../../utils/webModelConfig';
+import { PORT_RANGE, MODEL_PARAMETERS, MEMORY_SETTINGS, MULTIMODAL_SETTINGS, API_NAME, TIMEOUT } from '../../constants/config';
+import { logger } from '../../utils/logger';
 import './ApiConfigForm.css';
 
 /**
@@ -28,11 +30,11 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
     ...defaultConfig,
     engineType: defaultConfig.engineType || 'ollama',
     modelParameters: defaultConfig.modelParameters || {
-      temperature: 0.7,
-      top_p: 0.9,
-      top_k: 40,
-      max_tokens: 1024,
-      repeat_penalty: 1.1,
+      temperature: MODEL_PARAMETERS.TEMPERATURE.DEFAULT,
+      top_p: MODEL_PARAMETERS.TOP_P.DEFAULT,
+      top_k: MODEL_PARAMETERS.TOP_K.DEFAULT,
+      max_tokens: MODEL_PARAMETERS.MAX_TOKENS.DEFAULT,
+      repeat_penalty: MODEL_PARAMETERS.REPEAT_PENALTY.DEFAULT,
     },
   });
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
@@ -42,25 +44,41 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
   const [showMemorySettings, setShowMemorySettings] = useState(false);
   const [showMultimodalSettings, setShowMultimodalSettings] = useState(false);
   const [nameSuggesting, setNameSuggesting] = useState(false);
+  const [engineDetectionResult, setEngineDetectionResult] = useState<{
+    installed: boolean;
+    running: boolean;
+    message?: string;
+  } | null>(null);
+  const [checkingEngine, setCheckingEngine] = useState(false);
 
-  // 利用可能なエンジン一覧を取得
+  // アンマウントチェック用のref（メモリリーク対策）
+  const isMountedRef = useRef(true);
+
   useEffect(() => {
-    loadAvailableEngines();
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+    };
   }, []);
 
-  const loadAvailableEngines = async () => {
+  // 利用可能なエンジン一覧を取得（useCallbackでメモ化）
+  const loadAvailableEngines = useCallback(async () => {
     try {
       setLoadingEngines(true);
       const engines = await safeInvoke<string[]>('get_available_engines');
       setAvailableEngines(engines);
     } catch (err) {
-      console.error('エンジン一覧の取得に失敗:', err);
+      logger.error('エンジン一覧の取得に失敗', err, 'ApiConfigForm');
       // デフォルトエンジンのみ使用可能とする
       setAvailableEngines(['ollama']);
     } finally {
       setLoadingEngines(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    loadAvailableEngines();
+  }, [loadAvailableEngines]);
 
 
   // 現在のポート番号の使用可能性をチェック
@@ -83,22 +101,71 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
         });
       }
     } catch (err) {
-      console.error('ポート確認エラー:', err);
+      logger.error('ポート確認エラー', err, 'ApiConfigForm');
     }
   }, []);
 
   // ポート番号が変更されたときに確認
   useEffect(() => {
-    if (config.port && config.port >= 1024 && config.port <= 65535) {
+    if (config.port && config.port >= PORT_RANGE.MIN && config.port <= PORT_RANGE.MAX) {
       const timeoutId = setTimeout(() => {
         checkPortAvailability(config.port);
-      }, 500);
+      }, TIMEOUT.PORT_CHECK_DELAY);
       return () => clearTimeout(timeoutId);
     }
   }, [config.port, checkPortAvailability]);
 
-  // API名の自動生成（重複回避）
-  const suggestApiName = async () => {
+  // エンジンタイプが変更されたときにインストール状態を確認
+  const checkEngineInstallation = useCallback(async (engineType: string) => {
+    if (!engineType || engineType === 'ollama') {
+      // Ollamaは自動インストールされるため、特別なチェックは不要
+      setEngineDetectionResult(null);
+      return;
+    }
+
+    try {
+      setCheckingEngine(true);
+      const result = await safeInvoke<{
+        engine_type: string;
+        installed: boolean;
+        running: boolean;
+        version?: string | null;
+        path?: string | null;
+        message?: string | null;
+      }>('detect_engine', { engine_type: engineType });
+
+      if (isMountedRef.current) {
+        setEngineDetectionResult({
+          installed: result.installed,
+          running: result.running,
+          message: result.message || undefined,
+        });
+      }
+    } catch (err) {
+      logger.error('エンジン検出エラー', err, 'ApiConfigForm');
+      if (isMountedRef.current) {
+        setEngineDetectionResult({
+          installed: false,
+          running: false,
+          message: 'エンジンの検出に失敗しました',
+        });
+      }
+    } finally {
+      if (isMountedRef.current) {
+        setCheckingEngine(false);
+      }
+    }
+  }, []);
+
+  // エンジンタイプが変更されたときにチェック
+  useEffect(() => {
+    if (config.engineType) {
+      checkEngineInstallation(config.engineType);
+    }
+  }, [config.engineType, checkEngineInstallation]);
+
+  // API名の自動生成（重複回避、useCallbackでメモ化）
+  const suggestApiName = useCallback(async () => {
     try {
       setNameSuggesting(true);
       const result = await safeInvoke<{
@@ -108,15 +175,15 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
       }>('suggest_api_name', { baseName: config.name });
       
       if (!result.is_available || result.suggested_name !== config.name) {
-        setConfig({ ...config, name: result.suggested_name });
-        setErrors({ ...errors, name: '' });
+        setConfig((prevConfig) => ({ ...prevConfig, name: result.suggested_name }));
+        setErrors((prevErrors) => ({ ...prevErrors, name: '' }));
       }
     } catch (err) {
-      console.error('API名提案エラー:', err);
+      logger.error('API名提案エラー', err, 'ApiConfigForm');
     } finally {
       setNameSuggesting(false);
     }
-  };
+  }, [config.name]);
 
   // モデルパラメータの更新
   const updateModelParameter = (key: keyof ModelParameters, value: number | undefined) => {
@@ -154,17 +221,19 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
     });
   };
 
-  // Webサイト用モデルのデフォルト設定を適用
+  // Webサイト用モデルのデフォルト設定を適用（アンマウントチェックをuseRefで実装）
   useEffect(() => {
     if (!model.webModelId) {
       return;
     }
 
-    let isMounted = true;
+    if (!isMountedRef.current) {
+      return;
+    }
 
     loadWebModelConfig()
       .then((webConfig) => {
-        if (!isMounted) return;
+        if (!isMountedRef.current) return;
         
         const webModel = findModelById(webConfig, model.webModelId!);
         if (webModel && webModel.defaultSettings) {
@@ -209,14 +278,10 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
         }
       })
       .catch((err) => {
-        if (isMounted) {
-          console.error('Webサイト用モデル設定の読み込みに失敗:', err);
+        if (isMountedRef.current) {
+          logger.error('Webサイト用モデル設定の読み込みに失敗', err, 'ApiConfigForm');
         }
       });
-
-    return () => {
-      isMounted = false;
-    };
   }, [model.webModelId]);
 
   // モデルの機能に基づいてマルチモーダル設定を初期化（Webサイト用モデルでない場合のみ）
@@ -239,9 +304,9 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
         enableVision: model.capabilities?.vision || false,
         enableAudio: model.capabilities?.audio || false,
         enableVideo: model.capabilities?.video || false,
-        maxImageSize: 10,
-        maxAudioSize: 50,
-        maxVideoSize: 100,
+        maxImageSize: MULTIMODAL_SETTINGS.MAX_IMAGE_SIZE.DEFAULT,
+        maxAudioSize: MULTIMODAL_SETTINGS.MAX_AUDIO_SIZE.DEFAULT,
+        maxVideoSize: MULTIMODAL_SETTINGS.MAX_VIDEO_SIZE.DEFAULT,
         supportedImageFormats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
         supportedAudioFormats: ['mp3', 'wav', 'ogg', 'm4a'],
         supportedVideoFormats: ['mp4', 'webm', 'mov'],
@@ -258,56 +323,77 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
   const validate = (): boolean => {
     const newErrors: { [key: string]: string } = {};
 
-    if (!config.name.trim()) {
+    const trimmedName = config.name.trim();
+    if (!trimmedName) {
       newErrors.name = 'API名を入力してください';
+    } else if (trimmedName.length < API_NAME.MIN_LENGTH) {
+      newErrors.name = `API名は${API_NAME.MIN_LENGTH}文字以上で入力してください`;
+    } else if (trimmedName.length > API_NAME.MAX_LENGTH) {
+      newErrors.name = `API名は${API_NAME.MAX_LENGTH}文字以下で入力してください`;
     }
 
-    if (config.port < 1024 || config.port > 65535) {
-      newErrors.port = 'ポート番号は1024-65535の範囲で入力してください';
+    if (config.port < PORT_RANGE.MIN || config.port > PORT_RANGE.MAX) {
+      newErrors.port = `ポート番号は${PORT_RANGE.MIN}-${PORT_RANGE.MAX}の範囲で入力してください`;
     }
 
     // モデルパラメータのバリデーション
     if (config.modelParameters) {
       const params = config.modelParameters;
       
-      if (params.temperature !== undefined && (params.temperature < 0 || params.temperature > 2)) {
-        newErrors.temperature = '温度は0.0-2.0の範囲で入力してください';
+      if (params.temperature !== undefined && (params.temperature < MODEL_PARAMETERS.TEMPERATURE.MIN || params.temperature > MODEL_PARAMETERS.TEMPERATURE.MAX)) {
+        newErrors.temperature = `温度は${MODEL_PARAMETERS.TEMPERATURE.MIN}-${MODEL_PARAMETERS.TEMPERATURE.MAX}の範囲で入力してください`;
       }
       
-      if (params.top_p !== undefined && (params.top_p < 0 || params.top_p > 1)) {
-        newErrors.top_p = 'Top-pは0.0-1.0の範囲で入力してください';
+      if (params.top_p !== undefined && (params.top_p < MODEL_PARAMETERS.TOP_P.MIN || params.top_p > MODEL_PARAMETERS.TOP_P.MAX)) {
+        newErrors.top_p = `Top-pは${MODEL_PARAMETERS.TOP_P.MIN}-${MODEL_PARAMETERS.TOP_P.MAX}の範囲で入力してください`;
       }
       
-      if (params.top_k !== undefined && (params.top_k < 1 || params.top_k > 100)) {
-        newErrors.top_k = 'Top-kは1-100の範囲で入力してください';
+      if (params.top_k !== undefined && (params.top_k < MODEL_PARAMETERS.TOP_K.MIN || params.top_k > MODEL_PARAMETERS.TOP_K.MAX)) {
+        newErrors.top_k = `Top-kは${MODEL_PARAMETERS.TOP_K.MIN}-${MODEL_PARAMETERS.TOP_K.MAX}の範囲で入力してください`;
       }
       
-      if (params.max_tokens !== undefined && params.max_tokens < 1) {
-        newErrors.max_tokens = '最大トークン数は1以上の値を入力してください';
+      if (params.max_tokens !== undefined && params.max_tokens < MODEL_PARAMETERS.MAX_TOKENS.MIN) {
+        newErrors.max_tokens = `最大トークン数は${MODEL_PARAMETERS.MAX_TOKENS.MIN}以上の値を入力してください`;
       }
       
-      if (params.repeat_penalty !== undefined && (params.repeat_penalty < 0 || params.repeat_penalty > 2)) {
-        newErrors.repeat_penalty = '繰り返しペナルティは0.0-2.0の範囲で入力してください';
+      if (params.repeat_penalty !== undefined && (params.repeat_penalty < MODEL_PARAMETERS.REPEAT_PENALTY.MIN || params.repeat_penalty > MODEL_PARAMETERS.REPEAT_PENALTY.MAX)) {
+        newErrors.repeat_penalty = `繰り返しペナルティは${MODEL_PARAMETERS.REPEAT_PENALTY.MIN}-${MODEL_PARAMETERS.REPEAT_PENALTY.MAX}の範囲で入力してください`;
       }
 
       // メモリ設定のバリデーション
       if (params.memory) {
         const memory = params.memory;
         
-        if (memory.context_window !== undefined && memory.context_window < 128) {
-          newErrors.context_window = 'コンテキストウィンドウサイズは128以上の値を入力してください';
+        if (memory.context_window !== undefined) {
+          if (memory.context_window < MEMORY_SETTINGS.CONTEXT_WINDOW.MIN) {
+            newErrors.context_window = `コンテキストウィンドウサイズは${MEMORY_SETTINGS.CONTEXT_WINDOW.MIN}以上の値を入力してください`;
+          } else if (memory.context_window > MEMORY_SETTINGS.CONTEXT_WINDOW.MAX) {
+            newErrors.context_window = `コンテキストウィンドウサイズは${MEMORY_SETTINGS.CONTEXT_WINDOW.MAX}以下の値を入力してください`;
+          }
         }
         
-        if (memory.num_gpu_layers !== undefined && memory.num_gpu_layers < 0) {
-          newErrors.num_gpu_layers = 'GPUレイヤー数は0以上の値を入力してください';
+        if (memory.num_gpu_layers !== undefined) {
+          if (memory.num_gpu_layers < MEMORY_SETTINGS.NUM_GPU_LAYERS.MIN) {
+            newErrors.num_gpu_layers = `GPUレイヤー数は${MEMORY_SETTINGS.NUM_GPU_LAYERS.MIN}以上の値を入力してください`;
+          } else if (memory.num_gpu_layers > MEMORY_SETTINGS.NUM_GPU_LAYERS.MAX) {
+            newErrors.num_gpu_layers = `GPUレイヤー数は${MEMORY_SETTINGS.NUM_GPU_LAYERS.MAX}以下の値を入力してください`;
+          }
         }
         
-        if (memory.num_threads !== undefined && memory.num_threads < 1) {
-          newErrors.num_threads = 'CPUスレッド数は1以上の値を入力してください';
+        if (memory.num_threads !== undefined) {
+          if (memory.num_threads < MEMORY_SETTINGS.NUM_THREADS.MIN) {
+            newErrors.num_threads = `CPUスレッド数は${MEMORY_SETTINGS.NUM_THREADS.MIN}以上の値を入力してください`;
+          } else if (memory.num_threads > MEMORY_SETTINGS.NUM_THREADS.MAX) {
+            newErrors.num_threads = `CPUスレッド数は${MEMORY_SETTINGS.NUM_THREADS.MAX}以下の値を入力してください`;
+          }
         }
         
-        if (memory.batch_size !== undefined && memory.batch_size < 1) {
-          newErrors.batch_size = 'バッチサイズは1以上の値を入力してください';
+        if (memory.batch_size !== undefined) {
+          if (memory.batch_size < MEMORY_SETTINGS.BATCH_SIZE.MIN) {
+            newErrors.batch_size = `バッチサイズは${MEMORY_SETTINGS.BATCH_SIZE.MIN}以上の値を入力してください`;
+          } else if (memory.batch_size > MEMORY_SETTINGS.BATCH_SIZE.MAX) {
+            newErrors.batch_size = `バッチサイズは${MEMORY_SETTINGS.BATCH_SIZE.MAX}以下の値を入力してください`;
+          }
         }
       }
     }
@@ -321,7 +407,7 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
     if (validate()) {
       // デバッグ: 送信する設定をログ出力（開発環境のみ）
       if (import.meta.env.DEV) {
-        console.log('ApiConfigForm - 送信する設定:', {
+        logger.debug('ApiConfigForm - 送信する設定', 'ApiConfigForm', {
           ...config,
           modelParameters: config.modelParameters,
         });
@@ -329,7 +415,7 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
       onSubmit(config);
     } else {
       if (import.meta.env.DEV) {
-        console.warn('ApiConfigForm - バリデーションエラー:', errors);
+        logger.warn('ApiConfigForm - バリデーションエラー', 'ApiConfigForm', errors);
       }
     }
   };
@@ -358,6 +444,7 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
               value={config.name}
               onChange={(e) => setConfig({ ...config, name: e.target.value })}
               placeholder="LocalAI API"
+              maxLength={API_NAME.MAX_LENGTH}
               className={errors.name ? 'error' : ''}
             />
             <Tooltip content="重複を回避したAPI名を自動生成します。">
@@ -401,6 +488,53 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
           </select>
           {errors.engineType && <span className="error-message">{errors.engineType}</span>}
           <small className="form-hint">LLM実行エンジン（デフォルト: Ollama）</small>
+          
+          {/* エンジンインストール状態の表示 */}
+          {checkingEngine && (
+            <div className="engine-check-status">
+              <span className="checking-icon">⏳</span>
+              <span>エンジンの状態を確認中...</span>
+            </div>
+          )}
+          
+          {engineDetectionResult && !checkingEngine && (
+            <div className={`engine-status-message ${!engineDetectionResult.installed ? 'warning' : engineDetectionResult.running ? 'success' : 'info'}`}>
+              {!engineDetectionResult.installed ? (
+                <>
+                  <span className="status-icon">⚠️</span>
+                  <span className="status-text">
+                    {ENGINE_NAMES[config.engineType || 'ollama'] || config.engineType}がインストールされていません。
+                    {config.engineType === 'ollama' ? (
+                      <> 自動インストールが開始されます。</>
+                    ) : (
+                      <> 手動でインストールしてからAPIを作成してください。</>
+                    )}
+                  </span>
+                  {engineDetectionResult.message && (
+                    <div className="status-detail">{engineDetectionResult.message}</div>
+                  )}
+                </>
+              ) : !engineDetectionResult.running ? (
+                <>
+                  <span className="status-icon">ℹ️</span>
+                  <span className="status-text">
+                    {ENGINE_NAMES[config.engineType || 'ollama'] || config.engineType}が起動していません。
+                    エンジンを起動してからAPIを作成してください。
+                  </span>
+                  {engineDetectionResult.message && (
+                    <div className="status-detail">{engineDetectionResult.message}</div>
+                  )}
+                </>
+              ) : (
+                <>
+                  <span className="status-icon">✅</span>
+                  <span className="status-text">
+                    {ENGINE_NAMES[config.engineType || 'ollama'] || config.engineType}は正常に動作しています。
+                  </span>
+                </>
+              )}
+            </div>
+          )}
         </div>
 
         <div className="form-group">
@@ -417,13 +551,13 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
             id="api-port"
             type="number"
             value={config.port}
-            onChange={(e) => setConfig({ ...config, port: parseInt(e.target.value) || 8080 })}
-            min={1024}
-            max={65535}
+            onChange={(e) => setConfig({ ...config, port: parseInt(e.target.value) || PORT_RANGE.DEFAULT })}
+            min={PORT_RANGE.MIN}
+            max={PORT_RANGE.MAX}
             className={errors.port ? 'error' : ''}
           />
           {errors.port && <span className="error-message">{errors.port}</span>}
-          <small className="form-hint">APIエンドポイントのポート番号（デフォルト: 8080）</small>
+          <small className="form-hint">APIエンドポイントのポート番号（デフォルト: {PORT_RANGE.DEFAULT}）</small>
         </div>
 
         <div className="form-group">
@@ -481,17 +615,17 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
                   <input
                     id="temperature"
                     type="number"
-                    min="0"
-                    max="2"
+                    min={MODEL_PARAMETERS.TEMPERATURE.MIN}
+                    max={MODEL_PARAMETERS.TEMPERATURE.MAX}
                     step="0.1"
-                    value={config.modelParameters?.temperature ?? 0.7}
+                    value={config.modelParameters?.temperature ?? MODEL_PARAMETERS.TEMPERATURE.DEFAULT}
                     onChange={(e) => {
                       const value = e.target.value === '' ? undefined : parseFloat(e.target.value);
                       updateModelParameter('temperature', value);
                     }}
                     className={errors.temperature ? 'error' : ''}
                   />
-                  <small className="param-range">0.0 - 2.0</small>
+                  <small className="param-range">{MODEL_PARAMETERS.TEMPERATURE.MIN} - {MODEL_PARAMETERS.TEMPERATURE.MAX}</small>
                 </div>
                 {errors.temperature && <span className="error-message">{errors.temperature}</span>}
               </div>
@@ -510,17 +644,17 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
                   <input
                     id="top_p"
                     type="number"
-                    min="0"
-                    max="1"
+                    min={MODEL_PARAMETERS.TOP_P.MIN}
+                    max={MODEL_PARAMETERS.TOP_P.MAX}
                     step="0.1"
-                    value={config.modelParameters?.top_p ?? 0.9}
+                    value={config.modelParameters?.top_p ?? MODEL_PARAMETERS.TOP_P.DEFAULT}
                     onChange={(e) => {
                       const value = e.target.value === '' ? undefined : parseFloat(e.target.value);
                       updateModelParameter('top_p', value);
                     }}
                     className={errors.top_p ? 'error' : ''}
                   />
-                  <small className="param-range">0.0 - 1.0</small>
+                  <small className="param-range">{MODEL_PARAMETERS.TOP_P.MIN} - {MODEL_PARAMETERS.TOP_P.MAX}</small>
                 </div>
                 {errors.top_p && <span className="error-message">{errors.top_p}</span>}
               </div>
@@ -539,17 +673,17 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
                   <input
                     id="top_k"
                     type="number"
-                    min="1"
-                    max="100"
+                    min={MODEL_PARAMETERS.TOP_K.MIN}
+                    max={MODEL_PARAMETERS.TOP_K.MAX}
                     step="1"
-                    value={config.modelParameters?.top_k ?? 40}
+                    value={config.modelParameters?.top_k ?? MODEL_PARAMETERS.TOP_K.DEFAULT}
                     onChange={(e) => {
                       const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
                       updateModelParameter('top_k', value);
                     }}
                     className={errors.top_k ? 'error' : ''}
                   />
-                  <small className="param-range">1 - 100</small>
+                  <small className="param-range">{MODEL_PARAMETERS.TOP_K.MIN} - {MODEL_PARAMETERS.TOP_K.MAX}</small>
                 </div>
                 {errors.top_k && <span className="error-message">{errors.top_k}</span>}
               </div>
@@ -568,16 +702,16 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
                   <input
                     id="max_tokens"
                     type="number"
-                    min="1"
+                    min={MODEL_PARAMETERS.MAX_TOKENS.MIN}
                     step="1"
-                    value={config.modelParameters?.max_tokens ?? 1024}
+                    value={config.modelParameters?.max_tokens ?? MODEL_PARAMETERS.MAX_TOKENS.DEFAULT}
                     onChange={(e) => {
                       const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
                       updateModelParameter('max_tokens', value);
                     }}
                     className={errors.max_tokens ? 'error' : ''}
                   />
-                  <small className="param-range">1以上</small>
+                  <small className="param-range">{MODEL_PARAMETERS.MAX_TOKENS.MIN}以上</small>
                 </div>
                 {errors.max_tokens && <span className="error-message">{errors.max_tokens}</span>}
               </div>
@@ -596,17 +730,17 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
                   <input
                     id="repeat_penalty"
                     type="number"
-                    min="0"
-                    max="2"
+                    min={MODEL_PARAMETERS.REPEAT_PENALTY.MIN}
+                    max={MODEL_PARAMETERS.REPEAT_PENALTY.MAX}
                     step="0.1"
-                    value={config.modelParameters?.repeat_penalty ?? 1.1}
+                    value={config.modelParameters?.repeat_penalty ?? MODEL_PARAMETERS.REPEAT_PENALTY.DEFAULT}
                     onChange={(e) => {
                       const value = e.target.value === '' ? undefined : parseFloat(e.target.value);
                       updateModelParameter('repeat_penalty', value);
                     }}
                     className={errors.repeat_penalty ? 'error' : ''}
                   />
-                  <small className="param-range">0.0 - 2.0</small>
+                  <small className="param-range">{MODEL_PARAMETERS.REPEAT_PENALTY.MIN} - {MODEL_PARAMETERS.REPEAT_PENALTY.MAX}</small>
                 </div>
                 {errors.repeat_penalty && <span className="error-message">{errors.repeat_penalty}</span>}
               </div>
@@ -645,11 +779,11 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
                     setConfig({
                       ...config,
                       modelParameters: {
-                        temperature: 0.7,
-                        top_p: 0.9,
-                        top_k: 40,
-                        max_tokens: 1024,
-                        repeat_penalty: 1.1,
+                        temperature: MODEL_PARAMETERS.TEMPERATURE.DEFAULT,
+                        top_p: MODEL_PARAMETERS.TOP_P.DEFAULT,
+                        top_k: MODEL_PARAMETERS.TOP_K.DEFAULT,
+                        max_tokens: MODEL_PARAMETERS.MAX_TOKENS.DEFAULT,
+                        repeat_penalty: MODEL_PARAMETERS.REPEAT_PENALTY.DEFAULT,
                       },
                     });
                   }}
@@ -697,7 +831,8 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
                   <input
                     id="context_window"
                     type="number"
-                    min="128"
+                    min={MEMORY_SETTINGS.CONTEXT_WINDOW.MIN}
+                    max={MEMORY_SETTINGS.CONTEXT_WINDOW.MAX}
                     step="128"
                     value={config.modelParameters?.memory?.context_window ?? ''}
                     onChange={(e) => {
@@ -707,7 +842,7 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
                     placeholder="モデル依存"
                     className={errors.context_window ? 'error' : ''}
                   />
-                  <small className="param-range">128以上（トークン数）</small>
+                  <small className="param-range">{MEMORY_SETTINGS.CONTEXT_WINDOW.MIN}-{MEMORY_SETTINGS.CONTEXT_WINDOW.MAX}（トークン数）</small>
                 </div>
                 {errors.context_window && <span className="error-message">{errors.context_window}</span>}
               </div>
@@ -726,7 +861,8 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
                   <input
                     id="num_gpu_layers"
                     type="number"
-                    min="0"
+                    min={MEMORY_SETTINGS.NUM_GPU_LAYERS.MIN}
+                    max={MEMORY_SETTINGS.NUM_GPU_LAYERS.MAX}
                     step="1"
                     value={config.modelParameters?.memory?.num_gpu_layers ?? ''}
                     onChange={(e) => {
@@ -736,7 +872,7 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
                     placeholder="モデル依存（0=CPUのみ）"
                     className={errors.num_gpu_layers ? 'error' : ''}
                   />
-                  <small className="param-range">0以上（0=CPUのみ）</small>
+                  <small className="param-range">{MEMORY_SETTINGS.NUM_GPU_LAYERS.MIN}-{MEMORY_SETTINGS.NUM_GPU_LAYERS.MAX}（{MEMORY_SETTINGS.NUM_GPU_LAYERS.MIN}=CPUのみ）</small>
                 </div>
                 {errors.num_gpu_layers && <span className="error-message">{errors.num_gpu_layers}</span>}
               </div>
@@ -755,7 +891,8 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
                   <input
                     id="num_threads"
                     type="number"
-                    min="1"
+                    min={MEMORY_SETTINGS.NUM_THREADS.MIN}
+                    max={MEMORY_SETTINGS.NUM_THREADS.MAX}
                     step="1"
                     value={config.modelParameters?.memory?.num_threads ?? ''}
                     onChange={(e) => {
@@ -765,7 +902,7 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
                     placeholder="システム依存"
                     className={errors.num_threads ? 'error' : ''}
                   />
-                  <small className="param-range">1以上</small>
+                  <small className="param-range">{MEMORY_SETTINGS.NUM_THREADS.MIN}-{MEMORY_SETTINGS.NUM_THREADS.MAX}</small>
                 </div>
                 {errors.num_threads && <span className="error-message">{errors.num_threads}</span>}
               </div>
@@ -784,16 +921,17 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
                   <input
                     id="batch_size"
                     type="number"
-                    min="1"
+                    min={MEMORY_SETTINGS.BATCH_SIZE.MIN}
+                    max={MEMORY_SETTINGS.BATCH_SIZE.MAX}
                     step="1"
-                    value={config.modelParameters?.memory?.batch_size ?? 512}
+                    value={config.modelParameters?.memory?.batch_size ?? MEMORY_SETTINGS.BATCH_SIZE.DEFAULT}
                     onChange={(e) => {
                       const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
                       updateMemorySetting('batch_size', value);
                     }}
                     className={errors.batch_size ? 'error' : ''}
                   />
-                  <small className="param-range">1以上（推奨: 512）</small>
+                  <small className="param-range">{MEMORY_SETTINGS.BATCH_SIZE.MIN}-{MEMORY_SETTINGS.BATCH_SIZE.MAX}（推奨: {MEMORY_SETTINGS.BATCH_SIZE.DEFAULT}）</small>
                 </div>
                 {errors.batch_size && <span className="error-message">{errors.batch_size}</span>}
               </div>
@@ -856,7 +994,7 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
                       modelParameters: {
                         ...config.modelParameters,
                         memory: {
-                          batch_size: 512,
+                          batch_size: MEMORY_SETTINGS.BATCH_SIZE.DEFAULT,
                           use_mmap: true,
                           use_mlock: false,
                           low_mem: false,
@@ -969,16 +1107,16 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
                       <input
                         id="maxImageSize"
                         type="number"
-                        min="1"
-                        max="100"
+                        min={MULTIMODAL_SETTINGS.MAX_IMAGE_SIZE.MIN}
+                        max={MULTIMODAL_SETTINGS.MAX_IMAGE_SIZE.MAX}
                         step="1"
-                        value={config.multimodal?.maxImageSize ?? 10}
+                        value={config.multimodal?.maxImageSize ?? MULTIMODAL_SETTINGS.MAX_IMAGE_SIZE.DEFAULT}
                         onChange={(e) => {
                           const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
                           updateMultimodalSetting('maxImageSize', value);
                         }}
                       />
-                      <small className="param-range">1-100 MB</small>
+                      <small className="param-range">{MULTIMODAL_SETTINGS.MAX_IMAGE_SIZE.MIN}-{MULTIMODAL_SETTINGS.MAX_IMAGE_SIZE.MAX} MB</small>
                     </div>
                   </div>
                 )}
@@ -998,16 +1136,16 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
                       <input
                         id="maxAudioSize"
                         type="number"
-                        min="1"
-                        max="500"
+                        min={MULTIMODAL_SETTINGS.MAX_AUDIO_SIZE.MIN}
+                        max={MULTIMODAL_SETTINGS.MAX_AUDIO_SIZE.MAX}
                         step="1"
-                        value={config.multimodal?.maxAudioSize ?? 50}
+                        value={config.multimodal?.maxAudioSize ?? MULTIMODAL_SETTINGS.MAX_AUDIO_SIZE.DEFAULT}
                         onChange={(e) => {
                           const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
                           updateMultimodalSetting('maxAudioSize', value);
                         }}
                       />
-                      <small className="param-range">1-500 MB</small>
+                      <small className="param-range">{MULTIMODAL_SETTINGS.MAX_AUDIO_SIZE.MIN}-{MULTIMODAL_SETTINGS.MAX_AUDIO_SIZE.MAX} MB</small>
                     </div>
                   </div>
                 )}
@@ -1027,16 +1165,16 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
                       <input
                         id="maxVideoSize"
                         type="number"
-                        min="1"
-                        max="1000"
+                        min={MULTIMODAL_SETTINGS.MAX_VIDEO_SIZE.MIN}
+                        max={MULTIMODAL_SETTINGS.MAX_VIDEO_SIZE.MAX}
                         step="1"
-                        value={config.multimodal?.maxVideoSize ?? 100}
+                        value={config.multimodal?.maxVideoSize ?? MULTIMODAL_SETTINGS.MAX_VIDEO_SIZE.DEFAULT}
                         onChange={(e) => {
                           const value = e.target.value === '' ? undefined : parseInt(e.target.value, 10);
                           updateMultimodalSetting('maxVideoSize', value);
                         }}
                       />
-                      <small className="param-range">1-1000 MB</small>
+                      <small className="param-range">{MULTIMODAL_SETTINGS.MAX_VIDEO_SIZE.MIN}-{MULTIMODAL_SETTINGS.MAX_VIDEO_SIZE.MAX} MB</small>
                     </div>
                   </div>
                 )}
@@ -1052,9 +1190,9 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
                           enableVision: model.capabilities?.vision || false,
                           enableAudio: model.capabilities?.audio || false,
                           enableVideo: model.capabilities?.video || false,
-                          maxImageSize: 10,
-                          maxAudioSize: 50,
-                          maxVideoSize: 100,
+                          maxImageSize: MULTIMODAL_SETTINGS.MAX_IMAGE_SIZE.DEFAULT,
+                          maxAudioSize: MULTIMODAL_SETTINGS.MAX_AUDIO_SIZE.DEFAULT,
+                          maxVideoSize: MULTIMODAL_SETTINGS.MAX_VIDEO_SIZE.DEFAULT,
                           supportedImageFormats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
                           supportedAudioFormats: ['mp3', 'wav', 'ogg', 'm4a'],
                           supportedVideoFormats: ['mp4', 'webm', 'mov'],

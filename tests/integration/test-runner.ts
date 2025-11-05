@@ -1,16 +1,9 @@
-/**
- * FLM - 統合テストランナー
- * 
- * フェーズ4: QAエージェント (QA) 実装
- * 統合テストスイートの実行とレポート生成
- */
+// test-runner - 統合テストランナー
 
-/**
- * 統合テスト実行用のヘルパー関数
- * Jestの設定と統合して使用
- */
 export const runIntegrationTests = async () => {
-  console.log('統合テストスイートを開始します...');
+  if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+    console.log('統合テストスイートを開始します...');
+  }
   
   // テストファイルのリスト
   const testFiles = [

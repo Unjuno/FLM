@@ -5,6 +5,9 @@ use rusqlite::{Connection, Row, params};
 use chrono::Utc;
 use crate::database::{DatabaseError, models::*};
 
+// サブモジュールのエクスポート
+pub mod security_repository;
+
 /// API設定のリポジトリ
 pub struct ApiRepository<'a> {
     conn: &'a Connection,
@@ -794,6 +797,110 @@ impl<'a> RequestLogRepository<'a> {
             result.push(log?);
         }
         Ok(result)
+    }
+    
+    /// フィルタ条件に一致するログの総件数を取得（CODE-002修正）
+    /// find_with_filtersと同じフィルタ条件を使用してCOUNTクエリを実行します
+    pub fn count_with_filters(
+        &self,
+        api_id: Option<&str>,
+        start_date: Option<&str>,
+        end_date: Option<&str>,
+        status_codes: Option<&[i32]>,
+        path_filter: Option<&str>,
+    ) -> Result<i64, DatabaseError> {
+        // SQLクエリの構築（動的にWHERE句を追加）
+        let mut query = String::from("SELECT COUNT(*) FROM request_logs");
+        
+        let mut conditions = Vec::new();
+        
+        // API IDフィルタ
+        if api_id.is_some() {
+            conditions.push("api_id = ?1".to_string());
+        }
+        
+        // 開始日時フィルタ
+        if start_date.is_some() {
+            let param_idx = conditions.len() + 1;
+            conditions.push(format!("created_at >= ?{}", param_idx));
+        }
+        
+        // 終了日時フィルタ
+        if end_date.is_some() {
+            let param_idx = conditions.len() + 1;
+            conditions.push(format!("created_at <= ?{}", param_idx));
+        }
+        
+        // ステータスコードフィルタ
+        if let Some(status_codes_val) = status_codes {
+            if !status_codes_val.is_empty() {
+                let param_idx = conditions.len() + 1;
+                let placeholders: Vec<String> = (0..status_codes_val.len())
+                    .map(|i| format!("?{}", param_idx + i))
+                    .collect();
+                conditions.push(format!("response_status IN ({})", placeholders.join(", ")));
+            }
+        }
+        
+        // パスフィルタ（LIKE検索）
+        if let Some(path_filter_val) = path_filter {
+            if !path_filter_val.is_empty() {
+                let param_idx = conditions.len() + 1;
+                conditions.push(format!("path LIKE ?{}", param_idx));
+            }
+        }
+        
+        // WHERE句の追加
+        if !conditions.is_empty() {
+            query.push_str(" WHERE ");
+            query.push_str(&conditions.join(" AND "));
+        }
+        
+        let mut stmt = self.conn.prepare(&query)?;
+        
+        // パラメータを所有された値として収集（ライフタイムの問題を回避）
+        let mut params_vec: Vec<Box<dyn rusqlite::types::ToSql + Send + Sync>> = Vec::new();
+        
+        if let Some(api_id_val) = api_id {
+            params_vec.push(Box::new(api_id_val.to_string()));
+        }
+        
+        if let Some(start_date_val) = start_date {
+            params_vec.push(Box::new(start_date_val.to_string()));
+        }
+        
+        if let Some(end_date_val) = end_date {
+            params_vec.push(Box::new(end_date_val.to_string()));
+        }
+        
+        if let Some(status_codes_val) = status_codes {
+            if !status_codes_val.is_empty() {
+                for code in status_codes_val {
+                    params_vec.push(Box::new(*code));
+                }
+            }
+        }
+        
+        if let Some(path_filter_val) = path_filter {
+            if !path_filter_val.is_empty() {
+                let path_pattern = format!("%{}%", path_filter_val);
+                params_vec.push(Box::new(path_pattern));
+            }
+        }
+        
+        // パラメータをイテレータとして渡す
+        use rusqlite::params_from_iter;
+        let param_refs: Vec<&dyn rusqlite::types::ToSql> = params_vec.iter()
+            .map(|p| p.as_ref() as &dyn rusqlite::types::ToSql)
+            .collect();
+        
+        let count: i64 = if param_refs.is_empty() {
+            stmt.query_row([], |row| row.get(0))?
+        } else {
+            stmt.query_row(params_from_iter(param_refs), |row| row.get(0))?
+        };
+        
+        Ok(count)
     }
     
     /// ログ統計情報を取得（BE-006-02で追加、BE-006-03で最適化）

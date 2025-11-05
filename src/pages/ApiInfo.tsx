@@ -1,22 +1,18 @@
 // ApiInfo - API情報ページ
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { invoke } from '@tauri-apps/api/core';
+import { safeInvoke } from '../utils/tauri';
+import { API_KEY, TIMEOUT } from '../constants/config';
+import type { ApiInfo as BaseApiInfo, ApiDetailsResponse } from '../types/api';
+import { generateSampleCode } from '../utils/apiCodeGenerator';
 import './ApiInfo.css';
 
 /**
- * API情報
+ * API情報（拡張版 - apiKeyを含む）
  */
-interface ApiInfo {
-  id: string;
-  name: string;
-  endpoint: string;
+interface ApiInfoWithKey extends BaseApiInfo {
   apiKey?: string;
-  port: number;
-  model: string;
-  status: 'running' | 'stopped';
-  created_at: string;
 }
 
 /**
@@ -26,7 +22,7 @@ interface ApiInfo {
 export const ApiInfo: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const [apiInfo, setApiInfo] = useState<ApiInfo | null>(null);
+  const [apiInfo, setApiInfo] = useState<ApiInfoWithKey | null>(null);
   const [showApiKey, setShowApiKey] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -45,18 +41,7 @@ export const ApiInfo: React.FC = () => {
       setError(null);
 
       // バックエンドのIPCコマンドを呼び出してAPI詳細を取得（APIキーを含む）
-      const apiDetails = await invoke<{
-        id: string;
-        name: string;
-        endpoint: string;
-        model_name: string;
-        port: number;
-        enable_auth: boolean;
-        status: string;
-        api_key: string | null;
-        created_at: string;
-        updated_at: string;
-      }>('get_api_details', { api_id: apiId });
+      const apiDetails = await safeInvoke<ApiDetailsResponse>('get_api_details', { api_id: apiId });
 
       setApiInfo({
         id: apiDetails.id,
@@ -64,9 +49,10 @@ export const ApiInfo: React.FC = () => {
         endpoint: apiDetails.endpoint,
         apiKey: apiDetails.api_key || undefined,
         port: apiDetails.port,
-        model: apiDetails.model_name,
+        model_name: apiDetails.model_name,
         status: (apiDetails.status === 'running' ? 'running' : 'stopped') as 'running' | 'stopped',
         created_at: apiDetails.created_at,
+        updated_at: apiDetails.updated_at,
       });
     } catch (err) {
       setError(err instanceof Error ? err.message : 'API情報の取得に失敗しました');
@@ -80,71 +66,21 @@ export const ApiInfo: React.FC = () => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(label);
-      setTimeout(() => setCopied(null), 2000);
+      setTimeout(() => setCopied(null), TIMEOUT.COPY_NOTIFICATION);
     } catch (err) {
       setError('クリップボードへのコピーに失敗しました');
     }
   };
 
   // サンプルコード生成
-  const generateSampleCode = (language: 'curl' | 'python' | 'javascript') => {
+  const getSampleCode = useCallback((language: 'curl' | 'python' | 'javascript'): string => {
     if (!apiInfo) return '';
 
-    const apiKey = apiInfo.apiKey || 'YOUR_API_KEY';
-    const endpoint = apiInfo.endpoint;
-    const authHeader = apiInfo.apiKey ? `Authorization: Bearer ${apiKey}` : '';
-
-    switch (language) {
-      case 'curl':
-        return `curl ${endpoint}/v1/chat/completions \\
-  -H "Content-Type: application/json" \\
-  ${authHeader ? `-H "${authHeader}" \\` : ''}
-  -d '{
-    "model": "${apiInfo.model}",
-    "messages": [
-      {"role": "user", "content": "こんにちは"}
-    ]
-  }'`;
-
-      case 'python':
-        return `import requests
-
-url = "${endpoint}/v1/chat/completions"
-headers = {
-    "Content-Type": "application/json"${apiInfo.apiKey ? `,\n    "Authorization": "Bearer ${apiKey}"` : ''}
-}
-
-data = {
-    "model": "${apiInfo.model}",
-    "messages": [
-        {"role": "user", "content": "こんにちは"}
-    ]
-}
-
-response = requests.post(url, json=data, headers=headers)
-print(response.json())`;
-
-      case 'javascript':
-        return `const response = await fetch("${endpoint}/v1/chat/completions", {
-  method: "POST",
-  headers: {
-    "Content-Type": "application/json"${apiInfo.apiKey ? `,\n    "Authorization": "Bearer ${apiKey}"` : ''}
-  },
-  body: JSON.stringify({
-    model: "${apiInfo.model}",
-    messages: [
-      { role: "user", content: "こんにちは" }
-    ]
-  })
-});
-
-const data = await response.json();
-console.log(data);`;
-
-      default:
-        return '';
-    }
-  };
+    return generateSampleCode(language, {
+      apiInfo,
+      apiKey: apiInfo.apiKey,
+    });
+  }, [apiInfo]);
 
   if (loading) {
     return (
@@ -195,7 +131,7 @@ console.log(data);`;
               </div>
               <div className="info-item">
                 <span className="info-label">モデル:</span>
-                <span className="info-value">{apiInfo.model}</span>
+                <span className="info-value">{apiInfo.model_name}</span>
               </div>
               <div className="info-item">
                 <span className="info-label">ステータス:</span>
@@ -234,7 +170,7 @@ console.log(data);`;
               <h2>APIキー</h2>
               <div className="api-key-display">
                 <code className={`api-key-value ${showApiKey ? 'visible' : 'hidden'}`}>
-                  {showApiKey ? apiInfo.apiKey : '•'.repeat(32)}
+                  {showApiKey ? apiInfo.apiKey : '•'.repeat(API_KEY.DEFAULT_LENGTH)}
                 </code>
                 <div className="api-key-actions">
                   {apiInfo.apiKey.startsWith('***') ? (
@@ -292,33 +228,33 @@ console.log(data);`;
             <div className="sample-code-container">
               <div className={`sample-code-block ${activeTab === 'curl' ? 'active' : ''}`}>
                 <pre>
-                  <code>{generateSampleCode('curl')}</code>
+                  <code>{getSampleCode('curl')}</code>
                 </pre>
                 <button
                   className="copy-button"
-                  onClick={() => copyToClipboard(generateSampleCode('curl'), 'curl')}
+                  onClick={() => copyToClipboard(getSampleCode('curl'), 'curl')}
                 >
                   {copied === 'curl' ? '✓ コピー済み' : '📋 コピー'}
                 </button>
               </div>
               <div className={`sample-code-block ${activeTab === 'python' ? 'active' : ''}`}>
                 <pre>
-                  <code>{generateSampleCode('python')}</code>
+                  <code>{getSampleCode('python')}</code>
                 </pre>
                 <button
                   className="copy-button"
-                  onClick={() => copyToClipboard(generateSampleCode('python'), 'python')}
+                  onClick={() => copyToClipboard(getSampleCode('python'), 'python')}
                 >
                   {copied === 'python' ? '✓ コピー済み' : '📋 コピー'}
                 </button>
               </div>
               <div className={`sample-code-block ${activeTab === 'javascript' ? 'active' : ''}`}>
                 <pre>
-                  <code>{generateSampleCode('javascript')}</code>
+                  <code>{getSampleCode('javascript')}</code>
                 </pre>
                 <button
                   className="copy-button"
-                  onClick={() => copyToClipboard(generateSampleCode('javascript'), 'javascript')}
+                  onClick={() => copyToClipboard(getSampleCode('javascript'), 'javascript')}
                 >
                   {copied === 'javascript' ? '✓ コピー済み' : '📋 コピー'}
                 </button>
