@@ -13,12 +13,11 @@ on:
       - '.github/workflows/deploy-pages.yml'
   workflow_dispatch:
 
-# GITHUB_TOKENの権限設定
+# グローバル権限設定（jobsレベルで上書き可能）
 permissions:
   contents: read
   pages: write
   id-token: write
-  administration: read
 
 # 同時デプロイを1つに制限
 concurrency:
@@ -29,6 +28,11 @@ jobs:
   build-and-deploy:
     name: Build and Deploy
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pages: write
+      id-token: write
+    
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
@@ -37,15 +41,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
       
-      - name: Build website
-        run: |
-          # WEBディレクトリの内容を確認
-          echo "Building website from WEB directory..."
-          ls -la WEB/
-          
-          # WEBディレクトリの内容を一時ディレクトリにコピー（将来的にビルド処理がある場合の準備）
-          mkdir -p _site
-          cp -r WEB/* _site/ || true
+      - name: Setup Pages
+        uses: actions/configure-pages@v4
+        continue-on-error: true
       
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
