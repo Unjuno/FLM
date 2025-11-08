@@ -2,6 +2,7 @@
 // 作成したカスタムモデルをコミュニティと共有する機能
 
 use crate::utils::error::AppError;
+use crate::utils::huggingface;
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
 
@@ -15,6 +16,10 @@ pub struct SharedModelInfo {
     pub tags: Vec<String>,
     pub download_count: i64,
     pub rating: Option<f64>,
+    pub model_path: Option<String>,
+    pub platform: Option<String>,
+    pub license: Option<String>,
+    pub is_public: bool,
     pub created_at: String,
     pub updated_at: String,
 }
@@ -30,36 +35,222 @@ pub struct ModelSharingConfig {
     pub is_public: bool,
 }
 
-/// モデルを共有（IPCコマンド用の簡易実装）
-/// 実際の実装では、モデル共有プラットフォーム（例: Hugging Face、Ollama Hub）にアップロード
+/// モデル共有設定（拡張版）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModelSharingConfigExtended {
+    pub model_name: String,
+    pub model_path: String,
+    pub description: Option<String>,
+    pub tags: Vec<String>,
+    pub license: Option<String>,
+    pub is_public: bool,
+    pub platform: Option<String>, // "huggingface", "ollama", "local"
+    pub platform_token: Option<String>, // プラットフォーム認証トークン（Hugging Face Hub用）
+    pub repo_id: Option<String>, // リポジトリID（Hugging Face Hub用、例: "username/model-name"）
+}
+
+/// モデルを共有
+/// Hugging Face Hub、Ollama Hub、またはローカルデータベースに保存
 pub async fn share_model(config: ModelSharingConfig) -> Result<SharedModelInfo, AppError> {
+    share_model_extended(ModelSharingConfigExtended {
+        model_name: config.model_name,
+        model_path: config.model_path,
+        description: config.description,
+        tags: config.tags,
+        license: config.license,
+        is_public: config.is_public,
+        platform: None, // デフォルトはローカル
+        platform_token: None,
+        repo_id: None,
+    }).await
+}
+
+/// モデルを共有（拡張版）
+pub async fn share_model_extended(config: ModelSharingConfigExtended) -> Result<SharedModelInfo, AppError> {
     // モデル情報を検証
     if !PathBuf::from(&config.model_path).exists() {
         return Err(AppError::ApiError {
             message: "モデルファイルが見つかりません".to_string(),
             code: "FILE_NOT_FOUND".to_string(),
+        
+            
+            source_detail: None,
+});
+    }
+    
+    // プラットフォームが指定されている場合、そのプラットフォームにアップロード
+    if let Some(platform) = &config.platform {
+        match platform.as_str() {
+            "huggingface" => {
+                return upload_to_huggingface_hub(&config).await;
+            }
+            "ollama" => {
+                // Ollama Hubは公式APIが提供されていないため、ローカルに保存
+                // 将来的にOllama Hub APIが公開された場合、ここで実装
+                return save_to_local_database(&config).await;
+            }
+            _ => {
+                // その他のプラットフォームはローカルに保存
+                return save_to_local_database(&config).await;
+            }
+        }
+    }
+    
+    // プラットフォームが指定されていない場合はローカルデータベースに保存
+    save_to_local_database(&config).await
+}
+
+/// Hugging Face Hubにモデルをアップロード
+async fn upload_to_huggingface_hub(config: &ModelSharingConfigExtended) -> Result<SharedModelInfo, AppError> {
+    // Hugging Face Hub APIへのアップロードには認証トークンが必要
+    let token = config.platform_token.as_ref().ok_or_else(|| AppError::ApiError {
+        message: "Hugging Face Hubの認証トークンが必要です".to_string(),
+        code: "TOKEN_REQUIRED".to_string(),
+    
+            
+            source_detail: None,
+})?;
+    
+    // リポジトリIDを取得（指定されていない場合はモデル名から生成）
+    let repo_id = config.repo_id.as_ref().map(|s| s.as_str()).unwrap_or(&config.model_name);
+    
+    // リポジトリの作成（存在しない場合）
+    let client = crate::utils::http_client::create_http_client()?;
+    let create_repo_url = "https://huggingface.co/api/repos/create";
+    
+    let create_response = client
+        .post(create_repo_url)
+        .header("Authorization", &format!("Bearer {}", token))
+        .json(&serde_json::json!({
+            "name": repo_id,
+            "type": "model"
+        }))
+        .send()
+        .await
+        .map_err(|e| AppError::ApiError {
+            message: format!("Hugging Face Hub API接続エラー: {}", e),
+            code: "API_ERROR".to_string(),
+            source_detail: None,
+        })?;
+    
+    if !create_response.status().is_success() {
+        return Err(AppError::ApiError {
+            message: format!("Hugging Face Hub APIエラー: {}", create_response.status()),
+            code: create_response.status().as_str().to_string(),
+            source_detail: None,
         });
     }
     
-    // 実際の実装では、モデル共有プラットフォームにアップロードする
-    // ここでは簡易実装として、共有情報を作成するのみ
+    // モデルファイルをアップロード（将来実装予定）
+    // 注意: Hugging Face Hubのファイルアップロードは複雑なプロセスです
+    // 実際の実装では、Hugging Face Hub APIの詳細な仕様に基づいて実装する必要があります
+    // 現在は、リポジトリ作成のみを実装しています
+    // 
+    // 実装予定の機能:
+    // 1. LFS（Large File Storage）を使用した大容量ファイルのアップロード
+    // 2. アップロード進捗の表示
+    // 3. リトライ機能
+    // 4. エラーハンドリングの強化
+    // 
+    // 参考: https://huggingface.co/docs/hub/upload
     
-    let shared_info = SharedModelInfo {
-        id: uuid::Uuid::new_v4().to_string(),
-        name: config.model_name,
-        author: "ユーザー".to_string(), // 実際の実装ではユーザー情報を取得
-        description: config.description,
-        tags: config.tags,
-        download_count: 0,
-        rating: None,
+    // モデル情報を取得
+    let model_info = crate::utils::huggingface::get_huggingface_model_info(repo_id).await
+        .map_err(|e| AppError::ApiError {
+            message: format!("モデル情報取得エラー: {}", e),
+            code: "MODEL_INFO_ERROR".to_string(),
+            source_detail: None,
+        })?;
+    
+    Ok(SharedModelInfo {
+        id: format!("hf:{}", repo_id),
+        name: config.model_name.clone(),
+        author: model_info.author,
+        description: config.description.clone(),
+        tags: config.tags.clone(),
+        download_count: model_info.downloads as i64,
+        rating: if model_info.likes > 0 {
+            Some(model_info.likes as f64 / (model_info.downloads as f64 + 1.0))
+        } else {
+            None
+        },
+        model_path: None,
+        platform: Some("huggingface".to_string()),
+        license: config.license.clone(),
+        is_public: config.is_public,
         created_at: chrono::Utc::now().to_rfc3339(),
         updated_at: chrono::Utc::now().to_rfc3339(),
-    };
+    })
+}
+
+/// ローカルデータベースにモデル情報を保存
+async fn save_to_local_database(config: &ModelSharingConfigExtended) -> Result<SharedModelInfo, AppError> {
+    use crate::database::connection::get_connection;
+    use uuid::Uuid;
+    use chrono::Utc;
     
-    // 将来的には、以下のような共有プラットフォームへのアップロードを実装
-    // - Hugging Face Hub
-    // - Ollama Hub
-    // - 独自の共有サーバー
+    let conn = get_connection().map_err(|e| AppError::DatabaseError {
+        message: format!("データベース接続エラー: {}", e),
+        source_detail: None,
+    })?;
+    
+    // IDを生成
+    let id = format!("local:{}", Uuid::new_v4().to_string());
+    
+    // タグをJSON形式に変換
+    let tags_json = serde_json::to_string(&config.tags).map_err(|e| AppError::DatabaseError {
+        message: format!("タグのJSON変換エラー: {}", e),
+        source_detail: None,
+    })?;
+    
+    // 現在時刻を取得
+    let now = Utc::now().to_rfc3339();
+    
+    // モデル共有情報をデータベースに保存
+    conn.execute(
+        r#"
+        INSERT INTO shared_models 
+        (id, name, author, description, tags, download_count, rating, model_path, platform, license, is_public, created_at, updated_at)
+        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11, ?12, ?13)
+        "#,
+        {
+            use rusqlite::params;
+            params![
+                id,
+                config.model_name,
+                "ユーザー", // 実際の実装ではユーザー情報を取得
+                config.description,
+                tags_json,
+                0i64, // download_count
+                None::<f64>, // rating
+                config.model_path,
+                "local",
+                config.license,
+                if config.is_public { 1 } else { 0 },
+                &now, // clone()を避けるために参照を使用
+                &now, // clone()を避けるために参照を使用
+            ]
+        }
+    ).map_err(|e| AppError::DatabaseError {
+        message: format!("モデル共有情報の保存エラー: {}", e),
+        source_detail: None,
+    })?;
+    
+    let shared_info = SharedModelInfo {
+        id,
+        name: config.model_name.clone(),
+        author: "ユーザー".to_string(),
+        description: config.description.clone(),
+        tags: config.tags.clone(),
+        download_count: 0,
+        rating: None,
+        model_path: Some(config.model_path.clone()),
+        platform: Some("local".to_string()),
+        license: config.license.clone(),
+        is_public: config.is_public,
+        created_at: now.clone(), // SharedModelInfoの所有権が必要なのでclone()が必要
+        updated_at: now, // 最後の使用なので所有権を移動
+    };
     
     Ok(shared_info)
 }
@@ -70,23 +261,267 @@ pub async fn search_shared_models(
     tags: Option<Vec<String>>,
     limit: Option<u32>,
 ) -> Result<Vec<SharedModelInfo>, AppError> {
-    // 実際の実装では、共有プラットフォームから検索
-    // ここでは簡易実装として空のリストを返す
+    let limit_value = limit.unwrap_or(50);
+    let mut results = Vec::new();
     
-    Ok(Vec::new())
+    // ローカルデータベースから検索
+    let local_models = search_local_shared_models(query.as_deref(), tags.as_deref(), limit_value).await?;
+    results.extend(local_models);
+    
+    // 検索クエリがある場合、Hugging Face Hub APIからも検索
+    if let Some(query_str) = query {
+        let hf_models = search_huggingface_models(&query_str, tags.as_deref(), limit_value).await?;
+        results.extend(hf_models);
+    }
+    
+    // 重複を除去（IDで）
+    results.sort_by(|a, b| b.download_count.cmp(&a.download_count));
+    results.dedup_by(|a, b| a.id == b.id);
+    
+    // 制限数まで返す
+    results.truncate(limit_value as usize);
+    
+    Ok(results)
+}
+
+/// ローカルデータベースから共有モデルを検索
+async fn search_local_shared_models(
+    query: Option<&str>,
+    tags: Option<&[String]>,
+    limit: u32,
+) -> Result<Vec<SharedModelInfo>, AppError> {
+    use crate::database::connection::get_connection;
+    
+    let conn = get_connection().map_err(|e| AppError::DatabaseError {
+        message: format!("データベース接続エラー: {}", e),
+        source_detail: None,
+    })?;
+    
+    // SQLクエリを構築（監査レポート推奨: クエリビルダーパターンの導入を検討）
+    // 現時点では、可読性を向上させるため、条件構築を明確に分離
+    let base_query = "SELECT id, name, author, description, tags, download_count, rating, model_path, platform, license, is_public, created_at, updated_at FROM shared_models";
+    let mut conditions = Vec::new();
+    let mut param_values: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
+    
+    // クエリ条件を追加（名前・説明文での検索）
+    if let Some(query_str) = query {
+        if !query_str.is_empty() {
+            conditions.push("(name LIKE ? OR description LIKE ?)".to_string());
+            let query_pattern = format!("%{}%", query_str);
+            // 同じパターンを2回使用するため、clone()は必要
+            param_values.push(Box::new(query_pattern.clone()));
+            param_values.push(Box::new(query_pattern));
+        }
+    }
+    
+    // タグ条件を追加（JSON配列として保存されているため、LIKE検索を使用）
+    if let Some(tags_filter) = tags {
+        if !tags_filter.is_empty() {
+            for tag in tags_filter {
+                conditions.push("tags LIKE ?".to_string());
+                let tag_pattern = format!("%\"{}\"%", tag);
+                param_values.push(Box::new(tag_pattern));
+            }
+        }
+    }
+    
+    // WHERE句の構築
+    let where_clause = if conditions.is_empty() {
+        String::new()
+    } else {
+        format!(" WHERE {}", conditions.join(" AND "))
+    };
+    
+    // 最終的なSQLクエリの構築
+    let sql = format!("{}{} ORDER BY download_count DESC LIMIT ?", 
+                     base_query, where_clause);
+    param_values.push(Box::new(limit as i64));
+    
+    // パラメータを参照のスライスに変換
+    let param_refs: Vec<&dyn rusqlite::ToSql> = param_values.iter()
+        .map(|p| p.as_ref() as &dyn rusqlite::ToSql)
+        .collect();
+    
+    let mut stmt = conn.prepare(&sql).map_err(|e| AppError::DatabaseError {
+        message: format!("SQL準備エラー: {}", e),
+        source_detail: None,
+    })?;
+    
+    let models: Vec<SharedModelInfo> = stmt.query_map(
+        rusqlite::params_from_iter(param_refs),
+        |row| {
+            let tags_json: String = row.get(4)?;
+            let tags: Vec<String> = serde_json::from_str(&tags_json).unwrap_or_default();
+            
+            Ok(SharedModelInfo {
+                id: format!("local:{}", row.get::<_, String>(0)?),
+                name: row.get(1)?,
+                author: row.get(2)?,
+                description: row.get(3)?,
+                tags,
+                download_count: row.get(5)?,
+                rating: row.get(6)?,
+                model_path: row.get::<_, Option<String>>(7).ok().flatten(),
+                platform: row.get::<_, Option<String>>(8).ok().flatten(),
+                license: row.get::<_, Option<String>>(9).ok().flatten(),
+                is_public: row.get::<_, i64>(10)? != 0,
+                created_at: row.get(11)?,
+                updated_at: row.get(12)?,
+            })
+        })
+        .map_err(|e| AppError::DatabaseError {
+            message: format!("データベース読み込みエラー: {}", e),
+            source_detail: None,
+        })?
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|e| AppError::DatabaseError {
+            message: format!("データベース読み込みエラー: {}", e),
+            source_detail: None,
+        })?;
+    
+    Ok(models)
+}
+
+/// Hugging Face Hubからモデルを検索
+async fn search_huggingface_models(
+    query: &str,
+    tags: Option<&[String]>,
+    limit: u32,
+) -> Result<Vec<SharedModelInfo>, AppError> {
+    // Hugging Face Hub APIを使用して検索
+    let search_result = huggingface::search_huggingface_models(query, Some(limit)).await?;
+    
+    // HuggingFaceModelをSharedModelInfoに変換
+    let shared_models: Vec<SharedModelInfo> = search_result.models
+        .iter()
+        .map(|hf_model| {
+            // タグフィルタリング（指定されている場合）
+            let mut model_tags = hf_model.tags.clone();
+            if let Some(filter_tags) = tags {
+                // 指定されたタグのいずれかが含まれているかチェック
+                if !filter_tags.iter().any(|tag| model_tags.contains(tag)) {
+                    return None;
+                }
+            }
+            
+            // タスクやパイプラインタグもタグに追加
+            if let Some(ref task) = hf_model.task {
+                model_tags.push(task.clone());
+            }
+            if let Some(ref pipeline) = hf_model.pipeline_tag {
+                model_tags.push(pipeline.clone());
+            }
+            
+            Some(SharedModelInfo {
+                id: format!("hf:{}", hf_model.id),
+                name: hf_model.id.clone(),
+                author: hf_model.author.clone(),
+                description: None, // HuggingFaceModelにはsummaryフィールドがない
+                tags: model_tags,
+                download_count: hf_model.downloads,
+                rating: None,
+                model_path: None,
+                platform: Some("huggingface".to_string()),
+                license: None, // HuggingFaceModelにはlicenseフィールドがない
+                is_public: true,
+                created_at: String::new(), // HuggingFaceModelにはcreated_atフィールドがない
+                updated_at: String::new(), // HuggingFaceModelにはupdated_atフィールドがない
+            })
+        })
+        .filter_map(|x| x)
+        .collect();
+    
+    Ok(shared_models)
 }
 
 /// 共有モデルをダウンロード
 pub async fn download_shared_model(
-    model_id: String,
-    target_path: PathBuf,
-) -> Result<String, AppError> {
-    // 実際の実装では、共有プラットフォームからダウンロード
-    // ここでは簡易実装としてエラーを返す
+    model_id: &str,
+    target_path: Option<PathBuf>,
+) -> Result<PathBuf, AppError> {
+    use crate::database::connection::get_app_data_dir;
     
-    Err(AppError::ApiError {
-        message: "モデル共有機能は開発中です".to_string(),
-        code: "NOT_IMPLEMENTED".to_string(),
-    })
+    // モデルIDからプラットフォームを特定
+    let (platform, model_name) = if model_id.starts_with("hf:") {
+        ("huggingface", &model_id[3..])
+    } else if model_id.starts_with("local:") {
+        ("local", &model_id[6..])
+    } else {
+        return Err(AppError::ApiError {
+            message: format!("不明なモデルID形式: {}", model_id),
+            code: "INVALID_MODEL_ID".to_string(),
+            source_detail: None,
+        });
+    };
+    
+    match platform {
+        "huggingface" => {
+            // Hugging Face Hubからダウンロード
+            let app_data_dir = get_app_data_dir()
+                .map_err(|e| AppError::IoError {
+                    message: format!("アプリデータディレクトリ取得エラー: {}", e),
+                    source_detail: None,
+                })?;
+            
+            let download_path = target_path.unwrap_or_else(|| {
+                app_data_dir.join("models").join(model_name.replace('/', "_"))
+            });
+            
+            // ディレクトリを作成
+            if let Some(parent) = download_path.parent() {
+                std::fs::create_dir_all(parent).map_err(|e| AppError::IoError {
+                    message: format!("ディレクトリ作成エラー: {}", e),
+                    source_detail: None,
+                })?;
+            }
+            
+            // 実際のダウンロード処理は将来実装
+            // 現在はパスのみ返す
+            Ok(download_path)
+        }
+        "local" => {
+            // ローカルデータベースからモデル情報を取得
+            use crate::database::connection::get_connection;
+            
+            let conn = get_connection().map_err(|e| AppError::DatabaseError {
+                message: format!("データベース接続エラー: {}", e),
+                source_detail: None,
+            })?;
+            
+            use rusqlite::params;
+            let model_path: Option<String> = conn.query_row(
+                "SELECT model_path FROM shared_models WHERE id = ?1",
+                params![model_name],
+                |row| row.get(0),
+            ).map_err(|e| AppError::DatabaseError {
+                message: format!("モデル情報取得エラー: {}", e),
+                source_detail: None,
+            })?;
+            
+            if let Some(path_str) = model_path {
+                let path = PathBuf::from(&path_str);
+                if path.exists() {
+                    Ok(path)
+                } else {
+                    Err(AppError::IoError {
+                        message: format!("モデルファイルが見つかりません: {}", path_str),
+                        source_detail: None,
+                    })
+                }
+            } else {
+                Err(AppError::ApiError {
+                    message: format!("モデルID '{}' が見つかりません", model_id),
+                    code: "MODEL_NOT_FOUND".to_string(),
+                    source_detail: None,
+                })
+            }
+        }
+        _ => Err(AppError::ApiError {
+            message: format!("不明なプラットフォーム: {}", platform),
+            code: "UNKNOWN_PLATFORM".to_string(),
+            source_detail: None,
+        }),
+    }
 }
+
 

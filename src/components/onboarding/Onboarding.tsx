@@ -34,13 +34,15 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'welcome',
     title: 'FLMへようこそ！',
-    description: 'FLMは、ローカルLLMのAPIを簡単に作成・管理できるツールです。技術知識がなくても、コードを書かずにAPIを作成できます。',
+    description:
+      'FLMは、ローカルLLMのAPIを簡単に作成・管理できるツールです。技術知識がなくても、コードを書かずにAPIを作成できます。',
     icon: '👋',
   },
   {
     id: 'create-api',
     title: 'APIの作成',
-    description: '「新しいAPIを作成」ボタンをクリックして、OllamaモデルからAPIを作成します。ステップバイステップで簡単に作成できます。',
+    description:
+      '「新しいAPIを作成」ボタンをクリックして、OllamaモデルからAPIを作成します。ステップバイステップで簡単に作成できます。',
     icon: '✨',
     highlight: {
       selector: '.home-action-button.primary',
@@ -50,7 +52,8 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'manage-models',
     title: 'モデルの管理',
-    description: '「モデル管理」から利用可能なOllamaモデルを検索・ダウンロードできます。用途に応じて適切なモデルを選択してください。',
+    description:
+      '「モデル管理」から利用可能なOllamaモデルを検索・ダウンロードできます。用途に応じて適切なモデルを選択してください。',
     icon: '🤖',
     highlight: {
       selector: '.home-action-button:nth-child(3)',
@@ -60,7 +63,8 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'api-list',
     title: 'APIの管理',
-    description: '「API一覧」から作成済みのAPIを表示・管理できます。起動・停止・削除などの操作ができます。',
+    description:
+      '「API一覧」から作成済みのAPIを表示・管理できます。起動・停止・削除などの操作ができます。',
     icon: '📋',
     highlight: {
       selector: '.home-action-button:nth-child(2)',
@@ -70,7 +74,8 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'logs',
     title: 'ログと監視',
-    description: '「APIログ」と「パフォーマンス監視」で、APIのリクエストログとパフォーマンスメトリクスを確認できます。',
+    description:
+      '「APIログ」と「パフォーマンス監視」で、APIのリクエストログとパフォーマンスメトリクスを確認できます。',
     icon: '📊',
     highlight: {
       selector: '.home-action-button:nth-child(5)',
@@ -80,7 +85,8 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
   {
     id: 'help',
     title: 'ヘルプとサポート',
-    description: '「ヘルプ」ページから、よくある質問、使い方ガイド、トラブルシューティング情報を確認できます。',
+    description:
+      '「ヘルプ」ページから、よくある質問、使い方ガイド、トラブルシューティング情報を確認できます。',
     icon: '❓',
   },
 ];
@@ -89,7 +95,10 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
  * オンボーディングコンポーネント
  * 初回ユーザー向けのチュートリアルを提供します
  */
-export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) => {
+export const Onboarding: React.FC<OnboardingProps> = ({
+  onComplete,
+  onSkip,
+}) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [isVisible, setIsVisible] = useState(true);
 
@@ -136,8 +145,10 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
         if (highlight) {
           (highlight as HTMLElement).style.width = `${rect.width + 20}px`;
           (highlight as HTMLElement).style.height = `${rect.height + 20}px`;
-          (highlight as HTMLElement).style.top = `${rect.top - 10 + window.scrollY}px`;
-          (highlight as HTMLElement).style.left = `${rect.left - 10 + window.scrollX}px`;
+          (highlight as HTMLElement).style.top =
+            `${rect.top - 10 + window.scrollY}px`;
+          (highlight as HTMLElement).style.left =
+            `${rect.left - 10 + window.scrollX}px`;
         }
       }
     }
@@ -151,14 +162,14 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
     <div className="onboarding-overlay">
       {/* ハイライトエリア（背景を暗くする） */}
       <div className="onboarding-backdrop" />
-      
+
       {/* ハイライト要素（注目させる要素を囲む） */}
-      {step.highlight && (
-        <div className="onboarding-highlight" />
-      )}
+      {step.highlight && <div className="onboarding-highlight" />}
 
       {/* オンボーディングカード */}
-      <div className={`onboarding-card ${step.highlight ? `onboarding-${step.highlight.position}` : 'onboarding-center'}`}>
+      <div
+        className={`onboarding-card ${step.highlight ? `onboarding-${step.highlight.position}` : 'onboarding-center'}`}
+      >
         <div className="onboarding-header">
           <div className="onboarding-icon">{step.icon}</div>
           <button
@@ -188,10 +199,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
         </div>
 
         <div className="onboarding-actions">
-          <button
-            className="onboarding-button secondary"
-            onClick={handleSkip}
-          >
+          <button className="onboarding-button secondary" onClick={handleSkip}>
             スキップ
           </button>
           <div className="onboarding-nav-buttons">
@@ -203,10 +211,7 @@ export const Onboarding: React.FC<OnboardingProps> = ({ onComplete, onSkip }) =>
                 戻る
               </button>
             )}
-            <button
-              className="onboarding-button primary"
-              onClick={handleNext}
-            >
+            <button className="onboarding-button primary" onClick={handleNext}>
               {isLastStep ? '完了' : '次へ'}
             </button>
           </div>
@@ -225,8 +230,10 @@ export const useOnboarding = () => {
 
   useEffect(() => {
     // localStorageからオンボーディング完了フラグを確認
-    const onboardingCompleted = localStorage.getItem('flm_onboarding_completed');
-    
+    const onboardingCompleted = localStorage.getItem(
+      'flm_onboarding_completed'
+    );
+
     if (!onboardingCompleted) {
       // 初回起動の場合はオンボーディングを表示
       setShowOnboarding(true);
@@ -254,4 +261,3 @@ export const useOnboarding = () => {
     handleShowOnboarding,
   };
 };
-

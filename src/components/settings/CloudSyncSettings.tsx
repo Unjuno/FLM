@@ -1,7 +1,7 @@
 // CloudSyncSettings - クラウド同期設定コンポーネント
 // 設定のクラウド同期機能（GitHub Gist、Google Drive、Dropbox）
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useTransition } from 'react';
 import { safeInvoke } from '../../utils/tauri';
 import { useNotifications } from '../../contexts/NotificationContext';
 import './CloudSyncSettings.css';
@@ -9,7 +9,7 @@ import './CloudSyncSettings.css';
 /**
  * クラウド同期設定情報
  */
-interface CloudSyncConfig {
+export interface CloudSyncConfig {
   enabled: boolean;
   cloud_provider: string;
   access_token?: string;
@@ -18,9 +18,18 @@ interface CloudSyncConfig {
 }
 
 /**
+ * クラウド同期設定コンポーネントのプロパティ
+ */
+interface CloudSyncSettingsProps {
+  onConfigChange?: (config: CloudSyncConfig) => void;
+}
+
+/**
  * クラウド同期設定コンポーネント
  */
-export const CloudSyncSettings: React.FC = () => {
+export const CloudSyncSettings: React.FC<CloudSyncSettingsProps> = ({
+  onConfigChange,
+}) => {
   const { showSuccess, showError } = useNotifications();
   const [config, setConfig] = useState<CloudSyncConfig>({
     enabled: false,
@@ -29,22 +38,27 @@ export const CloudSyncSettings: React.FC = () => {
     sync_interval_seconds: 3600,
   });
   const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
   const [syncing, setSyncing] = useState(false);
+  const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
 
   useEffect(() => {
     loadConfig();
     generateDeviceIdIfNeeded();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   /**
-   * デバイスIDを生成（未設定の場合）
+   * デバイスIDを生成（未設定の場合、かつデバイスIDが有効な場合のみ）
    */
   const generateDeviceIdIfNeeded = async () => {
     if (!config.device_id) {
       try {
-        const deviceId = await safeInvoke<string>('generate_device_id');
-        setConfig((prev) => ({ ...prev, device_id: deviceId }));
+        // デバイスIDの使用が許可されているかチェック
+        const settings = await safeInvoke<{ device_id_enabled?: boolean }>('get_app_settings', {});
+        if (settings.device_id_enabled !== false) {
+          const deviceId = await safeInvoke<string>('generate_device_id');
+          setConfig(prev => ({ ...prev, device_id: deviceId }));
+        }
       } catch (err) {
         // エラーは無視（デフォルトで生成される）
       }
@@ -60,7 +74,7 @@ export const CloudSyncSettings: React.FC = () => {
       // 設定はローカルストレージまたはデータベースから読み込む
       // ここではデフォルト値を使用
       const deviceId = await safeInvoke<string>('generate_device_id');
-      setConfig((prev) => ({ ...prev, device_id: deviceId }));
+      setConfig(prev => ({ ...prev, device_id: deviceId }));
     } catch (err) {
       // エラーは無視（デフォルト値を使用）
     } finally {
@@ -68,40 +82,12 @@ export const CloudSyncSettings: React.FC = () => {
     }
   };
 
-  /**
-   * 設定を保存
-   */
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-      
-      if (config.enabled && !config.access_token) {
-        showError('アクセストークンを入力してください');
-        return;
-      }
-
-      // 設定をエクスポート
-      const settingsData = await safeInvoke<string>('export_settings_for_remote');
-      
-      // 同期設定を保存
-      await safeInvoke('sync_settings', {
-        config: {
-          enabled: config.enabled,
-          access_token: config.access_token || null,
-          device_id: config.device_id,
-          cloud_provider: config.cloud_provider,
-          sync_interval_seconds: config.sync_interval_seconds,
-        },
-        settings_data: settingsData,
-      });
-
-      showSuccess('クラウド同期設定を保存しました');
-    } catch (err) {
-      showError(err instanceof Error ? err.message : '設定の保存に失敗しました');
-    } finally {
-      setSaving(false);
+  // 設定が変更されたときに親コンポーネントに通知
+  useEffect(() => {
+    if (onConfigChange) {
+      onConfigChange(config);
     }
-  };
+  }, [config, onConfigChange]);
 
   /**
    * 手動同期を実行
@@ -109,10 +95,12 @@ export const CloudSyncSettings: React.FC = () => {
   const handleSync = async () => {
     try {
       setSyncing(true);
-      
+
       // 設定をエクスポート
-      const settingsData = await safeInvoke<string>('export_settings_for_remote');
-      
+      const settingsData = await safeInvoke<string>(
+        'export_settings_for_remote'
+      );
+
       // 同期実行
       await safeInvoke('sync_settings', {
         config: {
@@ -139,26 +127,33 @@ export const CloudSyncSettings: React.FC = () => {
   const handleGetSyncedSettings = async () => {
     try {
       setSyncing(true);
-      
-      const syncedSettings = await safeInvoke<string | null>('get_synced_settings', {
-        config: {
-          enabled: true,
-          access_token: config.access_token || null,
-          device_id: config.device_id,
-          cloud_provider: config.cloud_provider,
-          sync_interval_seconds: config.sync_interval_seconds,
-        },
-      });
+
+      const syncedSettings = await safeInvoke<string | null>(
+        'get_synced_settings',
+        {
+          config: {
+            enabled: true,
+            access_token: config.access_token || null,
+            device_id: config.device_id,
+            cloud_provider: config.cloud_provider,
+            sync_interval_seconds: config.sync_interval_seconds,
+          },
+        }
+      );
 
       if (syncedSettings) {
         // 設定をインポート
-        await safeInvoke('import_settings_from_remote', { settings_json: syncedSettings });
+        await safeInvoke('import_settings_from_remote', {
+          settings_json: syncedSettings,
+        });
         showSuccess('設定を取得しました');
       } else {
         showError('同期された設定が見つかりませんでした');
       }
     } catch (err) {
-      showError(err instanceof Error ? err.message : '設定の取得に失敗しました');
+      showError(
+        err instanceof Error ? err.message : '設定の取得に失敗しました'
+      );
     } finally {
       setSyncing(false);
     }
@@ -173,10 +168,16 @@ export const CloudSyncSettings: React.FC = () => {
   }
 
   return (
-    <section className="cloud-sync-settings-section" aria-labelledby="cloud-sync-heading">
-      <h2 id="cloud-sync-heading" className="settings-section-title">クラウド同期設定</h2>
+    <section
+      className="cloud-sync-settings-section"
+      aria-labelledby="cloud-sync-heading"
+    >
+      <h2 id="cloud-sync-heading" className="settings-section-title">
+        クラウド同期設定
+      </h2>
       <p className="settings-section-description">
-        複数デバイス間で設定を同期できます。GitHub Gist、Google Drive、Dropboxに対応しています。
+        複数デバイス間で設定を同期できます。GitHub Gist、Google
+        Drive、Dropboxに対応しています。
       </p>
 
       <div className="settings-group">
@@ -185,7 +186,7 @@ export const CloudSyncSettings: React.FC = () => {
             id="cloud-sync-enabled"
             type="checkbox"
             checked={config.enabled}
-            onChange={(e) => setConfig({ ...config, enabled: e.target.checked })}
+            onChange={e => setConfig({ ...config, enabled: e.target.checked })}
           />
           <span>クラウド同期を有効にする</span>
         </label>
@@ -201,7 +202,9 @@ export const CloudSyncSettings: React.FC = () => {
               id="cloud-provider"
               className="settings-select"
               value={config.cloud_provider}
-              onChange={(e) => setConfig({ ...config, cloud_provider: e.target.value })}
+              onChange={e =>
+                setConfig({ ...config, cloud_provider: e.target.value })
+              }
             >
               <option value="github">GitHub Gist</option>
               <option value="gdrive">Google Drive</option>
@@ -222,7 +225,9 @@ export const CloudSyncSettings: React.FC = () => {
               className="settings-input"
               placeholder="アクセストークンを入力"
               value={config.access_token || ''}
-              onChange={(e) => setConfig({ ...config, access_token: e.target.value })}
+              onChange={e =>
+                setConfig({ ...config, access_token: e.target.value })
+              }
             />
             <span className="settings-hint">
               選択したクラウドサービスのアクセストークンを入力してください
@@ -240,7 +245,7 @@ export const CloudSyncSettings: React.FC = () => {
               min="60"
               max="86400"
               value={config.sync_interval_seconds}
-              onChange={(e) =>
+              onChange={e =>
                 setConfig({
                   ...config,
                   sync_interval_seconds: parseInt(e.target.value) || 3600,
@@ -256,34 +261,30 @@ export const CloudSyncSettings: React.FC = () => {
             <button
               type="button"
               className="settings-button secondary"
-              onClick={handleSync}
-              disabled={saving || syncing}
+              onClick={() => {
+                startTransition(() => {
+                  handleSync();
+                });
+              }}
+              disabled={syncing || isPending}
             >
               {syncing ? '同期中...' : '今すぐ同期'}
             </button>
             <button
               type="button"
               className="settings-button secondary"
-              onClick={handleGetSyncedSettings}
-              disabled={saving || syncing}
+              onClick={() => {
+                startTransition(() => {
+                  handleGetSyncedSettings();
+                });
+              }}
+              disabled={syncing || isPending}
             >
               {syncing ? '取得中...' : '設定を取得'}
             </button>
           </div>
         </>
       )}
-
-      <div className="settings-actions">
-        <button
-          type="button"
-          className="settings-button primary"
-          onClick={handleSave}
-          disabled={saving || syncing}
-        >
-          {saving ? '保存中...' : '保存'}
-        </button>
-      </div>
     </section>
   );
 };
-

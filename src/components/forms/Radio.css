@@ -3,7 +3,7 @@
 .form-radio-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--spacing-xs, 0.5rem);
 }
 
 .form-radio-wrapper-full-width {
@@ -13,14 +13,14 @@
 .form-radio-container {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--spacing-xs, 0.5rem);
 }
 
 .form-radio {
   width: 1.25rem;
   height: 1.25rem;
   cursor: pointer;
-  accent-color: #667eea;
+  accent-color: var(--color-primary, #667eea);
   flex-shrink: 0;
 }
 
@@ -40,7 +40,7 @@
 }
 
 .form-radio-error {
-  accent-color: #f56565;
+  accent-color: var(--color-error, #f56565);
 }
 
 .form-radio-disabled {
@@ -50,17 +50,21 @@
 
 .form-radio-label {
   font-size: 0.9rem;
-  color: #333;
+  color: var(--color-text-primary, #1a202c);
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--spacing-xs, 0.25rem);
+}
+
+[data-theme="dark"] .form-radio-label {
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .form-radio-label:hover {
-  color: #667eea;
+  color: var(--color-primary, #667eea);
 }
 
 .form-radio-disabled + .form-radio-label {
@@ -69,75 +73,56 @@
 }
 
 .form-radio-disabled + .form-radio-label:hover {
-  color: #333;
+  color: var(--color-text-primary, #1a202c);
+}
+
+[data-theme="dark"] .form-radio-disabled + .form-radio-label:hover {
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .form-radio-required {
-  color: #f56565;
-  font-weight: bold;
+  color: var(--color-error, #f56565);
+  font-weight: 600;
 }
 
 .form-radio-error-message {
   font-size: 0.875rem;
-  color: #f56565;
+  color: var(--color-error, #f56565);
   margin-left: 1.75rem;
 }
 
 .form-radio-help-text {
   font-size: 0.875rem;
-  color: #666;
+  color: var(--color-text-secondary, #4a5568);
   margin-left: 1.75rem;
+}
+
+[data-theme="dark"] .form-radio-help-text {
+  color: var(--color-text-secondary, #cbd5e0);
 }
 
 .form-radio-group-label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #333;
+  color: var(--color-text-primary, #1a202c);
   display: flex;
   align-items: center;
-  gap: 0.25rem;
-  margin-bottom: 0.5rem;
+  gap: var(--spacing-xs, 0.25rem);
+  margin-bottom: var(--spacing-xs, 0.5rem);
+}
+
+[data-theme="dark"] .form-radio-group-label {
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .form-radio-group {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--spacing-xs, 0.5rem);
 }
 
 .form-radio-group-item {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--spacing-xs, 0.5rem);
 }
-
-/* ダークモード対応 */
-@media (prefers-color-scheme: dark) {
-  .form-radio-label {
-    color: #e0e0e0;
-  }
-
-  .form-radio-label:hover {
-    color: #667eea;
-  }
-
-  .form-radio-disabled + .form-radio-label:hover {
-    color: #e0e0e0;
-  }
-
-  .form-radio-help-text {
-    color: #a0aec0;
-  }
-
-  .form-radio-group-label {
-    color: #e0e0e0;
-  }
-}
-
-[data-theme="dark"] {
-  --form-radio-label-color: #e0e0e0;
-  --form-radio-label-hover-color: #667eea;
-  --form-radio-help-text-color: #a0aec0;
-  --form-radio-group-label-color: #e0e0e0;
-}
-

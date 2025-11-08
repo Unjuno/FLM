@@ -2,10 +2,12 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
+import { cleanupTestApis, createTestApi, waitForApiStart, waitForApiStop, handleTauriAppNotRunningError } from '../setup/test-helpers';
+import { debugLog, debugWarn } from '../setup/debug';
 
 /**
  * F003: API管理機能統合テストスイート
- * 
+ *
  * テスト項目:
  * - API起動/停止機能
  * - API設定更新機能
@@ -15,49 +17,31 @@ describe('F003: API管理機能 統合テスト', () => {
   let testApiId: string | null = null;
 
   beforeAll(async () => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-      console.log('F003 API管理機能統合テストを開始します');
-    }
-    
+    debugLog('F003 API管理機能統合テストを開始します');
+
     try {
       // テスト用のAPIを作成
-      const result = await invoke<{ id: string }>('create_api', {
+      testApiId = await createTestApi({
         name: 'Management Test API',
         model_name: 'llama3:8b',
         port: 8090,
         enable_auth: true,
       });
-      
-      testApiId = result.id;
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+      if (handleTauriAppNotRunningError(error)) {
+        // テストは続行（testApiIdがnullのまま）
+      } else {
+        throw error;
       }
-      // テストは続行（testApiIdがnullのまま）
     }
   }, 30000);
 
   afterAll(async () => {
     // テストで作成したAPIをクリーンアップ
     if (testApiId) {
-      try {
-        // 実行中の場合は停止
-        try {
-          await invoke('stop_api', { api_id: testApiId });
-        } catch (error) {
-          // 既に停止している可能性がある
-        }
-        await invoke('delete_api', { api_id: testApiId });
-      } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト後のクリーンアップに失敗しました:', error);
-        }
-      }
+      await cleanupTestApis([testApiId]);
     }
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-      console.log('F003 API管理機能統合テストを完了しました');
-    }
+    debugLog('F003 API管理機能統合テストを完了しました');
   });
 
   /**
@@ -66,68 +50,69 @@ describe('F003: API管理機能 統合テスト', () => {
   describe('API起動/停止機能', () => {
     it('should start API successfully', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、このテストをスキップします');
-        expect(true).toBe(true);
+        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
         return;
       }
 
       try {
         await invoke('start_api', { api_id: testApiId });
 
+        // APIが起動するまで待機（固定待機時間の代わりに状態を待つ）
+        await waitForApiStart(testApiId);
+
         // 一覧を取得してステータスを確認
-        const apis = await invoke<Array<{
-          id: string;
-          status: string;
-        }>>('list_apis');
+        const apis = await invoke<
+          Array<{
+            id: string;
+            status: string;
+          }>
+        >('list_apis');
 
         const api = apis.find(a => a.id === testApiId);
         expect(api).toBeDefined();
         expect(api!.status).toBe('running');
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
-        } else {
-          throw error;
+        if (handleTauriAppNotRunningError(error)) {
+          return;
         }
+        throw error;
       }
     }, 30000);
 
     it('should stop API successfully', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、このテストをスキップします');
-        expect(true).toBe(true);
+        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
         return;
       }
 
       try {
         await invoke('stop_api', { api_id: testApiId });
 
+        // APIが停止するまで待機（固定待機時間の代わりに状態を待つ）
+        await waitForApiStop(testApiId);
+
         // 一覧を取得してステータスを確認
-        const apis = await invoke<Array<{
-          id: string;
-          status: string;
-        }>>('list_apis');
+        const apis = await invoke<
+          Array<{
+            id: string;
+            status: string;
+          }>
+        >('list_apis');
 
         const api = apis.find(a => a.id === testApiId);
         expect(api).toBeDefined();
         expect(api!.status).toBe('stopped');
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
-        } else {
-          throw error;
+        if (handleTauriAppNotRunningError(error)) {
+          return;
         }
+        throw error;
       }
     }, 30000);
 
     it('should handle starting already running API', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、このテストをスキップします');
-        expect(true).toBe(true);
+        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
         return;
       }
 
@@ -135,13 +120,18 @@ describe('F003: API管理機能 統合テスト', () => {
       try {
         await invoke('start_api', { api_id: testApiId });
         await invoke('start_api', { api_id: testApiId }); // 再度起動
-        
+
         // エラーが発生しない、または適切に処理されることを確認
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
+          console.warn(
+            'Tauriアプリが起動していないため、このテストをスキップします'
+          );
+          expect(errorMessage).toContain(
+            'Tauriアプリケーションが起動していません'
+          );
         } else {
           // エラーが発生する場合、適切なエラーメッセージであることを確認
           expect(error).toBeDefined();
@@ -156,8 +146,7 @@ describe('F003: API管理機能 統合テスト', () => {
   describe('API設定更新機能', () => {
     it('should update API name', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、このテストをスキップします');
-        expect(true).toBe(true);
+        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
         return;
       }
 
@@ -178,20 +167,16 @@ describe('F003: API管理機能 統合テスト', () => {
 
         expect(apiDetails.name).toBe(newName);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
-        } else {
-          throw error;
+        if (handleTauriAppNotRunningError(error)) {
+          return;
         }
+        throw error;
       }
     }, 30000);
 
     it('should update API port number', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、このテストをスキップします');
-        expect(true).toBe(true);
+        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
         return;
       }
 
@@ -212,20 +197,16 @@ describe('F003: API管理機能 統合テスト', () => {
 
         expect(apiDetails.port).toBe(newPort);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
-        } else {
-          throw error;
+        if (handleTauriAppNotRunningError(error)) {
+          return;
         }
+        throw error;
       }
     }, 30000);
 
     it('should update authentication setting', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、このテストをスキップします');
-        expect(true).toBe(true);
+        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
         return;
       }
 
@@ -244,20 +225,16 @@ describe('F003: API管理機能 統合テスト', () => {
 
         expect(apiDetails.enable_auth).toBe(false);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
-        } else {
-          throw error;
+        if (handleTauriAppNotRunningError(error)) {
+          return;
         }
+        throw error;
       }
     }, 30000);
 
     it('should handle invalid port number in update', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、このテストをスキップします');
-        expect(true).toBe(true);
+        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
         return;
       }
 
@@ -270,10 +247,15 @@ describe('F003: API管理機能 統合テスト', () => {
         });
         // エラーが発生することを期待
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
+          console.warn(
+            'Tauriアプリが起動していないため、このテストをスキップします'
+          );
+          expect(errorMessage).toContain(
+            'Tauriアプリケーションが起動していません'
+          );
         } else {
           expect(error).toBeDefined();
         }
@@ -287,8 +269,7 @@ describe('F003: API管理機能 統合テスト', () => {
   describe('APIキー再生成機能', () => {
     it('should regenerate API key successfully', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、このテストをスキップします');
-        expect(true).toBe(true);
+        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
         return;
       }
 
@@ -302,10 +283,14 @@ describe('F003: API管理機能 統合テスト', () => {
         });
 
         // 現在のAPIキーを取得
-        const originalKey = await invoke<string | null>('get_api_key', { api_id: testApiId });
-        
+        const originalKey = await invoke<string | null>('get_api_key', {
+          api_id: testApiId,
+        });
+
         // APIキーを再生成
-        const newKey = await invoke<string>('regenerate_api_key', { api_id: testApiId });
+        const newKey = await invoke<string>('regenerate_api_key', {
+          api_id: testApiId,
+        });
 
         expect(newKey).toBeDefined();
         expect(typeof newKey).toBe('string');
@@ -313,23 +298,21 @@ describe('F003: API管理機能 統合テスト', () => {
         expect(newKey).not.toBe(originalKey); // 異なるキーが生成される
 
         // 新しいキーが取得できることを確認
-        const retrievedKey = await invoke<string | null>('get_api_key', { api_id: testApiId });
+        const retrievedKey = await invoke<string | null>('get_api_key', {
+          api_id: testApiId,
+        });
         expect(retrievedKey).toBe(newKey);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
-        } else {
-          throw error;
+        if (handleTauriAppNotRunningError(error)) {
+          return;
         }
+        throw error;
       }
     }, 30000);
 
     it('should handle regeneration when auth is disabled', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、このテストをスキップします');
-        expect(true).toBe(true);
+        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
         return;
       }
 
@@ -347,22 +330,26 @@ describe('F003: API管理機能 統合テスト', () => {
           await invoke('regenerate_api_key', { api_id: testApiId });
           // エラーが発生することを期待
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-            console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-            expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          if (
+            errorMessage.includes('Tauriアプリケーションが起動していません')
+          ) {
+            console.warn(
+              'Tauriアプリが起動していないため、このテストをスキップします'
+            );
+            expect(errorMessage).toContain(
+              'Tauriアプリケーションが起動していません'
+            );
           } else {
             expect(error).toBeDefined();
           }
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
-        } else {
-          throw error;
+        if (handleTauriAppNotRunningError(error)) {
+          return;
         }
+        throw error;
       }
     }, 30000);
   });
@@ -391,13 +378,10 @@ describe('F003: API管理機能 統合テスト', () => {
         const deletedApi = apis.find(a => a.id === deleteApiId);
         expect(deletedApi).toBeUndefined();
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
-        } else {
-          throw error;
+        if (handleTauriAppNotRunningError(error)) {
+          return;
         }
+        throw error;
       }
     }, 30000);
 
@@ -424,13 +408,10 @@ describe('F003: API管理機能 統合テスト', () => {
         const deletedApi = apis.find(a => a.id === runningApiId);
         expect(deletedApi).toBeUndefined();
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
-        } else {
-          throw error;
+        if (handleTauriAppNotRunningError(error)) {
+          return;
         }
+        throw error;
       }
     }, 30000);
 
@@ -441,10 +422,15 @@ describe('F003: API管理機能 統合テスト', () => {
         await invoke('delete_api', { api_id: nonExistentId });
         // エラーが発生することを期待
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
+          console.warn(
+            'Tauriアプリが起動していないため、このテストをスキップします'
+          );
+          expect(errorMessage).toContain(
+            'Tauriアプリケーションが起動していません'
+          );
         } else {
           expect(error).toBeDefined();
         }
@@ -458,8 +444,7 @@ describe('F003: API管理機能 統合テスト', () => {
   describe('API詳細取得機能', () => {
     it('should retrieve API details successfully', async () => {
       if (!testApiId) {
-        console.warn('テスト用APIが作成されていないため、このテストをスキップします');
-        expect(true).toBe(true);
+        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
         return;
       }
 
@@ -482,13 +467,10 @@ describe('F003: API管理機能 統合テスト', () => {
         expect(details.port).toBeGreaterThan(0);
         expect(['running', 'stopped', 'error']).toContain(details.status);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
-        } else {
-          throw error;
+        if (handleTauriAppNotRunningError(error)) {
+          return;
         }
+        throw error;
       }
     }, 15000);
 
@@ -499,10 +481,15 @@ describe('F003: API管理機能 統合テスト', () => {
         await invoke('get_api_details', { api_id: nonExistentId });
         // エラーが発生することを期待
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
+          console.warn(
+            'Tauriアプリが起動していないため、このテストをスキップします'
+          );
+          expect(errorMessage).toContain(
+            'Tauriアプリケーションが起動していません'
+          );
         } else {
           expect(error).toBeDefined();
         }
@@ -523,7 +510,7 @@ describe('F003: API管理機能 統合テスト', () => {
           port: 8094,
           enable_auth: false,
         });
-        
+
         const api2 = await invoke<{ id: string }>('create_api', {
           name: 'Cleanup Test API 2',
           model_name: 'llama3:8b',
@@ -536,36 +523,40 @@ describe('F003: API管理機能 統合テスト', () => {
         await invoke('start_api', { api_id: api2.id });
 
         // ステータスを確認（実行中であることを確認）
-        const apisBefore = await invoke<Array<{
-          id: string;
-          status: string;
-        }>>('list_apis');
-        
+        const apisBefore = await invoke<
+          Array<{
+            id: string;
+            status: string;
+          }>
+        >('list_apis');
+
         const api1Before = apisBefore.find(a => a.id === api1.id);
         const api2Before = apisBefore.find(a => a.id === api2.id);
-        
+
         expect(api1Before?.status).toBe('running');
         expect(api2Before?.status).toBe('running');
 
         // 注意: 実際のアプリケーション終了はテストできないため、
         // stop_all_running_apis関数の動作を直接テストすることはできません
         // 代わりに、個別に停止して動作を確認します
-        
+
         // API1を停止
         await invoke('stop_api', { api_id: api1.id });
-        
+
         // API2を停止
         await invoke('stop_api', { api_id: api2.id });
 
         // ステータスを確認（停止されていることを確認）
-        const apisAfter = await invoke<Array<{
-          id: string;
-          status: string;
-        }>>('list_apis');
-        
+        const apisAfter = await invoke<
+          Array<{
+            id: string;
+            status: string;
+          }>
+        >('list_apis');
+
         const api1After = apisAfter.find(a => a.id === api1.id);
         const api2After = apisAfter.find(a => a.id === api2.id);
-        
+
         expect(api1After?.status).toBe('stopped');
         expect(api2After?.status).toBe('stopped');
 
@@ -573,13 +564,10 @@ describe('F003: API管理機能 統合テスト', () => {
         await invoke('delete_api', { api_id: api1.id });
         await invoke('delete_api', { api_id: api2.id });
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
-        } else {
-          throw error;
+        if (handleTauriAppNotRunningError(error)) {
+          return;
         }
+        throw error;
       }
     }, 60000);
 
@@ -587,14 +575,16 @@ describe('F003: API管理機能 統合テスト', () => {
       // 実行中のAPIがない状態でクリーンアップ処理をシミュレート
       // 実際のstop_all_running_apis関数は直接呼び出せないため、
       // このテストは動作確認のみを行います
-      
+
       try {
         // まず、実行中のAPIをすべて停止する（クリーンアップ）
-        const apis = await invoke<Array<{
-          id: string;
-          status: string;
-        }>>('list_apis');
-        
+        const apis = await invoke<
+          Array<{
+            id: string;
+            status: string;
+          }>
+        >('list_apis');
+
         // 実行中のAPIをすべて停止
         for (const api of apis) {
           if (api.status === 'running') {
@@ -605,30 +595,28 @@ describe('F003: API管理機能 統合テスト', () => {
             }
           }
         }
-        
+
         // 再度リストを取得して確認
-        const apisAfter = await invoke<Array<{
-          id: string;
-          status: string;
-        }>>('list_apis');
-        
+        const apisAfter = await invoke<
+          Array<{
+            id: string;
+            status: string;
+          }>
+        >('list_apis');
+
         const runningApis = apisAfter.filter(a => a.status === 'running');
-        
+
         // 実行中のAPIがないことを確認
         expect(runningApis.length).toBe(0);
-        
+
         // この時点でクリーンアップ処理が実行されてもエラーが発生しないことを確認
         // （実際の実装では、stop_all_running_apis関数が正常に動作することを期待）
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
-        } else {
-          throw error;
+        if (handleTauriAppNotRunningError(error)) {
+          return;
         }
+        throw error;
       }
     }, 10000);
   });
 });
-

@@ -1,6 +1,6 @@
 // HuggingFaceSearch - Hugging Faceモデル検索コンポーネント
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useTransition } from 'react';
 import { safeInvoke } from '../../utils/tauri';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { ErrorMessage } from '../common/ErrorMessage';
@@ -40,9 +40,12 @@ export const HuggingFaceSearch: React.FC = () => {
   const [results, setResults] = useState<HuggingFaceModel[]>([]);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState<string | null>(null);
-  const [selectedModel, setSelectedModel] = useState<HuggingFaceModel | null>(null);
+  const [selectedModel, setSelectedModel] = useState<HuggingFaceModel | null>(
+    null
+  );
   const [showDetailModal, setShowDetailModal] = useState(false);
   const [downloading, setDownloading] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
 
   /**
    * モデルを検索
@@ -56,11 +59,14 @@ export const HuggingFaceSearch: React.FC = () => {
     try {
       setSearching(true);
       setError(null);
-      
-      const result = await safeInvoke<HuggingFaceSearchResult>('search_huggingface_models', {
-        query: query.trim(),
-        limit: 20,
-      });
+
+      const result = await safeInvoke<HuggingFaceSearchResult>(
+        'search_huggingface_models',
+        {
+          query: query.trim(),
+          limit: 20,
+        }
+      );
 
       setResults(result.models);
       setTotal(result.total);
@@ -86,15 +92,19 @@ export const HuggingFaceSearch: React.FC = () => {
   const handleViewDetails = async (modelId: string) => {
     try {
       setError(null);
-      const modelInfo = await safeInvoke<HuggingFaceModel | null>('get_huggingface_model_info', {
-        modelId,
-      });
+      const modelInfo = await safeInvoke<HuggingFaceModel | null>(
+        'get_huggingface_model_info',
+        {
+          modelId,
+        }
+      );
       if (modelInfo) {
         setSelectedModel(modelInfo);
         setShowDetailModal(true);
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'モデル情報の取得に失敗しました';
+      const errorMessage =
+        err instanceof Error ? err.message : 'モデル情報の取得に失敗しました';
       setError(errorMessage);
       showErrorNotification(errorMessage);
     }
@@ -107,25 +117,29 @@ export const HuggingFaceSearch: React.FC = () => {
     try {
       setDownloading(modelId);
       setError(null);
-      
+
       // モデル情報を取得
-      const modelInfo = await safeInvoke<HuggingFaceModel | null>('get_huggingface_model_info', {
-        modelId,
-      });
-      
+      const modelInfo = await safeInvoke<HuggingFaceModel | null>(
+        'get_huggingface_model_info',
+        {
+          modelId,
+        }
+      );
+
       if (!modelInfo) {
         throw new Error('モデル情報の取得に失敗しました');
       }
-      
+
       // モデルをダウンロード（Ollama形式に変換）
+      // 注意: Hugging FaceモデルはOllama形式に変換する必要があるため、
+      // 現在はOllamaモデル名として直接ダウンロードを試みます
+      // 将来的には、Hugging FaceモデルをOllama形式に変換する機能を追加する予定
       await safeInvoke('download_model', {
-        modelName: modelId,
-        source: 'huggingface',
-        sourceUrl: `https://huggingface.co/${modelId}`,
+        model_name: modelId,
       });
-      
+
       showSuccess(`モデル "${modelId}" のダウンロードを開始しました`);
-      
+
       // 必要に応じてGGUF形式に変換
       try {
         await safeInvoke('convert_model', {
@@ -138,13 +152,16 @@ export const HuggingFaceSearch: React.FC = () => {
       } catch (convertErr) {
         // 変換エラーは警告として表示（ダウンロードは成功している可能性がある）
         showErrorNotification(
-          convertErr instanceof Error 
-            ? `モデル変換エラー: ${convertErr.message}` 
+          convertErr instanceof Error
+            ? `モデル変換エラー: ${convertErr.message}`
             : 'モデル変換に失敗しましたが、ダウンロードは完了しています'
         );
       }
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'モデルのダウンロードに失敗しました';
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : 'モデルのダウンロードに失敗しました';
       setError(errorMessage);
       showErrorNotification(errorMessage);
     } finally {
@@ -170,11 +187,16 @@ export const HuggingFaceSearch: React.FC = () => {
       name: model.id,
       description: model.pipeline_tag || model.task || undefined,
       author: model.author,
-      category: model.pipeline_tag === 'text-generation' ? 'chat' as const : 
-                model.pipeline_tag === 'text2text-generation' ? 'translation' as const :
-                'other' as const,
+      category:
+        model.pipeline_tag === 'text-generation'
+          ? ('chat' as const)
+          : model.pipeline_tag === 'text2text-generation'
+            ? ('translation' as const)
+            : ('other' as const),
       recommended: model.downloads > 100000 || model.likes > 100,
-      license: model.tags.find(tag => tag.toLowerCase().includes('license')) || undefined,
+      license:
+        model.tags.find(tag => tag.toLowerCase().includes('license')) ||
+        undefined,
     };
   };
 
@@ -183,7 +205,8 @@ export const HuggingFaceSearch: React.FC = () => {
       <div className="huggingface-search-header">
         <h2>Hugging Faceモデル検索</h2>
         <p className="huggingface-search-description">
-          Hugging Face Hubからモデルを検索して、Ollamaで使用できる形式に変換できます。
+          Hugging Face
+          Hubからモデルを検索して、Ollamaで使用できる形式に変換できます。
         </p>
       </div>
 
@@ -194,16 +217,20 @@ export const HuggingFaceSearch: React.FC = () => {
             className="search-input"
             placeholder="モデル名、作成者、タグで検索..."
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={e => setQuery(e.target.value)}
             onKeyPress={handleKeyPress}
             disabled={searching}
           />
           <button
             className="search-button"
-            onClick={handleSearch}
-            disabled={searching || !query.trim()}
+            onClick={() => {
+              startTransition(() => {
+                handleSearch();
+              });
+            }}
+            disabled={searching || !query.trim() || isPending}
           >
-            {searching ? '検索中...' : '🔍 検索'}
+            {searching ? '検索中...' : '検索'}
           </button>
         </div>
       </div>
@@ -219,18 +246,16 @@ export const HuggingFaceSearch: React.FC = () => {
       {results.length > 0 && (
         <div className="huggingface-results">
           <div className="results-header">
-            <p className="results-count">
-              {total}件のモデルが見つかりました
-            </p>
+            <p className="results-count">{total}件のモデルが見つかりました</p>
           </div>
 
           <div className="models-grid">
-            {results.map((model) => (
+            {results.map(model => (
               <div
                 key={model.id}
                 className={`model-card ${selectedModel?.id === model.id ? 'selected' : ''}`}
                 onClick={() => setSelectedModel(model)}
-                onKeyDown={(e) => {
+                onKeyDown={e => {
                   if (e.key === 'Enter' || e.key === ' ') {
                     e.preventDefault();
                     setSelectedModel(model);
@@ -243,15 +268,21 @@ export const HuggingFaceSearch: React.FC = () => {
                 <div className="model-card-header">
                   <h3 className="model-name">{model.id}</h3>
                   <div className="model-stats">
-                    <span className="stat-item">📥 {model.downloads.toLocaleString()}</span>
-                    <span className="stat-item">❤️ {model.likes.toLocaleString()}</span>
+                    <span className="stat-item">
+                      {model.downloads.toLocaleString()}
+                    </span>
+                    <span className="stat-item">
+                      {model.likes.toLocaleString()}
+                    </span>
                   </div>
                 </div>
                 <div className="model-card-body">
                   <div className="model-info">
                     <span className="model-author">作成者: {model.author}</span>
                     {model.pipeline_tag && (
-                      <span className="model-tag">タグ: {model.pipeline_tag}</span>
+                      <span className="model-tag">
+                        タグ: {model.pipeline_tag}
+                      </span>
                     )}
                     {model.task && (
                       <span className="model-task">タスク: {model.task}</span>
@@ -260,7 +291,9 @@ export const HuggingFaceSearch: React.FC = () => {
                   {model.tags.length > 0 && (
                     <div className="model-tags">
                       {model.tags.slice(0, 5).map((tag, idx) => (
-                        <span key={idx} className="tag">{tag}</span>
+                        <span key={idx} className="tag">
+                          {tag}
+                        </span>
                       ))}
                     </div>
                   )}
@@ -268,7 +301,7 @@ export const HuggingFaceSearch: React.FC = () => {
                 <div className="model-card-actions">
                   <button
                     className="action-button primary"
-                    onClick={(e) => {
+                    onClick={e => {
                       e.stopPropagation();
                       // モデル情報を取得して詳細表示
                       handleViewDetails(model.id);
@@ -280,7 +313,7 @@ export const HuggingFaceSearch: React.FC = () => {
                   </button>
                   <button
                     className="action-button secondary"
-                    onClick={(e) => {
+                    onClick={e => {
                       e.stopPropagation();
                       // モデルをダウンロードして変換
                       handleDownloadModel(model.id);
@@ -289,7 +322,9 @@ export const HuggingFaceSearch: React.FC = () => {
                     aria-label={`${model.id}をダウンロード`}
                     disabled={downloading === model.id}
                   >
-                    {downloading === model.id ? 'ダウンロード中...' : 'ダウンロード'}
+                    {downloading === model.id
+                      ? 'ダウンロード中...'
+                      : 'ダウンロード'}
                   </button>
                 </div>
               </div>
@@ -318,4 +353,3 @@ export const HuggingFaceSearch: React.FC = () => {
     </div>
   );
 };
-

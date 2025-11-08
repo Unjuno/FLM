@@ -1,6 +1,13 @@
 // f008-log-deletion - ログ削除機能の統合テスト
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+} from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
 
 interface RequestLogInfo {
@@ -19,88 +26,43 @@ describe('F008: ログ削除機能 統合テスト', () => {
   let testApiId2: string | null = null;
 
   beforeAll(async () => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-      console.log('F008 ログ削除機能統合テストを開始します');
-    }
-    
+    debugLog('F008 ログ削除機能統合テストを開始します');
+
     try {
-      const result1 = await invoke<{
-        id: string;
-        name: string;
-        endpoint: string;
-        api_key: string | null;
-        model_name: string;
-        port: number;
-        status: string;
-      }>('create_api', {
+      testApiId = await createTestApi({
         name: 'Test API for Log Deletion',
         model_name: 'llama3:8b',
         port: 8887,
         enable_auth: false,
       });
-      
-      testApiId = result1.id;
-      if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-        console.log(`テスト用API1を作成しました: ${testApiId}`);
-      }
+      debugLog(`テスト用API1を作成しました: ${testApiId}`);
 
-      const result2 = await invoke<{
-        id: string;
-        name: string;
-        endpoint: string;
-        api_key: string | null;
-        model_name: string;
-        port: number;
-        status: string;
-      }>('create_api', {
+      testApiId2 = await createTestApi({
         name: 'Test API 2 for Log Deletion',
         model_name: 'llama3:8b',
         port: 8886,
         enable_auth: false,
       });
-      
-      testApiId2 = result2.id;
-      if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-        console.log(`テスト用API2を作成しました: ${testApiId2}`);
-      }
+      debugLog(`テスト用API2を作成しました: ${testApiId2}`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-      } else if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-        console.warn('テスト用APIの作成に失敗しました:', error);
+      if (handleTauriAppNotRunningError(error)) {
+        // テストは続行（testApiId/testApiId2がnullのまま）
+      } else {
+        debugWarn('テスト用APIの作成に失敗しました:', error);
       }
     }
   });
 
   afterAll(async () => {
-    if (testApiId) {
-      try {
-        await invoke('delete_api', { api_id: testApiId });
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.log(`テスト用API1を削除しました: ${testApiId}`);
-        }
-      } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト後のクリーンアップに失敗しました:', error);
-        }
-      }
+    const apiIds: string[] = [];
+    if (testApiId) apiIds.push(testApiId);
+    if (testApiId2) apiIds.push(testApiId2);
+    
+    if (apiIds.length > 0) {
+      await cleanupTestApis(apiIds);
+      debugLog(`テスト用APIを削除しました: ${apiIds.join(', ')}`);
     }
-    if (testApiId2) {
-      try {
-        await invoke('delete_api', { api_id: testApiId2 });
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.log(`テスト用API2を削除しました: ${testApiId2}`);
-        }
-      } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト後のクリーンアップに失敗しました:', error);
-        }
-      }
-    }
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-      console.log('F008 ログ削除機能統合テストを完了しました');
-    }
+    debugLog('F008 ログ削除機能統合テストを完了しました');
   });
 
   beforeEach(async () => {
@@ -113,15 +75,18 @@ describe('F008: ログ削除機能 統合テスト', () => {
   describe('delete_logs 基本機能', () => {
     it('should return 0 when no logs exist to delete', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが作成されていないため、スキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが作成されていないため、スキップします');
         }
         return;
       }
 
       // 存在しない日付より前のログを削除しようとする
       const pastDate = new Date('2020-01-01').toISOString();
-      
+
       try {
         const result = await invoke<{
           deleted_count: number;
@@ -135,10 +100,15 @@ describe('F008: ログ削除機能 統合テスト', () => {
         expect(result).toBeDefined();
         expect(result.deleted_count).toBe(0);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
+          console.warn(
+            'Tauriアプリが起動していないため、このテストをスキップします'
+          );
+          expect(errorMessage).toContain(
+            'Tauriアプリケーションが起動していません'
+          );
         } else {
           throw error;
         }
@@ -147,8 +117,11 @@ describe('F008: ログ削除機能 統合テスト', () => {
 
     it('should delete logs by API ID only', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが作成されていないため、スキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが作成されていないため、スキップします');
         }
         return;
       }
@@ -158,7 +131,9 @@ describe('F008: ログ削除機能 統合テスト', () => {
         {
           method: 'POST',
           path: '/v1/chat/completions',
-          request_body: JSON.stringify({ messages: [{ role: 'user', content: 'Test 1' }] }),
+          request_body: JSON.stringify({
+            messages: [{ role: 'user', content: 'Test 1' }],
+          }),
           response_status: 200,
           response_time_ms: 100,
           error_message: null,
@@ -166,7 +141,9 @@ describe('F008: ログ削除機能 統合テスト', () => {
         {
           method: 'POST',
           path: '/v1/chat/completions',
-          request_body: JSON.stringify({ messages: [{ role: 'user', content: 'Test 2' }] }),
+          request_body: JSON.stringify({
+            messages: [{ role: 'user', content: 'Test 2' }],
+          }),
           response_status: 200,
           response_time_ms: 150,
           error_message: null,
@@ -185,8 +162,11 @@ describe('F008: ログ削除機能 統合テスト', () => {
             error_message: log.error_message,
           });
         } catch (error) {
-          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-            console.warn('テストログの作成に失敗しました:', error);
+          if (
+            process.env.NODE_ENV === 'development' ||
+            process.env.JEST_DEBUG === '1'
+          ) {
+            debugWarn('テストログの作成に失敗しました:', error);
           }
         }
       }
@@ -208,10 +188,15 @@ describe('F008: ログ削除機能 統合テスト', () => {
         expect(result).toBeDefined();
         expect(result.deleted_count).toBeGreaterThanOrEqual(0);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
+          console.warn(
+            'Tauriアプリが起動していないため、このテストをスキップします'
+          );
+          expect(errorMessage).toContain(
+            'Tauriアプリケーションが起動していません'
+          );
         } else {
           throw error;
         }
@@ -220,8 +205,11 @@ describe('F008: ログ削除機能 統合テスト', () => {
 
     it('should delete logs by date range', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが作成されていないため、スキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが作成されていないため、スキップします');
         }
         return;
       }
@@ -231,7 +219,9 @@ describe('F008: ログ削除機能 統合テスト', () => {
         {
           method: 'POST',
           path: '/v1/chat/completions',
-          request_body: JSON.stringify({ messages: [{ role: 'user', content: 'Old Log' }] }),
+          request_body: JSON.stringify({
+            messages: [{ role: 'user', content: 'Old Log' }],
+          }),
           response_status: 200,
           response_time_ms: 100,
           error_message: null,
@@ -250,8 +240,11 @@ describe('F008: ログ削除機能 統合テスト', () => {
             error_message: log.error_message,
           });
         } catch (error) {
-          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-            console.warn('テストログの作成に失敗しました:', error);
+          if (
+            process.env.NODE_ENV === 'development' ||
+            process.env.JEST_DEBUG === '1'
+          ) {
+            debugWarn('テストログの作成に失敗しました:', error);
           }
         }
       }
@@ -261,7 +254,7 @@ describe('F008: ログ削除機能 統合テスト', () => {
 
       // 現在より1時間前の日付で削除
       const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-      
+
       try {
         const result = await invoke<{
           deleted_count: number;
@@ -275,10 +268,15 @@ describe('F008: ログ削除機能 統合テスト', () => {
         expect(result).toBeDefined();
         expect(result.deleted_count).toBeGreaterThanOrEqual(0);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
+          console.warn(
+            'Tauriアプリが起動していないため、このテストをスキップします'
+          );
+          expect(errorMessage).toContain(
+            'Tauriアプリケーションが起動していません'
+          );
         } else {
           throw error;
         }
@@ -287,8 +285,11 @@ describe('F008: ログ削除機能 統合テスト', () => {
 
     it('should delete logs by API ID and date range combination', async () => {
       if (!testApiId || !testApiId2) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが作成されていないため、スキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが作成されていないため、スキップします');
         }
         return;
       }
@@ -306,14 +307,19 @@ describe('F008: ログ削除機能 統合テスト', () => {
             api_id: log.apiId,
             method: 'POST',
             path: '/v1/chat/completions',
-            request_body: JSON.stringify({ messages: [{ role: 'user', content: log.content }] }),
+            request_body: JSON.stringify({
+              messages: [{ role: 'user', content: log.content }],
+            }),
             response_status: 200,
             response_time_ms: 100,
             error_message: null,
           });
         } catch (error) {
-          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-            console.warn('テストログの作成に失敗しました:', error);
+          if (
+            process.env.NODE_ENV === 'development' ||
+            process.env.JEST_DEBUG === '1'
+          ) {
+            debugWarn('テストログの作成に失敗しました:', error);
           }
         }
       }
@@ -322,8 +328,10 @@ describe('F008: ログ削除機能 統合テスト', () => {
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // API IDと日付範囲の両方で削除
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      
+      const oneDayAgo = new Date(
+        Date.now() - 24 * 60 * 60 * 1000
+      ).toISOString();
+
       try {
         const result = await invoke<{
           deleted_count: number;
@@ -337,10 +345,15 @@ describe('F008: ログ削除機能 統合テスト', () => {
         expect(result).toBeDefined();
         expect(result.deleted_count).toBeGreaterThanOrEqual(0);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
+          console.warn(
+            'Tauriアプリが起動していないため、このテストをスキップします'
+          );
+          expect(errorMessage).toContain(
+            'Tauriアプリケーションが起動していません'
+          );
         } else {
           throw error;
         }
@@ -365,8 +378,11 @@ describe('F008: ログ削除機能 統合テスト', () => {
       } catch (error) {
         expect(error).toBeDefined();
         // エラーはErrorオブジェクトまたは文字列の可能性がある
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        expect(typeof errorMessage === 'string' || errorMessage instanceof Error).toBe(true);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        expect(
+          typeof errorMessage === 'string' || errorMessage instanceof Error
+        ).toBe(true);
         // エラーメッセージに「許可されていません」などの安全メッセージが含まれることを確認
         expect(errorMessage).toMatch(/許可|安全|条件/i);
       }
@@ -374,8 +390,11 @@ describe('F008: ログ削除機能 統合テスト', () => {
 
     it('should allow deletion with API ID only', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが作成されていないため、スキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが作成されていないため、スキップします');
         }
         return;
       }
@@ -395,16 +414,21 @@ describe('F008: ログ削除機能 統合テスト', () => {
         expect(result.deleted_count).toBeGreaterThanOrEqual(0);
       } catch (error) {
         // エラーが発生する場合は、実装による
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('API IDのみでの削除がエラーになりました:', error);
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('API IDのみでの削除がエラーになりました:', error);
         }
       }
     });
 
     it('should allow deletion with date only', async () => {
       // 日付のみで削除（api_idはnull）
-      const oneYearAgo = new Date(Date.now() - 365 * 24 * 60 * 60 * 1000).toISOString();
-      
+      const oneYearAgo = new Date(
+        Date.now() - 365 * 24 * 60 * 60 * 1000
+      ).toISOString();
+
       try {
         const result = await invoke<{
           deleted_count: number;
@@ -419,8 +443,11 @@ describe('F008: ログ削除機能 統合テスト', () => {
         expect(result.deleted_count).toBeGreaterThanOrEqual(0);
       } catch (error) {
         // エラーが発生する場合は、実装による
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('日付のみでの削除がエラーになりました:', error);
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('日付のみでの削除がエラーになりました:', error);
         }
       }
     });
@@ -432,8 +459,11 @@ describe('F008: ログ削除機能 統合テスト', () => {
   describe('エッジケーステスト', () => {
     it('should handle invalid date format gracefully', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが作成されていないため、スキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが作成されていないため、スキップします');
         }
         return;
       }
@@ -453,7 +483,9 @@ describe('F008: ログ削除機能 統合テスト', () => {
 
     it('should handle non-existent API ID', async () => {
       const nonExistentApiId = 'non-existent-api-id-12345';
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const oneDayAgo = new Date(
+        Date.now() - 24 * 60 * 60 * 1000
+      ).toISOString();
 
       const result = await invoke<{
         deleted_count: number;
@@ -471,8 +503,11 @@ describe('F008: ログ削除機能 統合テスト', () => {
 
     it('should return correct deleted count', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが作成されていないため、スキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが作成されていないため、スキップします');
         }
         return;
       }
@@ -485,14 +520,19 @@ describe('F008: ログ削除機能 統合テスト', () => {
             api_id: testApiId,
             method: 'POST',
             path: `/v1/chat/completions`,
-            request_body: JSON.stringify({ messages: [{ role: 'user', content: `Test ${i}` }] }),
+            request_body: JSON.stringify({
+              messages: [{ role: 'user', content: `Test ${i}` }],
+            }),
             response_status: 200,
             response_time_ms: 100,
             error_message: null,
           });
         } catch (error) {
-          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-            console.warn('テストログの作成に失敗しました:', error);
+          if (
+            process.env.NODE_ENV === 'development' ||
+            process.env.JEST_DEBUG === '1'
+          ) {
+            debugWarn('テストログの作成に失敗しました:', error);
           }
         }
       }
@@ -502,7 +542,7 @@ describe('F008: ログ削除機能 統合テスト', () => {
 
       // 未来の日付で削除（すべてのログが削除される）
       const futureDate = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-      
+
       const result = await invoke<{
         deleted_count: number;
       }>('delete_logs', {
@@ -523,8 +563,11 @@ describe('F008: ログ削除機能 統合テスト', () => {
   describe('データ整合性テスト', () => {
     it('should only delete logs matching the conditions', async () => {
       if (!testApiId || !testApiId2) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが作成されていないため、スキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが作成されていないため、スキップします');
         }
         return;
       }
@@ -541,14 +584,19 @@ describe('F008: ログ削除機能 統合テスト', () => {
             api_id: log.apiId,
             method: 'POST',
             path: '/v1/chat/completions',
-            request_body: JSON.stringify({ messages: [{ role: 'user', content: log.content }] }),
+            request_body: JSON.stringify({
+              messages: [{ role: 'user', content: log.content }],
+            }),
             response_status: 200,
             response_time_ms: 100,
             error_message: null,
           });
         } catch (error) {
-          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-            console.warn('テストログの作成に失敗しました:', error);
+          if (
+            process.env.NODE_ENV === 'development' ||
+            process.env.JEST_DEBUG === '1'
+          ) {
+            debugWarn('テストログの作成に失敗しました:', error);
           }
         }
       }
@@ -557,8 +605,10 @@ describe('F008: ログ削除機能 統合テスト', () => {
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // testApiIdのログのみを削除
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      
+      const oneDayAgo = new Date(
+        Date.now() - 24 * 60 * 60 * 1000
+      ).toISOString();
+
       await invoke('delete_logs', {
         request: {
           api_id: testApiId,
@@ -580,4 +630,3 @@ describe('F008: ログ削除機能 統合テスト', () => {
     }, 15000);
   });
 });
-

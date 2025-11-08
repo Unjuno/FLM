@@ -46,4 +46,3 @@ export const HelpTooltip: React.FC<HelpTooltipProps> = ({
     </div>
   );
 };
-

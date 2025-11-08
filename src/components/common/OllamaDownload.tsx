@@ -2,7 +2,11 @@
 
 import React, { useRef, useEffect } from 'react';
 import { useOllamaDownload } from '../../hooks/useOllama';
-import { FORMATTING, FORMAT_STRINGS, OLLAMA_DOWNLOAD } from '../../constants/config';
+import {
+  FORMATTING,
+  FORMAT_STRINGS,
+  OLLAMA_DOWNLOAD,
+} from '../../constants/config';
 import './OllamaDownload.css';
 
 /**
@@ -21,7 +25,11 @@ function formatSpeed(bytesPerSec: number): string {
 }
 
 function formatTime(remainingBytes: number, speedBytesPerSec: number): string {
-  if (speedBytesPerSec === 0 || speedBytesPerSec < OLLAMA_DOWNLOAD.MIN_SPEED_THRESHOLD) return FORMAT_STRINGS.CALCULATING;
+  if (
+    speedBytesPerSec === 0 ||
+    speedBytesPerSec < OLLAMA_DOWNLOAD.MIN_SPEED_THRESHOLD
+  )
+    return FORMAT_STRINGS.CALCULATING;
   const seconds = Math.ceil(remainingBytes / speedBytesPerSec);
   if (seconds < FORMATTING.SECONDS_PER_MINUTE) return `${seconds}秒`;
   const minutes = Math.floor(seconds / FORMATTING.SECONDS_PER_MINUTE);
@@ -46,7 +54,11 @@ export const OllamaDownload: React.FC<OllamaDownloadProps> = ({
   onComplete,
   onError,
 }) => {
-  const { downloadStatus, progress, error, download, reset } = useOllamaDownload();
+  const { downloadStatus, progress, error, download, reset } =
+    useOllamaDownload();
+
+  // React Hooksは条件分岐の外で呼び出す必要がある
+  const progressContainerRef = useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
     if (downloadStatus === 'completed' && onComplete) {
@@ -56,6 +68,19 @@ export const OllamaDownload: React.FC<OllamaDownloadProps> = ({
       onError(error);
     }
   }, [downloadStatus, error, onComplete, onError]);
+
+  useEffect(() => {
+    if (
+      downloadStatus === 'downloading' &&
+      progress &&
+      progressContainerRef.current
+    ) {
+      progressContainerRef.current.style.setProperty(
+        '--progress',
+        String(Math.min(progress.progress, FORMATTING.PERCENTAGE_MULTIPLIER))
+      );
+    }
+  }, [downloadStatus, progress]);
 
   const handleDownload = () => {
     download(platform);
@@ -71,7 +96,9 @@ export const OllamaDownload: React.FC<OllamaDownloadProps> = ({
       <div className="ollama-download">
         <div className="download-prompt">
           <h3>Ollamaをダウンロード</h3>
-          <p>Ollamaが見つかりませんでした。ダウンロードしてインストールしますか？</p>
+          <p>
+            Ollamaが見つかりませんでした。ダウンロードしてインストールしますか？
+          </p>
           <button className="download-button" onClick={handleDownload}>
             ダウンロード開始
           </button>
@@ -82,29 +109,24 @@ export const OllamaDownload: React.FC<OllamaDownloadProps> = ({
 
   if (downloadStatus === 'downloading' && progress) {
     const remainingBytes = progress.total_bytes - progress.downloaded_bytes;
-    const remainingTime = formatTime(remainingBytes, progress.speed_bytes_per_sec);
+    const remainingTime = formatTime(
+      remainingBytes,
+      progress.speed_bytes_per_sec
+    );
     const currentStatus = progress.status || 'downloading';
-    const statusMessage = progress.message || 
-      (currentStatus === 'extracting' ? 'ファイルを解凍しています...' : 'ダウンロード中...');
-    
-    const progressContainerRef = useRef<HTMLDivElement>(null);
-
-    useEffect(() => {
-      if (progressContainerRef.current) {
-        progressContainerRef.current.style.setProperty('--progress', String(Math.min(progress.progress, FORMATTING.PERCENTAGE_MULTIPLIER)));
-      }
-    }, [progress.progress]);
+    const statusMessage =
+      progress.message ||
+      (currentStatus === 'extracting'
+        ? 'ファイルを解凍しています...'
+        : 'ダウンロード中...');
 
     return (
       <div className="ollama-download">
         <div className="download-progress-container">
           <h3>{statusMessage}</h3>
-          
+
           {/* プログレスバー */}
-          <div 
-            ref={progressContainerRef}
-            className="progress-bar-container"
-          >
+          <div ref={progressContainerRef} className="progress-bar-container">
             <div className="progress-bar"></div>
           </div>
 
@@ -118,14 +140,17 @@ export const OllamaDownload: React.FC<OllamaDownloadProps> = ({
             <div className="progress-item">
               <span className="progress-label">ダウンロード済み:</span>
               <span className="progress-value">
-                {formatBytes(progress.downloaded_bytes)} / {formatBytes(progress.total_bytes)}
+                {formatBytes(progress.downloaded_bytes)} /{' '}
+                {formatBytes(progress.total_bytes)}
               </span>
             </div>
             {currentStatus === 'downloading' && (
               <>
                 <div className="progress-item">
                   <span className="progress-label">速度:</span>
-                  <span className="progress-value">{formatSpeed(progress.speed_bytes_per_sec)}</span>
+                  <span className="progress-value">
+                    {formatSpeed(progress.speed_bytes_per_sec)}
+                  </span>
                 </div>
                 <div className="progress-item">
                   <span className="progress-label">残り時間:</span>
@@ -157,7 +182,9 @@ export const OllamaDownload: React.FC<OllamaDownloadProps> = ({
         <div className="download-error">
           <span className="error-icon">❌</span>
           <h3>ダウンロードエラー</h3>
-          <p className="error-message">{error || 'ダウンロードに失敗しました'}</p>
+          <p className="error-message">
+            {error || 'ダウンロードに失敗しました'}
+          </p>
           <button className="retry-button" onClick={handleRetry}>
             再試行
           </button>
@@ -168,4 +195,3 @@ export const OllamaDownload: React.FC<OllamaDownloadProps> = ({
 
   return null;
 };
-

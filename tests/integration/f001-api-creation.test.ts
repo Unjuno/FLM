@@ -2,10 +2,12 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
+import { cleanupTestApis, handleTauriAppNotRunningError } from '../setup/test-helpers';
+import { debugLog, debugWarn } from '../setup/debug';
 
 /**
  * F001: API作成機能統合テストスイート
- * 
+ *
  * テスト項目:
  * - API作成フロー全体の検証
  * - データベースへの保存確認
@@ -16,31 +18,13 @@ describe('F001: API作成機能 統合テスト', () => {
   const createdApiIds: string[] = [];
 
   beforeAll(() => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-      console.log('F001 API作成機能統合テストを開始します');
-    }
+    debugLog('F001 API作成機能統合テストを開始します');
   });
 
   afterAll(async () => {
     // テストで作成したAPIをクリーンアップ
-    for (const apiId of createdApiIds) {
-      try {
-        // 実行中の場合は停止
-        try {
-          await invoke('stop_api', { api_id: apiId });
-        } catch (error) {
-          // 既に停止している可能性がある
-        }
-        await invoke('delete_api', { api_id: apiId });
-      } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn(`API ${apiId} のクリーンアップに失敗しました:`, error);
-        }
-      }
-    }
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-      console.log('F001 API作成機能統合テストを完了しました');
-    }
+    await cleanupTestApis(createdApiIds);
+    debugLog('F001 API作成機能統合テストを完了しました');
   });
 
   /**
@@ -81,7 +65,7 @@ describe('F001: API作成機能 統合テスト', () => {
         expect(result.model_name).toBe(config.model_name);
         expect(result.port).toBe(config.port);
         expect(result.endpoint).toMatch(/^http:\/\/localhost:\d+$/);
-        
+
         // 認証が有効な場合、APIキーが生成されていることを確認
         if (config.enable_auth) {
           expect(result.api_key).toBeDefined();
@@ -93,13 +77,10 @@ describe('F001: API作成機能 統合テスト', () => {
         recordApiId(result.id);
       } catch (error) {
         // Tauriアプリが起動していない場合、エラーメッセージが適切であることを確認
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
-        } else {
-          throw error;
+        if (handleTauriAppNotRunningError(error)) {
+          return;
         }
+        throw error;
       }
     }, 30000); // タイムアウト: 30秒
 
@@ -120,17 +101,14 @@ describe('F001: API作成機能 統合テスト', () => {
         expect(result).toBeDefined();
         expect(result.id).toBeDefined();
         expect(result.api_key).toBeNull(); // 認証無効の場合はAPIキーがない
-        
+
         recordApiId(result.id);
       } catch (error) {
         // Tauriアプリが起動していない場合、エラーメッセージが適切であることを確認
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
-        } else {
-          throw error;
+        if (handleTauriAppNotRunningError(error)) {
+          return;
         }
+        throw error;
       }
     }, 30000);
 
@@ -154,13 +132,10 @@ describe('F001: API作成機能 統合テスト', () => {
         recordApiId(result.id);
       } catch (error) {
         // Tauriアプリが起動していない場合、エラーメッセージが適切であることを確認
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
-        } else {
-          throw error;
+        if (handleTauriAppNotRunningError(error)) {
+          return;
         }
+        throw error;
       }
     }, 30000);
 
@@ -185,10 +160,15 @@ describe('F001: API作成機能 統合テスト', () => {
 
         recordApiId(result.id);
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
+          console.warn(
+            'Tauriアプリが起動していないため、このテストをスキップします'
+          );
+          expect(errorMessage).toContain(
+            'Tauriアプリケーションが起動していません'
+          );
         } else {
           throw error;
         }
@@ -198,7 +178,12 @@ describe('F001: API作成機能 統合テスト', () => {
     it('should validate port number range', async () => {
       const invalidConfigs = [
         { name: 'Test', model_name: 'llama3:8b', port: 0, enable_auth: false },
-        { name: 'Test', model_name: 'llama3:8b', port: 65536, enable_auth: false },
+        {
+          name: 'Test',
+          model_name: 'llama3:8b',
+          port: 65536,
+          enable_auth: false,
+        },
         { name: 'Test', model_name: 'llama3:8b', port: -1, enable_auth: false },
       ];
 
@@ -219,15 +204,17 @@ describe('F001: API作成機能 統合テスト', () => {
    */
   describe('モデル一覧取得機能', () => {
     it('should retrieve list of available models', async () => {
-      const models = await invoke<Array<{
-        name: string;
-        size: number;
-        parameters?: number;
-      }>>('get_models_list');
+      const models = await invoke<
+        Array<{
+          name: string;
+          size: number;
+          parameters?: number;
+        }>
+      >('get_models_list');
 
       expect(models).toBeDefined();
       expect(Array.isArray(models)).toBe(true);
-      
+
       if (models.length > 0) {
         const model = models[0];
         expect(model.name).toBeDefined();
@@ -242,10 +229,13 @@ describe('F001: API作成機能 統合テスト', () => {
       try {
         await invoke('get_models_list');
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         expect(errorMessage).toBeDefined();
         // エラーメッセージが非開発者向けであることを確認
-        expect(errorMessage).toMatch(/Ollama|実行|起動|Tauriアプリケーションが起動していません/i);
+        expect(errorMessage).toMatch(
+          /Ollama|実行|起動|Tauriアプリケーションが起動していません/i
+        );
       }
     });
   });
@@ -266,11 +256,13 @@ describe('F001: API作成機能 統合テスト', () => {
       const apiId = recordApiId(createResult.id);
 
       // 作成したAPIが一覧に含まれていることを確認
-      const apis = await invoke<Array<{
-        id: string;
-        name: string;
-        port: number;
-      }>>('list_apis');
+      const apis = await invoke<
+        Array<{
+          id: string;
+          name: string;
+          port: number;
+        }>
+      >('list_apis');
 
       const createdApi = apis.find(api => api.id === apiId);
       expect(createdApi).toBeDefined();
@@ -313,8 +305,14 @@ describe('F001: API作成機能 統合テスト', () => {
         enable_auth: true,
       };
 
-      const result1 = await invoke<{ id: string; api_key: string | null }>('create_api', config1);
-      const result2 = await invoke<{ id: string; api_key: string | null }>('create_api', config2);
+      const result1 = await invoke<{ id: string; api_key: string | null }>(
+        'create_api',
+        config1
+      );
+      const result2 = await invoke<{ id: string; api_key: string | null }>(
+        'create_api',
+        config2
+      );
 
       expect(result1.api_key).toBeDefined();
       expect(result2.api_key).toBeDefined();
@@ -332,12 +330,17 @@ describe('F001: API作成機能 統合テスト', () => {
         enable_auth: true,
       };
 
-      const createResult = await invoke<{ id: string; api_key: string | null }>('create_api', config);
+      const createResult = await invoke<{ id: string; api_key: string | null }>(
+        'create_api',
+        config
+      );
       const apiId = createResult.id;
       const originalKey = createResult.api_key;
 
       // APIキーを取得
-      const retrievedKey = await invoke<string | null>('get_api_key', { api_id: apiId });
+      const retrievedKey = await invoke<string | null>('get_api_key', {
+        api_id: apiId,
+      });
 
       expect(retrievedKey).toBeDefined();
       expect(retrievedKey).toBe(originalKey); // 同じキーが取得できる
@@ -360,10 +363,13 @@ describe('F001: API作成機能 統合テスト', () => {
 
       const result1 = await invoke<{ id: string }>('create_api', config);
       recordApiId(result1.id);
-      
+
       // 同じポート番号でAPIを作成しようとする
       try {
-        const result2 = await invoke<{ id: string }>('create_api', { ...config, name: 'Port Test 2' });
+        const result2 = await invoke<{ id: string }>('create_api', {
+          ...config,
+          name: 'Port Test 2',
+        });
         // ポート番号の重複チェックが実装されていない場合は作成可能
         // 作成された場合は記録してクリーンアップ
         if (result2.id) {
@@ -395,4 +401,3 @@ describe('F001: API作成機能 統合テスト', () => {
     }, 30000);
   });
 });
-

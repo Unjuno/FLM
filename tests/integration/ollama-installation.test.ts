@@ -2,17 +2,15 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
+import { handleTauriAppNotRunningError } from '../setup/test-helpers';
+import { debugLog, debugWarn } from '../setup/debug';
 describe('Ollama Auto-Installation Tests', () => {
   beforeAll(() => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-      console.log('Ollama自動インストール機能テストを開始します');
-    }
+    debugLog('Ollama自動インストール機能テストを開始します');
   });
 
   afterAll(() => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-      console.log('Ollama自動インストール機能テストを完了しました');
-    }
+    debugLog('Ollama自動インストール機能テストを完了しました');
   });
 
   /**
@@ -34,18 +32,21 @@ describe('Ollama Auto-Installation Tests', () => {
         expect(typeof status.installed).toBe('boolean');
         expect(typeof status.running).toBe('boolean');
         expect(typeof status.portable).toBe('boolean');
-        
+
         // いずれかの方法で検出されている場合、詳細情報が存在する可能性がある
         if (status.installed || status.running || status.portable) {
           expect(
             status.version !== null ||
-            status.portable_path !== null ||
-            status.system_path !== null
+              status.portable_path !== null ||
+              status.system_path !== null
           ).toBe(true);
         }
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('Ollama検出テストをスキップ:', error);
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('Ollama検出テストをスキップ:', error);
         }
         expect(true).toBe(true);
       }
@@ -66,8 +67,11 @@ describe('Ollama Auto-Installation Tests', () => {
       } catch (error) {
         // 検出機能自体がエラーを返すべきではない
         // ただし、システム環境によってはエラーが発生する可能性もある
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('Ollama検出でエラーが発生:', error);
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('Ollama検出でエラーが発生:', error);
         }
         expect(true).toBe(true);
       }
@@ -76,14 +80,14 @@ describe('Ollama Auto-Installation Tests', () => {
 
   /**
    * Ollama自動ダウンロード機能のテスト
-   * 
+   *
    * 注意: 実際のダウンロードは時間がかかるため、スキップ可能
    */
   describe('Ollama auto-download', () => {
     it('should validate download parameters', () => {
       // ダウンロードパラメータの検証
       const validPlatforms = ['windows', 'linux', 'darwin'];
-      
+
       validPlatforms.forEach(platform => {
         expect(platform).toBeDefined();
         expect(typeof platform).toBe('string');
@@ -112,8 +116,8 @@ describe('Ollama Auto-Installation Tests', () => {
         if (!status.running) {
           // Ollamaが起動していない場合、起動を試みる
           try {
-            const pid = await invoke<number>('start_ollama', { 
-              ollama_path: null 
+            const pid = await invoke<number>('start_ollama', {
+              ollama_path: null,
             });
 
             expect(pid).toBeDefined();
@@ -121,7 +125,9 @@ describe('Ollama Auto-Installation Tests', () => {
             expect(pid).toBeGreaterThan(0);
 
             // 起動確認のため少し待機
-            await new Promise(resolve => setTimeout(resolve, 3000));
+            // Ollama起動の完了を待つ（固定待機時間の代わりに状態を待つ）
+            // 注意: Ollama起動は非同期のため、適切な待機方法を検討する必要がある
+            await new Promise(resolve => setTimeout(resolve, 3000)); // TODO: 状態を待つ方式に変更
 
             const newStatus = await invoke<{
               running: boolean;
@@ -132,21 +138,30 @@ describe('Ollama Auto-Installation Tests', () => {
             expect(newStatus).toBeDefined();
           } catch (error) {
             // 起動に失敗する可能性がある（Ollamaがインストールされていないなど）
-            if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-              console.warn('Ollama起動テストをスキップ:', error);
+            if (
+              process.env.NODE_ENV === 'development' ||
+              process.env.JEST_DEBUG === '1'
+            ) {
+              debugWarn('Ollama起動テストをスキップ:', error);
             }
             expect(true).toBe(true);
           }
         } else {
           // 既に起動している場合はスキップ
-          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-            console.log('Ollamaは既に起動しています');
+          if (
+            process.env.NODE_ENV === 'development' ||
+            process.env.JEST_DEBUG === '1'
+          ) {
+            debugLog('Ollamaは既に起動しています');
           }
           expect(true).toBe(true);
         }
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('Ollama起動テストをスキップ:', error);
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('Ollama起動テストをスキップ:', error);
         }
         expect(true).toBe(true);
       }
@@ -157,7 +172,9 @@ describe('Ollama Auto-Installation Tests', () => {
         await invoke('stop_ollama');
 
         // 停止確認のため少し待機
-        await new Promise(resolve => setTimeout(resolve, 1000));
+        // Ollama停止の完了を待つ（固定待機時間の代わりに状態を待つ）
+        // 注意: Ollama停止は非同期のため、適切な待機方法を検討する必要がある
+        await new Promise(resolve => setTimeout(resolve, 1000)); // TODO: 状態を待つ方式に変更
 
         const status = await invoke<{
           running: boolean;
@@ -168,8 +185,11 @@ describe('Ollama Auto-Installation Tests', () => {
         expect(status).toBeDefined();
       } catch (error) {
         // 停止に失敗する可能性がある（既に停止しているなど）
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('Ollama停止テストをスキップ:', error);
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('Ollama停止テストをスキップ:', error);
         }
         expect(true).toBe(true);
       }
@@ -183,17 +203,18 @@ describe('Ollama Auto-Installation Tests', () => {
     it('should return user-friendly error messages', async () => {
       try {
         // 無効なパスで起動を試みる
-        await invoke('start_ollama', { 
-          ollama_path: '/invalid/path/to/ollama' 
+        await invoke('start_ollama', {
+          ollama_path: '/invalid/path/to/ollama',
         });
-        
+
         // エラーが発生することを期待
         expect(true).toBe(false); // 到達しないはず
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         expect(errorMessage).toBeDefined();
         expect(typeof errorMessage).toBe('string');
-        
+
         // 非開発者向けのエラーメッセージか確認
         // 専門用語が少ない、わかりやすいメッセージであることを期待
         expect(errorMessage.length).toBeGreaterThan(0);
@@ -207,4 +228,3 @@ describe('Ollama Auto-Installation Tests', () => {
     });
   });
 });
-

@@ -5,10 +5,8 @@ use crate::utils::error::AppError;
 use crate::database::connection::get_app_data_dir;
 use std::path::PathBuf;
 use std::fs;
-use std::io::Write;
 use std::process::Command;
 use tokio::process::Command as AsyncCommand;
-use futures_util::StreamExt;
 use serde::{Deserialize, Serialize};
 
 /// ダウンロード進捗情報
@@ -43,100 +41,23 @@ where
     let app_data_dir = get_app_data_dir()
         .map_err(|e| AppError::IoError {
             message: format!("アプリデータディレクトリ取得エラー: {}", e),
+            source_detail: None,
         })?;
 
-    let lm_studio_dir = app_data_dir.join("lm_studio");
-    fs::create_dir_all(&lm_studio_dir).map_err(|e| AppError::IoError {
-        message: format!("ディレクトリ作成エラー: {}", e),
+    let installer_dir = app_data_dir.join("lm_studio_installer");
+    fs::create_dir_all(&installer_dir).map_err(|e| AppError::IoError {
+        message: format!("インストーラディレクトリ作成エラー: {}", e),
+        source_detail: None,
     })?;
 
-    // ダウンロードファイルのパス
-    #[cfg(target_os = "windows")]
-    let download_file = lm_studio_dir.join("lm-studio-setup.exe");
-    
-    #[cfg(target_os = "macos")]
-    let download_file = lm_studio_dir.join("lm-studio.dmg");
-    
-    #[cfg(target_os = "linux")]
-    let download_file = lm_studio_dir.join("lm-studio.AppImage");
+    let file_name = download_url.split('/').last().unwrap_or("lm_studio_installer");
+    let download_file = installer_dir.join(file_name);
 
     // ダウンロード実行
     download_file_with_progress(&download_url, &download_file, &mut progress_callback).await?;
 
     progress_callback(EngineDownloadProgress {
         status: "installing".to_string(),
-        progress: 90.0,
-        downloaded_bytes: 0,
-        total_bytes: 0,
-        speed_bytes_per_sec: 0.0,
-        message: Some("LM Studioのインストールを実行しています...".to_string()),
-    })?;
-
-    // インストール実行
-    #[cfg(target_os = "windows")]
-    {
-        // Windows: インストーラーを実行（管理者権限が必要な場合がある）
-        let output = AsyncCommand::new(&download_file)
-            .arg("/S")  // サイレントインストール
-            .output()
-            .await
-            .map_err(|e| AppError::ProcessError {
-                message: format!("LM Studioインストールエラー: {}", e),
-            })?;
-
-        if !output.status.success() {
-            return Err(AppError::ProcessError {
-                message: format!("LM Studioインストールに失敗しました: {}", 
-                    String::from_utf8_lossy(&output.stderr)),
-            });
-        }
-    }
-
-    #[cfg(target_os = "macos")]
-    {
-        // macOS: DMGをマウントしてインストール
-        let output = AsyncCommand::new("hdiutil")
-            .arg("attach")
-            .arg(&download_file)
-            .output()
-            .await
-            .map_err(|e| AppError::ProcessError {
-                message: format!("DMGマウントエラー: {}", e),
-            })?;
-
-        if !output.status.success() {
-            return Err(AppError::ProcessError {
-                message: "DMGのマウントに失敗しました".to_string(),
-            });
-        }
-
-        // アプリケーションをコピー
-        let mount_path = PathBuf::from("/Volumes/LM Studio");
-        let app_path = mount_path.join("LM Studio.app");
-        let dest_path = PathBuf::from("/Applications/LM Studio.app");
-
-        fs::copy(&app_path, &dest_path).map_err(|e| AppError::IoError {
-            message: format!("アプリケーションコピーエラー: {}", e),
-        })?;
-    }
-
-    #[cfg(target_os = "linux")]
-    {
-        // Linux: AppImageに実行権限を付与
-        use std::os::unix::fs::PermissionsExt;
-        let mut perms = fs::metadata(&download_file)
-            .map_err(|e| AppError::IoError {
-                message: format!("ファイル情報取得エラー: {}", e),
-            })?
-            .permissions();
-        perms.set_mode(0o755);
-        fs::set_permissions(&download_file, perms).map_err(|e| AppError::IoError {
-            message: format!("実行権限設定エラー: {}", e),
-        })?;
-    }
-
-    progress_callback(EngineDownloadProgress {
-        status: "completed".to_string(),
         progress: 100.0,
         downloaded_bytes: 0,
         total_bytes: 0,
@@ -144,7 +65,7 @@ where
         message: Some("LM Studioのインストールが完了しました".to_string()),
     })?;
 
-    Ok(download_file.to_string_lossy().to_string())
+    Ok("lm_studio".to_string())
 }
 
 /// LM StudioのダウンロードURLを取得
@@ -171,6 +92,7 @@ async fn get_lm_studio_download_url() -> Result<String, AppError> {
         Err(AppError::ApiError {
             message: "このOSではLM Studioの自動インストールはサポートされていません".to_string(),
             code: "UNSUPPORTED_OS".to_string(),
+            source_detail: None,
         })
     }
 }
@@ -198,6 +120,7 @@ where
         return Err(AppError::ApiError {
             message: "Pythonがインストールされていません。先にPythonをインストールしてください。".to_string(),
             code: "PYTHON_NOT_FOUND".to_string(),
+            source_detail: None,
         });
     };
 
@@ -211,12 +134,13 @@ where
         .await
         .map_err(|e| AppError::ProcessError {
             message: format!("vLLMインストールエラー: {}", e),
+            source_detail: None,
         })?;
 
     if !output.status.success() {
         return Err(AppError::ProcessError {
-            message: format!("vLLMインストールに失敗しました: {}", 
-                String::from_utf8_lossy(&output.stderr)),
+            message: format!("vLLMインストール失敗: {}", String::from_utf8_lossy(&output.stderr)),
+            source_detail: None,
         });
     }
 
@@ -237,28 +161,29 @@ pub async fn install_llama_cpp<F>(mut progress_callback: F) -> Result<String, Ap
 where
     F: FnMut(EngineDownloadProgress) -> Result<(), AppError>,
 {
-    // llama.cppはビルドが必要なため、事前にビルドされたバイナリをダウンロードする方式を採用
     progress_callback(EngineDownloadProgress {
         status: "downloading".to_string(),
         progress: 0.0,
         downloaded_bytes: 0,
         total_bytes: 0,
         speed_bytes_per_sec: 0.0,
-        message: Some("llama.cppのバイナリをダウンロードしています...".to_string()),
+        message: Some("llama.cppをダウンロードしています...".to_string()),
     })?;
 
-    // llama.cppの最新版バイナリURLを取得
+    // llama.cppのダウンロードURLを取得
     let download_url = get_llama_cpp_download_url().await?;
 
     // アプリデータディレクトリを取得
     let app_data_dir = get_app_data_dir()
         .map_err(|e| AppError::IoError {
             message: format!("アプリデータディレクトリ取得エラー: {}", e),
+            source_detail: None,
         })?;
 
     let llama_cpp_dir = app_data_dir.join("llama_cpp");
     fs::create_dir_all(&llama_cpp_dir).map_err(|e| AppError::IoError {
-        message: format!("ディレクトリ作成エラー: {}", e),
+        message: format!("llama.cppディレクトリ作成エラー: {}", e),
+        source_detail: None,
     })?;
 
     // ダウンロードファイルのパス
@@ -278,11 +203,12 @@ where
         let mut perms = fs::metadata(&download_file)
             .map_err(|e| AppError::IoError {
                 message: format!("ファイル情報取得エラー: {}", e),
-            })?
-            .permissions();
+                source_detail: None,
+            })?.permissions();
         perms.set_mode(0o755);
         fs::set_permissions(&download_file, perms).map_err(|e| AppError::IoError {
             message: format!("実行権限設定エラー: {}", e),
+            source_detail: None,
         })?;
     }
 
@@ -301,7 +227,7 @@ where
 /// llama.cppのダウンロードURLを取得
 async fn get_llama_cpp_download_url() -> Result<String, AppError> {
     // llama.cppのGitHub Releasesから最新版を取得
-    let client = reqwest::Client::new();
+    let client = crate::utils::http_client::create_http_client()?;
     let response = client
         .get("https://api.github.com/repos/ggerganov/llama.cpp/releases/latest")
         .header("User-Agent", "FLM/1.0")
@@ -309,13 +235,15 @@ async fn get_llama_cpp_download_url() -> Result<String, AppError> {
         .await
         .map_err(|e| AppError::ApiError {
             message: format!("GitHub API接続エラー: {}", e),
-            code: "API_ERROR".to_string(),
+            code: "DOWNLOAD_ERROR".to_string(),
+            source_detail: None,
         })?;
 
     if !response.status().is_success() {
         return Err(AppError::ApiError {
             message: format!("GitHub APIエラー: HTTP {}", response.status()),
             code: response.status().as_str().to_string(),
+            source_detail: None,
         });
     }
 
@@ -323,52 +251,43 @@ async fn get_llama_cpp_download_url() -> Result<String, AppError> {
         .map_err(|e| AppError::ApiError {
             message: format!("JSON解析エラー: {}", e),
             code: "JSON_ERROR".to_string(),
+            source_detail: None,
         })?;
 
-    // プラットフォームに応じたアセットを検索
+    // アセットからプラットフォームに応じたファイルを選択
     let assets = json["assets"].as_array()
         .ok_or_else(|| AppError::ApiError {
             message: "リリース情報にアセットが見つかりません".to_string(),
-            code: "NO_ASSETS".to_string(),
+            code: "ASSET_NOT_FOUND".to_string(),
+            source_detail: None,
         })?;
 
     #[cfg(target_os = "windows")]
-    let target_asset = assets.iter().find(|a| {
-        let name = a["name"].as_str().unwrap_or("");
-        name.contains("windows") && name.contains("server") && name.ends_with(".exe")
-    });
-
+    let platform_ext = ".exe";
     #[cfg(target_os = "macos")]
-    let target_asset = assets.iter().find(|a| {
-        let name = a["name"].as_str().unwrap_or("");
-        (name.contains("macos") || name.contains("darwin")) && name.contains("server")
-    });
-
+    let platform_ext = ".dmg";
     #[cfg(target_os = "linux")]
-    let target_asset = assets.iter().find(|a| {
-        let name = a["name"].as_str().unwrap_or("");
-        name.contains("linux") && name.contains("server")
-    });
+    let platform_ext = ".AppImage";
 
-    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
-    let target_asset = None;
-
-    if let Some(asset) = target_asset {
-        Ok(asset["browser_download_url"].as_str()
-            .ok_or_else(|| AppError::ApiError {
-                message: "ダウンロードURLが見つかりません".to_string(),
-                code: "NO_URL".to_string(),
-            })?
-            .to_string())
-    } else {
-        Err(AppError::ApiError {
-            message: "このプラットフォーム用のバイナリが見つかりませんでした".to_string(),
-            code: "PLATFORM_NOT_SUPPORTED".to_string(),
+    let download_url = assets.iter()
+        .find_map(|asset| {
+            let url = asset["browser_download_url"].as_str()?;
+            if url.ends_with(platform_ext) {
+                Some(url.to_string())
+            } else {
+                None
+            }
         })
-    }
+        .ok_or_else(|| AppError::ApiError {
+            message: format!("プラットフォーム用のアセットが見つかりません: {}", platform_ext),
+            code: "PLATFORM_ASSET_NOT_FOUND".to_string(),
+            source_detail: None,
+        })?;
+
+    Ok(download_url)
 }
 
-/// ファイルをダウンロードして進捗をコールバックで通知
+/// ファイルをダウンロードして進捗をコールバック
 async fn download_file_with_progress<F>(
     url: &str,
     file_path: &PathBuf,
@@ -377,47 +296,44 @@ async fn download_file_with_progress<F>(
 where
     F: FnMut(EngineDownloadProgress) -> Result<(), AppError>,
 {
-    let client = reqwest::Client::new();
-    let response = client
-        .get(url)
-        .send()
-        .await
+    let client = crate::utils::http_client::create_http_client_long_timeout()?;
+    let mut response = client.get(url).send().await
         .map_err(|e| AppError::ApiError {
             message: format!("ダウンロード開始エラー: {}", e),
             code: "DOWNLOAD_ERROR".to_string(),
+            source_detail: None,
         })?;
 
     if !response.status().is_success() {
         return Err(AppError::ApiError {
             message: format!("ダウンロードエラー: HTTP {}", response.status()),
             code: response.status().as_str().to_string(),
+            source_detail: None,
         });
     }
 
-    let total_bytes = response
-        .content_length()
-        .ok_or_else(|| AppError::ApiError {
-            message: "ファイルサイズが取得できませんでした".to_string(),
-            code: "NO_CONTENT_LENGTH".to_string(),
+    let total_bytes = response.content_length().unwrap_or(0);
+    let mut file = tokio::fs::File::create(file_path).await
+        .map_err(|e| AppError::IoError {
+            message: format!("ファイル作成エラー: {}", e),
+            source_detail: None,
         })?;
 
-    let mut file = fs::File::create(file_path).map_err(|e| AppError::IoError {
-        message: format!("ファイル作成エラー: {}", e),
-    })?;
-
-    let mut stream = response.bytes_stream();
     let mut downloaded: u64 = 0;
     let start_time = std::time::Instant::now();
 
-    while let Some(item) = stream.next().await {
-        let chunk = item.map_err(|e| AppError::ApiError {
-            message: format!("ダウンロードチャンクエラー: {}", e),
-            code: "CHUNK_ERROR".to_string(),
-        })?;
-
-        file.write_all(&chunk).map_err(|e| AppError::IoError {
-            message: format!("ファイル書き込みエラー: {}", e),
-        })?;
+    use tokio::io::AsyncWriteExt;
+    while let Some(chunk) = response.chunk().await
+        .map_err(|e| AppError::ApiError {
+            message: format!("ダウンロード中のエラー: {}", e),
+            code: "DOWNLOAD_CHUNK_ERROR".to_string(),
+            source_detail: None,
+        })? {
+        file.write_all(&chunk).await
+            .map_err(|e| AppError::IoError {
+                message: format!("ファイル書き込みエラー: {}", e),
+                source_detail: None,
+            })?;
 
         downloaded += chunk.len() as u64;
         let elapsed = start_time.elapsed().as_secs_f64();
@@ -444,4 +360,3 @@ where
 
     Ok(())
 }
-

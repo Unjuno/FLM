@@ -1,11 +1,26 @@
 /* Error Message Component Styles */
 
 .error-message {
-  padding: 1.5rem;
-  border-radius: 8px;
-  margin-bottom: 1.5rem;
-  background-color: #ffebee;
-  border-left: 4px solid #f44336;
+  padding: var(--spacing-xl, 1.75rem);
+  border-radius: var(--radius-xl, 1rem);
+  margin-bottom: var(--spacing-xl, 2rem);
+  background: var(--color-bg-primary, #ffffff);
+  border: 1px solid rgba(248, 113, 113, 0.4);
+  border-left: 6px solid var(--color-error, #ef4444);
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  box-shadow: var(--shadow-lg, 0 24px 48px rgba(15, 23, 42, 0.12));
+  backdrop-filter: blur(4px);
+}
+
+[data-theme="dark"] .error-message {
+  background: rgba(30, 41, 59, 0.85);
+  border-color: rgba(248, 113, 113, 0.6);
+  border-left-color: var(--color-error, #f87171);
+  box-shadow: var(--shadow-lg, 0 24px 48px rgba(0, 0, 0, 0.4));
 }
 
 .error-header {
@@ -22,9 +37,14 @@
 .error-title {
   margin: 0;
   flex: 1;
-  font-size: 1.1rem;
-  color: #c62828;
+  font-size: 1.125rem;
+  color: var(--color-error, #b91c1c);
   font-weight: 600;
+  letter-spacing: 0.01em;
+}
+
+[data-theme="dark"] .error-title {
+  color: #fecaca;
 }
 
 .error-close-button {
@@ -32,15 +52,24 @@
   border: none;
   font-size: 1.25rem;
   cursor: pointer;
-  color: #666;
+  color: var(--color-text-secondary, #666);
   padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+  border-radius: var(--radius-md, 0.5rem);
   transition: all 0.2s;
 }
 
+[data-theme="dark"] .error-close-button {
+  color: var(--color-text-secondary, #cbd5e0);
+}
+
 .error-close-button:hover {
-  background-color: rgba(0, 0, 0, 0.1);
-  color: #333;
+  background-color: var(--color-bg-tertiary, rgba(0, 0, 0, 0.1));
+  color: var(--color-text-primary, #333);
+}
+
+[data-theme="dark"] .error-close-button:hover {
+  background-color: var(--color-bg-tertiary, rgba(255, 255, 255, 0.1));
+  color: var(--color-text-primary, #fff);
 }
 
 .error-close-button:focus-visible {
@@ -55,18 +84,32 @@
 
 .error-text {
   margin: 0 0 0.75rem 0;
-  color: #c62828;
-  line-height: 1.6;
+  color: var(--color-error, #b91c1c);
+  line-height: 1.7;
+  font-size: 1rem;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+[data-theme="dark"] .error-text {
+  color: #fee2e2;
 }
 
 .error-suggestion {
   display: flex;
   align-items: flex-start;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background-color: rgba(255, 255, 255, 0.7);
-  border-radius: 6px;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: rgba(248, 113, 113, 0.08);
+  border-radius: var(--radius-lg, 0.75rem);
   margin-top: 0.75rem;
+  border: 1px solid rgba(248, 113, 113, 0.15);
+}
+
+[data-theme="dark"] .error-suggestion {
+  background: rgba(248, 113, 113, 0.12);
+  border-color: rgba(248, 113, 113, 0.2);
 }
 
 .suggestion-icon {
@@ -75,23 +118,31 @@
 }
 
 .suggestion-text {
-  color: #333;
+  color: var(--color-text-primary, #1f2937);
   font-size: 0.95rem;
   line-height: 1.6;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+  white-space: pre-wrap;
+}
+
+[data-theme="dark"] .suggestion-text {
+  color: #f8fafc;
 }
 
 .error-actions {
   display: flex;
   gap: 0.75rem;
   margin-top: 1rem;
+  flex-wrap: wrap;
 }
 
-.error-retry-button {
+.error-help-button {
   padding: 0.625rem 1.25rem;
-  background: linear-gradient(135deg, var(--color-primary, #667eea) 0%, var(--color-secondary, #764ba2) 100%);
-  color: white;
-  border: none;
-  border-radius: 6px;
+  background: transparent;
+  color: var(--color-accent, #667eea);
+  border: 1px solid var(--color-accent, #667eea);
+  border-radius: var(--radius-md, 0.5rem);
   font-size: 0.95rem;
   font-weight: 500;
   cursor: pointer;
@@ -100,7 +151,35 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.error-help-button:hover {
+  background: var(--color-primary, #667eea);
+  color: var(--color-text-inverse, #ffffff);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md, 0 4px 8px rgba(102, 126, 234, 0.3));
+}
+
+.error-help-button:focus-visible {
+  outline: 2px solid var(--color-accent, #667eea);
+  outline-offset: 2px;
+}
+
+.error-retry-button {
+  padding: 0.625rem 1.25rem;
+  background: var(--color-primary, #667eea);
+  color: var(--color-text-inverse, #ffffff);
+  border: none;
+  border-radius: var(--radius-md, 0.5rem);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-base, 200ms ease);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs, 0.5rem);
+  box-shadow: var(--shadow-sm, 0 2px 4px rgba(0, 0, 0, 0.1));
 }
 
 .error-retry-button:hover {
@@ -117,6 +196,101 @@
 .error-retry-button:active {
   transform: translateY(0);
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.error-auto-fix-button {
+  padding: 0.625rem 1.25rem;
+  background: var(--color-success, #48bb78);
+  color: var(--color-text-inverse, #ffffff);
+  border: none;
+  border-radius: var(--radius-md, 0.5rem);
+  font-size: 0.95rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all var(--transition-base, 200ms ease);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+}
+
+.error-auto-fix-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(76, 175, 80, 0.4);
+  opacity: 0.9;
+}
+
+.error-auto-fix-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.error-auto-fix-button:focus-visible {
+  outline: 2px solid #4caf50;
+  outline-offset: 2px;
+}
+
+.error-auto-fix-button:active:not(:disabled) {
+  transform: translateY(0);
+  box-shadow: 0 2px 4px rgba(76, 175, 80, 0.3);
+}
+
+.error-auto-fix-button .spinner {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
+  border-top-color: white;
+  border-radius: 50%;
+  animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.error-fix-result {
+  margin-top: 1rem;
+  padding: 0.75rem 1rem;
+  border-radius: var(--radius-md, 0.5rem);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.error-fix-result.success {
+  background-color: #e8f5e9;
+  border: 1px solid #4caf50;
+  color: #2e7d32;
+}
+
+.error-fix-result.failure {
+  background-color: #ffebee;
+  border: 1px solid #f44336;
+  color: #c62828;
+}
+
+[data-theme="dark"] .error-fix-result.success {
+  background-color: rgba(76, 175, 80, 0.2);
+  border-color: #4caf50;
+  color: #81c784;
+}
+
+[data-theme="dark"] .error-fix-result.failure {
+  background-color: rgba(244, 67, 54, 0.2);
+  border-color: #f44336;
+  color: #e57373;
+}
+
+.fix-success-message,
+.fix-failure-message {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* エラーの種類に応じたスタイル */
@@ -251,5 +425,62 @@
 [data-theme="dark"] .error-close-button:hover {
   background-color: rgba(255, 255, 255, 0.1);
   color: #fff;
+}
+
+/* 詳細手順のスタイル */
+.error-detailed-steps {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: rgba(59, 130, 246, 0.08);
+  border-radius: var(--radius-lg, 0.75rem);
+  border: 1px solid rgba(59, 130, 246, 0.15);
+}
+
+[data-theme="dark"] .error-detailed-steps {
+  background: rgba(59, 130, 246, 0.12);
+  border-color: rgba(59, 130, 246, 0.2);
+}
+
+.steps-title {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #1f2937);
+}
+
+[data-theme="dark"] .steps-title {
+  color: #f8fafc;
+}
+
+.steps-list {
+  margin: 0;
+  padding-left: 1.5rem;
+  list-style-type: decimal;
+  counter-reset: step-counter;
+}
+
+.step-item {
+  margin-bottom: 0.5rem;
+  color: var(--color-text-secondary, #4b5563);
+  counter-increment: step-counter;
+  position: relative;
+  padding-left: 0.5rem;
+}
+
+.step-item::before {
+  content: counter(step-counter) ".";
+  position: absolute;
+  left: -1.5rem;
+  font-weight: 600;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+[data-theme="dark"] .step-item {
+  color: #cbd5e0;
+}
+
+.step-item:last-child {
+  margin-bottom: 0;
 }
 

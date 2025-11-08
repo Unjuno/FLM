@@ -1,6 +1,13 @@
 // complete-features-e2e - 完全機能のE2Eテスト
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+} from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
 import { listen } from '@tauri-apps/api/event';
 describe('Complete Features E2E Tests', () => {
@@ -10,11 +17,16 @@ describe('Complete Features E2E Tests', () => {
   beforeAll(() => {
     // Tauriアプリが起動していない場合はスキップ
     if (!process.env.TAURI_APP_AVAILABLE) {
-      console.warn('Tauriアプリが起動していないため、このテストスイートをスキップします');
+      console.warn(
+        'Tauriアプリが起動していないため、このテストスイートをスキップします'
+      );
       return;
     }
-    
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('完全機能E2Eテストを開始します');
     }
   });
@@ -29,12 +41,18 @@ describe('Complete Features E2E Tests', () => {
         }
         await invoke('delete_api', { apiId: createdApiId });
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('テスト後のクリーンアップでエラー:', error);
         }
       }
     }
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('完全機能E2Eテストを完了しました');
     }
   });
@@ -46,26 +64,34 @@ describe('Complete Features E2E Tests', () => {
     it('should handle errors gracefully when Ollama is not running', async () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
       try {
-        const models = await invoke<Array<{
-          name: string;
-          size: number | null;
-          modified_at: string;
-          parameter_size: string | null;
-        }>>('get_models_list');
+        const models = await invoke<
+          Array<{
+            name: string;
+            size: number | null;
+            modified_at: string;
+            parameter_size: string | null;
+          }>
+        >('get_models_list');
 
         expect(models).toBeDefined();
         expect(Array.isArray(models)).toBe(true);
       } catch (error) {
         // エラーが適切な形式であることを確認
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         expect(errorMessage).toBeDefined();
         expect(typeof errorMessage).toBe('string');
         expect(errorMessage.length).toBeGreaterThan(0);
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.log('期待されるエラー（Ollama未起動）:', errorMessage);
         }
       }
@@ -74,7 +100,9 @@ describe('Complete Features E2E Tests', () => {
     it('should provide retry capability for model list retrieval', async () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
       let retryCount = 0;
@@ -82,12 +110,14 @@ describe('Complete Features E2E Tests', () => {
 
       for (let i = 0; i < maxRetries; i++) {
         try {
-          const models = await invoke<Array<{
-            name: string;
-            size: number | null;
-            modified_at: string;
-            parameter_size: string | null;
-          }>>('get_models_list');
+          const models = await invoke<
+            Array<{
+              name: string;
+              size: number | null;
+              modified_at: string;
+              parameter_size: string | null;
+            }>
+          >('get_models_list');
 
           expect(models).toBeDefined();
           expect(Array.isArray(models)).toBe(true);
@@ -96,7 +126,8 @@ describe('Complete Features E2E Tests', () => {
           retryCount++;
           if (retryCount >= maxRetries) {
             // 最終的なエラーは許可される
-            const errorMessage = error instanceof Error ? error.message : String(error);
+            const errorMessage =
+              error instanceof Error ? error.message : String(error);
             expect(errorMessage).toBeDefined();
           }
           // 再試行の前に少し待機
@@ -113,7 +144,9 @@ describe('Complete Features E2E Tests', () => {
     it('should handle download errors gracefully', async () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
       const invalidModelName = 'nonexistent:model:12345';
@@ -126,10 +159,14 @@ describe('Complete Features E2E Tests', () => {
         expect(true).toBe(false);
       } catch (error) {
         // エラーが適切に処理されることを確認
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         expect(errorMessage).toBeDefined();
         expect(typeof errorMessage).toBe('string');
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.log('期待されるエラー（存在しないモデル）:', errorMessage);
         }
       }
@@ -138,26 +175,36 @@ describe('Complete Features E2E Tests', () => {
     it('should emit progress events during download', async () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
       // 実際にダウンロード可能なモデルが存在する場合のみテスト
       try {
-        const models = await invoke<Array<{
-          name: string;
-          size: number | null;
-        }>>('get_models_list');
+        const models = await invoke<
+          Array<{
+            name: string;
+            size: number | null;
+          }>
+        >('get_models_list');
 
         if (models.length === 0) {
-          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-            console.warn('ダウンロード可能なモデルがないため、ダウンロード進捗テストをスキップ');
+          if (
+            process.env.NODE_ENV === 'development' ||
+            process.env.JEST_DEBUG === '1'
+          ) {
+            console.warn(
+              'ダウンロード可能なモデルがないため、ダウンロード進捗テストをスキップ'
+            );
           }
           expect(true).toBe(true);
           return;
         }
 
         // 小さなモデルを選択（テスト用）
-        const testModel = models.find(m => m.name && m.name.includes('small')) || models[0];
+        const testModel =
+          models.find(m => m.name && m.name.includes('small')) || models[0];
         testModelName = testModel.name;
 
         let progressReceived = false;
@@ -171,7 +218,7 @@ describe('Complete Features E2E Tests', () => {
           total_bytes: number;
           speed_bytes_per_sec: number;
           message?: string | null;
-        }>('model_download_progress', (event) => {
+        }>('model_download_progress', event => {
           expect(event.payload).toBeDefined();
           expect(event.payload.status).toBeDefined();
           expect(typeof event.payload.status).toBe('string');
@@ -180,7 +227,10 @@ describe('Complete Features E2E Tests', () => {
             progressReceived = true;
           }
 
-          if (event.payload.status === 'completed' || event.payload.status === 'success') {
+          if (
+            event.payload.status === 'completed' ||
+            event.payload.status === 'success'
+          ) {
             completedReceived = true;
           }
         });
@@ -193,16 +243,27 @@ describe('Complete Features E2E Tests', () => {
 
           // 10秒でタイムアウト（実際のダウンロードは長時間かかる可能性があるため）
           const timeoutPromise = new Promise((_, reject) => {
-            setTimeout(() => reject(new Error('ダウンロードタイムアウト（テスト用）')), 10000);
+            setTimeout(
+              () => reject(new Error('ダウンロードタイムアウト（テスト用）')),
+              10000
+            );
           });
 
           try {
             await Promise.race([downloadPromise, timeoutPromise]);
           } catch (error) {
             // タイムアウトは許容される（テスト目的）
-            if (error instanceof Error && error.message.includes('タイムアウト')) {
-              if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-                console.log('ダウンロードテストはタイムアウトしました（期待される動作）');
+            if (
+              error instanceof Error &&
+              error.message.includes('タイムアウト')
+            ) {
+              if (
+                process.env.NODE_ENV === 'development' ||
+                process.env.JEST_DEBUG === '1'
+              ) {
+                console.log(
+                  'ダウンロードテストはタイムアウトしました（期待される動作）'
+                );
               }
             }
           }
@@ -210,7 +271,6 @@ describe('Complete Features E2E Tests', () => {
           // 進捗イベントが受信されたことを確認
           // 実際のダウンロードが完了していない場合でも、進捗イベントは受信される可能性がある
           await new Promise(resolve => setTimeout(resolve, 2000));
-          
         } finally {
           unsubscribe();
         }
@@ -219,7 +279,10 @@ describe('Complete Features E2E Tests', () => {
         expect(progressReceived || completedReceived).toBe(true);
       } catch (error) {
         // モデルリスト取得に失敗した場合はスキップ
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('ダウンロード進捗テストをスキップ:', error);
         }
         expect(true).toBe(true);
@@ -234,7 +297,9 @@ describe('Complete Features E2E Tests', () => {
     it('should handle port conflict errors', async () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
       try {
@@ -265,9 +330,13 @@ describe('Complete Features E2E Tests', () => {
           // これは許容される（実装によって異なる）
         } catch (error) {
           // ポート競合エラーが適切に処理されることを確認
-          const errorMessage = error instanceof Error ? error.message : String(error);
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
           expect(errorMessage).toBeDefined();
-          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          if (
+            process.env.NODE_ENV === 'development' ||
+            process.env.JEST_DEBUG === '1'
+          ) {
             console.log('期待されるエラー（ポート競合）:', errorMessage);
           }
         } finally {
@@ -280,10 +349,19 @@ describe('Complete Features E2E Tests', () => {
         }
       } catch (error) {
         // モデルが見つからない場合などはスキップ
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('モデル') || errorMessage.includes('見つかりません')) {
-          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-            console.warn('API作成エラーハンドリングテストをスキップ（モデルなし）');
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        if (
+          errorMessage.includes('モデル') ||
+          errorMessage.includes('見つかりません')
+        ) {
+          if (
+            process.env.NODE_ENV === 'development' ||
+            process.env.JEST_DEBUG === '1'
+          ) {
+            console.warn(
+              'API作成エラーハンドリングテストをスキップ（モデルなし）'
+            );
           }
           expect(true).toBe(true);
         } else {
@@ -295,7 +373,9 @@ describe('Complete Features E2E Tests', () => {
     it('should handle invalid model name errors', async () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
       try {
@@ -310,10 +390,14 @@ describe('Complete Features E2E Tests', () => {
         expect(true).toBe(true);
       } catch (error) {
         // エラーが適切に処理されることを確認
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         expect(errorMessage).toBeDefined();
         expect(typeof errorMessage).toBe('string');
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.log('期待されるエラー（無効なモデル名）:', errorMessage);
         }
       }
@@ -327,20 +411,27 @@ describe('Complete Features E2E Tests', () => {
     it('should complete full API creation flow', async () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
       try {
         // ステップ1: モデル一覧取得
-        const models = await invoke<Array<{
-          name: string;
-          size: number | null;
-          modified_at: string;
-          parameter_size: string | null;
-        }>>('get_models_list');
+        const models = await invoke<
+          Array<{
+            name: string;
+            size: number | null;
+            modified_at: string;
+            parameter_size: string | null;
+          }>
+        >('get_models_list');
 
         if (models.length === 0) {
-          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          if (
+            process.env.NODE_ENV === 'development' ||
+            process.env.JEST_DEBUG === '1'
+          ) {
             console.warn('モデルがないため、API作成フローテストをスキップ');
           }
           expect(true).toBe(true);
@@ -393,18 +484,27 @@ describe('Complete Features E2E Tests', () => {
         expect(details.name).toBe('Complete Flow Test API');
 
         // ステップ5: API一覧から確認（ナビゲーションの動作をシミュレート）
-        const apis = await invoke<Array<{
-          id: string;
-          name: string;
-        }>>('list_apis');
+        const apis = await invoke<
+          Array<{
+            id: string;
+            name: string;
+          }>
+        >('list_apis');
 
         const createdApi = apis.find(api => api.id === createdApiId);
         expect(createdApi).toBeDefined();
         expect(createdApi?.name).toBe('Complete Flow Test API');
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('モデル') || errorMessage.includes('見つかりません')) {
-          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+        if (
+          errorMessage.includes('モデル') ||
+          errorMessage.includes('見つかりません')
+        ) {
+          if (
+            process.env.NODE_ENV === 'development' ||
+            process.env.JEST_DEBUG === '1'
+          ) {
             console.warn('完全API作成フローテストをスキップ（モデルなし）');
           }
           expect(true).toBe(true);
@@ -417,11 +517,16 @@ describe('Complete Features E2E Tests', () => {
     it('should handle API deletion and cleanup', async () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
       if (!createdApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('APIが作成されていないため、削除テストをスキップ');
         }
         expect(true).toBe(true);
@@ -439,7 +544,10 @@ describe('Complete Features E2E Tests', () => {
         expect(deletedApi).toBeUndefined();
         createdApiId = null; // クリーンアップ済みとしてマーク
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('API削除テストをスキップ:', error);
         }
         expect(true).toBe(true);
@@ -454,25 +562,34 @@ describe('Complete Features E2E Tests', () => {
     it('should maintain data consistency across operations', async () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
       try {
         // API一覧を取得
-        const apisBefore = await invoke<Array<{
-          id: string;
-          name: string;
-        }>>('list_apis');
+        const apisBefore = await invoke<
+          Array<{
+            id: string;
+            name: string;
+          }>
+        >('list_apis');
 
         const initialCount = apisBefore.length;
 
         // 新しいAPIを作成
-        const models = await invoke<Array<{
-          name: string;
-        }>>('get_models_list');
+        const models = await invoke<
+          Array<{
+            name: string;
+          }>
+        >('get_models_list');
 
         if (models.length === 0) {
-          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          if (
+            process.env.NODE_ENV === 'development' ||
+            process.env.JEST_DEBUG === '1'
+          ) {
             console.warn('モデルがないため、データ整合性テストをスキップ');
           }
           expect(true).toBe(true);
@@ -491,10 +608,12 @@ describe('Complete Features E2E Tests', () => {
           });
 
           // 作成後のAPI一覧を取得
-          const apisAfter = await invoke<Array<{
-            id: string;
-            name: string;
-          }>>('list_apis');
+          const apisAfter = await invoke<
+            Array<{
+              id: string;
+              name: string;
+            }>
+          >('list_apis');
 
           // APIが追加されたことを確認
           expect(apisAfter.length).toBe(initialCount + 1);
@@ -508,17 +627,26 @@ describe('Complete Features E2E Tests', () => {
           await invoke('delete_api', { apiId: newApi.id });
 
           // 削除後のAPI一覧を取得
-          const apisFinal = await invoke<Array<{
-            id: string;
-          }>>('list_apis');
+          const apisFinal = await invoke<
+            Array<{
+              id: string;
+            }>
+          >('list_apis');
 
           // APIが削除されたことを確認
           expect(apisFinal.length).toBe(initialCount);
           expect(apisFinal.find(api => api.id === newApi.id)).toBeUndefined();
         } catch (error) {
-          const errorMessage = error instanceof Error ? error.message : String(error);
-          if (errorMessage.includes('モデル') || errorMessage.includes('見つかりません')) {
-            if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+          const errorMessage =
+            error instanceof Error ? error.message : String(error);
+          if (
+            errorMessage.includes('モデル') ||
+            errorMessage.includes('見つかりません')
+          ) {
+            if (
+              process.env.NODE_ENV === 'development' ||
+              process.env.JEST_DEBUG === '1'
+            ) {
               console.warn('データ整合性テストをスキップ（モデルなし）');
             }
             expect(true).toBe(true);
@@ -527,7 +655,10 @@ describe('Complete Features E2E Tests', () => {
           }
         }
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('データ整合性テストをスキップ:', error);
         }
         expect(true).toBe(true);
@@ -535,4 +666,3 @@ describe('Complete Features E2E Tests', () => {
     });
   });
 });
-

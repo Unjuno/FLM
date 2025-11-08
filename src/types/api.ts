@@ -152,4 +152,3 @@ export interface ApiUpdateRequest {
     engine_config?: string | null; // エンジン固有設定（JSON形式）
   };
 }
-

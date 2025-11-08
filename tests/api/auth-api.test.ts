@@ -52,21 +52,25 @@ describe('Authentication API Tests', () => {
   describe('API Key Authentication', () => {
     it('should accept valid API key', async () => {
       if (!apiEndpoint || !apiKey) {
-        console.warn('APIエンドポイントまたはAPIキーが設定されていないため、スキップします');
+        console.warn(
+          'APIエンドポイントまたはAPIキーが設定されていないため、スキップします'
+        );
         expect(true).toBe(true);
         return;
       }
 
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
-      
+
       const response = await fetch(`${apiEndpoint}/v1/models`, {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
         },
       });
 
@@ -82,14 +86,16 @@ describe('Authentication API Tests', () => {
 
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
-      
+
       const response = await fetch(`${apiEndpoint}/v1/models`, {
         headers: {
-          'Authorization': 'Bearer invalid-key-12345',
+          Authorization: 'Bearer invalid-key-12345',
         },
       });
 
@@ -105,11 +111,13 @@ describe('Authentication API Tests', () => {
 
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
-      
+
       const response = await fetch(`${apiEndpoint}/v1/models`);
 
       expect(response.status).toBe(401);
@@ -141,11 +149,13 @@ describe('Authentication API Tests', () => {
 
         // Tauriアプリが起動していない場合はスキップ
         if (!process.env.TAURI_APP_AVAILABLE) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+          console.warn(
+            'Tauriアプリが起動していないため、このテストをスキップします'
+          );
           expect(true).toBe(true);
           return;
         }
-        
+
         const response = await fetch(`${noAuthEndpoint}/v1/models`);
 
         expect(response.status).toBe(200);
@@ -165,4 +175,3 @@ describe('Authentication API Tests', () => {
     }, 30000);
   });
 });
-

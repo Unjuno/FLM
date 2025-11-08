@@ -15,8 +15,24 @@ pub struct AppSettings {
     pub auto_refresh_interval: Option<u32>,
     /// ログ保持期間（日数、デフォルト: 30）
     pub log_retention_days: Option<u32>,
+    /// 監査ログ保持期間（日数、デフォルト: 90）
+    pub audit_log_retention_days: Option<u32>,
     /// 通知設定（true | false）
     pub notifications_enabled: Option<bool>,
+    /// アプリ終了時にAPIを停止するか（true | false、デフォルト: true）
+    pub stop_apis_on_exit: Option<bool>,
+    /// リクエストボディをログに保存するか（true | false、デフォルト: true、プライバシー保護のため無効化可能）
+    pub save_request_body: Option<bool>,
+    /// 診断機能を有効にするか（true | false、デフォルト: true、プライバシー保護のため無効化可能）
+    pub diagnostics_enabled: Option<bool>,
+    /// パフォーマンスメトリクス収集を有効にするか（true | false、デフォルト: true、プライバシー保護のため無効化可能）
+    pub performance_metrics_enabled: Option<bool>,
+    /// 監査ログにIPアドレスを含めるか（true | false、デフォルト: true、プライバシー保護のため無効化可能）
+    pub include_ip_address_in_audit_log: Option<bool>,
+    /// デバイスIDの使用を許可するか（true | false、デフォルト: true、リモート同期機能で使用、プライバシー保護のため無効化可能）
+    pub device_id_enabled: Option<bool>,
+    /// バックアップファイルをデフォルトで暗号化するか（true | false、デフォルト: false、プライバシー保護のため有効化推奨）
+    pub backup_encrypt_by_default: Option<bool>,
 }
 
 /// アプリケーション設定取得コマンド
@@ -46,7 +62,39 @@ pub async fn get_app_settings() -> Result<AppSettings, String> {
         .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
         .and_then(|v| v.parse::<u32>().ok());
     
+    let audit_log_retention_days = settings_repo.get("audit_log_retention_days")
+        .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
+        .and_then(|v| v.parse::<u32>().ok());
+    
     let notifications_enabled = settings_repo.get("notifications_enabled")
+        .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
+        .and_then(|v| v.parse::<bool>().ok());
+    
+    let stop_apis_on_exit = settings_repo.get("stop_apis_on_exit")
+        .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
+        .and_then(|v| v.parse::<bool>().ok());
+    
+    let save_request_body = settings_repo.get("save_request_body")
+        .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
+        .and_then(|v| v.parse::<bool>().ok());
+    
+    let diagnostics_enabled = settings_repo.get("diagnostics_enabled")
+        .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
+        .and_then(|v| v.parse::<bool>().ok());
+    
+    let performance_metrics_enabled = settings_repo.get("performance_metrics_enabled")
+        .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
+        .and_then(|v| v.parse::<bool>().ok());
+    
+    let include_ip_address_in_audit_log = settings_repo.get("include_ip_address_in_audit_log")
+        .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
+        .and_then(|v| v.parse::<bool>().ok());
+    
+    let device_id_enabled = settings_repo.get("device_id_enabled")
+        .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
+        .and_then(|v| v.parse::<bool>().ok());
+    
+    let backup_encrypt_by_default = settings_repo.get("backup_encrypt_by_default")
         .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
         .and_then(|v| v.parse::<bool>().ok());
     
@@ -55,7 +103,15 @@ pub async fn get_app_settings() -> Result<AppSettings, String> {
         language,
         auto_refresh_interval: auto_refresh_interval.or(Some(30)), // デフォルト: 30秒
         log_retention_days: log_retention_days.or(Some(30)), // デフォルト: 30日
+        audit_log_retention_days: audit_log_retention_days.or(Some(90)), // デフォルト: 90日
         notifications_enabled: notifications_enabled.or(Some(true)), // デフォルト: 有効
+        stop_apis_on_exit: stop_apis_on_exit.or(Some(true)), // デフォルト: 有効（アプリ終了時にAPIを停止）
+        save_request_body: save_request_body.or(Some(true)), // デフォルト: 有効（プライバシー保護のため無効化可能）
+        diagnostics_enabled: diagnostics_enabled.or(Some(true)), // デフォルト: 有効（プライバシー保護のため無効化可能）
+        performance_metrics_enabled: performance_metrics_enabled.or(Some(true)), // デフォルト: 有効（プライバシー保護のため無効化可能）
+        include_ip_address_in_audit_log: include_ip_address_in_audit_log.or(Some(true)), // デフォルト: 有効（プライバシー保護のため無効化可能）
+        device_id_enabled: device_id_enabled.or(Some(true)), // デフォルト: 有効（リモート同期機能で使用、プライバシー保護のため無効化可能）
+        backup_encrypt_by_default: backup_encrypt_by_default.or(Some(false)), // デフォルト: 無効（プライバシー保護のため有効化推奨）
     })
 }
 
@@ -94,9 +150,51 @@ pub async fn update_app_settings(settings: AppSettings) -> Result<(), String> {
         })?;
     }
     
+    if let Some(days) = settings.audit_log_retention_days {
+        settings_repo.set("audit_log_retention_days", &days.to_string()).map_err(|e| {
+            format!("監査ログ保持期間の保存に失敗しました: {}", e)
+        })?;
+    }
+    
     if let Some(enabled) = settings.notifications_enabled {
         settings_repo.set("notifications_enabled", &enabled.to_string()).map_err(|e| {
             format!("通知設定の保存に失敗しました: {}", e)
+        })?;
+    }
+    
+    if let Some(stop_on_exit) = settings.stop_apis_on_exit {
+        settings_repo.set("stop_apis_on_exit", &stop_on_exit.to_string()).map_err(|e| {
+            format!("アプリ終了時のAPI停止設定の保存に失敗しました: {}", e)
+        })?;
+    }
+    
+    if let Some(save_body) = settings.save_request_body {
+        settings_repo.set("save_request_body", &save_body.to_string()).map_err(|e| {
+            format!("リクエストボディ保存設定の保存に失敗しました: {}", e)
+        })?;
+    }
+    
+    if let Some(enabled) = settings.diagnostics_enabled {
+        settings_repo.set("diagnostics_enabled", &enabled.to_string()).map_err(|e| {
+            format!("診断機能設定の保存に失敗しました: {}", e)
+        })?;
+    }
+    
+    if let Some(enabled) = settings.performance_metrics_enabled {
+        settings_repo.set("performance_metrics_enabled", &enabled.to_string()).map_err(|e| {
+            format!("パフォーマンスメトリクス設定の保存に失敗しました: {}", e)
+        })?;
+    }
+    
+    if let Some(enabled) = settings.include_ip_address_in_audit_log {
+        settings_repo.set("include_ip_address_in_audit_log", &enabled.to_string()).map_err(|e| {
+            format!("監査ログIPアドレス設定の保存に失敗しました: {}", e)
+        })?;
+    }
+    
+    if let Some(enabled) = settings.device_id_enabled {
+        settings_repo.set("device_id_enabled", &enabled.to_string()).map_err(|e| {
+            format!("デバイスID設定の保存に失敗しました: {}", e)
         })?;
     }
     

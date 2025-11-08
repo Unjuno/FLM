@@ -24,7 +24,7 @@ describe('ModelDetailModal.tsx', () => {
     it('モデル情報を表示する', () => {
       const onClose = jest.fn();
       const onDownload = jest.fn();
-      
+
       render(
         <ModelDetailModal
           model={mockModel}
@@ -32,15 +32,17 @@ describe('ModelDetailModal.tsx', () => {
           onDownload={onDownload}
         />
       );
-      
+
       expect(screen.getByText('llama3:8b')).toBeInTheDocument();
-      expect(screen.getByText('高性能な汎用チャットモデル')).toBeInTheDocument();
+      expect(
+        screen.getByText('高性能な汎用チャットモデル')
+      ).toBeInTheDocument();
     });
 
     it('モデルのサイズを表示する', () => {
       const onClose = jest.fn();
       const onDownload = jest.fn();
-      
+
       render(
         <ModelDetailModal
           model={mockModel}
@@ -48,14 +50,14 @@ describe('ModelDetailModal.tsx', () => {
           onDownload={onDownload}
         />
       );
-      
+
       expect(screen.getByText(/4\.00 GB/i)).toBeInTheDocument();
     });
 
     it('モデルのパラメータ数を表示する', () => {
       const onClose = jest.fn();
       const onDownload = jest.fn();
-      
+
       render(
         <ModelDetailModal
           model={mockModel}
@@ -63,7 +65,7 @@ describe('ModelDetailModal.tsx', () => {
           onDownload={onDownload}
         />
       );
-      
+
       expect(screen.getByText(/8\.0B/i)).toBeInTheDocument();
     });
   });
@@ -72,7 +74,7 @@ describe('ModelDetailModal.tsx', () => {
     it('オーバーレイをクリックするとonCloseが呼ばれる', () => {
       const onClose = jest.fn();
       const onDownload = jest.fn();
-      
+
       const { container } = render(
         <ModelDetailModal
           model={mockModel}
@@ -80,10 +82,10 @@ describe('ModelDetailModal.tsx', () => {
           onDownload={onDownload}
         />
       );
-      
+
       const overlay = container.querySelector('.model-detail-modal-overlay');
       expect(overlay).toBeInTheDocument();
-      
+
       if (overlay) {
         fireEvent.click(overlay);
         expect(onClose).toHaveBeenCalledTimes(1);
@@ -93,7 +95,7 @@ describe('ModelDetailModal.tsx', () => {
     it('閉じるボタンをクリックするとonCloseが呼ばれる', () => {
       const onClose = jest.fn();
       const onDownload = jest.fn();
-      
+
       const { container } = render(
         <ModelDetailModal
           model={mockModel}
@@ -101,11 +103,11 @@ describe('ModelDetailModal.tsx', () => {
           onDownload={onDownload}
         />
       );
-      
+
       // 閉じるボタン（✕）を検索
       const closeButton = container.querySelector('.close-button');
       expect(closeButton).toBeInTheDocument();
-      
+
       if (closeButton) {
         fireEvent.click(closeButton);
         expect(onClose).toHaveBeenCalledTimes(1);
@@ -117,7 +119,7 @@ describe('ModelDetailModal.tsx', () => {
     it('ダウンロードボタンをクリックするとonDownloadが呼ばれる', () => {
       const onClose = jest.fn();
       const onDownload = jest.fn();
-      
+
       const { container } = render(
         <ModelDetailModal
           model={mockModel}
@@ -125,11 +127,11 @@ describe('ModelDetailModal.tsx', () => {
           onDownload={onDownload}
         />
       );
-      
+
       // ダウンロードボタンを検索（テキストで検索）
       const downloadButton = screen.getByText(/📥 ダウンロード/i);
       expect(downloadButton).toBeInTheDocument();
-      
+
       fireEvent.click(downloadButton);
       expect(onDownload).toHaveBeenCalledTimes(1);
     });
@@ -139,7 +141,7 @@ describe('ModelDetailModal.tsx', () => {
     it('チャットカテゴリを表示する', () => {
       const onClose = jest.fn();
       const onDownload = jest.fn();
-      
+
       render(
         <ModelDetailModal
           model={{ ...mockModel, category: 'chat' }}
@@ -147,7 +149,7 @@ describe('ModelDetailModal.tsx', () => {
           onDownload={onDownload}
         />
       );
-      
+
       // より具体的なセレクターを使用（カテゴリラベルのみを検索）
       const categoryLabel = screen.getByText('カテゴリ:');
       expect(categoryLabel).toBeInTheDocument();
@@ -158,7 +160,7 @@ describe('ModelDetailModal.tsx', () => {
     it('コード生成カテゴリを表示する', () => {
       const onClose = jest.fn();
       const onDownload = jest.fn();
-      
+
       render(
         <ModelDetailModal
           model={{ ...mockModel, category: 'code' }}
@@ -166,9 +168,8 @@ describe('ModelDetailModal.tsx', () => {
           onDownload={onDownload}
         />
       );
-      
+
       expect(screen.getByText(/コード生成/i)).toBeInTheDocument();
     });
   });
 });
-

@@ -29,8 +29,10 @@ function initDownloadButtons() {
         return;
       }
       
-      // ダウンロード追跡（将来の分析用）
-      trackDownload(os);
+      // ダウンロード追跡（オプトイン方式、非同期）
+      trackDownload(os).catch(err => {
+        console.error('ダウンロード追跡エラー:', err);
+      });
     });
   });
 }
@@ -58,13 +60,121 @@ function detectOS() {
 }
 
 /**
- * ダウンロード追跡（将来の分析用）
+ * ダウンロード追跡の同意を確認
  */
-function trackDownload(os) {
+function checkTrackingConsent() {
+  const consent = localStorage.getItem('flm_tracking_consent');
+  if (consent === null) {
+    // 初回訪問時は同意を求める
+    return showTrackingConsentDialog();
+  }
+  return consent === 'true';
+}
+
+/**
+ * ダウンロード追跡の同意ダイアログを表示
+ */
+function showTrackingConsentDialog() {
+  return new Promise((resolve) => {
+    // 既にダイアログが表示されている場合はスキップ
+    if (document.getElementById('tracking-consent-dialog')) {
+      resolve(false);
+      return;
+    }
+
+    const dialog = document.createElement('div');
+    dialog.id = 'tracking-consent-dialog';
+    dialog.className = 'tracking-consent-dialog';
+    dialog.innerHTML = `
+      <div class="tracking-consent-content">
+        <h3>プライバシー設定</h3>
+        <p>
+          ダウンロード統計の収集にご協力いただけますか？<br>
+          収集される情報：OS情報、ダウンロード日時（ローカルストレージに保存）
+        </p>
+        <p class="tracking-consent-note">
+          <a href="privacy.html" target="_blank">プライバシーポリシー</a>をご確認ください。
+        </p>
+        <div class="tracking-consent-buttons">
+          <button class="btn btn-primary" id="tracking-consent-accept">同意する</button>
+          <button class="btn btn-secondary" id="tracking-consent-decline">拒否する</button>
+        </div>
+      </div>
+    `;
+    
+    // スタイルを追加
+    dialog.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    `;
+    
+    const content = dialog.querySelector('.tracking-consent-content');
+    content.style.cssText = `
+      background: white;
+      padding: 2rem;
+      border-radius: 8px;
+      max-width: 500px;
+      margin: 1rem;
+      box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    `;
+    
+    const buttons = dialog.querySelector('.tracking-consent-buttons');
+    buttons.style.cssText = `
+      display: flex;
+      gap: 1rem;
+      margin-top: 1.5rem;
+      justify-content: flex-end;
+    `;
+    
+    const note = dialog.querySelector('.tracking-consent-note');
+    note.style.cssText = `
+      font-size: 0.875rem;
+      color: #666;
+      margin-top: 1rem;
+    `;
+    
+    // イベントリスナー
+    dialog.querySelector('#tracking-consent-accept').addEventListener('click', () => {
+      localStorage.setItem('flm_tracking_consent', 'true');
+      dialog.remove();
+      resolve(true);
+    });
+    
+    dialog.querySelector('#tracking-consent-decline').addEventListener('click', () => {
+      localStorage.setItem('flm_tracking_consent', 'false');
+      dialog.remove();
+      resolve(false);
+    });
+    
+    document.body.appendChild(dialog);
+  });
+}
+
+/**
+ * ダウンロード追跡（オプトイン方式）
+ */
+async function trackDownload(os) {
+  // ユーザーの同意を確認
+  const hasConsent = await checkTrackingConsent();
+  
+  if (!hasConsent) {
+    // 同意がない場合は追跡しない
+    console.log('ダウンロード追跡はスキップされました（ユーザーが同意していません）');
+    return;
+  }
+  
   // 将来的にGoogle Analytics等のトラッキングコードを追加可能
   console.log(`Download initiated for OS: ${os}`);
   
-  // ローカルストレージに記録（オプション）
+  // ローカルストレージに記録（同意がある場合のみ）
   try {
     const downloads = JSON.parse(localStorage.getItem('flm_downloads') || '[]');
     downloads.push({
@@ -74,6 +184,7 @@ function trackDownload(os) {
     localStorage.setItem('flm_downloads', JSON.stringify(downloads));
   } catch (e) {
     // エラーは無視
+    console.error('ダウンロード追跡の保存に失敗しました:', e);
   }
 }
 

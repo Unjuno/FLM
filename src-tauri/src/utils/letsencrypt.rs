@@ -36,9 +36,7 @@ pub async fn obtain_certificate(
 ) -> Result<CertificateInfo, AppError> {
     // 証明書保存ディレクトリを取得
     let cert_dir = get_certificate_directory(&config.api_id)?;
-    fs::create_dir_all(&cert_dir).map_err(|e| AppError::IoError {
-        message: format!("証明書ディレクトリ作成エラー: {}", e),
-    })?;
+    fs::create_dir_all(&cert_dir).map_err(|e| AppError::io_error(format!("証明書ディレクトリ作成エラー: {}", e)))?;
     
     // Let's Encryptから証明書を取得
     // 注意: 実際の実装では、acme-lib（https://github.com/alexejk/rustls-acme）などのライブラリを使用
@@ -106,10 +104,7 @@ pub async fn get_certificate_info(
     let key_path = cert_dir.join(format!("{}.key", domain));
     
     if !cert_path.exists() || !key_path.exists() {
-        return Err(AppError::ApiError {
-            message: "証明書が見つかりません".to_string(),
-            code: "CERT_NOT_FOUND".to_string(),
-        });
+        return Err(AppError::api_error("証明書が見つかりません", "CERT_NOT_FOUND"));
     }
     
     // 証明書の有効期限を取得（実際の実装では、証明書をパースして情報を取得）
@@ -128,9 +123,7 @@ pub async fn get_certificate_info(
 fn get_certificate_directory(api_id: &str) -> Result<PathBuf, AppError> {
     use crate::database::connection::get_app_data_dir;
     
-    let app_data_dir = get_app_data_dir().map_err(|e| AppError::DatabaseError {
-        message: format!("アプリデータディレクトリ取得エラー: {}", e),
-    })?;
+    let app_data_dir = get_app_data_dir().map_err(|e| AppError::database_error(format!("アプリデータディレクトリ取得エラー: {}", e)))?;
     
     Ok(app_data_dir.join("certificates").join(api_id))
 }
@@ -142,16 +135,13 @@ pub async fn schedule_certificate_renewal(
     // スケジューラーに証明書更新タスクを追加
     use crate::utils::scheduler;
     
-    let config_clone = config.clone();
+    let _config_clone = config.clone();
     scheduler::add_schedule_task(
         &format!("cert_renewal_{}", config.api_id),
         scheduler::TaskType::CertificateRenewal,
         &config.api_id,
         (60 * 60 * 24) as u64, // 1日ごとにチェック
-    ).await.map_err(|e| AppError::ApiError {
-        message: format!("証明書更新スケジュール設定エラー: {}", e),
-        code: "SCHEDULE_ERROR".to_string(),
-    })?;
+    ).await.map_err(|e| AppError::api_error(format!("証明書更新スケジュール設定エラー: {}", e), "SCHEDULE_ERROR"))?;
     
     Ok(())
 }
@@ -181,4 +171,5 @@ pub async fn check_certificate_expiry(
         Ok(false)
     }
 }
+
 

@@ -1,9 +1,45 @@
 // Memory Monitor Module
 // メモリ監視機能: メモリリーク検出と監視機能
+// 監査レポートの推奨事項に基づき、ピークメモリ追跡機能を追加
 
 use crate::utils::error::AppError;
 use serde::{Deserialize, Serialize};
 use sysinfo::{System, SystemExt, ProcessExt, Pid};
+use std::sync::{Mutex, OnceLock};
+
+/// ピークメモリ追跡用のグローバル状態（監査レポートの推奨事項に基づき追加）
+static PEAK_MEMORY: OnceLock<Mutex<u64>> = OnceLock::new();
+
+/// ピークメモリを初期化
+fn init_peak_memory() -> &'static Mutex<u64> {
+    PEAK_MEMORY.get_or_init(|| Mutex::new(0))
+}
+
+/// ピークメモリを更新（現在のメモリ使用量がピークを超えた場合）
+fn update_peak_memory(current_memory: u64) {
+    let peak_memory = init_peak_memory();
+    if let Ok(mut peak) = peak_memory.lock() {
+        if current_memory > *peak {
+            *peak = current_memory;
+        }
+    }
+}
+
+/// ピークメモリを取得
+fn get_peak_memory() -> u64 {
+    let peak_memory = init_peak_memory();
+    peak_memory.lock()
+        .map(|peak| *peak)
+        .unwrap_or(0)
+}
+
+/// ピークメモリをリセット（アプリ起動時など）
+pub fn reset_peak_memory() {
+    let peak_memory = init_peak_memory();
+    if let Ok(mut peak) = peak_memory.lock() {
+        *peak = 0;
+    }
+}
 
 /// メモリ使用状況
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,7 +73,7 @@ impl Default for MemoryMonitorConfig {
     }
 }
 
-/// メモリ使用量を取得
+/// メモリ使用量を取得（監査レポートの推奨事項に基づきピークメモリ追跡を追加）
 pub fn get_memory_usage() -> Result<MemoryUsage, AppError> {
     let mut system = System::new();
     system.refresh_processes();
@@ -46,7 +82,10 @@ pub fn get_memory_usage() -> Result<MemoryUsage, AppError> {
     
     if let Some(process) = system.process(pid) {
         let current_memory = process.memory(); // バイト単位
-        let peak_memory = process.memory(); // 実際の実装では、ピークメモリを追跡する必要がある
+        
+        // ピークメモリを更新（監査レポートの推奨事項に基づき追加）
+        update_peak_memory(current_memory);
+        let peak_memory = get_peak_memory();
         
         let config = MemoryMonitorConfig::default();
         let memory_limit = config.memory_limit_mb * 1024 * 1024;
@@ -63,10 +102,7 @@ pub fn get_memory_usage() -> Result<MemoryUsage, AppError> {
             is_healthy,
         })
     } else {
-        Err(AppError::ApiError {
-            message: "プロセス情報を取得できませんでした".to_string(),
-            code: "PROCESS_NOT_FOUND".to_string(),
-        })
+        Err(AppError::api_error("プロセス情報を取得できませんでした", "PROCESS_NOT_FOUND"))
     }
 }
 
@@ -206,4 +242,5 @@ pub async fn start_memory_monitoring(
     
     Ok(())
 }
+
 

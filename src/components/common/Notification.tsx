@@ -1,6 +1,6 @@
 // Notification - 通知コンポーネント
 
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { NOTIFICATION, TIMEOUT } from '../../constants/config';
 import './Notification.css';
 
@@ -8,6 +8,14 @@ import './Notification.css';
  * 通知タイプ
  */
 export type NotificationType = 'success' | 'error' | 'warning' | 'info';
+
+/**
+ * 通知アクション
+ */
+export interface NotificationAction {
+  label: string;
+  onClick: () => void;
+}
 
 /**
  * 通知アイテム
@@ -19,6 +27,7 @@ export interface NotificationItem {
   message?: string;
   duration?: number; // 自動非表示までの時間（ミリ秒、0で自動非表示しない）
   timestamp: number;
+  action?: NotificationAction; // アクションボタン（オプション）
 }
 
 /**
@@ -39,10 +48,24 @@ export const Notification: React.FC<NotificationProps> = ({
   const [isVisible, setIsVisible] = useState(false);
   const [isRemoving, setIsRemoving] = useState(false);
 
+  /**
+   * 通知を閉じる
+   */
+  const handleClose = useCallback(() => {
+    setIsRemoving(true);
+    // アニメーション完了後に削除
+    setTimeout(() => {
+      onClose(notification.id);
+    }, TIMEOUT.ANIMATION_DURATION);
+  }, [notification.id, onClose]);
+
   // アニメーション用の表示制御
   useEffect(() => {
     // マウント時にアニメーション開始
-    const timer = setTimeout(() => setIsVisible(true), TIMEOUT.VISIBILITY_DELAY);
+    const timer = setTimeout(
+      () => setIsVisible(true),
+      TIMEOUT.VISIBILITY_DELAY
+    );
     return () => clearTimeout(timer);
   }, []);
 
@@ -58,18 +81,7 @@ export const Notification: React.FC<NotificationProps> = ({
     }, duration);
 
     return () => clearTimeout(timer);
-  }, [notification.duration]);
-
-  /**
-   * 通知を閉じる
-   */
-  const handleClose = () => {
-    setIsRemoving(true);
-    // アニメーション完了後に削除
-    setTimeout(() => {
-      onClose(notification.id);
-    }, TIMEOUT.ANIMATION_DURATION);
-  };
+  }, [notification.duration, handleClose]);
 
   // タイプに応じたアイコンを取得
   const getIcon = () => {
@@ -103,6 +115,18 @@ export const Notification: React.FC<NotificationProps> = ({
         {notification.message && (
           <div className="notification-message">{notification.message}</div>
         )}
+        {notification.action && (
+          <button
+            className="notification-action"
+            onClick={() => {
+              notification.action?.onClick();
+              handleClose();
+            }}
+            aria-label={notification.action.label}
+          >
+            {notification.action.label}
+          </button>
+        )}
       </div>
       <button
         className="notification-close"
@@ -114,4 +138,3 @@ export const Notification: React.FC<NotificationProps> = ({
     </div>
   );
 };
-

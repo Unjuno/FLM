@@ -156,7 +156,7 @@ impl ApiConfigCache {
     }
 }
 
-/// グローバルキャッシュインスタンス
+// グローバルキャッシュインスタンス
 lazy_static::lazy_static! {
     pub static ref MODEL_LIST_CACHE: ModelListCache = ModelListCache::new(60); // 60秒TTL
     pub static ref API_CONFIG_CACHE: ApiConfigCache = ApiConfigCache::new(300); // 5分TTL
@@ -182,4 +182,5 @@ pub async fn start_cache_cleanup() -> Result<(), AppError> {
     
     Ok(())
 }
+
 

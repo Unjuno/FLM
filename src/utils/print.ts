@@ -33,11 +33,12 @@ const DEFAULT_LINE_HEIGHT = 1.5;
  * エラーメッセージ
  */
 const ERROR_MESSAGES = {
-  POPUP_BLOCKED: '印刷ウィンドウを開けませんでした。ポップアップブロッカーが有効になっている可能性があります。',
+  POPUP_BLOCKED:
+    '印刷ウィンドウを開けませんでした。ポップアップブロッカーが有効になっている可能性があります。',
   ELEMENT_NOT_FOUND: '印刷対象の要素が見つかりませんでした。',
   WINDOW_LOAD_FAILED: '印刷ウィンドウの読み込みに失敗しました。',
   PRINT_FAILED: '印刷の実行中にエラーが発生しました。',
-  CALLBACK_ERROR: (phase: 'before' | 'after') => 
+  CALLBACK_ERROR: (phase: 'before' | 'after') =>
     `印刷${phase === 'before' ? '前' : '後'}コールバックでエラーが発生しました:`,
 } as const;
 
@@ -117,7 +118,7 @@ const escapeHtml = (str: string): string => {
     '"': '&quot;',
     "'": '&#39;',
   };
-  return str.replace(/[&<>"']/g, (char) => map[char] || char);
+  return str.replace(/[&<>"']/g, char => map[char] || char);
 };
 
 /**
@@ -125,7 +126,9 @@ const escapeHtml = (str: string): string => {
  * @param targetElement セレクタ文字列またはHTMLElement
  * @returns 取得した要素またはnull
  */
-const getTargetElement = (targetElement?: string | HTMLElement): HTMLElement | null => {
+const getTargetElement = (
+  targetElement?: string | HTMLElement
+): HTMLElement | null => {
   if (typeof targetElement === 'string') {
     return document.querySelector<HTMLElement>(targetElement);
   }
@@ -147,7 +150,7 @@ const safeExecuteCallback = async (
   try {
     await Promise.resolve(callback());
   } catch (error) {
-    console.error(ERROR_MESSAGES.CALLBACK_ERROR(phase), error);
+    logger.error(ERROR_MESSAGES.CALLBACK_ERROR(phase), error, 'print');
   }
 };
 
@@ -164,7 +167,7 @@ const handleError = async (
     try {
       printWindow.close();
     } catch (error) {
-      console.error('印刷ウィンドウの閉鎖中にエラーが発生しました:', error);
+      logger.error('印刷ウィンドウの閉鎖中にエラーが発生しました', error, 'print');
     }
   }
   if (afterPrint) {
@@ -178,18 +181,22 @@ const handleError = async (
  * @param content 印刷コンテンツ（innerHTMLから取得されたHTML文字列）
  * @param styles 追加CSSスタイル
  * @returns 完全なHTML文字列
- * 
+ *
  * 注意: contentは既存のDOM要素のinnerHTMLから取得されるため、
  * 信頼されたソースからのコンテンツのみが渡されることを前提としています。
  * 外部入力や信頼できないデータが含まれる可能性がある場合は、
  * 事前にサニタイゼーションが必要です。
  */
-const generatePrintHTML = (title: string, content: string, styles: string): string => {
+const generatePrintHTML = (
+  title: string,
+  content: string,
+  styles: string
+): string => {
   const escapedTitle = escapeHtml(title);
   const escapedStyles = escapeHtml(styles);
   const currentYear = new Date().getFullYear();
   const printDate = new Date().toLocaleString('ja-JP');
-  
+
   // contentはDOM要素のinnerHTMLから取得されるため、そのまま使用
   // ただし、将来外部入力が含まれる可能性がある場合は、サニタイゼーションが必要
 
@@ -220,7 +227,9 @@ ${DEFAULT_PRINT_STYLES.trim()}
  * 指定された要素を印刷します
  * @param options 印刷オプション
  */
-export const printElement = async (options: PrintOptions = {}): Promise<void> => {
+export const printElement = async (
+  options: PrintOptions = {}
+): Promise<void> => {
   const {
     targetElement,
     title = document.title,
@@ -238,24 +247,24 @@ export const printElement = async (options: PrintOptions = {}): Promise<void> =>
   // 新しいウィンドウを作成
   const printWindow = window.open('', '_blank');
   if (!printWindow) {
-    console.error(ERROR_MESSAGES.POPUP_BLOCKED);
-    alert(ERROR_MESSAGES.POPUP_BLOCKED);
+    logger.error(ERROR_MESSAGES.POPUP_BLOCKED, null, 'print');
+    // alert()を削除: エラーはコンソールに出力し、呼び出し元で適切に処理される
     await handleError(null, afterPrint);
     return;
   }
 
   // 読み込み失敗時のエラーハンドリングを先に設定
   printWindow.onerror = async () => {
-    console.error(ERROR_MESSAGES.WINDOW_LOAD_FAILED);
-    alert(ERROR_MESSAGES.WINDOW_LOAD_FAILED);
+    logger.error(ERROR_MESSAGES.WINDOW_LOAD_FAILED, null, 'print');
+    // alert()を削除: エラーはコンソールに出力し、呼び出し元で適切に処理される
     await handleError(printWindow, afterPrint);
   };
 
   // 印刷対象の要素を取得
   const elementToPrint = getTargetElement(targetElement);
   if (!elementToPrint) {
-    console.error(ERROR_MESSAGES.ELEMENT_NOT_FOUND);
-    alert(ERROR_MESSAGES.ELEMENT_NOT_FOUND);
+    logger.error(ERROR_MESSAGES.ELEMENT_NOT_FOUND, null, 'print');
+    // alert()を削除: エラーはコンソールに出力し、呼び出し元で適切に処理される
     await handleError(printWindow, afterPrint);
     return;
   }
@@ -280,20 +289,20 @@ export const printElement = async (options: PrintOptions = {}): Promise<void> =>
             try {
               printWindow.close();
             } catch (error) {
-              console.error('印刷ウィンドウの閉鎖中にエラーが発生しました:', error);
+              logger.error('印刷ウィンドウの閉鎖中にエラーが発生しました', error, 'print');
             }
             if (afterPrint) {
               await safeExecuteCallback(afterPrint, 'after');
             }
           }, WINDOW_CLOSE_DELAY_MS);
         } catch (error) {
-          console.error(ERROR_MESSAGES.PRINT_FAILED, error);
+          logger.error(ERROR_MESSAGES.PRINT_FAILED, error, 'print');
           await handleError(printWindow, afterPrint);
         }
       }, PRINT_DELAY_MS);
     };
   } catch (error) {
-    console.error('印刷処理中にエラーが発生しました:', error);
+    logger.error('印刷処理中にエラーが発生しました', error, 'print');
     await handleError(printWindow, afterPrint);
   }
 };
@@ -321,10 +330,12 @@ export const printPage = async (title?: string): Promise<void> => {
  * @param selector 要素のセレクタ
  * @param title ページタイトル（オプション）
  */
-export const printSelector = async (selector: string, title?: string): Promise<void> => {
+export const printSelector = async (
+  selector: string,
+  title?: string
+): Promise<void> => {
   await printElement({
     targetElement: selector,
     title: title || document.title,
   });
 };
-

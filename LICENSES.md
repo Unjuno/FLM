@@ -14,9 +14,9 @@
 |------------|----------|----------|------|
 | **@tauri-apps/api** | ^2 | MIT/Apache 2.0 | Tauri API通信 |
 | **@tauri-apps/plugin-opener** | ^2 | MIT/Apache 2.0 | 外部アプリケーション起動 |
-| **react** | ^19.1.0 | MIT | UIライブラリ |
-| **react-dom** | ^19.1.0 | MIT | React DOMレンダリング |
-| **react-router-dom** | ^7.9.5 | MIT | ルーティング |
+| **react** | ^18.3.1 | MIT | UIライブラリ |
+| **react-dom** | ^18.3.1 | MIT | React DOMレンダリング |
+| **react-router-dom** | ^6.26.1 | MIT | ルーティング |
 | **recharts** | ^2.15.4 | MIT | チャート表示 |
 
 ### 開発ツール
@@ -24,8 +24,8 @@
 | ライブラリ名 | バージョン | ライセンス | 用途 |
 |------------|----------|----------|------|
 | **@tauri-apps/cli** | ^2 | MIT/Apache 2.0 | Tauri CLI |
-| **vite** | ^7.0.4 | MIT | ビルドツール |
-| **typescript** | ~5.8.3 | Apache 2.0 | 型チェック |
+| **vite** | ^7.2.2 | MIT | ビルドツール |
+| **typescript** | ~5.5.4 | Apache 2.0 | 型チェック |
 | **eslint** | ^8.57.1 | MIT | リント |
 | **prettier** | ^3.6.2 | MIT | コードフォーマッター |
 | **jest** | ^29.7.0 | MIT | テストフレームワーク |

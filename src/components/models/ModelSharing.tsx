@@ -1,10 +1,12 @@
 // ModelSharing - モデル共有コンポーネント
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useTransition, useEffect } from 'react';
 import { safeInvoke } from '../../utils/tauri';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { ErrorMessage } from '../common/ErrorMessage';
 import { InfoBanner } from '../common/InfoBanner';
+import { extractErrorMessage } from '../../utils/errorHandler';
+import { logger } from '../../utils/logger';
 import './ModelSharing.css';
 
 /**
@@ -36,6 +38,35 @@ export const ModelSharing: React.FC = () => {
   const [sharing, setSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [sharedInfo, setSharedInfo] = useState<SharedModelInfo | null>(null);
+  const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
+  // 確認ダイアログの状態
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+  }>({
+    isOpen: false,
+    message: '',
+    onConfirm: () => {},
+    onCancel: () => {},
+  });
+
+  // ESCキーで確認ダイアログを閉じる
+  useEffect(() => {
+    if (!confirmDialog.isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [confirmDialog.isOpen]);
 
   /**
    * モデルを共有
@@ -46,43 +77,74 @@ export const ModelSharing: React.FC = () => {
       return;
     }
 
-    if (!confirm('モデルを共有しますか？公開設定は後で変更できません。')) {
-      return;
-    }
+    // モデル共有の同意プロセス（監査レポートの推奨事項に基づき、詳細な説明を追加）
+    const consentMessage = `モデルを共有しますか？
 
-    try {
-      setSharing(true);
-      setError(null);
-      
-      const tagsArray = tags.split(',').map(t => t.trim()).filter(t => t.length > 0);
-      
-      const info = await safeInvoke<SharedModelInfo>('share_model', {
-        config: {
-          model_name: modelName,
-          model_path: modelPath,
-          description: description || null,
-          tags: tagsArray,
-          license: license || null,
-          is_public: isPublic,
-        },
-      });
+以下の内容に同意してください：
 
-      setSharedInfo(info);
-      showSuccess('モデルを共有しました');
-      
-      // フォームをリセット
-      setModelName('');
-      setModelPath('');
-      setDescription('');
-      setTags('');
-      setLicense('');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'モデル共有に失敗しました');
-      showError(err instanceof Error ? err.message : 'モデル共有に失敗しました');
-    } finally {
-      setSharing(false);
-    }
-  }, [modelName, modelPath, description, tags, license, isPublic, showSuccess, showError]);
+• 共有するモデルファイルが公開される可能性があります
+• モデル名、説明、タグなどの情報が公開されます
+• 公開設定（is_public）は後で変更できません
+• 共有されたモデルは他のユーザーがダウンロードできるようになります
+
+プライバシーに関する詳細は、SECURITY_POLICY.mdを参照してください。`;
+
+    setConfirmDialog({
+      isOpen: true,
+      message: consentMessage,
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        try {
+          setSharing(true);
+          setError(null);
+
+          const tagsArray = tags
+            .split(',')
+            .map(t => t.trim())
+            .filter(t => t.length > 0);
+
+          const info = await safeInvoke<SharedModelInfo>('share_model_command', {
+            config: {
+              model_name: modelName,
+              model_path: modelPath,
+              description: description || null,
+              tags: tagsArray,
+              license: license || null,
+              is_public: isPublic,
+            },
+          });
+
+          setSharedInfo(info);
+          showSuccess('モデルを共有しました');
+
+          // フォームをリセット
+          setModelName('');
+          setModelPath('');
+          setDescription('');
+          setTags('');
+          setLicense('');
+        } catch (err) {
+          const errorMessage = extractErrorMessage(err, 'モデル共有に失敗しました');
+          setError(errorMessage);
+          showError(errorMessage);
+        } finally {
+          setSharing(false);
+        }
+      },
+      onCancel: () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+      },
+    });
+  }, [
+    modelName,
+    modelPath,
+    description,
+    tags,
+    license,
+    isPublic,
+    showSuccess,
+    showError,
+  ]);
 
   /**
    * ファイル選択ダイアログを開く
@@ -98,7 +160,7 @@ export const ModelSharing: React.FC = () => {
           },
         ],
       });
-      
+
       if (selectedPath) {
         setModelPath(selectedPath);
         showSuccess('ファイルを選択しました');
@@ -106,11 +168,10 @@ export const ModelSharing: React.FC = () => {
     } catch (err) {
       // エラーは静かに処理（手動入力にフォールバック）
       // eslint-disable-next-line no-console
-      if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-        console.warn('ファイル選択ダイアログが利用できません:', err);
-      }
-      showError('ファイル選択ダイアログが利用できません。手動でパスを入力してください。');
+      logger.warn('ファイル選択ダイアログが利用できません', err, 'ModelSharing');
+      showError(
+        'ファイル選択ダイアログが利用できません。手動でパスを入力してください。'
+      );
     }
   };
 
@@ -133,7 +194,7 @@ export const ModelSharing: React.FC = () => {
             type="text"
             className="form-input"
             value={modelName}
-            onChange={(e) => setModelName(e.target.value)}
+            onChange={e => setModelName(e.target.value)}
             placeholder="例: my-custom-model"
             disabled={sharing}
           />
@@ -149,7 +210,7 @@ export const ModelSharing: React.FC = () => {
               type="text"
               className="form-input"
               value={modelPath}
-              onChange={(e) => setModelPath(e.target.value)}
+              onChange={e => setModelPath(e.target.value)}
               placeholder="例: /path/to/model.gguf"
               disabled={sharing}
             />
@@ -170,7 +231,7 @@ export const ModelSharing: React.FC = () => {
             className="form-textarea"
             rows={4}
             value={description}
-            onChange={(e) => setDescription(e.target.value)}
+            onChange={e => setDescription(e.target.value)}
             placeholder="モデルの説明、用途、特徴などを記入してください"
             disabled={sharing}
           />
@@ -183,7 +244,7 @@ export const ModelSharing: React.FC = () => {
             type="text"
             className="form-input"
             value={tags}
-            onChange={(e) => setTags(e.target.value)}
+            onChange={e => setTags(e.target.value)}
             placeholder="例: chat, japanese, code"
             disabled={sharing}
           />
@@ -197,7 +258,7 @@ export const ModelSharing: React.FC = () => {
             type="text"
             className="form-input"
             value={license}
-            onChange={(e) => setLicense(e.target.value)}
+            onChange={e => setLicense(e.target.value)}
             placeholder="例: Apache 2.0, MIT, CC BY 4.0"
             disabled={sharing}
           />
@@ -208,7 +269,7 @@ export const ModelSharing: React.FC = () => {
             <input
               type="checkbox"
               checked={isPublic}
-              onChange={(e) => setIsPublic(e.target.checked)}
+              onChange={e => setIsPublic(e.target.checked)}
               disabled={sharing}
             />
             <span>公開（他のユーザーが検索・ダウンロード可能）</span>
@@ -218,8 +279,12 @@ export const ModelSharing: React.FC = () => {
         <div className="form-actions">
           <button
             className="button primary"
-            onClick={handleShare}
-            disabled={sharing || !modelName || !modelPath}
+            onClick={() => {
+              startTransition(() => {
+                handleShare();
+              });
+            }}
+            disabled={sharing || !modelName || !modelPath || isPending}
           >
             {sharing ? '共有中...' : '📤 モデルを共有'}
           </button>
@@ -240,7 +305,40 @@ export const ModelSharing: React.FC = () => {
           message={`モデル "${sharedInfo.name}" を共有しました。共有ID: ${sharedInfo.id}`}
         />
       )}
+
+      {/* 確認ダイアログ */}
+      {confirmDialog.isOpen && (
+        <div
+          className="confirm-dialog-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-dialog-title"
+        >
+          <div
+            className="confirm-dialog"
+            role="document"
+          >
+            <h3 id="confirm-dialog-title">確認</h3>
+            <p>{confirmDialog.message}</p>
+            <div className="confirm-dialog-actions">
+              <button
+                className="confirm-button cancel"
+                onClick={confirmDialog.onCancel}
+                type="button"
+              >
+                キャンセル
+              </button>
+              <button
+                className="confirm-button confirm"
+                onClick={confirmDialog.onConfirm}
+                type="button"
+              >
+                確認
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-

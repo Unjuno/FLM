@@ -1,10 +1,15 @@
 // ApiSettings - API設定変更ページ
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useTransition, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { Breadcrumb, BreadcrumbItem } from '../components/common/Breadcrumb';
+import { SkeletonLoader } from '../components/common/SkeletonLoader';
+import { useI18n } from '../contexts/I18nContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import { PORT_RANGE, API_NAME } from '../constants/config';
+import { extractErrorMessage } from '../utils/errorHandler';
 import './ApiSettings.css';
 
 /**
@@ -25,14 +30,47 @@ interface ApiSettings {
 export const ApiSettings: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useI18n();
+  const { showSuccess, showError: showErrorNotification } = useNotifications();
   const [settings, setSettings] = useState<ApiSettings | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
+  // 確認ダイアログの状態
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+  }>({
+    isOpen: false,
+    message: '',
+    onConfirm: () => {},
+    onCancel: () => {},
+  });
+
+  // パンくずリストの項目
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => {
+    const items: BreadcrumbItem[] = [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('header.apiList') || 'API一覧', path: '/api/list' },
+    ];
+    if (settings) {
+      items.push(
+        { label: settings.name, path: `/api/details/${id}` },
+        { label: '設定' }
+      );
+    } else {
+      items.push({ label: 'API設定' });
+    }
+    return items;
+  }, [t, settings, id]);
 
   useEffect(() => {
     loadSettings();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [id]);
 
   // 設定を読み込む
@@ -41,7 +79,7 @@ export const ApiSettings: React.FC = () => {
 
     try {
       setLoading(true);
-      
+
       // バックエンドのIPCコマンドを呼び出し（list_apisから該当APIを取得）
       interface ApiListItem {
         id: string;
@@ -57,7 +95,7 @@ export const ApiSettings: React.FC = () => {
       const apis = await safeInvoke<ApiListItem[]>('list_apis');
 
       const api = apis.find((a: ApiListItem) => a.id === id);
-      
+
       if (!api) {
         setError('APIが見つかりませんでした');
         return;
@@ -71,7 +109,7 @@ export const ApiSettings: React.FC = () => {
         modelName: api.model_name,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : '設定の読み込みに失敗しました');
+      setError(extractErrorMessage(err, '設定の読み込みに失敗しました'));
     } finally {
       setLoading(false);
     }
@@ -124,7 +162,7 @@ export const ApiSettings: React.FC = () => {
 
       navigate('/api/list');
     } catch (err) {
-      setError(err instanceof Error ? err.message : '設定の保存に失敗しました');
+      setError(extractErrorMessage(err, '設定の保存に失敗しました'));
     } finally {
       setSaving(false);
     }
@@ -132,27 +170,43 @@ export const ApiSettings: React.FC = () => {
 
   // APIキーを再生成
   const handleRegenerateApiKey = async () => {
-    if (!id || !window.confirm('APIキーを再生成しますか？現在のAPIキーは無効になります。')) {
-      return;
-    }
+    if (!id) return;
 
-    try {
-      setSaving(true);
-      setError(null);
+    setConfirmDialog({
+      isOpen: true,
+      message: 'APIキーを再生成しますか？現在のAPIキーは無効になります。',
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        try {
+          setSaving(true);
+          setError(null);
 
-      // バックエンドのregenerate_api_keyコマンドを呼び出し
-      const newKey = await safeInvoke<string>('regenerate_api_key', { api_id: id });
+          // バックエンドのregenerate_api_keyコマンドを呼び出し
+          const newKey = await safeInvoke<string>('regenerate_api_key', {
+            api_id: id,
+          });
 
-      // 新しいAPIキーを表示
-      alert(`APIキーが再生成されました。\n新しいAPIキー: ${newKey}\n\nこのキーは今回のみ表示されます。コピーして安全な場所に保存してください。`);
-      
-      // 設定を再読み込みして反映
-      loadSettings();
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'APIキーの再生成に失敗しました');
-    } finally {
-      setSaving(false);
-    }
+          // 新しいAPIキーを通知で表示
+          showSuccess(
+            'APIキーが再生成されました',
+            `新しいAPIキー: ${newKey}\n\nこのキーは今回のみ表示されます。コピーして安全な場所に保存してください。`,
+            10000
+          );
+
+          // 設定を再読み込みして反映
+          loadSettings();
+        } catch (err) {
+          const errorMessage = extractErrorMessage(err, 'APIキーの再生成に失敗しました');
+          setError(errorMessage);
+          showErrorNotification('APIキーの再生成に失敗しました', errorMessage);
+        } finally {
+          setSaving(false);
+        }
+      },
+      onCancel: () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+      },
+    });
   };
 
   // APIを削除
@@ -163,33 +217,34 @@ export const ApiSettings: React.FC = () => {
     if (settings.modelName) {
       confirmMessage += `\n\nこのAPIが使用しているモデル "${settings.modelName}" も削除しますか？\n（他のAPIで使用されていない場合のみ削除されます）`;
     }
-    
-    if (!window.confirm(confirmMessage)) {
-      return;
-    }
 
-    // モデル削除オプションを確認
-    let deleteModel = false;
-    if (settings.modelName) {
-      deleteModel = window.confirm(
-        `モデル "${settings.modelName}" も削除しますか？\n（他のAPIで使用されていない場合のみ削除されます）`
-      );
-    }
+    // 最初の確認ダイアログを表示
+    setConfirmDialog({
+      isOpen: true,
+      message: confirmMessage,
+      onConfirm: () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        
+        // モデル削除オプションを確認（2回目の確認ダイアログ）
+        if (settings.modelName) {
+          setConfirmDialog({
+            isOpen: true,
+            message: `モデル "${settings.modelName}" も削除しますか？\n（他のAPIで使用されていない場合のみ削除されます）`,
+            onConfirm: async () => {
+              setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+              try {
+                setSaving(true);
+                setError(null);
 
-    try {
-      setSaving(true);
-      setError(null);
-
-      // バックエンドのdelete_apiコマンドを呼び出し（モデル削除オプションを含む）
-      await safeInvoke('delete_api', { 
-        api_id: id,
-        delete_model: deleteModel,
-      });
+                await safeInvoke('delete_api', {
+                  api_id: id,
+                  delete_model: true,
+                });
 
       // API一覧に戻る
       navigate('/api/list');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'APIの削除に失敗しました');
+      setError(extractErrorMessage(err, 'APIの削除に失敗しました'));
     } finally {
       setSaving(false);
     }
@@ -199,9 +254,15 @@ export const ApiSettings: React.FC = () => {
     return (
       <div className="api-settings-page">
         <div className="api-settings-container">
-          <div className="loading-container">
-            <div className="loading-spinner"></div>
-            <p>設定を読み込んでいます...</p>
+          <Breadcrumb items={breadcrumbItems} />
+          <header className="api-settings-header">
+            <div className="header-top">
+              <SkeletonLoader type="button" width="150px" />
+              <SkeletonLoader type="title" width="200px" />
+            </div>
+          </header>
+          <div className="api-settings-content">
+            <SkeletonLoader type="form" count={3} />
           </div>
         </div>
       </div>
@@ -212,9 +273,24 @@ export const ApiSettings: React.FC = () => {
     return (
       <div className="api-settings-page">
         <div className="api-settings-container">
-          <div className="error-container">
-            <h2>APIが見つかりませんでした</h2>
-            <button onClick={() => navigate('/api/list')}>API一覧に戻る</button>
+          <Breadcrumb items={breadcrumbItems} />
+          <header className="api-settings-header">
+            <div className="header-top">
+              <button
+                className="back-button"
+                onClick={() => navigate('/api/list')}
+              >
+                ← API一覧に戻る
+              </button>
+              <h1>API設定変更</h1>
+            </div>
+          </header>
+          <div className="api-settings-content">
+            <ErrorMessage
+              message="APIが見つかりませんでした"
+              type="api"
+              onClose={() => navigate('/api/list')}
+            />
           </div>
         </div>
       </div>
@@ -224,9 +300,13 @@ export const ApiSettings: React.FC = () => {
   return (
     <div className="api-settings-page">
       <div className="api-settings-container">
+        <Breadcrumb items={breadcrumbItems} />
         <header className="api-settings-header">
           <div className="header-top">
-            <button className="back-button" onClick={() => navigate('/api/list')}>
+            <button
+              className="back-button"
+              onClick={() => navigate('/api/list')}
+            >
               ← API一覧に戻る
             </button>
             <h1>API設定変更</h1>
@@ -252,11 +332,15 @@ export const ApiSettings: React.FC = () => {
                 id="api-name"
                 type="text"
                 value={settings.name}
-                onChange={(e) => setSettings({ ...settings, name: e.target.value })}
+                onChange={e =>
+                  setSettings({ ...settings, name: e.target.value })
+                }
                 className={errors.name ? 'error' : ''}
                 maxLength={API_NAME.MAX_LENGTH}
               />
-              {errors.name && <span className="error-message-text">{errors.name}</span>}
+              {errors.name && (
+                <span className="error-message-text">{errors.name}</span>
+              )}
             </div>
 
             <div className="form-group">
@@ -267,12 +351,19 @@ export const ApiSettings: React.FC = () => {
                 id="api-port"
                 type="number"
                 value={settings.port}
-                onChange={(e) => setSettings({ ...settings, port: parseInt(e.target.value) || PORT_RANGE.DEFAULT })}
+                onChange={e =>
+                  setSettings({
+                    ...settings,
+                    port: parseInt(e.target.value) || PORT_RANGE.DEFAULT,
+                  })
+                }
                 min={PORT_RANGE.MIN}
                 max={PORT_RANGE.MAX}
                 className={errors.port ? 'error' : ''}
               />
-              {errors.port && <span className="error-message-text">{errors.port}</span>}
+              {errors.port && (
+                <span className="error-message-text">{errors.port}</span>
+              )}
               <small className="form-hint">
                 ポート番号を変更する場合、APIが停止されます。
               </small>
@@ -283,7 +374,9 @@ export const ApiSettings: React.FC = () => {
                 <input
                   type="checkbox"
                   checked={settings.enableAuth}
-                  onChange={(e) => setSettings({ ...settings, enableAuth: e.target.checked })}
+                  onChange={e =>
+                    setSettings({ ...settings, enableAuth: e.target.checked })
+                  }
                 />
                 <span>認証を有効にする</span>
               </label>
@@ -302,7 +395,12 @@ export const ApiSettings: React.FC = () => {
                 </p>
                 <button
                   className="regenerate-button"
-                  onClick={handleRegenerateApiKey}
+                  onClick={() => {
+                    startTransition(() => {
+                      handleRegenerateApiKey();
+                    });
+                  }}
+                  disabled={isPending}
                 >
                   🔄 APIキーを再生成
                 </button>
@@ -323,7 +421,12 @@ export const ApiSettings: React.FC = () => {
               </p>
               <button
                 className="delete-button"
-                onClick={handleDelete}
+                onClick={() => {
+                  startTransition(() => {
+                    handleDelete();
+                  });
+                }}
+                disabled={isPending}
               >
                 🗑️ APIを削除
               </button>
@@ -340,14 +443,52 @@ export const ApiSettings: React.FC = () => {
             </button>
             <button
               className="button-primary"
-              onClick={handleSave}
-              disabled={saving}
+              onClick={() => {
+                startTransition(() => {
+                  handleSave();
+                });
+              }}
+              disabled={saving || isPending}
             >
               {saving ? '保存中...' : '保存'}
             </button>
           </div>
         </div>
       </div>
+
+      {/* 確認ダイアログ */}
+      {confirmDialog.isOpen && (
+        <div
+          className="confirm-dialog-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-dialog-title"
+        >
+          <div
+            className="confirm-dialog"
+            role="document"
+          >
+            <h3 id="confirm-dialog-title">確認</h3>
+            <p style={{ whiteSpace: 'pre-line' }}>{confirmDialog.message}</p>
+            <div className="confirm-dialog-actions">
+              <button
+                className="confirm-button cancel"
+                onClick={confirmDialog.onCancel}
+                type="button"
+              >
+                キャンセル
+              </button>
+              <button
+                className="confirm-button confirm"
+                onClick={confirmDialog.onConfirm}
+                type="button"
+              >
+                確認
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

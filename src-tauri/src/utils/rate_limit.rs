@@ -36,12 +36,14 @@ pub async fn check_rate_limit(
     let result = tokio::task::spawn_blocking(move || {
         let conn = get_connection().map_err(|e| AppError::DatabaseError {
             message: format!("データベース接続エラー: {}", e),
+            source_detail: None,
         })?;
         
-        // セキュリティ設定を取得
-        let security_settings = ApiSecuritySettingsRepository::find_by_api_id(&conn, &api_id).map_err(|e| AppError::DatabaseError {
-            message: format!("セキュリティ設定取得エラー: {}", e),
-        })?;
+        let security_settings = ApiSecuritySettingsRepository::find_by_api_id(&conn, &api_id)
+            .map_err(|e| AppError::DatabaseError {
+                message: format!("セキュリティ設定取得エラー: {}", e),
+                source_detail: None,
+            })?;
         
         if let Some(settings) = security_settings {
             if !settings.rate_limit_enabled {
@@ -56,74 +58,76 @@ pub async fn check_rate_limit(
             // 現在の時間窓を計算
             let now = Utc::now();
             let window_start = now.timestamp() / settings.rate_limit_window_seconds as i64;
-            let window_start_iso = chrono::DateTime::from_timestamp(window_start * settings.rate_limit_window_seconds as i64, 0)
-                .ok_or_else(|| AppError::ApiError {
-                    message: "タイムスタンプ変換エラー".to_string(),
-                    code: "TIMESTAMP_ERROR".to_string(),
-                })?;
+            let window_start_iso = chrono::DateTime::from_timestamp(
+                window_start * settings.rate_limit_window_seconds as i64,
+                0
+            ).ok_or_else(|| AppError::ApiError {
+                message: "タイムスタンプ変換エラー".to_string(),
+                code: "TIMESTAMP_ERROR".to_string(),
+                source_detail: None,
+            })?;
             
             // レート制限追跡を取得または作成
-            let mut tracking = RateLimitTrackingRepository::find_by_api_and_identifier(
+            let tracking = RateLimitTrackingRepository::find_by_api_and_identifier(
                 &conn,
                 &api_id,
                 &identifier,
                 &window_start_iso,
             ).map_err(|e| AppError::DatabaseError {
                 message: format!("レート制限追跡取得エラー: {}", e),
+                source_detail: None,
             })?;
-            
-            if tracking.is_none() {
-                // 新しい時間窓の場合は、新しい追跡レコードを作成
-                tracking = Some(RateLimitTrackingRepository::create(
-                    &conn,
-                    &api_id,
-                    &identifier,
-                    &window_start_iso,
-                ).map_err(|e| AppError::DatabaseError {
-                    message: format!("レート制限追跡作成エラー: {}", e),
-                })?);
-            }
             
             if let Some(mut track) = tracking {
                 // リクエスト数を増加
                 track.request_count += 1;
                 RateLimitTrackingRepository::update(&conn, &track).map_err(|e| AppError::DatabaseError {
                     message: format!("レート制限追跡更新エラー: {}", e),
+                    source_detail: None,
                 })?;
                 
-                // レート制限チェック
+                let remaining = (settings.rate_limit_requests - track.request_count).max(0);
                 let allowed = track.request_count <= settings.rate_limit_requests;
-                let remaining = if allowed {
-                    settings.rate_limit_requests - track.request_count
-                } else {
-                    0
-                };
-                
-                // リセット時刻を計算
-                let reset_at = window_start_iso + chrono::Duration::seconds(settings.rate_limit_window_seconds as i64);
                 
                 Ok(RateLimitResult {
                     allowed,
                     remaining,
-                    reset_at: reset_at.to_rfc3339(),
+                    reset_at: window_start_iso.to_rfc3339(),
                 })
             } else {
-                Err(AppError::ApiError {
-                    message: "レート制限追跡の取得に失敗しました".to_string(),
-                    code: "TRACKING_ERROR".to_string(),
+                // 新しい追跡レコードを作成
+                let _new_tracking = crate::database::models::RateLimitTracking {
+                    id: uuid::Uuid::new_v4().to_string(),
+                    api_id: api_id.clone(),
+                    identifier: identifier.clone(),
+                    window_start: window_start_iso,
+                    request_count: 1,
+                    created_at: Utc::now(),
+                };
+                
+                RateLimitTrackingRepository::create(&conn, &api_id, &identifier, &window_start_iso).map_err(|e| AppError::DatabaseError {
+                    message: format!("レート制限追跡作成エラー: {}", e),
+                    source_detail: None,
+                })?;
+                
+                let remaining = settings.rate_limit_requests - 1;
+                Ok(RateLimitResult {
+                    allowed: true,
+                    remaining,
+                    reset_at: window_start_iso.to_rfc3339(),
                 })
             }
         } else {
-            // セキュリティ設定が存在しない場合は、レート制限なし
+            // セキュリティ設定がない場合は許可
             Ok(RateLimitResult {
                 allowed: true,
-                remaining: 100, // デフォルト値
+                remaining: 1000,
                 reset_at: Utc::now().to_rfc3339(),
             })
         }
-    }).await.map_err(|e| AppError::ApiError {
+    }).await.map_err(|e| AppError::ProcessError {
         message: format!("タスク実行エラー: {}", e),
-        code: "TASK_ERROR".to_string(),
+        source_detail: None,
     })?;
     
     result
@@ -140,15 +144,19 @@ pub async fn update_rate_limit_config(
     tokio::task::spawn_blocking(move || {
         let conn = get_connection().map_err(|e| AppError::DatabaseError {
             message: format!("データベース接続エラー: {}", e),
+            source_detail: None,
         })?;
         
-        let mut settings = ApiSecuritySettingsRepository::find_by_api_id(&conn, &api_id).map_err(|e| AppError::DatabaseError {
-            message: format!("セキュリティ設定取得エラー: {}", e),
-        })?
-        .ok_or_else(|| AppError::ApiError {
-            message: "セキュリティ設定が見つかりません".to_string(),
-            code: "SETTINGS_NOT_FOUND".to_string(),
-        })?;
+        let mut settings = ApiSecuritySettingsRepository::find_by_api_id(&conn, &api_id)
+            .map_err(|e| AppError::DatabaseError {
+                message: format!("セキュリティ設定取得エラー: {}", e),
+                source_detail: None,
+            })?
+            .ok_or_else(|| AppError::ApiError {
+                message: "セキュリティ設定が見つかりません".to_string(),
+                code: "SETTINGS_NOT_FOUND".to_string(),
+                source_detail: None,
+            })?;
         
         settings.rate_limit_enabled = config.enabled;
         settings.rate_limit_requests = config.requests;
@@ -157,11 +165,12 @@ pub async fn update_rate_limit_config(
         
         ApiSecuritySettingsRepository::update(&conn, &settings).map_err(|e| AppError::DatabaseError {
             message: format!("セキュリティ設定更新エラー: {}", e),
+            source_detail: None,
         })?;
         
         Ok(())
-    }).await.map_err(|e| AppError::ApiError {
+    }).await.map_err(|e| AppError::ProcessError {
         message: format!("タスク実行エラー: {}", e),
-        code: "TASK_ERROR".to_string(),
+        source_detail: None,
     })?
 }

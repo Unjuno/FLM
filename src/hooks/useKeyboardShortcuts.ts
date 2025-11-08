@@ -27,10 +27,10 @@ export interface KeyboardShortcut {
 
 /**
  * キーボードショートカットフック
- * 
+ *
  * @param shortcuts ショートカット定義の配列
  * @param enabled ショートカットを有効にするか（デフォルト: true）
- * 
+ *
  * @example
  * ```tsx
  * const shortcuts: KeyboardShortcut[] = [
@@ -99,7 +99,9 @@ export const useKeyboardShortcuts = (
 
         // すべての条件が一致した場合、ハンドラを実行
         if (
-          (ctrlMatches || metaMatches || (!shortcut.ctrlKey && !shortcut.metaKey)) &&
+          (ctrlMatches ||
+            metaMatches ||
+            (!shortcut.ctrlKey && !shortcut.metaKey)) &&
           (shiftMatches || shortcut.shiftKey === undefined) &&
           (altMatches || shortcut.altKey === undefined)
         ) {
@@ -195,7 +197,7 @@ export const useGlobalKeyboardShortcuts = () => {
 
 /**
  * キーボードショートカットの文字列表現を取得
- * 
+ *
  * @param shortcut ショートカット定義
  * @returns ショートカットの文字列表現（例: "Ctrl+N"）
  */
@@ -220,11 +222,11 @@ export const getShortcutDisplay = (shortcut: KeyboardShortcut): string => {
   let keyName = shortcut.key;
   const keyMap: { [key: string]: string } = {
     ' ': 'Space',
-    'ArrowUp': '↑',
-    'ArrowDown': '↓',
-    'ArrowLeft': '←',
-    'ArrowRight': '→',
-    'Escape': 'Esc',
+    ArrowUp: '↑',
+    ArrowDown: '↓',
+    ArrowLeft: '←',
+    ArrowRight: '→',
+    Escape: 'Esc',
   };
 
   if (keyMap[keyName]) {
@@ -239,4 +241,3 @@ export const getShortcutDisplay = (shortcut: KeyboardShortcut): string => {
   parts.push(keyName);
   return parts.join('+');
 };
-

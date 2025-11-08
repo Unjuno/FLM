@@ -17,7 +17,7 @@ describe('NavItem.tsx', () => {
           <NavItem path="/test" label="テスト項目" />
         </BrowserRouter>
       );
-      
+
       expect(screen.getByText('テスト項目')).toBeInTheDocument();
     });
 
@@ -27,7 +27,7 @@ describe('NavItem.tsx', () => {
           <NavItem path="/test" label="テスト" icon="🏠" />
         </BrowserRouter>
       );
-      
+
       expect(screen.getByText('🏠')).toBeInTheDocument();
     });
 
@@ -37,7 +37,7 @@ describe('NavItem.tsx', () => {
           <NavItem path="/test" label="テスト" badge={5} />
         </BrowserRouter>
       );
-      
+
       expect(screen.getByText('5')).toBeInTheDocument();
     });
   });
@@ -49,7 +49,7 @@ describe('NavItem.tsx', () => {
           <NavItem path="/test" label="テスト" active={true} />
         </BrowserRouter>
       );
-      
+
       const navItem = container.querySelector('.nav-item');
       expect(navItem).toHaveClass('active');
     });
@@ -60,7 +60,7 @@ describe('NavItem.tsx', () => {
           <NavItem path="/test" label="テスト" active={false} />
         </BrowserRouter>
       );
-      
+
       const navItem = container.querySelector('.nav-item');
       expect(navItem).not.toHaveClass('active');
     });
@@ -74,10 +74,10 @@ describe('NavItem.tsx', () => {
           <NavItem path="/test" label="テスト" onClick={onClick} />
         </BrowserRouter>
       );
-      
+
       const navItem = screen.getByText('テスト');
       fireEvent.click(navItem);
-      
+
       expect(onClick).toHaveBeenCalledTimes(1);
     });
   });
@@ -89,7 +89,7 @@ describe('NavItem.tsx', () => {
           <NavItem path="/test" label="テスト" disabled={true} />
         </BrowserRouter>
       );
-      
+
       const navItem = container.querySelector('.nav-item');
       expect(navItem).toHaveClass('disabled');
     });
@@ -98,15 +98,19 @@ describe('NavItem.tsx', () => {
       const onClick = jest.fn();
       render(
         <BrowserRouter>
-          <NavItem path="/test" label="テスト" disabled={true} onClick={onClick} />
+          <NavItem
+            path="/test"
+            label="テスト"
+            disabled={true}
+            onClick={onClick}
+          />
         </BrowserRouter>
       );
-      
+
       const navItem = screen.getByText('テスト');
       fireEvent.click(navItem);
-      
+
       expect(onClick).not.toHaveBeenCalled();
     });
   });
 });
-

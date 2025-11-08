@@ -17,4 +17,3 @@ declare module '@testing-library/dom' {
     [key: string]: any;
   };
 }
-

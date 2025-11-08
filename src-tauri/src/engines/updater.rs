@@ -2,7 +2,6 @@
 // 各エンジンの自動アップデート機能
 
 use crate::utils::error::AppError;
-use crate::engines::manager::EngineManager;
 use serde::{Deserialize, Serialize};
 
 /// アップデートチェック結果
@@ -25,7 +24,7 @@ pub async fn check_lm_studio_update() -> Result<EngineUpdateCheck, AppError> {
 }
 
 /// LM Studioのアップデート実行
-pub async fn update_lm_studio<F>(mut progress_callback: F) -> Result<String, AppError>
+pub async fn update_lm_studio<F>(progress_callback: F) -> Result<String, AppError>
 where
     F: FnMut(crate::engines::installer::EngineDownloadProgress) -> Result<(), AppError>,
 {
@@ -61,7 +60,6 @@ pub async fn update_vllm<F>(mut progress_callback: F) -> Result<String, AppError
 where
     F: FnMut(crate::engines::installer::EngineDownloadProgress) -> Result<(), AppError>,
 {
-    use crate::engines::installer;
     
     progress_callback(crate::engines::installer::EngineDownloadProgress {
         status: "installing".to_string(),
@@ -82,6 +80,7 @@ where
         return Err(AppError::ApiError {
             message: "Pythonがインストールされていません。".to_string(),
             code: "PYTHON_NOT_FOUND".to_string(),
+            source_detail: None,
         });
     };
 
@@ -97,12 +96,13 @@ where
         .await
         .map_err(|e| AppError::ProcessError {
             message: format!("vLLMアップデートエラー: {}", e),
+            source_detail: None,
         })?;
-
+    
     if !output.status.success() {
         return Err(AppError::ProcessError {
-            message: format!("vLLMアップデートに失敗しました: {}", 
-                String::from_utf8_lossy(&output.stderr)),
+            message: format!("vLLMアップデートエラー: {}", String::from_utf8_lossy(&output.stderr)),
+            source_detail: None,
         });
     }
 
@@ -129,7 +129,7 @@ pub async fn check_llama_cpp_update() -> Result<EngineUpdateCheck, AppError> {
 }
 
 /// llama.cppのアップデート実行
-pub async fn update_llama_cpp<F>(mut progress_callback: F) -> Result<String, AppError>
+pub async fn update_llama_cpp<F>(progress_callback: F) -> Result<String, AppError>
 where
     F: FnMut(crate::engines::installer::EngineDownloadProgress) -> Result<(), AppError>,
 {
@@ -151,6 +151,7 @@ async fn get_vllm_version() -> Result<String, AppError> {
         return Err(AppError::ApiError {
             message: "Pythonがインストールされていません。".to_string(),
             code: "PYTHON_NOT_FOUND".to_string(),
+            source_detail: None,
         });
     };
 
@@ -161,61 +162,20 @@ async fn get_vllm_version() -> Result<String, AppError> {
         .await
         .map_err(|e| AppError::ProcessError {
             message: format!("vLLMバージョン取得エラー: {}", e),
-        })?;
-
-    if output.status.success() {
-        let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
-        Ok(version)
-    } else {
-        Err(AppError::ApiError {
-            message: "vLLMがインストールされていません。".to_string(),
-            code: "VLLM_NOT_INSTALLED".to_string(),
-        })
-    }
-}
-
-/// vLLMの最新バージョンを取得
-async fn get_latest_vllm_version() -> Result<String, AppError> {
-    use tokio::process::Command as AsyncCommand;
-    
-    let python_cmd = if std::process::Command::new("python3").output().is_ok() {
-        "python3"
-    } else if std::process::Command::new("python").output().is_ok() {
-        "python"
-    } else {
-        return Err(AppError::ApiError {
-            message: "Pythonがインストールされていません。".to_string(),
-            code: "PYTHON_NOT_FOUND".to_string(),
-        });
-    };
-
-    // pip index versions vllmで最新版を取得
-    let output = AsyncCommand::new(python_cmd)
-        .arg("-m")
-        .arg("pip")
-        .arg("index")
-        .arg("versions")
-        .arg("vllm")
-        .output()
-        .await
-        .map_err(|e| AppError::ProcessError {
-            message: format!("最新バージョン取得エラー: {}", e),
+            source_detail: None,
         })?;
 
     if output.status.success() {
         let stdout = String::from_utf8_lossy(&output.stdout);
-        // 出力から最新バージョンを抽出（簡易実装）
-        // 実際の実装では、PyPI APIを使用する方が確実
         let lines: Vec<&str> = stdout.lines().collect();
         if let Some(first_line) = lines.first() {
-            // 最初の行からバージョンを抽出
             Ok(first_line.trim().to_string())
         } else {
             Ok("latest".to_string())
         }
     } else {
         // PyPI APIから直接取得を試みる
-        let client = reqwest::Client::new();
+        let client = crate::utils::http_client::create_http_client()?;
         let response = client
             .get("https://pypi.org/pypi/vllm/json")
             .send()
@@ -223,27 +183,65 @@ async fn get_latest_vllm_version() -> Result<String, AppError> {
             .map_err(|e| AppError::ApiError {
                 message: format!("PyPI API接続エラー: {}", e),
                 code: "API_ERROR".to_string(),
+                source_detail: None,
             })?;
 
-        if response.status().is_success() {
-            let json: serde_json::Value = response.json().await
-                .map_err(|e| AppError::ApiError {
-                    message: format!("JSON解析エラー: {}", e),
-                    code: "JSON_ERROR".to_string(),
-                })?;
-
-            let version = json["info"]["version"]
-                .as_str()
-                .ok_or_else(|| AppError::ApiError {
-                    message: "バージョン情報が見つかりません".to_string(),
-                    code: "VERSION_NOT_FOUND".to_string(),
-                })?
-                .to_string();
-
-            Ok(version)
-        } else {
-            Ok("latest".to_string())
+        if !response.status().is_success() {
+            return Ok("latest".to_string());
         }
+
+        let json: serde_json::Value = response.json().await.map_err(|e| AppError::ApiError {
+            message: format!("JSON解析エラー: {}", e),
+            code: "JSON_ERROR".to_string(),
+            source_detail: None,
+        })?;
+
+        let version = json["info"]["version"]
+            .as_str()
+            .ok_or_else(|| AppError::ApiError {
+                message: "バージョン情報が見つかりません".to_string(),
+                code: "VERSION_NOT_FOUND".to_string(),
+                source_detail: None,
+            })?
+            .to_string();
+
+        Ok(version)
     }
 }
+
+/// vLLMの最新バージョンを取得
+async fn get_latest_vllm_version() -> Result<String, AppError> {
+    let client = crate::utils::http_client::create_http_client()?;
+    let response = client
+        .get("https://pypi.org/pypi/vllm/json")
+        .send()
+        .await
+        .map_err(|e| AppError::ApiError {
+            message: format!("PyPI API接続エラー: {}", e),
+            code: "API_ERROR".to_string(),
+            source_detail: None,
+        })?;
+
+    if !response.status().is_success() {
+        return Ok("latest".to_string());
+    }
+
+    let json: serde_json::Value = response.json().await.map_err(|e| AppError::ApiError {
+        message: format!("JSON解析エラー: {}", e),
+        code: "JSON_ERROR".to_string(),
+        source_detail: None,
+    })?;
+
+    let version = json["info"]["version"]
+        .as_str()
+        .ok_or_else(|| AppError::ApiError {
+            message: "バージョン情報が見つかりません".to_string(),
+            code: "VERSION_NOT_FOUND".to_string(),
+            source_detail: None,
+        })?
+        .to_string();
+
+    Ok(version)
+}
+
 

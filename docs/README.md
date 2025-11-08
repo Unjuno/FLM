@@ -34,10 +34,42 @@
 #### パフォーマンス・品質
 - **[PERFORMANCE_OPTIMIZATION.md](./PERFORMANCE_OPTIMIZATION.md)** - パフォーマンス最適化
 
-#### プロジェクト完了関連
-- **[PROJECT_COMPLETION_REPORT.md](./PROJECT_COMPLETION_REPORT.md)** - プロジェクト完了報告書
-- **[PROJECT_FINAL_REVIEW.md](./PROJECT_FINAL_REVIEW.md)** - プロジェクト最終レビュー報告書
+#### 将来の拡張
 - **[FUTURE_EXTENSIONS.md](./FUTURE_EXTENSIONS.md)** - 将来の拡張計画
+
+#### 開発計画
+- **[NEXT_STEPS.md](./NEXT_STEPS.md)** - 次のステップ
+- **[NEXT_ACTIONS_PRIORITY.md](./NEXT_ACTIONS_PRIORITY.md)** - 次のアクション優先度
+
+---
+
+## 📁 サブディレクトリ
+
+### 📊 プロジェクト概要
+- **[overview/](./overview/)** - プロジェクト概要情報
+  - `APP_INFO.md` - アプリケーション情報
+  - `USAGE_STATUS.md` - 使用可能状況レポート
+
+### 📝 リリース関連
+- **[release/](./release/)** - リリース準備・完了ドキュメント
+  - リリース準備チェックリスト、完了レポートなど
+
+### 📈 実装・テストレポート
+- **[reports/](./reports/)** - 実装完了、テスト実行、評価レポート
+  - 実装完了レポート、テストレポート、セキュリティ監査レポートなど
+
+### 🧪 テストガイド
+- **[tests/guides/](./tests/guides/)** - テスト実行ガイド
+  - テストガイド、クイックテストガイド、LLMテストガイドなど
+- **[test-plans/](./test-plans/)** - テスト計画ドキュメント
+
+### 📋 手順書
+- **[procedures/](./procedures/)** - 公開手順・開発手順
+  - 開発手順、ウェブサイト公開手順、スチーム公開手順など
+
+### 📖 ガイド
+- **[guides/](./guides/)** - 各種機能の使用方法ガイド
+  - レート制限機能の使用方法、Redisレート制限のセットアップなど
 
 ---
 

@@ -16,18 +16,32 @@ interface ApiCreationSuccessProps {
   onGoHome: () => void;
 }
 
-export const ApiCreationSuccess: React.FC<ApiCreationSuccessProps> = ({ result, onGoHome }) => {
+export const ApiCreationSuccess: React.FC<ApiCreationSuccessProps> = ({
+  result,
+  onGoHome,
+}) => {
   const [apiKeyVisible, setApiKeyVisible] = useState(false);
-  const [copied, setCopied] = useState<'endpoint' | 'apiKey' | 'code' | null>(null);
-  const [activeTab, setActiveTab] = useState<'curl' | 'python' | 'javascript'>('curl');
+  const [copied, setCopied] = useState<'endpoint' | 'apiKey' | 'code' | null>(
+    null
+  );
+  const [activeTab, setActiveTab] = useState<'curl' | 'python' | 'javascript'>(
+    'curl'
+  );
 
-  const copyToClipboard = async (text: string, type: 'endpoint' | 'apiKey' | 'code' = 'code') => {
+  const copyToClipboard = async (
+    text: string,
+    type: 'endpoint' | 'apiKey' | 'code' = 'code'
+  ) => {
     try {
       await navigator.clipboard.writeText(text);
       setCopied(type);
       setTimeout(() => setCopied(null), TIMEOUT.COPY_NOTIFICATION);
     } catch (err) {
-      logger.error('コピーに失敗しました', err instanceof Error ? err : new Error(String(err)), 'ApiCreationSuccess');
+      logger.error(
+        'コピーに失敗しました',
+        err instanceof Error ? err : new Error(String(err)),
+        'ApiCreationSuccess'
+      );
     }
   };
 
@@ -79,8 +93,14 @@ export const ApiCreationSuccess: React.FC<ApiCreationSuccessProps> = ({ result, 
             <h3>APIキー</h3>
             <div className="info-item">
               <div className="api-key-container">
-                <code className={apiKeyVisible ? 'api-key-visible' : 'api-key-hidden'}>
-                  {apiKeyVisible ? result.apiKey : '••••••••••••••••••••••••••••••••'}
+                <code
+                  className={
+                    apiKeyVisible ? 'api-key-visible' : 'api-key-hidden'
+                  }
+                >
+                  {apiKeyVisible
+                    ? result.apiKey
+                    : '••••••••••••••••••••••••••••••••'}
                 </code>
                 <button
                   className="toggle-button"
@@ -96,7 +116,8 @@ export const ApiCreationSuccess: React.FC<ApiCreationSuccessProps> = ({ result, 
                 {copied === 'apiKey' ? '✓ コピーしました' : '📋 コピー'}
               </button>
               <small className="warning-text">
-                ⚠️ このAPIキーは表示できるのは今回だけです。安全な場所に保存してください。
+                ⚠️
+                このAPIキーは表示できるのは今回だけです。安全な場所に保存してください。
               </small>
             </div>
           </div>
@@ -105,19 +126,19 @@ export const ApiCreationSuccess: React.FC<ApiCreationSuccessProps> = ({ result, 
         <div className="info-section">
           <h3>サンプルコード</h3>
           <div className="code-tabs">
-            <button 
+            <button
               className={`code-tab ${activeTab === 'curl' ? 'active' : ''}`}
               onClick={() => setActiveTab('curl')}
             >
               cURL
             </button>
-            <button 
+            <button
               className={`code-tab ${activeTab === 'python' ? 'active' : ''}`}
               onClick={() => setActiveTab('python')}
             >
               Python
             </button>
-            <button 
+            <button
               className={`code-tab ${activeTab === 'javascript' ? 'active' : ''}`}
               onClick={() => setActiveTab('javascript')}
             >

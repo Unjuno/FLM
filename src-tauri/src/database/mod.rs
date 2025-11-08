@@ -59,20 +59,79 @@ pub use connection::get_connection;
 /// 初回起動時にはモデルカタログを自動的に初期化します
 /// 定期的に（7日以上経過時）モデルカタログを更新します
 pub fn init_database() -> Result<(), DatabaseError> {
-    let mut conn = connection::get_connection()?;
+    #[cfg(debug_assertions)]
+    eprintln!("=== データベース初期化プロセス開始 ===");
+    
+    // データベース接続の取得（詳細なエラー情報を出力）
+    #[cfg(debug_assertions)]
+    eprintln!("ステップ1: データベース接続を取得します...");
+    let mut conn = match connection::get_connection() {
+        Ok(conn) => {
+            #[cfg(debug_assertions)]
+            eprintln!("✓ データベース接続に成功しました");
+            conn
+        },
+        Err(e) => {
+            eprintln!("✗ データベース接続エラー: {:?}", e);
+            #[cfg(debug_assertions)]
+            eprintln!("[DEBUG] データベースパス: {:?}", connection::get_database_path());
+            return Err(e);
+        }
+    };
     
     // スキーマの作成
-    schema::create_schema(&conn)?;
+    #[cfg(debug_assertions)]
+    eprintln!("ステップ2: データベーススキーマを作成します...");
+    if let Err(e) = schema::create_schema(&conn) {
+        eprintln!("✗ スキーマ作成エラー: {:?}", e);
+        eprintln!("エラー詳細: {}", e);
+        return Err(e);
+    } else {
+        #[cfg(debug_assertions)]
+        eprintln!("✓ データベーススキーマの作成が完了しました");
+    }
     
     // マイグレーションの実行
-    migrations::run_migrations(&mut conn)?;
+    #[cfg(debug_assertions)]
+    eprintln!("ステップ3: データベースマイグレーションを実行します...");
+    if let Err(e) = migrations::run_migrations(&mut conn) {
+        eprintln!("✗ マイグレーション実行エラー: {:?}", e);
+        eprintln!("エラー詳細: {}", e);
+        return Err(e);
+    } else {
+        #[cfg(debug_assertions)]
+        eprintln!("✓ データベースマイグレーションが完了しました");
+    }
     
     // モデルカタログの初期化（初回起動時のみ）
-    init_model_catalog_if_empty(&conn)?;
+    #[cfg(debug_assertions)]
+    eprintln!("ステップ4: モデルカタログを初期化します...");
+    if let Err(e) = init_model_catalog_if_empty(&conn) {
+        eprintln!("警告: モデルカタログ初期化エラー: {:?}", e);
+        #[cfg(debug_assertions)]
+        eprintln!("注意: モデルカタログの初期化に失敗しましたが、データベース初期化は継続します");
+        // モデルカタログの初期化に失敗しても、データベース初期化は成功とする
+        // （既存のデータベースを使用できるため）
+    } else {
+        #[cfg(debug_assertions)]
+        eprintln!("✓ モデルカタログの初期化が完了しました");
+    }
     
     // モデルカタログの定期更新（7日以上経過時）
-    update_model_catalog_if_stale(&conn)?;
+    #[cfg(debug_assertions)]
+    eprintln!("ステップ5: モデルカタログを更新します...");
+    if let Err(e) = update_model_catalog_if_stale(&conn) {
+        eprintln!("警告: モデルカタログ更新エラー: {:?}", e);
+        #[cfg(debug_assertions)]
+        eprintln!("注意: モデルカタログの更新に失敗しましたが、データベース初期化は継続します");
+        // モデルカタログの更新に失敗しても、データベース初期化は成功とする
+    } else {
+        #[cfg(debug_assertions)]
+        eprintln!("✓ モデルカタログの更新が完了しました");
+    }
     
+    #[cfg(debug_assertions)]
+    eprintln!("=== データベース初期化プロセス完了 ===");
     Ok(())
 }
 
@@ -94,6 +153,7 @@ fn init_model_catalog_if_empty(conn: &Connection) -> Result<(), DatabaseError> {
             catalog_repo.upsert(&model)
                 .map_err(|e| DatabaseError::QueryFailed(format!("モデルカタログの初期化に失敗しました ({}): {}", model.name, e)))?;
         }
+        #[cfg(debug_assertions)]
         eprintln!("モデルカタログを初期化しました（{}件のモデルを追加）", model_count);
     }
     

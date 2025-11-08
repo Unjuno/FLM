@@ -1,13 +1,27 @@
 // PluginManagement - プラグイン管理ページ
 // サードパーティプラグインの管理
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useTransition } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { useNotifications } from '../contexts/NotificationContext';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { SkeletonLoader } from '../components/common/SkeletonLoader';
+import { Breadcrumb, BreadcrumbItem } from '../components/common/Breadcrumb';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useI18n } from '../contexts/I18nContext';
+import { extractErrorMessage } from '../utils/errorHandler';
 import './PluginManagement.css';
+
+/**
+ * プラグイン権限
+ */
+interface PluginPermissions {
+  database_access: string; // "read", "write", "none"
+  network_access: string; // "allow", "deny"
+  api_key_access: string; // "allow", "deny"
+  filesystem_access: string; // "allow", "deny"
+}
 
 /**
  * プラグイン情報
@@ -20,6 +34,7 @@ interface PluginInfo {
   description?: string;
   enabled: boolean;
   plugin_type: string;
+  permissions?: PluginPermissions;
 }
 
 /**
@@ -27,6 +42,7 @@ interface PluginInfo {
  */
 export const PluginManagement: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const { showSuccess, showError } = useNotifications();
   const [plugins, setPlugins] = useState<PluginInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -39,10 +55,25 @@ export const PluginManagement: React.FC = () => {
     author: '',
     description: '',
     plugin_type: 'Custom',
+    permissions: {
+      database_access: 'none',
+      network_access: 'deny',
+      api_key_access: 'deny',
+      filesystem_access: 'deny',
+    },
   });
+  const [editingPermissions, setEditingPermissions] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
 
   // グローバルキーボードショートカットを有効化
   useGlobalKeyboardShortcuts();
+
+  // パンくずリストの項目
+  const breadcrumbItems: BreadcrumbItem[] = React.useMemo(() => [
+    { label: t('header.home') || 'ホーム', path: '/' },
+    { label: t('header.settings') || '設定', path: '/settings' },
+    { label: 'プラグイン管理' },
+  ], [t]);
 
   useEffect(() => {
     loadPlugins();
@@ -55,12 +86,16 @@ export const PluginManagement: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
+
       // プラグイン一覧を取得
       const pluginsData = await safeInvoke<PluginInfo[]>('get_all_plugins', {});
       setPlugins(pluginsData);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'プラグインの読み込みに失敗しました');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'プラグインの読み込みに失敗しました'
+      );
     } finally {
       setLoading(false);
     }
@@ -77,7 +112,7 @@ export const PluginManagement: React.FC = () => {
 
     try {
       setSaving(true);
-      
+
       await safeInvoke('register_plugin', {
         plugin_id: newPlugin.id || `plugin-${Date.now()}`,
         plugin_name: newPlugin.name,
@@ -85,6 +120,12 @@ export const PluginManagement: React.FC = () => {
         plugin_author: newPlugin.author,
         plugin_description: newPlugin.description || null,
         plugin_type: newPlugin.plugin_type || 'Custom',
+        permissions: newPlugin.permissions || {
+          database_access: 'none',
+          network_access: 'deny',
+          api_key_access: 'deny',
+          filesystem_access: 'deny',
+        },
       });
 
       showSuccess('プラグインを登録しました');
@@ -94,11 +135,19 @@ export const PluginManagement: React.FC = () => {
         author: '',
         description: '',
         plugin_type: 'Custom',
+        permissions: {
+          database_access: 'none',
+          network_access: 'deny',
+          api_key_access: 'deny',
+          filesystem_access: 'deny',
+        },
       });
       setShowRegisterForm(false);
       loadPlugins();
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'プラグインの登録に失敗しました');
+      showError(
+        extractErrorMessage(err, 'プラグインの登録に失敗しました')
+      );
     } finally {
       setSaving(false);
     }
@@ -118,13 +167,74 @@ export const PluginManagement: React.FC = () => {
     return names[type] || type;
   };
 
+  /**
+   * プラグインの権限を更新
+   */
+  const handleUpdatePermissions = async (pluginId: string, permissions: PluginPermissions) => {
+    try {
+      setSaving(true);
+      await safeInvoke('update_plugin_permissions', {
+        plugin_id: pluginId,
+        permissions,
+      });
+      showSuccess('プラグインの権限を更新しました');
+      setEditingPermissions(null);
+      loadPlugins();
+    } catch (err) {
+      showError(
+        extractErrorMessage(err, 'プラグインの権限更新に失敗しました')
+      );
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  /**
+   * 権限の表示名を取得
+   */
+  const getPermissionLabel = (permission: string, value: string): string => {
+    const labels: { [key: string]: { [key: string]: string } } = {
+      database_access: {
+        none: 'なし',
+        read: '読み取りのみ',
+        write: '読み書き',
+      },
+      network_access: {
+        deny: '拒否',
+        allow: '許可',
+      },
+      api_key_access: {
+        deny: '拒否',
+        allow: '許可',
+      },
+      filesystem_access: {
+        deny: '拒否',
+        allow: '許可',
+      },
+    };
+    return labels[permission]?.[value] || value;
+  };
+
   if (loading) {
     return (
       <div className="plugin-management-page">
         <div className="plugin-management-container">
-          <div className="loading-container">
-            <div className="loading-spinner"></div>
-            <p>プラグインを読み込んでいます...</p>
+          <Breadcrumb items={breadcrumbItems} />
+          <header className="plugin-management-header">
+            <button className="back-button" onClick={() => navigate('/settings')}>
+              ← 戻る
+            </button>
+            <h1>プラグイン管理</h1>
+          </header>
+          <div className="plugin-management-content">
+            <SkeletonLoader type="title" width="200px" />
+            <SkeletonLoader type="paragraph" count={2} />
+            <div className="margin-top-md">
+              <SkeletonLoader type="button" width="150px" />
+            </div>
+            <div className="margin-top-xl">
+              <SkeletonLoader type="card" count={3} />
+            </div>
           </div>
         </div>
       </div>
@@ -134,6 +244,7 @@ export const PluginManagement: React.FC = () => {
   return (
     <div className="plugin-management-page">
       <div className="plugin-management-container">
+        <Breadcrumb items={breadcrumbItems} />
         <header className="plugin-management-header">
           <button className="back-button" onClick={() => navigate('/settings')}>
             ← 戻る
@@ -188,7 +299,9 @@ export const PluginManagement: React.FC = () => {
                     type="text"
                     className="form-input"
                     value={newPlugin.name || ''}
-                    onChange={(e) => setNewPlugin({ ...newPlugin, name: e.target.value })}
+                    onChange={e =>
+                      setNewPlugin({ ...newPlugin, name: e.target.value })
+                    }
                     placeholder="プラグイン名を入力"
                     disabled={saving}
                   />
@@ -202,7 +315,9 @@ export const PluginManagement: React.FC = () => {
                     type="text"
                     className="form-input"
                     value={newPlugin.version || ''}
-                    onChange={(e) => setNewPlugin({ ...newPlugin, version: e.target.value })}
+                    onChange={e =>
+                      setNewPlugin({ ...newPlugin, version: e.target.value })
+                    }
                     placeholder="1.0.0"
                     disabled={saving}
                   />
@@ -216,7 +331,9 @@ export const PluginManagement: React.FC = () => {
                     type="text"
                     className="form-input"
                     value={newPlugin.author || ''}
-                    onChange={(e) => setNewPlugin({ ...newPlugin, author: e.target.value })}
+                    onChange={e =>
+                      setNewPlugin({ ...newPlugin, author: e.target.value })
+                    }
                     placeholder="作成者名を入力"
                     disabled={saving}
                   />
@@ -229,7 +346,12 @@ export const PluginManagement: React.FC = () => {
                     id="plugin-description"
                     className="form-textarea"
                     value={newPlugin.description || ''}
-                    onChange={(e) => setNewPlugin({ ...newPlugin, description: e.target.value })}
+                    onChange={e =>
+                      setNewPlugin({
+                        ...newPlugin,
+                        description: e.target.value,
+                      })
+                    }
                     placeholder="プラグインの説明を入力（オプション）"
                     rows={3}
                     disabled={saving}
@@ -243,7 +365,12 @@ export const PluginManagement: React.FC = () => {
                     id="plugin-type"
                     className="form-select"
                     value={newPlugin.plugin_type || 'Custom'}
-                    onChange={(e) => setNewPlugin({ ...newPlugin, plugin_type: e.target.value })}
+                    onChange={e =>
+                      setNewPlugin({
+                        ...newPlugin,
+                        plugin_type: e.target.value,
+                      })
+                    }
                     disabled={saving}
                   >
                     <option value="Engine">エンジン</option>
@@ -252,6 +379,115 @@ export const PluginManagement: React.FC = () => {
                     <option value="Logging">ログ</option>
                     <option value="Custom">カスタム</option>
                   </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label">権限設定</label>
+                  <div className="permissions-section">
+                    <div className="permission-item">
+                      <label className="permission-label">データベースアクセス</label>
+                      <select
+                        className="form-select"
+                        value={newPlugin.permissions?.database_access || 'none'}
+                        onChange={e =>
+                          setNewPlugin({
+                            ...newPlugin,
+                            permissions: {
+                              ...(newPlugin.permissions || {
+                                database_access: 'none',
+                                network_access: 'deny',
+                                api_key_access: 'deny',
+                                filesystem_access: 'deny',
+                              }),
+                              database_access: e.target.value,
+                            },
+                          })
+                        }
+                        disabled={saving}
+                      >
+                        <option value="none">なし</option>
+                        <option value="read">読み取りのみ</option>
+                        <option value="write">読み書き</option>
+                      </select>
+                    </div>
+                    <div className="permission-item">
+                      <label className="permission-label">外部通信</label>
+                      <select
+                        className="form-select"
+                        value={newPlugin.permissions?.network_access || 'deny'}
+                        onChange={e =>
+                          setNewPlugin({
+                            ...newPlugin,
+                            permissions: {
+                              ...(newPlugin.permissions || {
+                                database_access: 'none',
+                                network_access: 'deny',
+                                api_key_access: 'deny',
+                                filesystem_access: 'deny',
+                              }),
+                              network_access: e.target.value,
+                            },
+                          })
+                        }
+                        disabled={saving}
+                      >
+                        <option value="deny">拒否</option>
+                        <option value="allow">許可</option>
+                      </select>
+                    </div>
+                    <div className="permission-item">
+                      <label className="permission-label">APIキーアクセス</label>
+                      <select
+                        className="form-select"
+                        value={newPlugin.permissions?.api_key_access || 'deny'}
+                        onChange={e =>
+                          setNewPlugin({
+                            ...newPlugin,
+                            permissions: {
+                              ...(newPlugin.permissions || {
+                                database_access: 'none',
+                                network_access: 'deny',
+                                api_key_access: 'deny',
+                                filesystem_access: 'deny',
+                              }),
+                              api_key_access: e.target.value,
+                            },
+                          })
+                        }
+                        disabled={saving}
+                      >
+                        <option value="deny">拒否</option>
+                        <option value="allow">許可</option>
+                      </select>
+                    </div>
+                    <div className="permission-item">
+                      <label className="permission-label">ファイルシステムアクセス</label>
+                      <select
+                        className="form-select"
+                        value={newPlugin.permissions?.filesystem_access || 'deny'}
+                        onChange={e =>
+                          setNewPlugin({
+                            ...newPlugin,
+                            permissions: {
+                              ...(newPlugin.permissions || {
+                                database_access: 'none',
+                                network_access: 'deny',
+                                api_key_access: 'deny',
+                                filesystem_access: 'deny',
+                              }),
+                              filesystem_access: e.target.value,
+                            },
+                          })
+                        }
+                        disabled={saving}
+                      >
+                        <option value="deny">拒否</option>
+                        <option value="allow">許可</option>
+                      </select>
+                    </div>
+                  </div>
+                  <p className="permission-hint">
+                    プラグインの権限を設定します。デフォルトではすべての権限が拒否されています。
+                  </p>
                 </div>
                 <div className="form-actions">
                   <button
@@ -265,6 +501,12 @@ export const PluginManagement: React.FC = () => {
                         author: '',
                         description: '',
                         plugin_type: 'Custom',
+                        permissions: {
+                          database_access: 'none',
+                          network_access: 'deny',
+                          api_key_access: 'deny',
+                          filesystem_access: 'deny',
+                        },
                       });
                     }}
                     disabled={saving}
@@ -274,8 +516,18 @@ export const PluginManagement: React.FC = () => {
                   <button
                     type="button"
                     className="button-primary"
-                    onClick={handleRegisterPlugin}
-                    disabled={saving || !newPlugin.name || !newPlugin.version || !newPlugin.author}
+                    onClick={() => {
+                      startTransition(() => {
+                        handleRegisterPlugin();
+                      });
+                    }}
+                    disabled={
+                      saving ||
+                      !newPlugin.name ||
+                      !newPlugin.version ||
+                      isPending ||
+                      !newPlugin.author
+                    }
                   >
                     {saving ? '登録中...' : 'プラグインを登録'}
                   </button>
@@ -292,12 +544,14 @@ export const PluginManagement: React.FC = () => {
               </div>
             ) : (
               <div className="plugins-list">
-                {plugins.map((plugin) => (
+                {plugins.map(plugin => (
                   <div key={plugin.id} className="plugin-item">
                     <div className="plugin-header">
                       <div className="plugin-title-section">
                         <h3 className="plugin-name">{plugin.name}</h3>
-                        <span className="plugin-version">v{plugin.version}</span>
+                        <span className="plugin-version">
+                          v{plugin.version}
+                        </span>
                       </div>
                       <label className="plugin-toggle">
                         <input
@@ -310,10 +564,16 @@ export const PluginManagement: React.FC = () => {
                                 plugin_id: plugin.id,
                                 enabled: !plugin.enabled,
                               });
-                              showSuccess(`プラグイン "${plugin.name}" を${!plugin.enabled ? '有効' : '無効'}にしました`);
+                              showSuccess(
+                                `プラグイン "${plugin.name}" を${!plugin.enabled ? '有効' : '無効'}にしました`
+                              );
                               loadPlugins();
                             } catch (err) {
-                              showError(err instanceof Error ? err.message : 'プラグインの有効/無効化に失敗しました');
+                              showError(
+                                err instanceof Error
+                                  ? err.message
+                                  : 'プラグインの有効/無効化に失敗しました'
+                              );
                             } finally {
                               setSaving(false);
                             }
@@ -333,8 +593,127 @@ export const PluginManagement: React.FC = () => {
                         </span>
                       </div>
                       {plugin.description && (
-                        <p className="plugin-description">{plugin.description}</p>
+                        <p className="plugin-description">
+                          {plugin.description}
+                        </p>
                       )}
+                      <div className="plugin-permissions">
+                        <div className="plugin-permissions-header">
+                          <h4>権限設定</h4>
+                          <button
+                            type="button"
+                            className="button-link"
+                            onClick={() =>
+                              setEditingPermissions(
+                                editingPermissions === plugin.id ? null : plugin.id
+                              )
+                            }
+                            disabled={saving}
+                          >
+                            {editingPermissions === plugin.id ? 'キャンセル' : '編集'}
+                          </button>
+                        </div>
+                        {editingPermissions === plugin.id ? (
+                          <div className="permissions-edit-form">
+                            <div className="permission-item">
+                              <label className="permission-label">データベースアクセス</label>
+                              <select
+                                className="form-select"
+                                value={plugin.permissions?.database_access || 'none'}
+                                onChange={async e => {
+                                  const updatedPermissions: PluginPermissions = {
+                                    database_access: e.target.value,
+                                    network_access: plugin.permissions?.network_access || 'deny',
+                                    api_key_access: plugin.permissions?.api_key_access || 'deny',
+                                    filesystem_access: plugin.permissions?.filesystem_access || 'deny',
+                                  };
+                                  await handleUpdatePermissions(plugin.id, updatedPermissions);
+                                }}
+                                disabled={saving}
+                              >
+                                <option value="none">なし</option>
+                                <option value="read">読み取りのみ</option>
+                                <option value="write">読み書き</option>
+                              </select>
+                            </div>
+                            <div className="permission-item">
+                              <label className="permission-label">外部通信</label>
+                              <select
+                                className="form-select"
+                                value={plugin.permissions?.network_access || 'deny'}
+                                onChange={async e => {
+                                  const updatedPermissions: PluginPermissions = {
+                                    database_access: plugin.permissions?.database_access || 'none',
+                                    network_access: e.target.value,
+                                    api_key_access: plugin.permissions?.api_key_access || 'deny',
+                                    filesystem_access: plugin.permissions?.filesystem_access || 'deny',
+                                  };
+                                  await handleUpdatePermissions(plugin.id, updatedPermissions);
+                                }}
+                                disabled={saving}
+                              >
+                                <option value="deny">拒否</option>
+                                <option value="allow">許可</option>
+                              </select>
+                            </div>
+                            <div className="permission-item">
+                              <label className="permission-label">APIキーアクセス</label>
+                              <select
+                                className="form-select"
+                                value={plugin.permissions?.api_key_access || 'deny'}
+                                onChange={async e => {
+                                  const updatedPermissions: PluginPermissions = {
+                                    database_access: plugin.permissions?.database_access || 'none',
+                                    network_access: plugin.permissions?.network_access || 'deny',
+                                    api_key_access: e.target.value,
+                                    filesystem_access: plugin.permissions?.filesystem_access || 'deny',
+                                  };
+                                  await handleUpdatePermissions(plugin.id, updatedPermissions);
+                                }}
+                                disabled={saving}
+                              >
+                                <option value="deny">拒否</option>
+                                <option value="allow">許可</option>
+                              </select>
+                            </div>
+                            <div className="permission-item">
+                              <label className="permission-label">ファイルシステムアクセス</label>
+                              <select
+                                className="form-select"
+                                value={plugin.permissions?.filesystem_access || 'deny'}
+                                onChange={async e => {
+                                  const updatedPermissions: PluginPermissions = {
+                                    database_access: plugin.permissions?.database_access || 'none',
+                                    network_access: plugin.permissions?.network_access || 'deny',
+                                    api_key_access: plugin.permissions?.api_key_access || 'deny',
+                                    filesystem_access: e.target.value,
+                                  };
+                                  await handleUpdatePermissions(plugin.id, updatedPermissions);
+                                }}
+                                disabled={saving}
+                              >
+                                <option value="deny">拒否</option>
+                                <option value="allow">許可</option>
+                              </select>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="permissions-display">
+                            <div className="permission-badge">
+                              データベース: {getPermissionLabel('database_access', plugin.permissions?.database_access || 'none')}
+                            </div>
+                            <div className="permission-badge">
+                              外部通信: {getPermissionLabel('network_access', plugin.permissions?.network_access || 'deny')}
+                            </div>
+                            <div className="permission-badge">
+                              APIキー: {getPermissionLabel('api_key_access', plugin.permissions?.api_key_access || 'deny')}
+                            </div>
+                            <div className="permission-badge">
+                              ファイルシステム: {getPermissionLabel('filesystem_access', plugin.permissions?.filesystem_access || 'deny')}
+                            </div>
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
                 ))}
@@ -346,4 +725,3 @@ export const PluginManagement: React.FC = () => {
     </div>
   );
 };
-

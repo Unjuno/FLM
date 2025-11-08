@@ -17,4 +17,3 @@ declare global {
 
 // モジュールとして認識されるようにexportを追加
 export {};
-

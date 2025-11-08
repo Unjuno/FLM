@@ -1,60 +1,78 @@
 /* API Edit Page Styles */
+/* 共通スタイルは src/styles/common.css を参照 */
 
 .api-edit-page {
   min-height: 100vh;
-  background-color: #f6f6f6;
-  padding: 2rem;
+  background-color: var(--color-bg-secondary, #f7fafc);
+  padding: var(--spacing-md);
+}
+
+[data-theme="dark"] .api-edit-page {
+  background-color: var(--color-bg-secondary, #2d3748);
 }
 
 .api-edit-container {
-  max-width: 800px;
+  /* 共通スタイルの .page-container を使用 */
+  max-width: var(--layout-max-width, 1200px);
   margin: 0 auto;
-  background: white;
-  border-radius: 12px;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  padding: 2rem;
+  background: var(--color-bg-primary, #ffffff);
+  border: 1px solid var(--color-border-light, #e2e8f0);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+  padding: var(--spacing-md);
+}
+
+[data-theme="dark"] .api-edit-container {
+  background: var(--color-bg-primary, #1a202c);
+  border-color: var(--color-border-light, #4a5568);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.3));
 }
 
 .api-edit-header {
+  /* 共通スタイルの .page-header を使用 */
   display: flex;
   align-items: center;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid #e0e0e0;
+  gap: var(--spacing-sm);
+  margin-bottom: var(--spacing-md);
+  padding-bottom: var(--spacing-sm);
+  border-bottom: 1px solid var(--color-border-light, #e2e8f0);
+  flex-wrap: wrap;
 }
 
-.back-button {
-  padding: 0.5rem 1rem;
-  background: transparent;
-  border: 1px solid #ddd;
-  border-radius: 8px;
-  cursor: pointer;
-  color: #666;
-  transition: all 0.2s;
+[data-theme="dark"] .api-edit-header {
+  border-bottom-color: var(--color-border-light, #4a5568);
 }
 
-.back-button:hover {
-  background-color: #f0f0f0;
-  border-color: #396cd8;
-  color: #396cd8;
-}
+/* 共通スタイルの .back-button を使用 */
 
 .api-edit-header h1 {
   margin: 0;
-  color: #0f0f0f;
+  color: var(--color-text-primary, #1a202c);
+  font-size: 1.125rem;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .api-edit-header h1 {
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .error-message {
-  padding: 1rem;
-  background-color: #fee;
-  border: 1px solid #fcc;
-  border-radius: 8px;
-  color: #c00;
-  margin-bottom: 1.5rem;
+  padding: var(--spacing-md, 1rem);
+  background-color: var(--color-error-light, #fed7d7);
+  border: 1px solid var(--color-error, #f56565);
+  border-radius: var(--radius-lg, 0.75rem);
+  color: var(--color-error, #f56565);
+  margin-bottom: var(--spacing-lg, 1.5rem);
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--spacing-xs, 0.25rem);
+  font-weight: 500;
+}
+
+[data-theme="dark"] .error-message {
+  background-color: var(--color-error-light, rgba(245, 101, 101, 0.2));
+  border-color: var(--color-error, #f56565);
+  color: var(--color-error, #f56565);
 }
 
 .error-icon {
@@ -64,23 +82,34 @@
 .api-edit-form {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: var(--spacing-xl, 2rem);
 }
 
 .form-section {
-  padding: 1.5rem;
-  background-color: #fafafa;
-  border-radius: 8px;
+  padding: var(--spacing-lg, 1.5rem);
+  background-color: var(--color-bg-secondary, #f7fafc);
+  border-radius: var(--radius-lg, 0.75rem);
+  border: 1px solid var(--color-border-light, #e2e8f0);
+}
+
+[data-theme="dark"] .form-section {
+  background-color: var(--color-bg-secondary, #2d3748);
+  border-color: var(--color-border-light, #4a5568);
 }
 
 .form-section h2 {
-  margin: 0 0 1.5rem 0;
-  color: #0f0f0f;
-  font-size: 1.2rem;
+  margin: 0 0 var(--spacing-lg, 1.5rem) 0;
+  color: var(--color-text-primary, #1a202c);
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+[data-theme="dark"] .form-section h2 {
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .form-group {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--spacing-lg, 1.5rem);
 }
 
 .form-group:last-child {
@@ -89,52 +118,70 @@
 
 .form-label {
   display: block;
-  margin-bottom: 0.5rem;
-  font-weight: 500;
-  color: #0f0f0f;
+  margin-bottom: var(--spacing-xs, 0.25rem);
+  font-weight: 600;
+  color: var(--color-text-primary, #1a202c);
+}
+
+[data-theme="dark"] .form-label {
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .required {
-  color: #c00;
-  margin-left: 0.25rem;
+  color: var(--color-error, #f56565);
+  margin-left: var(--spacing-xs, 0.25rem);
 }
 
 .form-input {
   width: 100%;
-  padding: 0.75rem;
-  border: 1px solid #ddd;
-  border-radius: 8px;
+  padding: var(--spacing-md, 1rem);
+  border: 1px solid var(--color-border, #cbd5e0);
+  border-radius: var(--radius-md, 0.5rem);
   font-size: 1rem;
-  transition: border-color 0.2s;
+  background: var(--color-bg-primary, #ffffff);
+  color: var(--color-text-primary, #1a202c);
+  transition: border-color var(--transition-base, 200ms ease-in-out);
+}
+
+[data-theme="dark"] .form-input {
+  background: var(--color-bg-primary, #1a202c);
+  border-color: var(--color-border, #718096);
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .form-input:focus {
   outline: none;
-  border-color: #396cd8;
+  border-color: var(--color-primary, #667eea);
+  box-shadow: 0 0 0 3px var(--color-primary-light, rgba(102, 126, 234, 0.1));
 }
 
 .form-input.error {
-  border-color: #c00;
+  border-color: var(--color-error, #f56565);
 }
 
 .form-error {
   display: block;
-  margin-top: 0.25rem;
-  color: #c00;
+  margin-top: var(--spacing-xs, 0.25rem);
+  color: var(--color-error, #f56565);
   font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .form-hint {
   display: block;
-  margin-top: 0.25rem;
-  color: #666;
+  margin-top: var(--spacing-xs, 0.25rem);
+  color: var(--color-text-secondary, #4a5568);
   font-size: 0.875rem;
+}
+
+[data-theme="dark"] .form-hint {
+  color: var(--color-text-secondary, #cbd5e0);
 }
 
 .form-checkbox-label {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--spacing-xs, 0.25rem);
   cursor: pointer;
 }
 
@@ -142,76 +189,110 @@
   width: 20px;
   height: 20px;
   cursor: pointer;
+  accent-color: var(--color-primary, #667eea);
 }
 
 .form-checkbox-text {
   -webkit-user-select: none;
   user-select: none;
+  color: var(--color-text-primary, #1a202c);
+}
+
+[data-theme="dark"] .form-checkbox-text {
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .api-key-actions {
-  margin-top: 0.5rem;
+  margin-top: var(--spacing-xs, 0.25rem);
 }
 
 .button-warning {
-  padding: 0.75rem 1.5rem;
-  background-color: #ff9800;
-  color: white;
+  padding: var(--spacing-xs) var(--spacing-md);
+  background: var(--color-warning, #ed8936);
+  color: var(--color-text-inverse, #ffffff);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.75rem;
   font-weight: 500;
-  transition: background-color 0.2s;
+  transition: all var(--transition-base, 200ms ease-in-out);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
 }
 
 .button-warning:hover {
-  background-color: #f57c00;
+  background: var(--color-warning-dark, #dd6b20);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow, 0 1px 3px 0 rgba(0, 0, 0, 0.1));
 }
 
 .form-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
-  padding-top: 1.5rem;
-  border-top: 1px solid #e0e0e0;
+  gap: var(--spacing-md, 1rem);
+  padding-top: var(--spacing-lg, 1.5rem);
+  flex-wrap: wrap;
+  border-top: 1px solid var(--color-border-light, #e2e8f0);
+}
+
+[data-theme="dark"] .form-actions {
+  border-top-color: var(--color-border-light, #4a5568);
 }
 
 .button-primary,
 .button-secondary {
-  padding: 0.75rem 2rem;
+  padding: var(--spacing-xs) var(--spacing-md);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-md);
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 0.75rem;
   font-weight: 500;
-  transition: all 0.2s;
+  transition: all var(--transition-base, 200ms ease-in-out);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
 }
 
 .button-primary {
-  background-color: #396cd8;
-  color: white;
+  background: var(--color-primary, #667eea);
+  color: var(--color-text-inverse, #ffffff);
 }
 
 .button-primary:hover:not(:disabled) {
-  background-color: #2851a3;
+  background: var(--color-primary-hover, #5568d3);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow, 0 1px 3px 0 rgba(0, 0, 0, 0.1));
 }
 
 .button-primary:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
+}
+
+.button-primary:disabled:hover {
+  transform: none;
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
 }
 
 .button-secondary {
-  background-color: transparent;
-  color: #666;
-  border: 1px solid #ddd;
+  background: var(--color-bg-tertiary, #edf2f7);
+  color: var(--color-text-primary, #1a202c);
+  border: 1px solid var(--color-border, #cbd5e0);
+}
+
+[data-theme="dark"] .button-secondary {
+  background: var(--color-bg-tertiary, #4a5568);
+  color: var(--color-text-primary, #f7fafc);
+  border-color: var(--color-border, #718096);
 }
 
 .button-secondary:hover {
-  background-color: #f0f0f0;
-  border-color: #396cd8;
-  color: #396cd8;
+  background: var(--color-bg-tertiary, #cbd5e0);
+  border-color: var(--color-border-dark, #a0aec0);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+}
+
+[data-theme="dark"] .button-secondary:hover {
+  background: var(--color-bg-tertiary, #718096);
 }
 
 .loading-container {
@@ -289,3 +370,122 @@
   }
 }
 
+/* 確認ダイアログのスタイル */
+.confirm-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--spacing-md);
+}
+
+.confirm-dialog {
+  background-color: var(--color-bg-primary, #ffffff);
+  border-radius: var(--radius-lg, 0.75rem);
+  padding: var(--spacing-xl, 2rem);
+  max-width: 500px;
+  width: 100%;
+  box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
+}
+
+[data-theme="dark"] .confirm-dialog {
+  background-color: var(--color-bg-primary, #1a202c);
+  box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.3));
+}
+
+.confirm-dialog h3 {
+  margin: 0 0 var(--spacing-md, 1rem) 0;
+  font-size: 1.25rem;
+  color: var(--color-text-primary, #1a202c);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .confirm-dialog h3 {
+  color: var(--color-text-primary, #f7fafc);
+}
+
+.confirm-dialog p {
+  margin: 0 0 var(--spacing-xl, 2rem) 0;
+  color: var(--color-text-secondary, #4a5568);
+  line-height: 1.6;
+}
+
+[data-theme="dark"] .confirm-dialog p {
+  color: var(--color-text-secondary, #cbd5e0);
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  gap: var(--spacing-md, 1rem);
+  justify-content: flex-end;
+}
+
+.confirm-button {
+  padding: var(--spacing-sm, 0.5rem) var(--spacing-lg, 1.5rem);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: none;
+  border-radius: var(--radius-md, 0.5rem);
+  cursor: pointer;
+  transition: all var(--transition-base, 200ms ease-in-out);
+  min-width: 100px;
+}
+
+.confirm-button.cancel {
+  background-color: var(--color-bg-tertiary, #edf2f7);
+  color: var(--color-text-primary, #1a202c);
+  border: 1px solid var(--color-border-light, #e2e8f0);
+}
+
+[data-theme="dark"] .confirm-button.cancel {
+  background-color: var(--color-bg-tertiary, #4a5568);
+  color: var(--color-text-primary, #f7fafc);
+  border-color: var(--color-border-light, #4a5568);
+}
+
+.confirm-button.cancel:hover {
+  background-color: var(--color-bg-secondary, #e2e8f0);
+  border-color: var(--color-border, #cbd5e0);
+}
+
+[data-theme="dark"] .confirm-button.cancel:hover {
+  background-color: var(--color-bg-secondary, #2d3748);
+  border-color: var(--color-border, #718096);
+}
+
+.confirm-button.confirm {
+  background-color: var(--color-primary, #667eea);
+  color: var(--color-text-inverse, #ffffff);
+}
+
+.confirm-button.confirm:hover {
+  background-color: var(--color-primary-hover, #5568d3);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+.confirm-button:active {
+  transform: translateY(0);
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 480px) {
+  .confirm-dialog {
+    padding: var(--spacing-lg, 1.5rem);
+    margin: var(--spacing-md, 1rem);
+  }
+
+  .confirm-dialog-actions {
+    flex-direction: column;
+  }
+
+  .confirm-button {
+    width: 100%;
+  }
+}

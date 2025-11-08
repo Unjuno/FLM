@@ -3,13 +3,19 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 describe('Database Schema Tests', () => {
   beforeAll(() => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('データベーススキーマテストを開始します');
     }
   });
 
   afterAll(() => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('データベーススキーマテストを完了しました');
     }
   });
@@ -167,4 +173,3 @@ describe('Database Schema Tests', () => {
     });
   });
 });
-

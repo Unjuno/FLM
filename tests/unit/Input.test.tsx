@@ -18,12 +18,16 @@ describe('Input.tsx', () => {
 
     it('ラベルなしでレンダリングできる', () => {
       render(<Input placeholder="入力してください" />);
-      expect(screen.getByPlaceholderText('入力してください')).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('入力してください')
+      ).toBeInTheDocument();
     });
 
     it('プレースホルダーを表示する', () => {
       render(<Input placeholder="プレースホルダー" />);
-      expect(screen.getByPlaceholderText('プレースホルダー')).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('プレースホルダー')
+      ).toBeInTheDocument();
     });
   });
 
@@ -151,4 +155,3 @@ describe('Input.tsx', () => {
     });
   });
 });
-

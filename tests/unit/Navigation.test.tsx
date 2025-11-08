@@ -23,7 +23,7 @@ describe('Navigation.tsx', () => {
           <Navigation items={mockItems} />
         </BrowserRouter>
       );
-      
+
       expect(screen.getByText('ホーム')).toBeInTheDocument();
       expect(screen.getByText('API一覧')).toBeInTheDocument();
       expect(screen.getByText('モデル管理')).toBeInTheDocument();
@@ -35,7 +35,7 @@ describe('Navigation.tsx', () => {
           <Navigation items={mockItems} />
         </BrowserRouter>
       );
-      
+
       expect(screen.getByText('🏠')).toBeInTheDocument();
       expect(screen.getByText('📋')).toBeInTheDocument();
       expect(screen.getByText('🤖')).toBeInTheDocument();
@@ -49,7 +49,7 @@ describe('Navigation.tsx', () => {
           <Navigation items={mockItems} orientation="horizontal" />
         </BrowserRouter>
       );
-      
+
       const nav = container.querySelector('nav');
       expect(nav).toHaveClass('navigation', 'navigation-horizontal');
     });
@@ -60,7 +60,7 @@ describe('Navigation.tsx', () => {
           <Navigation items={mockItems} orientation="vertical" />
         </BrowserRouter>
       );
-      
+
       const nav = container.querySelector('nav');
       expect(nav).toHaveClass('navigation', 'navigation-vertical');
     });
@@ -85,10 +85,9 @@ describe('Navigation.tsx', () => {
           <Navigation items={nestedItems} />
         </BrowserRouter>
       );
-      
+
       expect(screen.getByText('API')).toBeInTheDocument();
       // 子項目は展開されていない場合、表示されない可能性がある
     });
   });
 });
-

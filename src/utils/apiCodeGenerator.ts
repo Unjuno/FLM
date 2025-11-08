@@ -131,4 +131,3 @@ export function generateSampleCode(
       return '';
   }
 }
-

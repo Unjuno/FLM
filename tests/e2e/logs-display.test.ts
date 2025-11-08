@@ -1,9 +1,9 @@
 /**
  * FLM - F006: ログ表示機能 E2Eテスト
- * 
+ *
  * QAエージェント (QA) 実装
  * ログ表示UIのE2Eテスト
- * 
+ *
  * 注意: TauriアプリケーションのE2Eテストは、実際のUI操作ではなく、
  * フロントエンドからバックエンドへの完全なフローのテストとして実装します
  */
@@ -53,7 +53,7 @@ interface ApiInfo {
 
 /**
  * F006: ログ表示機能E2Eテストスイート
- * 
+ *
  * テスト項目:
  * - ログ一覧表示テスト（ページ読み込み、API選択、ログ一覧表示確認）
  * - フィルタ機能テスト（日時範囲、ステータスコード、パス検索）
@@ -64,11 +64,11 @@ interface ApiInfo {
  */
 describe('F006: ログ表示機能 E2Eテスト', () => {
   let testApiId: string | null = null;
-  let testLogIds: string[] = [];
+  const testLogIds: string[] = [];
 
   beforeAll(async () => {
     console.log('F006 ログ表示機能E2Eテストを開始します');
-    
+
     // テスト用のAPIを作成
     try {
       const result = await invoke<ApiInfo>('create_api', {
@@ -144,7 +144,9 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
 
         for (const log of logs) {
           try {
-            const logId = await invoke<string>('save_request_log', { log: log });
+            const logId = await invoke<string>('save_request_log', {
+              log: log,
+            });
             testLogIds.push(logId);
           } catch (err) {
             console.warn('ログの作成に失敗しました:', err);
@@ -199,7 +201,7 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
 
       expect(logs).toBeDefined();
       expect(Array.isArray(logs)).toBe(true);
-      
+
       // テスト用ログが存在する場合は検証
       if (logs.length > 0) {
         const log = logs[0];
@@ -276,8 +278,12 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
       // フィルタされたログが指定した日時範囲内にあることを確認
       for (const log of filteredLogs) {
         const logDate = new Date(log.created_at);
-        expect(logDate.getTime()).toBeGreaterThanOrEqual(new Date(startDate).getTime());
-        expect(logDate.getTime()).toBeLessThanOrEqual(new Date(endDate).getTime());
+        expect(logDate.getTime()).toBeGreaterThanOrEqual(
+          new Date(startDate).getTime()
+        );
+        expect(logDate.getTime()).toBeLessThanOrEqual(
+          new Date(endDate).getTime()
+        );
       }
     });
 
@@ -354,8 +360,12 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
       // 複数のフィルタ条件がすべて満たされていることを確認
       for (const log of filteredLogs) {
         const logDate = new Date(log.created_at);
-        expect(logDate.getTime()).toBeGreaterThanOrEqual(new Date(startDate).getTime());
-        expect(logDate.getTime()).toBeLessThanOrEqual(new Date(endDate).getTime());
+        expect(logDate.getTime()).toBeGreaterThanOrEqual(
+          new Date(startDate).getTime()
+        );
+        expect(logDate.getTime()).toBeLessThanOrEqual(
+          new Date(endDate).getTime()
+        );
         expect(log.response_status).toBe(200);
         expect(log.path).toContain('/v1');
       }
@@ -410,19 +420,29 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
 
       if (logs.length > 0) {
         const log = logs[0];
-        
+
         // 必須フィールドが存在することを確認
         expect(log.id).toBeDefined();
         expect(log.api_id).toBeDefined();
         expect(log.method).toBeDefined();
         expect(log.path).toBeDefined();
         expect(log.created_at).toBeDefined();
-        
+
         // オプションフィールドがnullまたは値を持つことを確認
-        expect(log.request_body === null || typeof log.request_body === 'string').toBe(true);
-        expect(log.response_status === null || typeof log.response_status === 'number').toBe(true);
-        expect(log.response_time_ms === null || typeof log.response_time_ms === 'number').toBe(true);
-        expect(log.error_message === null || typeof log.error_message === 'string').toBe(true);
+        expect(
+          log.request_body === null || typeof log.request_body === 'string'
+        ).toBe(true);
+        expect(
+          log.response_status === null ||
+            typeof log.response_status === 'number'
+        ).toBe(true);
+        expect(
+          log.response_time_ms === null ||
+            typeof log.response_time_ms === 'number'
+        ).toBe(true);
+        expect(
+          log.error_message === null || typeof log.error_message === 'string'
+        ).toBe(true);
       }
     });
   });
@@ -466,7 +486,9 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
       }
 
       const now = new Date();
-      const startDate = new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString(); // 24時間前
+      const startDate = new Date(
+        now.getTime() - 24 * 60 * 60 * 1000
+      ).toISOString(); // 24時間前
       const endDate = now.toISOString();
 
       const statistics = await invoke<LogStatistics>('get_log_statistics', {
@@ -521,7 +543,7 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
 
       expect(statistics.error_rate).toBeDefined();
       expect(typeof statistics.error_rate).toBe('number');
-      
+
       // エラー率は0-100の範囲内である必要がある
       expect(statistics.error_rate).toBeGreaterThanOrEqual(0);
       expect(statistics.error_rate).toBeLessThanOrEqual(100);
@@ -558,14 +580,14 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
 
     it('should handle invalid API ID gracefully', async () => {
       const invalidApiId = 'invalid-api-id-12345';
-      
+
       try {
         const logs = await invoke<RequestLogInfo[]>('get_request_logs', {
           apiId: invalidApiId,
           limit: 20,
           offset: 0,
         });
-        
+
         // エラーが発生するか、空の配列が返されることを確認
         expect(Array.isArray(logs)).toBe(true);
       } catch (error) {
@@ -599,8 +621,12 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
       }
 
       // 将来の日時範囲（ログが存在しない）
-      const futureStart = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-      const futureEnd = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+      const futureStart = new Date(
+        Date.now() + 24 * 60 * 60 * 1000
+      ).toISOString();
+      const futureEnd = new Date(
+        Date.now() + 48 * 60 * 60 * 1000
+      ).toISOString();
 
       const logs = await invoke<RequestLogInfo[]>('get_request_logs', {
         apiId: testApiId,
@@ -668,4 +694,3 @@ describe('F006: ログ表示機能 E2Eテスト', () => {
     });
   });
 });
-

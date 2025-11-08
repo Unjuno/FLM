@@ -53,26 +53,35 @@ export const Sidebar: React.FC<SidebarProps> = ({
   }, [collapsed, onCollapseChange]);
 
   // パスがアクティブかどうかを判定（useCallbackでメモ化）
-  const isActive = useCallback((path: string): boolean => {
-    return location.pathname === path;
-  }, [location.pathname]);
+  const isActive = useCallback(
+    (path: string): boolean => {
+      return location.pathname === path;
+    },
+    [location.pathname]
+  );
 
   // ナビゲーションアイテム（useMemoでメモ化）
-  const navItems: NavItem[] = useMemo(() => [
-    { path: '/', label: 'ホーム', icon: '🏠' },
-    { path: '/apis', label: 'API一覧', icon: '📡' },
-    { path: '/models', label: 'モデル管理', icon: '🤖' },
-    { path: '/logs', label: 'ログ', icon: '📊' },
-    { path: '/performance', label: 'パフォーマンス', icon: '⚡' },
-    { path: '/alerts', label: 'アラート', icon: '🔔' },
-    { path: '/settings', label: '設定', icon: '⚙️' },
-    { path: '/help', label: 'ヘルプ', icon: '❓' },
-  ], []);
+  const navItems: NavItem[] = useMemo(
+    () => [
+      { path: '/', label: 'ホーム', icon: '🏠' },
+      { path: '/apis', label: 'API一覧', icon: '📡' },
+      { path: '/models', label: 'モデル管理', icon: '🤖' },
+      { path: '/logs', label: 'ログ', icon: '📊' },
+      { path: '/performance', label: 'パフォーマンス', icon: '⚡' },
+      { path: '/alerts', label: 'アラート', icon: '🔔' },
+      { path: '/settings', label: '設定', icon: '⚙️' },
+      { path: '/help', label: 'ヘルプ', icon: '❓' },
+    ],
+    []
+  );
 
   // ナビゲーションハンドラ（useCallbackでメモ化）
-  const handleNavigation = useCallback((path: string) => {
-    navigate(path);
-  }, [navigate]);
+  const handleNavigation = useCallback(
+    (path: string) => {
+      navigate(path);
+    },
+    [navigate]
+  );
 
   // className を安全に結合
   const sidebarClassName = useMemo(() => {
@@ -91,11 +100,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
       <div className="sidebar-container">
         {/* 折りたたみボタン */}
         <div className="sidebar-header">
-          <Tooltip content={collapsed ? 'サイドバーを展開' : 'サイドバーを折りたたむ'} position="right">
+          <Tooltip
+            content={collapsed ? 'サイドバーを展開' : 'サイドバーを折りたたむ'}
+            position="right"
+          >
             <button
               className="sidebar-toggle"
               onClick={toggleCollapse}
-              aria-label={collapsed ? 'サイドバーを展開' : 'サイドバーを折りたたむ'}
+              aria-label={
+                collapsed ? 'サイドバーを展開' : 'サイドバーを折りたたむ'
+              }
               {...(!collapsed && { 'aria-expanded': true })}
             >
               {collapsed ? '▶' : '◀'}
@@ -106,11 +120,15 @@ export const Sidebar: React.FC<SidebarProps> = ({
         {/* ナビゲーションメニュー */}
         <nav className="sidebar-nav" aria-label="サイドナビゲーション">
           <ul className="sidebar-nav-list">
-            {navItems.map((item) => {
+            {navItems.map(item => {
               const active = isActive(item.path);
               return (
                 <li key={item.path} className="sidebar-nav-item">
-                  <Tooltip content={item.label} position="right" disabled={!collapsed}>
+                  <Tooltip
+                    content={item.label}
+                    position="right"
+                    disabled={!collapsed}
+                  >
                     <button
                       className={`sidebar-nav-link ${active ? 'active' : ''}`}
                       onClick={() => handleNavigation(item.path)}
@@ -120,9 +138,13 @@ export const Sidebar: React.FC<SidebarProps> = ({
                       <span className="sidebar-nav-icon">{item.icon}</span>
                       {!collapsed && (
                         <>
-                          <span className="sidebar-nav-label">{item.label}</span>
+                          <span className="sidebar-nav-label">
+                            {item.label}
+                          </span>
                           {item.badge !== undefined && item.badge > 0 && (
-                            <span className="sidebar-nav-badge">{item.badge}</span>
+                            <span className="sidebar-nav-badge">
+                              {item.badge}
+                            </span>
                           )}
                         </>
                       )}
@@ -137,4 +159,3 @@ export const Sidebar: React.FC<SidebarProps> = ({
     </aside>
   );
 };
-

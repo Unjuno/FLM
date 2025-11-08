@@ -4,6 +4,10 @@ FLMは、**初心者でも外部に公開して使える安全なAPIが、イン
 
 技術知識がなくても、コードを書かずに、直感的なUIでローカルLLMのAPIを作成・デプロイし、そのAPIを**外部からも安全に利用**できます。セキュリティ設定は自動化されているため、誰でも簡単に安全なAPIを作成・公開できます。
 
+**注意**: 本アプリケーションは**シングルユーザー環境専用**です。マルチユーザー対応やロールベースアクセス制御（RBAC）機能は提供されていません。
+
+**プロジェクト名について**: 本プロジェクトの正式名称は「FLM (Local LLM API Manager)」です。パッケージ名（`package.json`の`name`、`Cargo.toml`の`name`）は技術的制約により小文字の「flm」となっていますが、プロジェクト名は「FLM」で統一されています。
+
 ## ✨ 主な特徴
 
 - 🚀 **簡単セットアップ**: インストールして実行するだけ
@@ -19,7 +23,7 @@ FLMは、**初心者でも外部に公開して使える安全なAPIが、イン
 ## 📋 プロジェクト構成
 
 ```
-FLLM/
+FLM/
 ├── src/                          # フロントエンド (React + TypeScript)
 │   ├── components/               # UIコンポーネント
 │   │   ├── api/                  # API関連コンポーネント
@@ -75,12 +79,12 @@ FLLM/
 ## 🛠️ 技術スタック
 
 - **UIフレームワーク**: Tauri 2.x
-- **フロントエンド**: React 19.x + TypeScript 5.8
+- **フロントエンド**: React 18.3.1 + TypeScript 5.5.4
 - **バックエンド**: Rust (Edition 2021)
 - **データベース**: SQLite (rusqlite)
 - **LLM実行**: Ollama
 - **認証プロキシ**: Express.js + express-http-proxy
-- **ビルドツール**: Vite 7.x
+- **ビルドツール**: Vite 7.2.2
 - **テスト**: Jest
 
 ## 🚀 クイックスタート
@@ -96,7 +100,7 @@ FLLM/
 1. **リポジトリのクローン**
    ```bash
    git clone https://github.com/Unjuno/FLM.git
-   cd FLLM
+   cd FLM
    ```
 
 2. **依存関係のインストール**
@@ -171,14 +175,9 @@ cargo test
 **📚 [ドキュメントインデックス](./DOCKS/DOCUMENTATION_INDEX.md)** - すべてのドキュメントファイルの一覧と分類（推奨）
 
 ### 📋 プロジェクト情報
-- [プロジェクト整理サマリー](./PROJECT_ORGANIZATION_SUMMARY.md) - プロジェクト整理の詳細
 - [プロジェクト構造](./docs/PROJECT_STRUCTURE.md) - プロジェクト構造の説明
-- [アプリケーション情報](./APP_INFO.md) - アプリケーションの種類とセキュリティ情報
-- [使用可能状況](./USAGE_STATUS.md) - 実装済み機能の一覧
-
-### 📊 実装・テストレポート
-- [実装完了レポート](./DEVELOPER_EXPERT_ULTIMATE_COMPREHENSIVE_REPORT.md) - 最新の完了レポート
-- [テスト実行レポート](./FINAL_TEST_REPORT.md) - 最終テスト実行レポート（最新）
+- [アプリケーション情報](./docs/overview/APP_INFO.md) - アプリケーションの種類とセキュリティ情報
+- [使用可能状況](./docs/overview/USAGE_STATUS.md) - 実装済み機能の一覧
 
 ### 開発者向け
 - [開発環境セットアップ](./docs/DEVELOPMENT_SETUP.md) - 開発環境のセットアップ手順
@@ -193,16 +192,22 @@ cargo test
 - [FAQ](./docs/FAQ.md) - よくある質問
 - [トラブルシューティングガイド](./docs/TROUBLESHOOTING.md) - トラブルシューティング
 
-### テスト関連
-- [テストガイド](./TESTING_GUIDE.md) - テストの実行方法
-- [テスト実行ガイド](./TEST_EXECUTION_GUIDE.md) - テスト実行の詳細手順
-- [クイックテストガイド](./QUICK_TEST_GUIDE.md) - クイックテストガイド
+### 📁 ドキュメントディレクトリ
+詳細なドキュメントは以下のディレクトリに整理されています：
+
+- **[docs/](./docs/)** - ユーザー向け・開発者向けドキュメント
+  - [docs/README.md](./docs/README.md) - ドキュメント一覧
+  - [docs/release/](./docs/release/) - リリース関連ドキュメント
+  - [docs/reports/](./docs/reports/) - 実装・テストレポート
+  - [docs/tests/guides/](./docs/tests/guides/) - テストガイド
+  - [docs/procedures/](./docs/procedures/) - 公開手順・開発手順
+  - [docs/guides/](./docs/guides/) - 各種機能の使用方法ガイド
 
 ## 🔧 開発状況
 
 **現在のバージョン**: v1.0.0
 
-### 最新の更新 (2024年)
+### 最新の更新 (2024-12-31)
 
 - ✅ **プロジェクト全体の整理完了**: 28ファイルを整理・アーカイブ、ドキュメント構造を明確化
 - ✅ **コード整理・リファクタリング完了**: 182ファイルを整理、234行のコード削減

@@ -3,7 +3,14 @@
 /**
  * @jest-environment jsdom
  */
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  jest,
+} from '@jest/globals';
 import { createRoot, type Root } from 'react-dom/client';
 import { LogStatistics } from '../../src/components/api/LogStatistics';
 import * as tauriUtils from '../../src/utils/tauri';
@@ -21,53 +28,111 @@ jest.mock('recharts', () => {
     BarChart: ({ children, ...props }: any) => {
       // dataKeyなどのrecharts専用プロップを除外
       const { dataKey, ...restProps } = props;
-      return React.createElement('div', { className: 'recharts-bar-chart', 'data-testid': 'bar-chart', ...restProps }, children);
+      return React.createElement(
+        'div',
+        {
+          className: 'recharts-bar-chart',
+          'data-testid': 'bar-chart',
+          ...restProps,
+        },
+        children
+      );
     },
     Bar: ({ ...props }: any) => {
       const { dataKey, ...restProps } = props;
-      return React.createElement('div', { className: 'recharts-bar', ...restProps });
+      return React.createElement('div', {
+        className: 'recharts-bar',
+        ...restProps,
+      });
     },
     XAxis: ({ ...props }: any) => {
       const { dataKey, ...restProps } = props;
-      return React.createElement('div', { className: 'recharts-x-axis', ...restProps });
+      return React.createElement('div', {
+        className: 'recharts-x-axis',
+        ...restProps,
+      });
     },
     YAxis: ({ ...props }: any) => {
       const { ...restProps } = props;
-      return React.createElement('div', { className: 'recharts-y-axis', ...restProps });
+      return React.createElement('div', {
+        className: 'recharts-y-axis',
+        ...restProps,
+      });
     },
     CartesianGrid: ({ ...props }: any) => {
       const { ...restProps } = props;
-      return React.createElement('div', { className: 'recharts-cartesian-grid', ...restProps });
+      return React.createElement('div', {
+        className: 'recharts-cartesian-grid',
+        ...restProps,
+      });
     },
     Tooltip: ({ ...props }: any) => {
       const { ...restProps } = props;
-      return React.createElement('div', { className: 'recharts-tooltip', ...restProps });
+      return React.createElement('div', {
+        className: 'recharts-tooltip',
+        ...restProps,
+      });
     },
     Legend: ({ ...props }: any) => {
       const { ...restProps } = props;
-      return React.createElement('div', { className: 'recharts-legend', ...restProps });
+      return React.createElement('div', {
+        className: 'recharts-legend',
+        ...restProps,
+      });
     },
     ResponsiveContainer: ({ children, ...props }: any) => {
       const { width, height, ...restProps } = props;
-      return React.createElement('div', { className: 'recharts-responsive-container', ...restProps }, children);
+      return React.createElement(
+        'div',
+        { className: 'recharts-responsive-container', ...restProps },
+        children
+      );
     },
     PieChart: ({ children, ...props }: any) => {
       const { ...restProps } = props;
-      return React.createElement('div', { className: 'recharts-pie-chart', 'data-testid': 'pie-chart', ...restProps }, children);
+      return React.createElement(
+        'div',
+        {
+          className: 'recharts-pie-chart',
+          'data-testid': 'pie-chart',
+          ...restProps,
+        },
+        children
+      );
     },
     Pie: ({ ...props }: any) => {
-      const { data, cx, cy, labelLine, label, outerRadius, fill, dataKey, ...restProps } = props;
-      return React.createElement('div', { className: 'recharts-pie', ...restProps });
+      const {
+        data,
+        cx,
+        cy,
+        labelLine,
+        label,
+        outerRadius,
+        fill,
+        dataKey,
+        ...restProps
+      } = props;
+      return React.createElement('div', {
+        className: 'recharts-pie',
+        ...restProps,
+      });
     },
     Cell: ({ ...props }: any) => {
       const { fill, ...restProps } = props;
-      return React.createElement('div', { className: 'recharts-cell', ...restProps });
+      return React.createElement('div', {
+        className: 'recharts-cell',
+        ...restProps,
+      });
     },
   };
 });
 
-const mockSafeInvoke = tauriUtils.safeInvoke as jest.MockedFunction<typeof tauriUtils.safeInvoke>;
-const mockUseI18n = i18nContext.useI18n as jest.MockedFunction<typeof i18nContext.useI18n>;
+const mockSafeInvoke = tauriUtils.safeInvoke as jest.MockedFunction<
+  typeof tauriUtils.safeInvoke
+>;
+const mockUseI18n = i18nContext.useI18n as jest.MockedFunction<
+  typeof i18nContext.useI18n
+>;
 
 describe('LogStatistics.tsx', () => {
   let container: HTMLDivElement;
@@ -120,9 +185,12 @@ describe('LogStatistics.tsx', () => {
       // beforeEachで設定されたモックを上書き
       mockSafeInvoke.mockClear();
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      mockSafeInvoke.mockImplementation(() => new Promise<any>(() => {
-        // 解決しないPromise（テストの実行中はローディング状態を維持）
-      }));
+      mockSafeInvoke.mockImplementation(
+        () =>
+          new Promise<any>(() => {
+            // 解決しないPromise（テストの実行中はローディング状態を維持）
+          })
+      );
 
       root.render(<LogStatistics apiId="test-api-id" />);
 
@@ -141,7 +209,7 @@ describe('LogStatistics.tsx', () => {
       // useEffectの実行を待つため、少し待機
       await new Promise(resolve => setTimeout(resolve, 50));
       expect(mockSafeInvoke).toHaveBeenCalled();
-      
+
       const loadingContainer = container.querySelector('.loading-container');
       // ローディング状態が表示される場合、aria-busy属性が設定されることを確認
       if (loadingContainer) {
@@ -200,14 +268,17 @@ describe('LogStatistics.tsx', () => {
       const statCards = container.querySelectorAll('.stat-card');
       // 統計カードが表示されることを確認（0または3の可能性がある）
       expect(statCards.length).toBeGreaterThanOrEqual(0);
-      
+
       // 正規化された値が表示されることを確認
-      const totalRequestsValue = Array.from(statCards)[0].querySelector('.stat-value');
+      const totalRequestsValue =
+        Array.from(statCards)[0].querySelector('.stat-value');
       expect(totalRequestsValue?.textContent).toBe('0'); // 負の値は0に正規化
     });
 
     it('nullデータを処理する', async () => {
-      mockSafeInvoke.mockResolvedValue(null as unknown as ReturnType<typeof tauriUtils.safeInvoke>);
+      mockSafeInvoke.mockResolvedValue(
+        null as unknown as ReturnType<typeof tauriUtils.safeInvoke>
+      );
 
       root.render(<LogStatistics apiId="test-api-id" autoRefresh={false} />);
 
@@ -218,7 +289,9 @@ describe('LogStatistics.tsx', () => {
     });
 
     it('undefinedデータを処理する', async () => {
-      mockSafeInvoke.mockResolvedValue(undefined as unknown as ReturnType<typeof tauriUtils.safeInvoke>);
+      mockSafeInvoke.mockResolvedValue(
+        undefined as unknown as ReturnType<typeof tauriUtils.safeInvoke>
+      );
 
       root.render(<LogStatistics apiId="test-api-id" autoRefresh={false} />);
 
@@ -229,7 +302,9 @@ describe('LogStatistics.tsx', () => {
     });
 
     it('オブジェクト以外のデータを処理する', async () => {
-      mockSafeInvoke.mockResolvedValue('invalid' as unknown as ReturnType<typeof tauriUtils.safeInvoke>);
+      mockSafeInvoke.mockResolvedValue(
+        'invalid' as unknown as ReturnType<typeof tauriUtils.safeInvoke>
+      );
 
       root.render(<LogStatistics apiId="test-api-id" autoRefresh={false} />);
 
@@ -325,7 +400,9 @@ describe('LogStatistics.tsx', () => {
 
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      const retryButton = container.querySelector('.retry-button') as HTMLButtonElement;
+      const retryButton = container.querySelector(
+        '.retry-button'
+      ) as HTMLButtonElement;
       expect(retryButton).toBeTruthy();
 
       retryButton.click();
@@ -339,7 +416,13 @@ describe('LogStatistics.tsx', () => {
   describe('自動更新', () => {
     it('自動更新が有効な場合、setIntervalが設定される', async () => {
       // フェイクタイマーを使用せず、実際の動作を確認
-      root.render(<LogStatistics apiId="test-api-id" autoRefresh={true} refreshInterval={1000} />);
+      root.render(
+        <LogStatistics
+          apiId="test-api-id"
+          autoRefresh={true}
+          refreshInterval={1000}
+        />
+      );
 
       // 初回読み込みを待つ
       await new Promise(resolve => {
@@ -357,7 +440,13 @@ describe('LogStatistics.tsx', () => {
     }, 10000);
 
     it('自動更新が無効な場合、定期更新しない', async () => {
-      root.render(<LogStatistics apiId="test-api-id" autoRefresh={false} refreshInterval={1000} />);
+      root.render(
+        <LogStatistics
+          apiId="test-api-id"
+          autoRefresh={false}
+          refreshInterval={1000}
+        />
+      );
 
       // 初回読み込みを待つ
       await new Promise(resolve => {
@@ -381,7 +470,13 @@ describe('LogStatistics.tsx', () => {
     }, 10000);
 
     it('無効なrefreshIntervalはデフォルト値に正規化される', async () => {
-      root.render(<LogStatistics apiId="test-api-id" autoRefresh={true} refreshInterval={500} />); // 1000ms未満
+      root.render(
+        <LogStatistics
+          apiId="test-api-id"
+          autoRefresh={true}
+          refreshInterval={500}
+        />
+      ); // 1000ms未満
 
       // 初回読み込みを待つ
       await new Promise(resolve => {
@@ -395,7 +490,7 @@ describe('LogStatistics.tsx', () => {
       // コンポーネントが正しくレンダリングされたことを確認
       const statisticsTitle = container.querySelector('.statistics-title');
       expect(statisticsTitle).toBeTruthy();
-      
+
       // 無効なrefreshIntervalはデフォルト値（30000ms）に正規化されるため、
       // 短い時間では追加の呼び出しが発生しないことを確認
       await new Promise(resolve => {
@@ -473,11 +568,11 @@ describe('LogStatistics.tsx', () => {
 
       const statCards = container.querySelectorAll('.stat-card');
       expect(statCards.length).toBeGreaterThanOrEqual(3);
-      
+
       // 最初のstat-cardが総リクエスト数（順序に依存）
       const totalRequestsCard = statCards[0];
       expect(totalRequestsCard).toBeTruthy();
-      
+
       // フォーマットされた値が表示されることを確認
       const value = totalRequestsCard?.querySelector('.stat-value');
       expect(value).toBeTruthy();
@@ -494,7 +589,7 @@ describe('LogStatistics.tsx', () => {
         card.textContent?.includes('avgResponseTime')
       );
       expect(avgResponseTimeCard).toBeTruthy();
-      
+
       // フォーマットされた値が表示されることを確認
       const value = avgResponseTimeCard?.querySelector('.stat-value');
       expect(value?.textContent).toBe('250.50ms'); // toFixed(2)が適用される
@@ -510,7 +605,7 @@ describe('LogStatistics.tsx', () => {
         card.textContent?.includes('errorRate')
       );
       expect(errorRateCard).toBeTruthy();
-      
+
       // フォーマットされた値が表示されることを確認
       const value = errorRateCard?.querySelector('.stat-value');
       expect(value?.textContent).toBe('2.50%'); // toFixed(2)が適用される
@@ -521,14 +616,26 @@ describe('LogStatistics.tsx', () => {
         total_requests: 100,
         avg_response_time_ms: 250.5,
         error_rate: 10, // 5%を超える
-        status_code_distribution: [[200, 90], [500, 10]],
+        status_code_distribution: [
+          [200, 90],
+          [500, 10],
+        ],
       } as unknown as ReturnType<typeof tauriUtils.safeInvoke>);
 
       root.render(<LogStatistics apiId="test-api-id" autoRefresh={false} />);
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // データが読み込まれるまで待機（より長い待機時間）
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      const errorRateCard = container.querySelector('.stat-value.error-high');
+      // 統計カードが表示されるまで待機
+      let errorRateCard = container.querySelector('.stat-value.error-high');
+      let attempts = 0;
+      while (!errorRateCard && attempts < 10) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        errorRateCard = container.querySelector('.stat-value.error-high');
+        attempts++;
+      }
+
       expect(errorRateCard).toBeTruthy();
       expect(errorRateCard?.textContent).toBe('10.00%');
     });
@@ -543,14 +650,27 @@ describe('LogStatistics.tsx', () => {
 
       root.render(<LogStatistics apiId="test-api-id" autoRefresh={false} />);
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // データが読み込まれるまで待機（より長い待機時間）
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      const statCards = container.querySelectorAll('.stat-card');
+      // 統計カードが表示されるまで待機
+      let statCards = container.querySelectorAll('.stat-card');
+      let attempts = 0;
+      while (statCards.length === 0 && attempts < 10) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        statCards = container.querySelectorAll('.stat-card');
+        attempts++;
+      }
+
       expect(statCards.length).toBeGreaterThan(0);
-      const totalRequestsCard = Array.from(statCards).find(card => 
-        card.querySelector('.stat-label')?.textContent?.includes('総リクエスト') ||
-        card.querySelector('.stat-label')?.textContent?.includes('Total')
-      ) || Array.from(statCards)[0];
+      const totalRequestsCard =
+        Array.from(statCards).find(
+          card =>
+            card
+              .querySelector('.stat-label')
+              ?.textContent?.includes('総リクエスト') ||
+            card.querySelector('.stat-label')?.textContent?.includes('Total')
+        ) || Array.from(statCards)[0];
       const value = totalRequestsCard?.querySelector('.stat-value');
       // toLocaleString()が適用される（例: "1,234,567"）または値が表示される
       if (value?.textContent) {
@@ -609,9 +729,10 @@ describe('LogStatistics.tsx', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
 
       // ARIA属性が設定されていることを確認（role="region"またはその他の要素）
-      const region = container.querySelector('[role="region"]') || 
-                     container.querySelector('[aria-labelledby]') ||
-                     container.querySelector('.log-statistics');
+      const region =
+        container.querySelector('[role="region"]') ||
+        container.querySelector('[aria-labelledby]') ||
+        container.querySelector('.log-statistics');
       expect(region).toBeTruthy();
       if (region?.getAttribute('aria-labelledby')) {
         expect(region.getAttribute('aria-labelledby')).toBe('statistics-title');
@@ -633,7 +754,7 @@ describe('LogStatistics.tsx', () => {
       // ローディング状態が表示されない場合でも、aria-busy属性が設定されていることを確認
       // （実際のコンポーネントでは、ローディング状態が表示される場合にaria-busyが設定される）
       const loadingRegion = container.querySelector('[aria-busy="true"]');
-      
+
       // ローディング状態が表示される場合、aria-busyが設定されることを確認
       if (loadingContainer) {
         expect(loadingRegion).toBeTruthy();
@@ -666,11 +787,15 @@ describe('LogStatistics.tsx', () => {
       await new Promise(resolve => setTimeout(resolve, 300));
 
       // 統計情報が表示されるまで待機
-      const statValues = container.querySelectorAll('.stat-value[aria-live="polite"]');
+      const statValues = container.querySelectorAll(
+        '.stat-value[aria-live="polite"]'
+      );
       // 統計情報が読み込まれていない場合は、より長く待機して再試行
       if (statValues.length === 0) {
         await new Promise(resolve => setTimeout(resolve, 200));
-        const retryStatValues = container.querySelectorAll('.stat-value[aria-live="polite"]');
+        const retryStatValues = container.querySelectorAll(
+          '.stat-value[aria-live="polite"]'
+        );
         expect(retryStatValues.length).toBeGreaterThan(0);
       } else {
         expect(statValues.length).toBeGreaterThan(0);
@@ -682,9 +807,19 @@ describe('LogStatistics.tsx', () => {
 
       root.render(<LogStatistics apiId="test-api-id" autoRefresh={false} />);
 
-      await new Promise(resolve => setTimeout(resolve, 100));
+      // エラー状態が表示されるまで待機（より長い待機時間）
+      await new Promise(resolve => setTimeout(resolve, 500));
 
-      const retryButton = container.querySelector('.retry-button');
+      // リトライボタンが表示されるまで待機
+      let retryButton = container.querySelector('.retry-button');
+      let attempts = 0;
+      while (!retryButton && attempts < 10) {
+        await new Promise(resolve => setTimeout(resolve, 100));
+        retryButton = container.querySelector('.retry-button');
+        attempts++;
+      }
+
+      expect(retryButton).toBeTruthy();
       expect(retryButton?.getAttribute('aria-label')).toBeTruthy();
     });
   });
@@ -715,7 +850,13 @@ describe('LogStatistics.tsx', () => {
     }, 15000);
 
     it('refreshIntervalの変更時に自動更新が再設定される', async () => {
-      root.render(<LogStatistics apiId="test-api-id" autoRefresh={true} refreshInterval={1000} />);
+      root.render(
+        <LogStatistics
+          apiId="test-api-id"
+          autoRefresh={true}
+          refreshInterval={1000}
+        />
+      );
 
       // 初回読み込みを待つ
       await new Promise(resolve => {
@@ -727,7 +868,13 @@ describe('LogStatistics.tsx', () => {
       expect(mockSafeInvoke).toHaveBeenCalledTimes(1);
 
       // refreshIntervalを変更
-      root.render(<LogStatistics apiId="test-api-id" autoRefresh={true} refreshInterval={2000} />);
+      root.render(
+        <LogStatistics
+          apiId="test-api-id"
+          autoRefresh={true}
+          refreshInterval={2000}
+        />
+      );
 
       await new Promise(resolve => {
         setTimeout(() => {
@@ -933,4 +1080,3 @@ describe('LogStatistics.tsx', () => {
     });
   });
 });
-

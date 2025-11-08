@@ -90,4 +90,3 @@ export interface WebModelConfig {
   description?: string;
   models: WebModelDefinition[];
 }
-

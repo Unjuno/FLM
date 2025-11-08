@@ -8,7 +8,9 @@ import { HuggingFaceSearch } from '../components/models/HuggingFaceSearch';
 import { ModelfileEditor } from '../components/models/ModelfileEditor';
 import { ModelConverter } from '../components/models/ModelConverter';
 import { ModelSharing } from '../components/models/ModelSharing';
+import { Breadcrumb, BreadcrumbItem } from '../components/common/Breadcrumb';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useI18n } from '../contexts/I18nContext';
 import type { SelectedModel } from '../types/api';
 import './ModelManagement.css';
 
@@ -20,8 +22,16 @@ import './ModelManagement.css';
 export const ModelManagement: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  const [activeTab, setActiveTab] = useState<'search' | 'installed' | 'huggingface' | 'modelfile' | 'converter' | 'sharing'>('search');
-  
+  const { t } = useI18n();
+  const [activeTab, setActiveTab] = useState<
+    | 'search'
+    | 'installed'
+    | 'huggingface'
+    | 'modelfile'
+    | 'converter'
+    | 'sharing'
+  >('search');
+
   // 遷移元の情報を取得（API作成画面から来た場合）
   const returnTo = location.state?.returnTo;
   const selectedEngine = location.state?.selectedEngine;
@@ -29,8 +39,25 @@ export const ModelManagement: React.FC = () => {
   // グローバルキーボードショートカットを有効化
   useGlobalKeyboardShortcuts();
 
+  // パンくずリストの項目
+  const breadcrumbItems: BreadcrumbItem[] = React.useMemo(() => {
+    const items: BreadcrumbItem[] = [
+      { label: t('header.home') || 'ホーム', path: '/' },
+    ];
+    if (returnTo === 'api/create') {
+      items.push({ label: 'API作成', path: '/api/create' });
+    }
+    items.push({ label: 'モデル管理' });
+    return items;
+  }, [t, returnTo]);
+
   // モデル選択時のハンドラ
-  const handleModelSelected = (model: { name: string; size?: number; description?: string; parameters?: number }) => {
+  const handleModelSelected = (model: {
+    name: string;
+    size?: number;
+    description?: string;
+    parameters?: number;
+  }) => {
     // パラメータ数のフォーマット（B単位に変換）
     let description = model.description;
     if (!description && model.parameters) {
@@ -52,11 +79,11 @@ export const ModelManagement: React.FC = () => {
 
     if (returnTo === 'api/create') {
       // API作成画面に戻り、選択したモデルを渡す
-      navigate('/api/create', { 
-        state: { 
+      navigate('/api/create', {
+        state: {
           selectedModel,
-          engineType: selectedEngine || 'ollama'
-        } 
+          engineType: selectedEngine || 'ollama',
+        },
       });
     } else {
       // 通常の遷移
@@ -65,15 +92,18 @@ export const ModelManagement: React.FC = () => {
   };
 
   return (
-    <div className="model-management-page">
-      <div className="model-management-container">
-        <header className="model-management-header">
+    <div className="page-background model-management-page">
+      <div className="page-container model-management-container">
+        <Breadcrumb items={breadcrumbItems} />
+        <header className="page-header model-management-header">
           <div className="header-top">
-            <button 
-              className="back-button" 
+            <button
+              className="back-button"
               onClick={() => {
                 if (returnTo === 'api/create') {
-                  navigate('/api/create', { state: { engineType: selectedEngine } });
+                  navigate('/api/create', {
+                    state: { engineType: selectedEngine },
+                  });
                 } else {
                   navigate('/');
                 }
@@ -88,31 +118,31 @@ export const ModelManagement: React.FC = () => {
               className={`tab-button ${activeTab === 'search' ? 'active' : ''}`}
               onClick={() => setActiveTab('search')}
             >
-              🔍 モデル検索・ダウンロード
+              モデル検索・ダウンロード
             </button>
             <button
               className={`tab-button ${activeTab === 'installed' ? 'active' : ''}`}
               onClick={() => setActiveTab('installed')}
             >
-              📦 インストール済み
+              インストール済み
             </button>
             <button
               className={`tab-button ${activeTab === 'huggingface' ? 'active' : ''}`}
               onClick={() => setActiveTab('huggingface')}
             >
-              🤗 Hugging Face検索
+              Hugging Face検索
             </button>
             <button
               className={`tab-button ${activeTab === 'modelfile' ? 'active' : ''}`}
               onClick={() => setActiveTab('modelfile')}
             >
-              📝 Modelfile作成
+              Modelfile作成
             </button>
             <button
               className={`tab-button ${activeTab === 'converter' ? 'active' : ''}`}
               onClick={() => setActiveTab('converter')}
             >
-              🔄 モデル変換
+              モデル変換
             </button>
             <button
               className={`tab-button ${activeTab === 'sharing' ? 'active' : ''}`}
@@ -132,21 +162,13 @@ export const ModelManagement: React.FC = () => {
             <InstalledModelsList onModelSelected={handleModelSelected} />
           )}
 
-          {activeTab === 'huggingface' && (
-            <HuggingFaceSearch />
-          )}
+          {activeTab === 'huggingface' && <HuggingFaceSearch />}
 
-          {activeTab === 'modelfile' && (
-            <ModelfileEditor />
-          )}
+          {activeTab === 'modelfile' && <ModelfileEditor />}
 
-          {activeTab === 'converter' && (
-            <ModelConverter />
-          )}
+          {activeTab === 'converter' && <ModelConverter />}
 
-          {activeTab === 'sharing' && (
-            <ModelSharing />
-          )}
+          {activeTab === 'sharing' && <ModelSharing />}
         </div>
       </div>
     </div>

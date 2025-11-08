@@ -97,11 +97,28 @@ pub struct BackupResponse {
 /// バックアップ作成コマンド
 /// データベース全体をJSON形式でバックアップします
 #[tauri::command]
-pub async fn create_backup(output_path: String) -> Result<BackupResponse, String> {
+pub async fn create_backup(
+    output_path: String,
+    encrypt: Option<bool>, // Noneの場合は設定から取得
+    password: Option<String>,
+) -> Result<BackupResponse, String> {
     // データベース接続を取得
     let conn = get_connection().map_err(|e| {
         format!("データベース接続エラー: {}", e)
     })?;
+    
+    // 暗号化設定を取得（指定されていない場合は設定から取得）
+    let should_encrypt = if let Some(enc) = encrypt {
+        enc
+    } else {
+        use crate::database::repository::UserSettingRepository;
+        let settings_repo = UserSettingRepository::new(&conn);
+        settings_repo.get("backup_encrypt_by_default")
+            .ok()
+            .flatten()
+            .and_then(|v| v.parse::<bool>().ok())
+            .unwrap_or(false) // デフォルト: 無効
+    };
 
     // データを取得
     let backup_data = tokio::task::spawn_blocking({
@@ -138,16 +155,29 @@ pub async fn create_backup(output_path: String) -> Result<BackupResponse, String
         format!("JSONシリアライズエラー: {}", e)
     })?;
 
+    // 暗号化処理
+    let final_data = if should_encrypt {
+        if let Some(pwd) = password {
+            encrypt_backup_data(&json_data, &pwd).map_err(|e| {
+                format!("バックアップデータの暗号化に失敗しました: {}", e)
+            })?
+        } else {
+            return Err("暗号化が有効ですが、パスワードが指定されていません。".to_string());
+        }
+    } else {
+        json_data.clone()
+    };
+
     // オプションでファイルに保存（output_pathが指定されている場合）
     if !output_path.is_empty() {
-        if let Err(e) = fs::write(&output_path, &json_data) {
+        if let Err(e) = fs::write(&output_path, &final_data) {
             eprintln!("ファイル保存警告: {}", e);
             // エラーを無視して続行（ファイル保存はオプション）
         }
     }
 
     // ファイルサイズを計算
-    let file_size: u64 = json_data.len().try_into().unwrap_or(0u64);
+    let file_size: u64 = final_data.len().try_into().unwrap_or(0u64);
 
     Ok(BackupResponse {
         file_path: output_path,
@@ -156,23 +186,72 @@ pub async fn create_backup(output_path: String) -> Result<BackupResponse, String
         model_count: backup_data.installed_models.len(),
         log_count: backup_data.request_logs.len(),
         alert_history_count: backup_data.alert_history.len(),
-        json_data, // JSONデータも返す
+        json_data: final_data, // 暗号化されたデータまたはJSONデータを返す
     })
+}
+
+/// バックアップデータを暗号化（パスワードベース）
+fn encrypt_backup_data(data: &str, password: &str) -> Result<String, String> {
+    use aes_gcm::{
+        aead::{Aead, AeadCore, KeyInit, OsRng},
+        Aes256Gcm,
+    };
+    use sha2::{Sha256, Digest};
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    
+    // パスワードから32バイトのキーを生成（SHA-256）
+    let mut hasher = Sha256::new();
+    hasher.update(password.as_bytes());
+    let key_bytes = hasher.finalize();
+    
+    // AES-256-GCMで暗号化
+    let cipher = Aes256Gcm::new_from_slice(&key_bytes)
+        .map_err(|e| format!("暗号化キーの生成に失敗しました: {}", e))?;
+    
+    // Nonceを生成
+    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+    
+    // 暗号化
+    let ciphertext = cipher.encrypt(&nonce, data.as_bytes().as_ref())
+        .map_err(|e| format!("暗号化エラー: {}", e))?;
+    
+    // Nonceと暗号文を結合してBase64エンコード
+    let nonce_bytes: &[u8] = nonce.as_ref();
+    let mut combined = nonce_bytes.to_vec();
+    combined.extend_from_slice(&ciphertext);
+    
+    Ok(STANDARD.encode(&combined))
 }
 
 /// 復元コマンド（ファイルパス版）
 /// JSON形式のバックアップファイルからデータを復元します
 #[tauri::command]
-pub async fn restore_backup(backup_path: String) -> Result<RestoreResponse, String> {
+pub async fn restore_backup(
+    backup_path: String,
+    password: Option<String>,
+) -> Result<RestoreResponse, String> {
     // ファイルが存在するか確認
     if !Path::new(&backup_path).exists() {
         return Err("バックアップファイルが見つかりません".to_string());
     }
 
     // ファイルを読み込む
-    let json_data = fs::read_to_string(&backup_path).map_err(|e| {
+    let encrypted_data = fs::read_to_string(&backup_path).map_err(|e| {
         format!("ファイル読み込みエラー: {}", e)
     })?;
+
+    // 暗号化されているかどうかを判定（Base64エンコードされたデータかどうか）
+    // 簡易的な判定：Base64デコードが成功し、かつパスワードが提供されている場合は復号化を試みる
+    let json_data = if let Some(pwd) = password {
+        // パスワードが提供されている場合は復号化を試みる
+        decrypt_backup_data(&encrypted_data, &pwd).unwrap_or_else(|_| {
+            // 復号化に失敗した場合は、暗号化されていない可能性があるので元のデータを返す
+            encrypted_data
+        })
+    } else {
+        // パスワードが提供されていない場合は、暗号化されていないと仮定
+        encrypted_data
+    };
 
     restore_from_json(json_data).await
 }
@@ -180,8 +259,66 @@ pub async fn restore_backup(backup_path: String) -> Result<RestoreResponse, Stri
 /// 復元コマンド（JSONデータ版）
 /// JSON文字列から直接データを復元します（フロントエンドからファイル内容を送信する場合）
 #[tauri::command]
-pub async fn restore_backup_from_json(json_data: String) -> Result<RestoreResponse, String> {
-    restore_from_json(json_data).await
+pub async fn restore_backup_from_json(
+    json_data: String,
+    password: Option<String>,
+) -> Result<RestoreResponse, String> {
+    // 暗号化されているかどうかを判定
+    let decrypted_data = if let Some(pwd) = password {
+        // パスワードが提供されている場合は復号化を試みる
+        decrypt_backup_data(&json_data, &pwd).unwrap_or_else(|_| {
+            // 復号化に失敗した場合は、暗号化されていない可能性があるので元のデータを返す
+            json_data
+        })
+    } else {
+        // パスワードが提供されていない場合は、暗号化されていないと仮定
+        json_data
+    };
+
+    restore_from_json(decrypted_data).await
+}
+
+/// バックアップデータを復号化（パスワードベース）
+fn decrypt_backup_data(encrypted_data: &str, password: &str) -> Result<String, String> {
+    use aes_gcm::{
+        aead::{Aead, KeyInit},
+        Aes256Gcm, Nonce,
+    };
+    use sha2::{Sha256, Digest};
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    
+    // Base64デコード
+    let combined = STANDARD.decode(encrypted_data)
+        .map_err(|e| format!("Base64デコードエラー: {}", e))?;
+    
+    // Nonce（12バイト）と暗号文を分離
+    if combined.len() < 12 {
+        return Err("暗号化データが不正です".to_string());
+    }
+    
+    let nonce_bytes = &combined[0..12];
+    let ciphertext = &combined[12..];
+    
+    // Nonceを作成（12バイトの配列から作成）
+    let nonce_array: [u8; 12] = nonce_bytes.try_into()
+        .map_err(|_| "Nonceの長さが不正です")?;
+    #[allow(deprecated)] // aes-gcm 0.10では非推奨だが、依存関係のバージョンアップは中長期改善項目
+    let nonce = Nonce::from_slice(&nonce_array);
+    
+    // パスワードから32バイトのキーを生成（SHA-256）
+    let mut hasher = Sha256::new();
+    hasher.update(password.as_bytes());
+    let key_bytes = hasher.finalize();
+    
+    // AES-256-GCMで復号化
+    let cipher = Aes256Gcm::new_from_slice(&key_bytes)
+        .map_err(|e| format!("復号化キーの生成に失敗しました: {}", e))?;
+    
+    let plaintext = cipher.decrypt(nonce, ciphertext.as_ref())
+        .map_err(|e| format!("復号化エラー: {}", e))?;
+    
+    String::from_utf8(plaintext)
+        .map_err(|e| format!("UTF-8変換エラー: {}", e))
 }
 
 /// JSONデータから復元する共通関数
@@ -523,4 +660,5 @@ fn restore_alert_history(tx: &rusqlite::Transaction, alerts: &[AlertHistoryBacku
 
     Ok(count)
 }
+
 

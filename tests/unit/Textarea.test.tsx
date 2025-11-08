@@ -19,7 +19,9 @@ describe('Textarea.tsx', () => {
 
     it('プレースホルダーを表示する', () => {
       render(<Textarea placeholder="プレースホルダー" />);
-      expect(screen.getByPlaceholderText('プレースホルダー')).toBeInTheDocument();
+      expect(
+        screen.getByPlaceholderText('プレースホルダー')
+      ).toBeInTheDocument();
     });
   });
 
@@ -90,4 +92,3 @@ describe('Textarea.tsx', () => {
     });
   });
 });
-

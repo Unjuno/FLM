@@ -16,7 +16,9 @@ export interface ApiStatus {
  * 定期的にAPIステータスをポーリングして更新します
  */
 export function useApiStatus(apiId: string | null, interval: number = 5000) {
-  const [status, setStatus] = useState<'running' | 'stopped' | 'error' | null>(null);
+  const [status, setStatus] = useState<'running' | 'stopped' | 'error' | null>(
+    null
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isMountedRef = useRef(true);
@@ -31,7 +33,7 @@ export function useApiStatus(apiId: string | null, interval: number = 5000) {
 
   const fetchStatus = useCallback(async () => {
     if (!isMountedRef.current) return;
-    
+
     if (!apiId) {
       if (isMountedRef.current) {
         setStatus(null);
@@ -41,22 +43,29 @@ export function useApiStatus(apiId: string | null, interval: number = 5000) {
 
     try {
       if (!isMountedRef.current) return;
-      
+
       setLoading(true);
       setError(null);
 
       // API一覧を取得して該当APIのステータスを取得
-      const apis = await safeInvoke<{
-        id: string;
-        status: string;
-      }[]>('list_apis');
-      
+      const apis = await safeInvoke<
+        {
+          id: string;
+          status: string;
+        }[]
+      >('list_apis');
+
       if (!isMountedRef.current) return;
-      
+
       const api = apis.find(a => a.id === apiId);
       if (api) {
-        const newStatus = (api.status === 'running' ? 'running' : 
-                          api.status === 'stopped' ? 'stopped' : 'error') as 'running' | 'stopped' | 'error';
+        const newStatus = (
+          api.status === 'running'
+            ? 'running'
+            : api.status === 'stopped'
+              ? 'stopped'
+              : 'error'
+        ) as 'running' | 'stopped' | 'error';
         setStatus(newStatus);
       } else {
         setStatus(null);
@@ -64,7 +73,9 @@ export function useApiStatus(apiId: string | null, interval: number = 5000) {
       }
     } catch (err) {
       if (!isMountedRef.current) return;
-      setError(err instanceof Error ? err.message : 'ステータス取得に失敗しました');
+      setError(
+        err instanceof Error ? err.message : 'ステータス取得に失敗しました'
+      );
     } finally {
       if (isMountedRef.current) {
         setLoading(false);
@@ -102,7 +113,9 @@ export function useApiStatus(apiId: string | null, interval: number = 5000) {
  * 複数のAPIステータスを一括管理するフック
  */
 export function useApiStatusList(interval: number = 5000) {
-  const [statuses, setStatuses] = useState<Record<string, 'running' | 'stopped' | 'error'>>({});
+  const [statuses, setStatuses] = useState<
+    Record<string, 'running' | 'stopped' | 'error'>
+  >({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isMountedRef = useRef(true);
@@ -117,31 +130,40 @@ export function useApiStatusList(interval: number = 5000) {
 
   const fetchStatuses = useCallback(async () => {
     if (!isMountedRef.current) return;
-    
+
     try {
       if (!isMountedRef.current) return;
-      
+
       setLoading(true);
       setError(null);
 
       // API一覧を取得
-      const apis = await safeInvoke<{
-        id: string;
-        status: string;
-      }[]>('list_apis');
-      
+      const apis = await safeInvoke<
+        {
+          id: string;
+          status: string;
+        }[]
+      >('list_apis');
+
       if (!isMountedRef.current) return;
-      
+
       const newStatuses: Record<string, 'running' | 'stopped' | 'error'> = {};
       apis.forEach(api => {
-        newStatuses[api.id] = (api.status === 'running' ? 'running' : 
-                               api.status === 'stopped' ? 'stopped' : 'error') as 'running' | 'stopped' | 'error';
+        newStatuses[api.id] = (
+          api.status === 'running'
+            ? 'running'
+            : api.status === 'stopped'
+              ? 'stopped'
+              : 'error'
+        ) as 'running' | 'stopped' | 'error';
       });
-      
+
       setStatuses(newStatuses);
     } catch (err) {
       if (!isMountedRef.current) return;
-      setError(err instanceof Error ? err.message : 'ステータス一覧取得に失敗しました');
+      setError(
+        err instanceof Error ? err.message : 'ステータス一覧取得に失敗しました'
+      );
     } finally {
       if (isMountedRef.current) {
         setLoading(false);
@@ -170,4 +192,3 @@ export function useApiStatusList(interval: number = 5000) {
     refresh: fetchStatuses,
   };
 }
-

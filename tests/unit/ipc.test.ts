@@ -1,6 +1,13 @@
 // ipc - IPC通信のテスト
 
-import { describe, it, expect, beforeAll, beforeEach, jest } from '@jest/globals';
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  beforeEach,
+  jest,
+} from '@jest/globals';
 
 /**
  * アプリケーション情報の型定義
@@ -31,7 +38,7 @@ const MOCK_APP_INFO: AppInfo = {
 /**
  * グリーティングメッセージのテンプレート関数
  */
-const GREET_MESSAGE_TEMPLATE = (name: string): string => 
+const GREET_MESSAGE_TEMPLATE = (name: string): string =>
   `Hello, ${name}! You've been greeted from Rust!`;
 
 /**
@@ -70,7 +77,7 @@ const setupTauriMock = (mockFn: jest.Mock<InvokeFunction>): void => {
 
 /**
  * IPC通信テストスイート
- * 
+ *
  * テスト項目:
  * - greetコマンドの動作確認（モック）
  * - get_app_infoコマンドの動作確認（モック）
@@ -164,7 +171,7 @@ describe('IPC Communication Tests', () => {
     it('should return a greeting message with a name', async () => {
       const name = 'TestUser';
       const result = await testGreetCommand(name);
-      
+
       expect(result).toContain(name);
       verifyInvokeCall(1, COMMANDS.GREET, { name });
     });
@@ -172,14 +179,14 @@ describe('IPC Communication Tests', () => {
     it('should handle empty name gracefully', async () => {
       const name = '';
       await testGreetCommand(name);
-      
+
       verifyInvokeCall(1, COMMANDS.GREET, { name });
     });
 
     it('should handle special characters in name', async () => {
       const name = 'Test <User> & "Special"';
       const result = await testGreetCommand(name);
-      
+
       expect(result).toContain(name);
       verifyInvokeCall(1, COMMANDS.GREET, { name });
     });
@@ -192,7 +199,7 @@ describe('IPC Communication Tests', () => {
   describe('get_app_info command', () => {
     it('should return app information with all required fields', async () => {
       const appInfo = await testGetAppInfo();
-      
+
       expect(typeof appInfo.name).toBe('string');
       expect(typeof appInfo.version).toBe('string');
       expect(typeof appInfo.description).toBe('string');
@@ -201,14 +208,14 @@ describe('IPC Communication Tests', () => {
 
     it('should return correct app name', async () => {
       const appInfo = await testGetAppInfo();
-      
+
       expect(appInfo.name).toBe(MOCK_APP_INFO.name);
       verifyInvokeCall(1, COMMANDS.GET_APP_INFO);
     });
 
     it('should return valid version format', async () => {
       const appInfo = await testGetAppInfo();
-      
+
       // セマンティックバージョニング形式の検証（例: "1.0.0"）
       expect(appInfo.version).toMatch(/^\d+\.\d+\.\d+/);
       verifyInvokeCall(1, COMMANDS.GET_APP_INFO);
@@ -224,7 +231,7 @@ describe('IPC Communication Tests', () => {
       const errorMessage = 'Command not found';
       const invalidCommand = 'invalid_command';
       mockInvoke.mockRejectedValueOnce(new Error(errorMessage));
-      
+
       await expect(mockInvoke(invalidCommand)).rejects.toThrow(errorMessage);
       verifyInvokeCall(1, invalidCommand);
     });
@@ -234,9 +241,9 @@ describe('IPC Communication Tests', () => {
       // 実装によってはエラーまたはデフォルト値が返される
       const expectedMessage = GREET_MESSAGE_TEMPLATE('');
       mockInvoke.mockResolvedValueOnce(expectedMessage);
-      
+
       const result = await typedInvoke<string>(COMMANDS.GREET, {});
-      
+
       expect(result).toBe(expectedMessage);
       verifyInvokeCall(1, COMMANDS.GREET, {});
     });
@@ -249,7 +256,7 @@ describe('IPC Communication Tests', () => {
   describe('Performance', () => {
     it('should respond within acceptable time', async () => {
       mockInvoke.mockResolvedValueOnce(MOCK_APP_INFO);
-      
+
       const startTime = Date.now();
       await typedInvoke<AppInfo>(COMMANDS.GET_APP_INFO);
       const responseTime = Date.now() - startTime;
@@ -260,16 +267,20 @@ describe('IPC Communication Tests', () => {
 
     it('should handle multiple concurrent requests', async () => {
       mockInvoke.mockResolvedValue(MOCK_APP_INFO);
-      
-      const requests = Array.from({ length: CONCURRENT_REQUEST_COUNT }, () => 
+
+      const requests = Array.from({ length: CONCURRENT_REQUEST_COUNT }, () =>
         typedInvoke<AppInfo>(COMMANDS.GET_APP_INFO)
       );
 
       const results = await Promise.all(requests);
-      
+
       expect(results).toHaveLength(CONCURRENT_REQUEST_COUNT);
-      expect(results.every(result => result.name === MOCK_APP_INFO.name)).toBe(true);
-      expect(results.every(result => result.version === MOCK_APP_INFO.version)).toBe(true);
+      expect(results.every(result => result.name === MOCK_APP_INFO.name)).toBe(
+        true
+      );
+      expect(
+        results.every(result => result.version === MOCK_APP_INFO.version)
+      ).toBe(true);
       verifyInvokeCall(CONCURRENT_REQUEST_COUNT, COMMANDS.GET_APP_INFO);
     });
   });

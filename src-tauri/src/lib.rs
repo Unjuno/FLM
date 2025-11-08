@@ -8,6 +8,7 @@ mod auth;
 mod auth_proxy;
 pub mod utils;
 pub mod engines;
+pub mod plugins;
 
 use commands::{greet, api};
 use commands::database as db_commands;
@@ -20,8 +21,44 @@ use commands::system;
 use commands::port;
 use commands::suggestions;
 use commands::remote_sync;
+use commands::oauth;
+use commands::updater;
+// Plugin, scheduler, and model_sharing modules are used in invoke_handler!
+// use commands::plugin;
+// use commands::scheduler;
+// use commands::model_sharing;
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
+use lazy_static::lazy_static;
+use std::sync::{Mutex, atomic::{AtomicBool, Ordering}};
+use tokio::runtime::Runtime;
+
+/// デバッグビルドでのみログを出力するマクロ
+#[cfg(debug_assertions)]
+macro_rules! debug_log {
+    ($($arg:tt)*) => {
+        eprintln!("[DEBUG] {}", format!($($arg)*));
+    };
+}
+
+#[cfg(not(debug_assertions))]
+macro_rules! debug_log {
+    ($($arg:tt)*) => {};
+}
+
+/// 警告ログを出力するマクロ（常に出力）
+macro_rules! warn_log {
+    ($($arg:tt)*) => {
+        eprintln!("[WARN] {}", format!($($arg)*));
+    };
+}
+
+/// エラーログを出力するマクロ（常に出力）
+macro_rules! error_log {
+    ($($arg:tt)*) => {
+        eprintln!("[ERROR] {}", format!($($arg)*));
+    };
+}
 
 /// アプリケーション情報取得コマンド
 #[tauri::command]
@@ -40,53 +77,190 @@ pub struct AppInfo {
     pub description: String,
 }
 
+// グローバルなTokioランタイムを保持
+lazy_static! {
+    static ref TOKIO_RUNTIME: Mutex<Option<Runtime>> = Mutex::new(None);
+}
+
+static SHUTDOWN_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
-    // データベースを初期化
-    if let Err(e) = database::init_database() {
-        eprintln!("データの初期化に失敗しました。アプリを再起動して再度お試しください。エラー: {}", e);
-        // アプリケーションは継続して起動します（データベースエラーは後で処理可能）
+    debug_log!("=== アプリケーション起動開始 ===");
+    
+    // グローバルなTokioランタイムを初期化
+    // 注意: Tauri 2.xでは非同期コマンドが自動的にTokioランタイムを使用するため、
+    // グローバルランタイムは将来的に削除予定です
+    {
+        match TOKIO_RUNTIME.lock() {
+            Ok(mut rt) => {
+                if rt.is_none() {
+                    match Runtime::new() {
+                        Ok(runtime) => {
+                            *rt = Some(runtime);
+                            debug_log!("グローバルTokioランタイムを初期化しました");
+                        }
+                        Err(e) => {
+                            error_log!("Tokioランタイムの初期化に失敗しました: {}", e);
+                            error_log!("エラー詳細: {:?}", e);
+                            // アプリケーションを続行できないため、パニック
+                            // これは起動時の致命的エラーなので、panicは適切です
+                            panic!("Tokioランタイムの初期化に失敗しました: {}. アプリケーションを再起動してください。", e);
+                        }
+                    }
+                } else {
+                    debug_log!("グローバルTokioランタイムは既に初期化されています");
+                }
+            }
+            Err(e) => {
+                error_log!("Tokioランタイムのロック取得に失敗しました: {}", e);
+                error_log!("エラー詳細: {:?}", e);
+                // アプリケーションを続行できないため、パニック
+                // これは起動時の致命的エラーなので、panicは適切です
+                panic!("Tokioランタイムのロック取得に失敗しました: {}. アプリケーションを再起動してください。", e);
+            }
+        }
     }
     
+    // データベースを初期化
+    debug_log!("データベース初期化を開始します...");
+    match database::init_database() {
+        Ok(_) => {
+            debug_log!("データベースの初期化が完了しました");
+        },
+        Err(e) => {
+            warn_log!("データベース初期化エラー: {}", e);
+            debug_log!("エラー詳細: {:?}", e);
+            warn_log!("警告: データベース初期化に失敗しましたが、アプリケーションは起動を続行します");
+            warn_log!("注意: データベース機能が正常に動作しない可能性があります");
+            // アプリケーションは継続して起動します（データベースエラーは後で処理可能）
+            // ユーザーには、初回データベースアクセス時にエラーメッセージが表示されます
+        }
+    }
+    
+    debug_log!("Tauriビルダーを初期化します...");
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
+        .plugin(tauri_plugin_updater::Builder::new().build())
         .setup(|app| {
             // アプリケーション終了時のクリーンアップ処理を設定
             // すべてのウィンドウに対してイベントハンドラを設定
             if let Some(window) = app.get_webview_window("main") {
                 window.clone().on_window_event(move |event| {
                     if let tauri::WindowEvent::CloseRequested { api, .. } = event {
+                        if SHUTDOWN_IN_PROGRESS.compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst).is_err() {
+                            return;
+                        }
                         // ウィンドウの閉鎖を一時的にブロック
                         api.prevent_close();
                         
-                        // 非同期処理を実行（タイムアウト付き）
                         let window_handle = window.clone();
-                        tokio::spawn(async move {
-                            // 10秒のタイムアウトを設定
-                            let timeout = tokio::time::sleep(tokio::time::Duration::from_secs(10));
-                            let cleanup_task = api::stop_all_running_apis();
-                            
-                            tokio::pin!(timeout);
-                            
-                            tokio::select! {
-                                result = cleanup_task => {
-                                    match result {
-                                        Ok(_) => {
-                                            eprintln!("クリーンアップ処理が完了しました");
+                        
+                        // クリーンアップ処理をバックグラウンドスレッドで実行（ウィンドウを閉じるのを待たない）
+                        // デーモンスレッドとして実行し、プロセス終了時に自動的にクリーンアップされる
+                        std::thread::spawn(move || {
+                            // スレッド内で新しいTokioランタイムを作成して非同期処理を実行
+                            match tokio::runtime::Runtime::new() {
+                                Ok(runtime) => {
+                                    runtime.block_on(async {
+                            // 設定を確認して、アプリ終了時にAPIを停止するかどうかを決定
+                                    let debug_mode = std::env::var("FLM_DEBUG").unwrap_or_default() == "1";
+                                    if debug_mode {
+                                        debug_log!("アプリ終了時の設定を確認中...");
+                                    }
+                            let should_stop_apis = tokio::task::spawn_blocking(|| {
+                                use crate::database::connection::get_connection;
+                                use crate::database::repository::UserSettingRepository;
+                                
+                                match get_connection() {
+                                    Ok(conn) => {
+                                        let settings_repo = UserSettingRepository::new(&conn);
+                                        match settings_repo.get("stop_apis_on_exit") {
+                                            Ok(Some(value)) => {
+                                                match value.parse::<bool>() {
+                                                    Ok(enabled) => {
+                                                        // デバッグモードのチェックは外側で行う
+                                                        enabled
+                                                    },
+                                                    Err(_) => {
+                                                                warn_log!("stop_apis_on_exit設定の値が無効です。デフォルト値（true）を使用します");
+                                                        true
+                                                    }
+                                                }
+                                            },
+                                            Ok(None) => {
+                                                // 初回のみ設定を初期化（デフォルト値で保存）
+                                                // これにより次回以降はログが表示されない
+                                                if let Err(e) = settings_repo.set("stop_apis_on_exit", "true") {
+                                                    // 設定の保存に失敗してもデフォルト値を使用するため問題なし
+                                                    warn_log!("stop_apis_on_exit設定の保存に失敗しました: {}。デフォルト値（true）を使用します", e);
+                                                }
+                                                true
+                                            },
+                                            Err(e) => {
+                                                        warn_log!("stop_apis_on_exit設定の読み込みに失敗しました: {}。デフォルト値（true）を使用します", e);
+                                                true
+                                            }
                                         }
-                                        Err(e) => {
-                                            eprintln!("クリーンアップ処理中にエラーが発生しました: {}", e);
-                                        }
+                                    },
+                                    Err(e) => {
+                                                warn_log!("データベース接続に失敗しました: {}。デフォルト値（true）を使用します", e);
+                                        true
                                     }
                                 }
-                                _ = timeout.as_mut() => {
-                                    eprintln!("警告: クリーンアップ処理がタイムアウトしました（10秒）");
+                            }).await.unwrap_or_else(|e| {
+                                        warn_log!("設定確認タスクが失敗しました: {}。デフォルト値（true）を使用します", e);
+                                true
+                            });
+                            
+                            if should_stop_apis {
+                                        if debug_mode {
+                                            debug_log!("バックグラウンドでAPIを停止します...");
+                                        }
+                                        // 5秒のタイムアウトを設定（監査レポートの推奨に基づき2秒→5秒に延長）
+                                        let timeout = tokio::time::sleep(tokio::time::Duration::from_secs(5));
+                                let cleanup_task = api::stop_all_running_apis();
+                                
+                                tokio::pin!(timeout);
+                                
+                                tokio::select! {
+                                    result = cleanup_task => {
+                                        match result {
+                                            Ok(_) => {
+                                                        if debug_mode {
+                                                            debug_log!("✓ クリーンアップ処理が完了しました");
+                                                        }
+                                            }
+                                            Err(e) => {
+                                                        warn_log!("クリーンアップ処理中にエラーが発生しました: {}", e);
+                                            }
+                                        }
+                                    }
+                                    _ = timeout.as_mut() => {
+                                                warn_log!("クリーンアップ処理がタイムアウトしました（5秒）。処理を中断します。");
+                                    }
+                                }
+                            } else {
+                                        if debug_mode {
+                                            debug_log!("設定により、アプリ終了時にAPIを停止しません");
+                                        }
+                            }
+                                    });
+                                },
+                                Err(e) => {
+                                    warn_log!("バックグラウンドクリーンアップ用のTokioランタイム作成に失敗しました: {:?}", e);
                                 }
                             }
-                            
-                            // クリーンアップ完了またはタイムアウト後にウィンドウを閉じる
-                            let _ = window_handle.close();
                         });
+                        
+                        // ウィンドウを即座に閉じる（クリーンアップ処理の完了を待たない）
+                        debug_log!("ウィンドウを閉じます...");
+                        if let Err(e) = window_handle.close() {
+                            error_log!("ウィンドウの閉鎖に失敗しました: {:?}", e);
+                            // ウィンドウが閉じられない場合は、強制的にプロセスを終了
+                            std::process::exit(0);
+                        }
+                        debug_log!("ウィンドウを閉じました");
                     }
                 });
             }
@@ -100,8 +274,10 @@ pub fn run() {
             commands::ollama::download_ollama,
             commands::ollama::start_ollama,
             commands::ollama::stop_ollama,
+            commands::ollama::check_ollama_health,
             commands::ollama::check_ollama_update,
             commands::ollama::update_ollama,
+            commands::port::resolve_port_conflicts,
             api::create_api,
             api::list_apis,
             api::start_api,
@@ -119,6 +295,7 @@ pub fn run() {
             api::get_installed_models,
             api::save_request_log,
             api::get_request_logs,
+            api::save_error_log,
             api::get_log_statistics,
             api::export_logs,
             api::delete_logs,
@@ -145,12 +322,22 @@ pub fn run() {
             engine::detect_all_engines,
             engine::start_engine,
             engine::stop_engine,
+            engine::install_engine,
+            engine::check_engine_update,
+            engine::update_engine,
             engine::save_engine_config,
             engine::get_engine_configs,
             engine::delete_engine_config,
             engine::get_engine_models,
             system::get_system_resources,
+            system::get_memory_usage,
+            system::check_memory_health,
             system::get_model_recommendation,
+            system::detect_security_block,
+            system::diagnose_network,
+            system::diagnose_environment,
+            system::diagnose_filesystem,
+            system::run_comprehensive_diagnostics,
             port::find_available_port,
             port::check_port_availability,
             suggestions::suggest_api_name,
@@ -161,16 +348,53 @@ pub fn run() {
             remote_sync::export_settings_for_remote,
             remote_sync::import_settings_from_remote,
             remote_sync::generate_device_id,
+            commands::plugin::register_plugin,
+            commands::plugin::get_all_plugins,
+            commands::plugin::get_plugin,
+            commands::plugin::set_plugin_enabled,
+            commands::plugin::unregister_plugin,
+            commands::plugin::update_plugin_permissions,
+            commands::plugin::execute_plugin_command,
+            commands::scheduler::add_schedule_task,
+            commands::scheduler::get_schedule_tasks,
+            commands::scheduler::update_schedule_task,
+            commands::scheduler::delete_schedule_task,
+            commands::scheduler::start_schedule_task,
+            commands::scheduler::stop_schedule_task,
+            commands::scheduler::update_model_catalog,
+            commands::model_sharing::share_model_command,
+            commands::model_sharing::search_shared_models_command,
+            commands::model_sharing::download_shared_model_command,
+            oauth::start_oauth_flow_command,
+            oauth::exchange_oauth_code,
+            oauth::refresh_oauth_token,
+            api::get_huggingface_model_info,
+            api::get_security_settings,
+            api::set_ip_whitelist,
+            api::update_rate_limit_config,
+            api::update_key_rotation_config,
+            api::search_audit_logs,
+            api::export_audit_logs,
+            updater::check_app_update,
+            updater::install_app_update,
         ])
         .run(tauri::generate_context!())
         .map_err(|e| {
-            eprintln!("Tauriアプリケーションの起動に失敗しました: {}", e);
+            error_log!("=== Tauriアプリケーションの起動に失敗しました ===");
+            error_log!("エラー: {}", e);
+            debug_log!("エラー詳細: {:?}", e);
             e
         })
         .unwrap_or_else(|e| {
-            eprintln!("致命的エラー: Tauriアプリケーションの起動に失敗しました。エラーログを確認してください。");
-            eprintln!("エラー詳細: {}", e);
+            error_log!("=== 致命的エラー ===");
+            error_log!("Tauriアプリケーションの起動に失敗しました。エラーログを確認してください。");
+            error_log!("エラー詳細: {}", e);
+            debug_log!("エラー詳細（デバッグ）: {:?}", e);
+            error_log!("プロセスを終了します...");
             std::process::exit(1);
         });
+    
+    debug_log!("=== アプリケーション起動完了 ===");
 }
+
 

@@ -8,6 +8,7 @@ use rusqlite::{Connection, params};
 pub struct ApiSecuritySettingsRepository;
 
 impl ApiSecuritySettingsRepository {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         ApiSecuritySettingsRepository
     }
@@ -45,6 +46,7 @@ impl ApiSecuritySettingsRepository {
     }
     
     /// セキュリティ設定を作成
+    #[allow(dead_code)]
     pub fn create(conn: &Connection, settings: &ApiSecuritySettings) -> Result<(), DatabaseError> {
         conn.execute(
             "INSERT INTO api_security_settings 
@@ -93,6 +95,7 @@ impl ApiSecuritySettingsRepository {
 pub struct RateLimitTrackingRepository;
 
 impl RateLimitTrackingRepository {
+    #[allow(dead_code)]
     pub fn new() -> Self {
         RateLimitTrackingRepository
     }
@@ -177,4 +180,5 @@ impl RateLimitTrackingRepository {
         Ok(())
     }
 }
+
 

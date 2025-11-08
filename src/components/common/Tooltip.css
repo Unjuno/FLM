@@ -8,13 +8,13 @@
 .tooltip {
   position: absolute;
   z-index: 1000;
-  padding: 0.75rem 1rem;
-  background-color: #333;
-  color: white;
-  border-radius: 8px;
+  padding: var(--spacing-md, 0.75rem) var(--spacing-md, 1rem);
+  background-color: var(--color-bg-primary, #1a202c);
+  color: var(--color-text-inverse, #ffffff);
+  border-radius: var(--radius-lg, 0.75rem);
   font-size: 0.875rem;
   line-height: 1.6;
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+  box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.4));
   white-space: normal;
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -28,6 +28,12 @@
   writing-mode: horizontal-tb;
   box-sizing: border-box;
   hyphens: auto;
+  border: 1px solid var(--color-border-light, rgba(255, 255, 255, 0.1));
+}
+
+[data-theme="dark"] .tooltip {
+  background-color: var(--color-bg-primary, #2a2a2a);
+  border-color: var(--color-border-light, #444);
 }
 
 @keyframes tooltipFadeIn {
@@ -55,7 +61,7 @@
   bottom: 100%;
   left: 50%;
   transform: translateX(-50%);
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--spacing-xs, 0.5rem);
 }
 
 .tooltip-top::before {
@@ -63,7 +69,11 @@
   left: 50%;
   transform: translateX(-50%);
   border-width: 6px 6px 0 6px;
-  border-color: #333 transparent transparent transparent;
+  border-color: var(--color-bg-primary, #1a202c) transparent transparent transparent;
+}
+
+[data-theme="dark"] .tooltip-top::before {
+  border-color: var(--color-bg-primary, #2a2a2a) transparent transparent transparent;
 }
 
 /* Bottom position */
@@ -71,7 +81,7 @@
   top: 100%;
   left: 50%;
   transform: translateX(-50%);
-  margin-top: 0.5rem;
+  margin-top: var(--spacing-xs, 0.5rem);
 }
 
 .tooltip-bottom::before {
@@ -79,7 +89,11 @@
   left: 50%;
   transform: translateX(-50%);
   border-width: 0 6px 6px 6px;
-  border-color: transparent transparent #333 transparent;
+  border-color: transparent transparent var(--color-bg-primary, #1a202c) transparent;
+}
+
+[data-theme="dark"] .tooltip-bottom::before {
+  border-color: transparent transparent var(--color-bg-primary, #2a2a2a) transparent;
 }
 
 /* Left position */
@@ -87,7 +101,7 @@
   right: 100%;
   top: 50%;
   transform: translateY(-50%);
-  margin-right: 0.5rem;
+  margin-right: var(--spacing-xs, 0.5rem);
 }
 
 .tooltip-left::before {
@@ -95,7 +109,11 @@
   top: 50%;
   transform: translateY(-50%);
   border-width: 6px 0 6px 6px;
-  border-color: transparent transparent transparent #333;
+  border-color: transparent transparent transparent var(--color-bg-primary, #1a202c);
+}
+
+[data-theme="dark"] .tooltip-left::before {
+  border-color: transparent transparent transparent var(--color-bg-primary, #2a2a2a);
 }
 
 /* Right position */
@@ -103,7 +121,7 @@
   left: 100%;
   top: 50%;
   transform: translateY(-50%);
-  margin-left: 0.5rem;
+  margin-left: var(--spacing-xs, 0.5rem);
 }
 
 .tooltip-right::before {
@@ -111,18 +129,22 @@
   top: 50%;
   transform: translateY(-50%);
   border-width: 6px 6px 6px 0;
-  border-color: transparent #333 transparent transparent;
+  border-color: transparent var(--color-bg-primary, #1a202c) transparent transparent;
+}
+
+[data-theme="dark"] .tooltip-right::before {
+  border-color: transparent var(--color-bg-primary, #2a2a2a) transparent transparent;
 }
 
 .tooltip-title {
   font-weight: 600;
-  margin-bottom: 0.5rem;
-  color: #fff;
+  margin-bottom: var(--spacing-xs, 0.5rem);
+  color: var(--color-text-inverse, #ffffff);
   font-size: 0.9rem;
 }
 
 .tooltip-content {
-  color: #e0e0e0;
+  color: var(--color-text-secondary, rgba(255, 255, 255, 0.9));
   font-size: 0.875rem;
   word-wrap: break-word;
   overflow-wrap: break-word;
@@ -130,37 +152,12 @@
   text-align: left;
 }
 
-/* ダークモード対応 */
-@media (prefers-color-scheme: dark) {
-  .tooltip {
-    background-color: #2a2a2a;
-    border: 1px solid #444;
-  }
-
-  .tooltip-top::before {
-    border-color: #2a2a2a transparent transparent transparent;
-  }
-
-  .tooltip-bottom::before {
-    border-color: transparent transparent #2a2a2a transparent;
-  }
-
-  .tooltip-left::before {
-    border-color: transparent transparent transparent #2a2a2a;
-  }
-
-  .tooltip-right::before {
-    border-color: transparent #2a2a2a transparent transparent;
-  }
-}
-
 /* モバイル対応（タッチデバイスではツールチップを非表示にするか、タップで表示） */
 @media (max-width: 768px) {
   .tooltip {
     font-size: 0.8125rem;
-    padding: 0.625rem 0.875rem;
+    padding: var(--spacing-sm, 0.625rem) var(--spacing-md, 0.875rem);
     max-width: 280px;
     min-width: 180px;
   }
 }
-

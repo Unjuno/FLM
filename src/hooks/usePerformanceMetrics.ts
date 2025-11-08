@@ -40,7 +40,9 @@ export interface UsePerformanceMetricsOptions {
  * パフォーマンスメトリクス取得用カスタムフック
  * グラフコンポーネント間で共通のデータ取得ロジックを提供します
  */
-export const usePerformanceMetrics = (options: UsePerformanceMetricsOptions) => {
+export const usePerformanceMetrics = (
+  options: UsePerformanceMetricsOptions
+) => {
   const {
     apiId,
     metricType,
@@ -67,7 +69,7 @@ export const usePerformanceMetrics = (options: UsePerformanceMetricsOptions) => 
   // データを取得
   const loadData = useCallback(async () => {
     if (!isMountedRef.current) return;
-    
+
     if (!apiId || apiId.trim() === '') {
       if (isMountedRef.current) {
         setData([]);
@@ -79,7 +81,7 @@ export const usePerformanceMetrics = (options: UsePerformanceMetricsOptions) => 
 
     try {
       if (!isMountedRef.current) return;
-      
+
       setLoading(true);
       setError(null);
 
@@ -90,15 +92,24 @@ export const usePerformanceMetrics = (options: UsePerformanceMetricsOptions) => 
         end_date: endDate || null,
       };
 
-      const result = await safeInvoke<PerformanceMetricInfo[]>('get_performance_metrics', { request });
-      
+      const result = await safeInvoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        { request }
+      );
+
       if (!isMountedRef.current) return;
 
-      const safeMetrics: PerformanceMetricInfo[] = Array.isArray(result) ? result : [];
+      const safeMetrics: PerformanceMetricInfo[] = Array.isArray(result)
+        ? result
+        : [];
 
       // データを時間順にソートし、グラフ用フォーマットに変換
-      const validMetrics = safeMetrics.filter((metric) => {
-        if (!metric.timestamp || typeof metric.value !== 'number' || isNaN(metric.value)) {
+      const validMetrics = safeMetrics.filter(metric => {
+        if (
+          !metric.timestamp ||
+          typeof metric.value !== 'number' ||
+          isNaN(metric.value)
+        ) {
           return false;
         }
         const timestamp = new Date(metric.timestamp).getTime();
@@ -106,10 +117,13 @@ export const usePerformanceMetrics = (options: UsePerformanceMetricsOptions) => 
       });
 
       const sortedData = validMetrics
-        .sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
-        .map((metric) => {
+        .sort(
+          (a, b) =>
+            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+        )
+        .map(metric => {
           let formattedValue = metric.value;
-          
+
           // 値のフォーマット関数が提供されている場合は適用
           if (valueFormatter) {
             formattedValue = valueFormatter(metric.value);
@@ -119,11 +133,14 @@ export const usePerformanceMetrics = (options: UsePerformanceMetricsOptions) => 
           }
 
           return {
-            time: new Date(metric.timestamp).toLocaleTimeString(LOCALE.DEFAULT, {
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit',
-            }),
+            time: new Date(metric.timestamp).toLocaleTimeString(
+              LOCALE.DEFAULT,
+              {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+              }
+            ),
             value: formattedValue,
           };
         });
@@ -132,7 +149,9 @@ export const usePerformanceMetrics = (options: UsePerformanceMetricsOptions) => 
       setData(sortedData);
     } catch (err) {
       if (!isMountedRef.current) return;
-      setError(err instanceof Error ? err.message : 'データの取得に失敗しました');
+      setError(
+        err instanceof Error ? err.message : 'データの取得に失敗しました'
+      );
     } finally {
       if (isMountedRef.current) {
         setLoading(false);
@@ -166,4 +185,3 @@ export const usePerformanceMetrics = (options: UsePerformanceMetricsOptions) => 
     isEmpty: !apiId || apiId.trim() === '',
   };
 };
-

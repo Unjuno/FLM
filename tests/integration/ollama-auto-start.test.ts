@@ -1,7 +1,16 @@
 // ollama-auto-start - Ollama自動起動機能の統合テスト
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+} from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
+import { handleTauriAppNotRunningError } from '../setup/test-helpers';
+import { debugLog, debugWarn } from '../setup/debug';
 
 /**
  * テスト内容:
@@ -12,25 +21,20 @@ describe('Ollama自動起動機能 結合テスト', () => {
   let wasOllamaRunning: boolean = false;
 
   beforeAll(async () => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-      console.log('Ollama自動起動機能結合テストを開始します');
-    }
-    
+    debugLog('Ollama自動起動機能結合テストを開始します');
+
     try {
       await invoke('check_ollama_running');
       wasOllamaRunning = true;
-      if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-        console.log('テスト開始時: Ollamaは実行中でした');
-      }
+      debugLog('テスト開始時: Ollamaは実行中でした');
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      if (handleTauriAppNotRunningError(error)) {
+        // テストは続行
       }
       wasOllamaRunning = false;
-      if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-        console.log('テスト開始時: Ollamaは停止していました');
-      }
+      debugLog('テスト開始時: Ollamaは停止していました');
     }
   });
 
@@ -42,9 +46,7 @@ describe('Ollama自動起動機能 結合テスト', () => {
         // 既に停止している可能性がある
       }
     }
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-      console.log('Ollama自動起動機能結合テストを完了しました');
-    }
+    debugLog('Ollama自動起動機能結合テストを完了しました');
   });
 
   beforeEach(() => {
@@ -56,7 +58,9 @@ describe('Ollama自動起動機能 結合テスト', () => {
    */
   const isTauriAvailable = (): boolean => {
     try {
-      return typeof window !== 'undefined' && (window as any).__TAURI__ !== undefined;
+      return (
+        typeof window !== 'undefined' && (window as any).__TAURI__ !== undefined
+      );
     } catch {
       return false;
     }
@@ -69,8 +73,13 @@ describe('Ollama自動起動機能 結合テスト', () => {
     it('Ollamaが停止している場合、モデル一覧取得でエラーが発生する', async () => {
       // Tauri環境が利用可能でない場合はスキップ
       if (!isTauriAvailable()) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.log('Tauri環境が利用できないため、このテストをスキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          console.log(
+            'Tauri環境が利用できないため、このテストをスキップします'
+          );
         }
         return;
       }
@@ -81,10 +90,15 @@ describe('Ollama自動起動機能 結合テスト', () => {
         // 停止を確認するため少し待機
         await new Promise(resolve => setTimeout(resolve, 1000));
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
+          console.warn(
+            'Tauriアプリが起動していないため、このテストをスキップします'
+          );
+          expect(errorMessage).toContain(
+            'Tauriアプリケーションが起動していません'
+          );
           return;
         }
         // 既に停止している可能性がある
@@ -99,20 +113,22 @@ describe('Ollama自動起動機能 結合テスト', () => {
         errorOccurred = true;
         const errMsg = error instanceof Error ? error.message : String(error);
         if (errMsg.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+          console.warn(
+            'Tauriアプリが起動していないため、このテストをスキップします'
+          );
           expect(errMsg).toContain('Tauriアプリケーションが起動していません');
           return;
         }
         errorMessage = errMsg;
         // エラーメッセージが起動関連であることを確認
-        const isEngineNotRunningError = 
+        const isEngineNotRunningError =
           errorMessage.toLowerCase().includes('ollama') ||
           errorMessage.toLowerCase().includes('起動') ||
           errorMessage.toLowerCase().includes('接続') ||
           errorMessage.toLowerCase().includes('running') ||
           errorMessage.toLowerCase().includes('connection') ||
           errorMessage.toLowerCase().includes('refused');
-        
+
         // エラーメッセージが起動関連でない場合でも、エラーが発生したことは確認
         if (isEngineNotRunningError) {
           expect(isEngineNotRunningError).toBe(true);
@@ -125,8 +141,13 @@ describe('Ollama自動起動機能 結合テスト', () => {
         // エラーが発生したことを確認
         expect(errorOccurred).toBe(true);
       } else if (!wasOllamaRunning && !errorOccurred) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.log('Ollamaが停止していたが、エラーが発生しませんでした（予期しない動作）');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          console.log(
+            'Ollamaが停止していたが、エラーが発生しませんでした（予期しない動作）'
+          );
         }
       }
     }, 30000);
@@ -139,8 +160,13 @@ describe('Ollama自動起動機能 結合テスト', () => {
     it('Ollamaを起動した後、モデル一覧が取得できる', async () => {
       // Tauri環境が利用可能でない場合はスキップ
       if (!isTauriAvailable()) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.log('Tauri環境が利用できないため、このテストをスキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          console.log(
+            'Tauri環境が利用できないため、このテストをスキップします'
+          );
         }
         return;
       }
@@ -152,11 +178,14 @@ describe('Ollama自動起動機能 結合テスト', () => {
         await new Promise(resolve => setTimeout(resolve, 3000));
       } catch (error) {
         // 既に起動している可能性がある
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         if (!errorMessage.includes('既に実行中')) {
           // windowが未定義のエラーの場合はスキップ
           if (errorMessage.includes('window is not defined')) {
-            console.log('Tauri環境が利用できないため、このテストをスキップします');
+            console.log(
+              'Tauri環境が利用できないため、このテストをスキップします'
+            );
             return;
           }
           throw error;
@@ -165,18 +194,23 @@ describe('Ollama自動起動機能 結合テスト', () => {
 
       // モデル一覧を取得
       try {
-        const models = await invoke<Array<{
-          name: string;
-          size?: number;
-        }>>('get_models_list');
+        const models = await invoke<
+          Array<{
+            name: string;
+            size?: number;
+          }>
+        >('get_models_list');
 
         expect(models).toBeDefined();
         expect(Array.isArray(models)).toBe(true);
       } catch (error) {
         // Tauri環境が利用できない場合はスキップ
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('window is not defined')) {
-          console.log('Tauri環境が利用できないため、このテストをスキップします');
+          console.log(
+            'Tauri環境が利用できないため、このテストをスキップします'
+          );
           return;
         }
         throw error;
@@ -201,15 +235,19 @@ describe('Ollama自動起動機能 結合テスト', () => {
         // 実行状態を確認
         const isRunning = await invoke<boolean>('check_ollama_running');
         expect(typeof isRunning).toBe('boolean');
-        
+
         if (isRunning) {
           // 実行中の場合、モデル一覧が取得できることを確認
-          const models = await invoke<Array<{ name: string }>>('get_models_list');
+          const models =
+            await invoke<Array<{ name: string }>>('get_models_list');
           expect(Array.isArray(models)).toBe(true);
         }
       } catch (error) {
         // テスト環境によってはOllamaが利用できない場合がある
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('Ollama起動状態確認テストでエラー:', error);
         }
       }
@@ -235,7 +273,8 @@ describe('Ollama自動起動機能 結合テスト', () => {
         try {
           await invoke('get_models_list');
         } catch (error) {
-          modelListError = error instanceof Error ? error : new Error(String(error));
+          modelListError =
+            error instanceof Error ? error : new Error(String(error));
         }
 
         // 3. Ollamaを起動（自動起動のシミュレーション）
@@ -245,7 +284,10 @@ describe('Ollama自動起動機能 結合テスト', () => {
             // 起動完了を待つ
             await new Promise(resolve => setTimeout(resolve, 3000));
           } catch (startError) {
-            const errorMessage = startError instanceof Error ? startError.message : String(startError);
+            const errorMessage =
+              startError instanceof Error
+                ? startError.message
+                : String(startError);
             // 既に起動している場合は問題なし
             if (!errorMessage.includes('既に実行中')) {
               throw startError;
@@ -253,18 +295,23 @@ describe('Ollama自動起動機能 結合テスト', () => {
           }
 
           // 4. 再度モデル一覧を取得（成功することを期待）
-          const models = await invoke<Array<{ name: string }>>('get_models_list');
+          const models =
+            await invoke<Array<{ name: string }>>('get_models_list');
           expect(models).toBeDefined();
           expect(Array.isArray(models)).toBe(true);
         } else {
           // Ollamaが既に実行中だった場合は、そのままモデル一覧が取得できる
-          const models = await invoke<Array<{ name: string }>>('get_models_list');
+          const models =
+            await invoke<Array<{ name: string }>>('get_models_list');
           expect(models).toBeDefined();
           expect(Array.isArray(models)).toBe(true);
         }
       } catch (error) {
         // テスト環境によってはOllamaが利用できない場合がある
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('自動起動シミュレーションテストでエラー:', error);
         }
         // エラーが発生した場合はテストをスキップ（環境依存のため）
@@ -273,4 +320,3 @@ describe('Ollama自動起動機能 結合テスト', () => {
     }, 60000);
   });
 });
-

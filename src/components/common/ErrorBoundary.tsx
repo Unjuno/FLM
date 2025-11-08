@@ -3,6 +3,7 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { ErrorMessage } from './ErrorMessage';
 import { logger } from '../../utils/logger';
+import { isDev } from '../../utils/env';
 import './ErrorBoundary.css';
 
 /**
@@ -31,7 +32,10 @@ interface ErrorBoundaryState {
  * 子コンポーネントツリーのJavaScriptエラーをキャッチし、
  * エラーログを記録し、フォールバックUIを表示します
  */
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+export class ErrorBoundary extends Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = {
@@ -72,8 +76,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
     // 本番環境では、エラー追跡サービスに送信することも可能
     // 例: Sentry, LogRocket など
-    // 注意: import.meta.env.DEVを使用（Vite環境）
-    if (!import.meta.env.DEV) {
+    if (!isDev()) {
       this.logErrorToExternalService(error, errorInfo);
     }
   }
@@ -82,27 +85,35 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
    * コンソールにエラーを記録（開発環境のみ）
    */
   private logErrorToConsole(error: Error, errorInfo: ErrorInfo) {
-    if (import.meta.env.DEV) {
+    if (isDev()) {
       logger.error('ErrorBoundary caught an error', error, 'ErrorBoundary');
       logger.error('Error Info', errorInfo, 'ErrorBoundary');
-      logger.debug('Component Stack', errorInfo.componentStack, 'ErrorBoundary');
+      logger.debug(
+        'Component Stack',
+        errorInfo.componentStack,
+        'ErrorBoundary'
+      );
     }
   }
 
   /**
-   * 外部サービスにエラーを送信（開発環境のみ）
-   * 
+   * 外部サービスにエラーを送信（本番環境のみ）
+   *
    * 注意: 現時点ではコンソールにのみ記録します。
    * 将来的にエラー追跡サービス（Sentry、LogRocket等）への統合を検討します。
    */
   private logErrorToExternalService(error: Error, errorInfo: ErrorInfo) {
-    if (!import.meta.env.DEV) {
-      logger.error('Production Error', {
-        message: error.message,
-        stack: error.stack,
-        componentStack: errorInfo.componentStack,
-        timestamp: new Date().toISOString(),
-      }, 'ErrorBoundary');
+    if (!isDev()) {
+      logger.error(
+        'Production Error',
+        {
+          message: error.message,
+          stack: error.stack,
+          componentStack: errorInfo.componentStack,
+          timestamp: new Date().toISOString(),
+        },
+        'ErrorBoundary'
+      );
     }
   }
 
@@ -140,13 +151,21 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
       // デフォルトのエラーUIを表示
       const error = this.state.error;
-      const isDevelopment = import.meta.env.DEV;
+      const isDevelopment = isDev();
 
       return (
         <div className="error-boundary">
           <div className="error-boundary-container">
             <div className="error-boundary-header">
-              <div className="error-boundary-icon">⚠️</div>
+              <img 
+                src="/logo.png" 
+                alt="FLM" 
+                className="error-boundary-logo" 
+                width="48" 
+                height="48"
+                aria-hidden="true"
+              />
+              <div className="error-boundary-icon">!</div>
               <h1 className="error-boundary-title">エラーが発生しました</h1>
             </div>
 
@@ -170,7 +189,9 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                     <div className="error-details-content">
                       <div className="error-details-section">
                         <h4>エラーメッセージ:</h4>
-                        <pre className="error-stack">{error?.message || 'エラーが発生しました'}</pre>
+                        <pre className="error-stack">
+                          {error?.message || 'エラーが発生しました'}
+                        </pre>
                       </div>
                       {error?.stack && (
                         <div className="error-details-section">
@@ -197,7 +218,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                 className="error-boundary-button primary"
                 onClick={this.handleReset}
               >
-                🔄 もう一度試す
+                もう一度試す
               </button>
               <button
                 className="error-boundary-button secondary"
@@ -223,7 +244,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
 
 /**
  * Error Boundary を簡単に使用するためのHOC（Higher-Order Component）
- * 
+ *
  * @example
  * ```tsx
  * const SafeComponent = withErrorBoundary(MyComponent);
@@ -241,4 +262,3 @@ export function withErrorBoundary<P extends object>(
     );
   };
 }
-

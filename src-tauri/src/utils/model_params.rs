@@ -293,3 +293,4 @@ fn validate_multimodal_settings(multimodal: &MultimodalSettings) -> Result<(), V
     
     Ok(())
 }
+

@@ -7,7 +7,7 @@ use chrono::Utc;
 
 /// マイグレーションのバージョン番号
 #[allow(dead_code)] // 将来の検証機能で使用予定
-const CURRENT_VERSION: i32 = 2;
+const CURRENT_VERSION: i32 = 3;
 
 /// 全てのマイグレーションを実行
 pub fn run_migrations(conn: &mut Connection) -> Result<(), DatabaseError> {
@@ -28,6 +28,14 @@ pub fn run_migrations(conn: &mut Connection) -> Result<(), DatabaseError> {
     if current_version < 2 {
         apply_migration(conn, 2, "add_engine_support", |conn_ref| {
             add_engine_support(conn_ref)
+        })?;
+    }
+    
+    // パフォーマンス改善のマイグレーション（バージョン3）
+    // last_used_atカラムとインデックスを追加（監査レポート推奨）
+    if current_version < 3 {
+        apply_migration(conn, 3, "add_performance_indexes", |conn_ref| {
+            add_performance_indexes(conn_ref)
         })?;
     }
     
@@ -82,6 +90,36 @@ fn add_engine_support(tx: &mut rusqlite::Transaction) -> Result<(), DatabaseErro
         "CREATE INDEX IF NOT EXISTS idx_apis_engine_type ON apis(engine_type)",
         [],
     ).ok(); // エラーは無視
+    
+    Ok(())
+}
+
+/// パフォーマンス改善のマイグレーション（バージョン3）
+/// last_used_atカラムとインデックスを追加（監査レポート推奨）
+fn add_performance_indexes(tx: &mut rusqlite::Transaction) -> Result<(), DatabaseError> {
+    // APIsテーブルにlast_used_atカラムを追加（既に存在する場合はエラーを無視）
+    tx.execute(
+        "ALTER TABLE apis ADD COLUMN last_used_at TEXT",
+        [],
+    ).ok(); // エラーは無視（既に存在する場合）
+    
+    // last_used_atカラムのインデックスを追加（監査レポート推奨）
+    tx.execute(
+        "CREATE INDEX IF NOT EXISTS idx_apis_last_used_at ON apis(last_used_at DESC)",
+        [],
+    )?;
+    
+    // created_atインデックスを降順に再作成（監査レポート推奨）
+    // 既存のインデックスを削除してから再作成
+    tx.execute(
+        "DROP INDEX IF EXISTS idx_apis_created_at",
+        [],
+    ).ok(); // エラーは無視
+    
+    tx.execute(
+        "CREATE INDEX IF NOT EXISTS idx_apis_created_at ON apis(created_at DESC)",
+        [],
+    )?;
     
     Ok(())
 }
@@ -169,3 +207,4 @@ pub fn get_migrations(conn: &Connection) -> Result<Vec<Migration>, DatabaseError
     
     Ok(result)
 }
+

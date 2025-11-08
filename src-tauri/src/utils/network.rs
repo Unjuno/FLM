@@ -147,3 +147,4 @@ pub fn format_external_endpoint_url(port: u16, api_id: Option<&str>) -> Option<S
     Some(format!("{protocol}://{local_ip}:{https_port}"))
 }
 
+

@@ -1,10 +1,17 @@
 // web-download - WEBダウンロード機能の単体テスト
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  jest,
+} from '@jest/globals';
 
 /**
  * OS検出関数のテスト
- * 
+ *
  * 注意: 実際のdownload.jsの関数を使用する場合は、
  * 関数をエクスポートする必要があります
  */
@@ -61,7 +68,8 @@ describe('WEBダウンロード機能 - OS検出', () => {
 
   it('macOS OSを検出できる', () => {
     global.navigator = {
-      userAgent: 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+      userAgent:
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
       platform: 'MacIntel',
     } as Navigator;
 
@@ -108,17 +116,20 @@ describe('WEBダウンロード機能 - GitHub Releases API', () => {
         {
           name: 'FLM-1.0.0.msi',
           size: 52428800, // 50MB
-          browser_download_url: 'https://github.com/Unjuno/FLM/releases/download/v1.0.0/FLM-1.0.0.msi',
+          browser_download_url:
+            'https://github.com/Unjuno/FLM/releases/download/v1.0.0/FLM-1.0.0.msi',
         },
         {
           name: 'FLM-1.0.0.dmg',
           size: 57671680, // 55MB
-          browser_download_url: 'https://github.com/Unjuno/FLM/releases/download/v1.0.0/FLM-1.0.0.dmg',
+          browser_download_url:
+            'https://github.com/Unjuno/FLM/releases/download/v1.0.0/FLM-1.0.0.dmg',
         },
         {
           name: 'FLM-1.0.0.AppImage',
           size: 54525952, // 52MB
-          browser_download_url: 'https://github.com/Unjuno/FLM/releases/download/v1.0.0/FLM-1.0.0.AppImage',
+          browser_download_url:
+            'https://github.com/Unjuno/FLM/releases/download/v1.0.0/FLM-1.0.0.AppImage',
         },
       ],
     };
@@ -129,11 +140,14 @@ describe('WEBダウンロード機能 - GitHub Releases API', () => {
       json: async () => mockRelease,
     } as Response);
 
-    const response = await fetch('https://api.github.com/repos/Unjuno/FLM/releases/latest', {
-      headers: {
-        'Accept': 'application/vnd.github.v3+json',
-      },
-    });
+    const response = await fetch(
+      'https://api.github.com/repos/Unjuno/FLM/releases/latest',
+      {
+        headers: {
+          Accept: 'application/vnd.github.v3+json',
+        },
+      }
+    );
 
     expect(response.ok).toBe(true);
     const release = await response.json();
@@ -144,7 +158,7 @@ describe('WEBダウンロード機能 - GitHub Releases API', () => {
       'https://api.github.com/repos/Unjuno/FLM/releases/latest',
       expect.objectContaining({
         headers: expect.objectContaining({
-          'Accept': 'application/vnd.github.v3+json',
+          Accept: 'application/vnd.github.v3+json',
         }),
       })
     );
@@ -157,14 +171,18 @@ describe('WEBダウンロード機能 - GitHub Releases API', () => {
       statusText: 'Not Found',
     } as Response);
 
-    const response = await fetch('https://api.github.com/repos/Unjuno/FLM/releases/latest');
+    const response = await fetch(
+      'https://api.github.com/repos/Unjuno/FLM/releases/latest'
+    );
 
     expect(response.ok).toBe(false);
     expect(response.status).toBe(404);
   });
 
   it('ネットワークエラーを適切に処理する', async () => {
-    (global.fetch as jest.Mock).mockRejectedValueOnce(new Error('Network error'));
+    (global.fetch as jest.Mock).mockRejectedValueOnce(
+      new Error('Network error')
+    );
 
     await expect(
       fetch('https://api.github.com/repos/Unjuno/FLM/releases/latest')
@@ -185,7 +203,10 @@ describe('WEBダウンロード機能 - アセット分類', () => {
 
     const windowsAssets = assets.filter(asset => {
       const name = asset.name.toLowerCase();
-      return name.endsWith('.msi') || (name.endsWith('.exe') && !name.includes('setup'));
+      return (
+        name.endsWith('.msi') ||
+        (name.endsWith('.exe') && !name.includes('setup'))
+      );
     });
 
     expect(windowsAssets).toHaveLength(2);
@@ -201,7 +222,10 @@ describe('WEBダウンロード機能 - アセット分類', () => {
 
     const macosAssets = assets.filter(asset => {
       const name = asset.name.toLowerCase();
-      return name.endsWith('.dmg') || (name.endsWith('.app') && name.includes('macos'));
+      return (
+        name.endsWith('.dmg') ||
+        (name.endsWith('.app') && name.includes('macos'))
+      );
     });
 
     expect(macosAssets).toHaveLength(2);
@@ -305,10 +329,11 @@ describe('WEBダウンロード機能 - エラーハンドリング', () => {
       statusText: 'Internal Server Error',
     } as Response);
 
-    const response = await fetch('https://api.github.com/repos/Unjuno/FLM/releases/latest');
-    
+    const response = await fetch(
+      'https://api.github.com/repos/Unjuno/FLM/releases/latest'
+    );
+
     expect(response.ok).toBe(false);
     expect(response.status).toBe(500);
   });
 });
-

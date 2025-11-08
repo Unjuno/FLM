@@ -24,8 +24,8 @@
 .nav-item {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 0.75rem 1rem;
+  gap: var(--spacing-md, 0.75rem);
+  padding: var(--spacing-md, 0.75rem) var(--spacing-md, 1rem);
   background: transparent;
   border: none;
   border-radius: var(--nav-item-border-radius);
@@ -82,8 +82,8 @@
   color: var(--nav-item-badge-text);
   font-size: 0.75rem;
   font-weight: 700;
-  padding: 0.125rem 0.5rem;
-  border-radius: 12px;
+  padding: var(--spacing-xs, 0.125rem) var(--spacing-sm, 0.5rem);
+  border-radius: var(--radius-full, 9999px);
   min-width: 20px;
   text-align: center;
   flex-shrink: 0;
@@ -92,9 +92,9 @@
 }
 
 .nav-item-children {
-  margin-top: 0.25rem;
-  margin-left: 1rem;
-  padding-left: 1rem;
+  margin-top: var(--spacing-xs, 0.25rem);
+  margin-left: var(--spacing-md, 1rem);
+  padding-left: var(--spacing-md, 1rem);
   border-left: 2px solid var(--nav-item-children-border);
 }
 

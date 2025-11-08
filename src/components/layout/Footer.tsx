@@ -40,7 +40,7 @@ export const Footer: React.FC<FooterProps> = ({ className = '' }) => {
           {/* 中央: リンク */}
           <nav className="footer-nav" aria-label="フッターナビゲーション">
             <ul className="footer-links">
-              {footerLinks.map((link) => (
+              {footerLinks.map(link => (
                 <li key={link.path} className="footer-link-item">
                   <button
                     className="footer-link"
@@ -63,4 +63,3 @@ export const Footer: React.FC<FooterProps> = ({ className = '' }) => {
     </footer>
   );
 };
-

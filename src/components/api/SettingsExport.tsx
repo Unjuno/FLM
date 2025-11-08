@@ -1,6 +1,6 @@
 // SettingsExport - 設定エクスポート・インポートコンポーネント
 
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useTransition } from 'react';
 import { safeInvoke } from '../../utils/tauri';
 import { logger } from '../../utils/logger';
 import './SettingsExport.css';
@@ -31,6 +31,7 @@ export const SettingsExport: React.FC<SettingsExportProps> = ({
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
 
   /**
    * 設定をエクスポート
@@ -44,7 +45,8 @@ export const SettingsExport: React.FC<SettingsExportProps> = ({
       // export_api_settings IPCコマンドを呼び出し
       const jsonData = await safeInvoke<string>('export_api_settings', {
         request: {
-          api_ids: selectedApiIds && selectedApiIds.length > 0 ? selectedApiIds : null,
+          api_ids:
+            selectedApiIds && selectedApiIds.length > 0 ? selectedApiIds : null,
         },
       });
 
@@ -52,25 +54,29 @@ export const SettingsExport: React.FC<SettingsExportProps> = ({
       const blob = new Blob([jsonData], {
         type: 'application/json;charset=utf-8;',
       });
-      
+
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
-      const apiCount = selectedApiIds && selectedApiIds.length > 0 
-        ? selectedApiIds.length 
-        : 'all';
+      const apiCount =
+        selectedApiIds && selectedApiIds.length > 0
+          ? selectedApiIds.length
+          : 'all';
       link.download = `api-settings-${apiCount}-${new Date().toISOString().split('T')[0]}.json`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       URL.revokeObjectURL(url);
 
-      const apiCountText = selectedApiIds && selectedApiIds.length > 0
-        ? `${selectedApiIds.length}件`
-        : 'すべて';
+      const apiCountText =
+        selectedApiIds && selectedApiIds.length > 0
+          ? `${selectedApiIds.length}件`
+          : 'すべて';
       setSuccessMessage(`${apiCountText}のAPI設定をエクスポートしました`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'エクスポートに失敗しました');
+      setError(
+        err instanceof Error ? err.message : 'エクスポートに失敗しました'
+      );
       logger.error('設定エクスポートエラー', err, 'SettingsExport');
     } finally {
       setExporting(false);
@@ -113,7 +119,7 @@ export const SettingsExport: React.FC<SettingsExportProps> = ({
     } catch (err) {
       setError(err instanceof Error ? err.message : 'インポートに失敗しました');
       logger.error('設定インポートエラー', err, 'SettingsExport');
-      
+
       // ファイル入力をリセット
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -126,7 +132,10 @@ export const SettingsExport: React.FC<SettingsExportProps> = ({
   /**
    * インポートを実行（直接呼び出し用）
    */
-  const handleImportWithResolutionDirectly = async (fileContent: string, conflictResolution: string) => {
+  const handleImportWithResolutionDirectly = async (
+    fileContent: string,
+    conflictResolution: string
+  ) => {
     try {
       setImporting(true);
       setError(null);
@@ -179,7 +188,7 @@ export const SettingsExport: React.FC<SettingsExportProps> = ({
     } catch (err) {
       setError(err instanceof Error ? err.message : 'インポートに失敗しました');
       logger.error('設定インポートエラー', err, 'SettingsExport');
-      
+
       // ファイル入力をリセット
       if (fileInputRef.current) {
         fileInputRef.current.value = '';
@@ -193,12 +202,18 @@ export const SettingsExport: React.FC<SettingsExportProps> = ({
     <div className="settings-export">
       <div className="settings-export-buttons">
         <button
-          onClick={handleExport}
-          disabled={exporting}
+          onClick={() => {
+            startTransition(() => {
+              handleExport();
+            });
+          }}
+          disabled={exporting || isPending}
           className="export-button settings-export-button"
-          title={selectedApiIds && selectedApiIds.length > 0 
-            ? `選択した${selectedApiIds.length}件のAPI設定をエクスポート`
-            : 'すべてのAPI設定をエクスポート'}
+          title={
+            selectedApiIds && selectedApiIds.length > 0
+              ? `選択した${selectedApiIds.length}件のAPI設定をエクスポート`
+              : 'すべてのAPI設定をエクスポート'
+          }
         >
           {exporting ? 'エクスポート中...' : '設定をエクスポート'}
         </button>
@@ -220,15 +235,9 @@ export const SettingsExport: React.FC<SettingsExportProps> = ({
           aria-label="API設定JSONファイルを選択"
         />
       </div>
-      {error && (
-        <div className="settings-export-error">
-          {error}
-        </div>
-      )}
+      {error && <div className="settings-export-error">{error}</div>}
       {successMessage && (
-        <div className="settings-export-success">
-          {successMessage}
-        </div>
+        <div className="settings-export-success">{successMessage}</div>
       )}
     </div>
   );

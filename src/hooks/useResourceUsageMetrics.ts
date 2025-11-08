@@ -39,7 +39,9 @@ export interface UseResourceUsageMetricsOptions {
  * CPU/メモリ使用率取得用カスタムフック
  * CPUとメモリの両方を同時に取得してマージします
  */
-export const useResourceUsageMetrics = (options: UseResourceUsageMetricsOptions) => {
+export const useResourceUsageMetrics = (
+  options: UseResourceUsageMetricsOptions
+) => {
   const {
     apiId,
     startDate = null,
@@ -64,7 +66,7 @@ export const useResourceUsageMetrics = (options: UseResourceUsageMetricsOptions)
   // データを取得
   const loadData = useCallback(async () => {
     if (!isMountedRef.current) return;
-    
+
     if (!apiId || apiId.trim() === '') {
       if (isMountedRef.current) {
         setData([]);
@@ -76,7 +78,7 @@ export const useResourceUsageMetrics = (options: UseResourceUsageMetricsOptions)
 
     try {
       if (!isMountedRef.current) return;
-      
+
       setLoading(true);
       setError(null);
 
@@ -103,15 +105,28 @@ export const useResourceUsageMetrics = (options: UseResourceUsageMetricsOptions)
       if (!isMountedRef.current) return;
 
       // APIレスポンスがnullやundefined、または配列でない場合のチェック
-      const safeCpuMetrics: PerformanceMetricInfo[] = Array.isArray(cpuMetrics) ? cpuMetrics : [];
-      const safeMemoryMetrics: PerformanceMetricInfo[] = Array.isArray(memoryMetrics) ? memoryMetrics : [];
+      const safeCpuMetrics: PerformanceMetricInfo[] = Array.isArray(cpuMetrics)
+        ? cpuMetrics
+        : [];
+      const safeMemoryMetrics: PerformanceMetricInfo[] = Array.isArray(
+        memoryMetrics
+      )
+        ? memoryMetrics
+        : [];
 
       // タイムスタンプをキーとしてデータをマージ
-      const dataMap = new Map<number, { timestamp: string; cpu?: number; memory?: number }>();
+      const dataMap = new Map<
+        number,
+        { timestamp: string; cpu?: number; memory?: number }
+      >();
 
-      safeCpuMetrics.forEach((metric) => {
+      safeCpuMetrics.forEach(metric => {
         // timestampとvalueのバリデーション
-        if (!metric.timestamp || typeof metric.value !== 'number' || isNaN(metric.value)) {
+        if (
+          !metric.timestamp ||
+          typeof metric.value !== 'number' ||
+          isNaN(metric.value)
+        ) {
           return; // 無効なデータはスキップ
         }
 
@@ -122,23 +137,32 @@ export const useResourceUsageMetrics = (options: UseResourceUsageMetricsOptions)
 
         if (!dataMap.has(timestamp)) {
           dataMap.set(timestamp, {
-            timestamp: new Date(metric.timestamp).toLocaleTimeString(LOCALE.DEFAULT, {
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit',
-            }),
+            timestamp: new Date(metric.timestamp).toLocaleTimeString(
+              LOCALE.DEFAULT,
+              {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+              }
+            ),
           });
         }
         const entry = dataMap.get(timestamp);
         if (entry) {
           // CPU使用率はパーセンテージ（0-100）で保存されている
-          entry.cpu = Math.round(metric.value * FORMATTING.PERCENTAGE_MULTIPLIER) / FORMATTING.PERCENTAGE_MULTIPLIER;
+          entry.cpu =
+            Math.round(metric.value * FORMATTING.PERCENTAGE_MULTIPLIER) /
+            FORMATTING.PERCENTAGE_MULTIPLIER;
         }
       });
 
-      safeMemoryMetrics.forEach((metric) => {
+      safeMemoryMetrics.forEach(metric => {
         // timestampとvalueのバリデーション
-        if (!metric.timestamp || typeof metric.value !== 'number' || isNaN(metric.value)) {
+        if (
+          !metric.timestamp ||
+          typeof metric.value !== 'number' ||
+          isNaN(metric.value)
+        ) {
           return; // 無効なデータはスキップ
         }
 
@@ -149,17 +173,22 @@ export const useResourceUsageMetrics = (options: UseResourceUsageMetricsOptions)
 
         if (!dataMap.has(timestamp)) {
           dataMap.set(timestamp, {
-            timestamp: new Date(metric.timestamp).toLocaleTimeString(LOCALE.DEFAULT, {
-              hour: '2-digit',
-              minute: '2-digit',
-              second: '2-digit',
-            }),
+            timestamp: new Date(metric.timestamp).toLocaleTimeString(
+              LOCALE.DEFAULT,
+              {
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit',
+              }
+            ),
           });
         }
         const entry = dataMap.get(timestamp);
         if (entry) {
           // メモリ使用率は既にパーセンテージ（0-100）で保存されている
-          entry.memory = Math.round(metric.value * FORMATTING.PERCENTAGE_MULTIPLIER) / FORMATTING.PERCENTAGE_MULTIPLIER;
+          entry.memory =
+            Math.round(metric.value * FORMATTING.PERCENTAGE_MULTIPLIER) /
+            FORMATTING.PERCENTAGE_MULTIPLIER;
         }
       });
 
@@ -172,13 +201,15 @@ export const useResourceUsageMetrics = (options: UseResourceUsageMetricsOptions)
           timestamp,
         }))
         .sort((a, b) => a.timestamp - b.timestamp)
-        .map(({ timestamp, ...rest }) => rest);
+        .map(({ timestamp: _timestamp, ...rest }) => rest);
 
       if (!isMountedRef.current) return;
       setData(sortedData);
     } catch (err) {
       if (!isMountedRef.current) return;
-      setError(err instanceof Error ? err.message : 'データの取得に失敗しました');
+      setError(
+        err instanceof Error ? err.message : 'データの取得に失敗しました'
+      );
     } finally {
       if (isMountedRef.current) {
         setLoading(false);
@@ -218,4 +249,3 @@ export const useResourceUsageMetrics = (options: UseResourceUsageMetricsOptions)
     isEmpty: !apiId || apiId.trim() === '',
   };
 };
-

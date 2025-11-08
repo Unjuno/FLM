@@ -2,7 +2,11 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
 import { safeInvoke } from '../../utils/tauri';
-import { REFRESH_INTERVALS, FORMATTING, UI_WARNING_THRESHOLDS } from '../../constants/config';
+import {
+  REFRESH_INTERVALS,
+  FORMATTING,
+  UI_WARNING_THRESHOLDS,
+} from '../../constants/config';
 import './PerformanceSummary.css';
 
 /**
@@ -68,10 +72,15 @@ export const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({
         api_id: apiId,
         period: period,
       };
-      const result = await safeInvoke<PerformanceSummary>('get_performance_summary', request);
+      const result = await safeInvoke<PerformanceSummary>(
+        'get_performance_summary',
+        request
+      );
       setSummary(result);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'サマリーの取得に失敗しました');
+      setError(
+        err instanceof Error ? err.message : 'サマリーの取得に失敗しました'
+      );
     } finally {
       setLoading(false);
     }
@@ -137,55 +146,75 @@ export const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({
       <div className="summary-grid">
         <div className="summary-card">
           <div className="card-label">リクエスト数</div>
-          <div className="card-value">{summary.request_count.toLocaleString()}</div>
+          <div className="card-value">
+            {summary.request_count.toLocaleString()}
+          </div>
           <div className="card-unit">件</div>
         </div>
 
         <div className="summary-card">
           <div className="card-label">平均レスポンス時間</div>
-          <div className="card-value">{summary.avg_response_time.toFixed(FORMATTING.DECIMAL_PLACES)}</div>
+          <div className="card-value">
+            {summary.avg_response_time.toFixed(FORMATTING.DECIMAL_PLACES)}
+          </div>
           <div className="card-unit">ms</div>
         </div>
 
         <div className="summary-card">
           <div className="card-label">最大レスポンス時間</div>
-          <div className="card-value">{summary.max_response_time.toFixed(FORMATTING.DECIMAL_PLACES)}</div>
+          <div className="card-value">
+            {summary.max_response_time.toFixed(FORMATTING.DECIMAL_PLACES)}
+          </div>
           <div className="card-unit">ms</div>
         </div>
 
         <div className="summary-card">
           <div className="card-label">最小レスポンス時間</div>
-          <div className="card-value">{summary.min_response_time.toFixed(FORMATTING.DECIMAL_PLACES)}</div>
+          <div className="card-value">
+            {summary.min_response_time.toFixed(FORMATTING.DECIMAL_PLACES)}
+          </div>
           <div className="card-unit">ms</div>
         </div>
 
-        <div className={`summary-card ${summary.error_rate > UI_WARNING_THRESHOLDS.ERROR_RATE_HIGH ? 'alert' : ''}`}>
+        <div
+          className={`summary-card ${summary.error_rate > UI_WARNING_THRESHOLDS.ERROR_RATE_HIGH ? 'alert' : ''}`}
+        >
           <div className="card-label">エラー率</div>
-          <div className="card-value">{summary.error_rate.toFixed(FORMATTING.DECIMAL_PLACES)}</div>
+          <div className="card-value">
+            {summary.error_rate.toFixed(FORMATTING.DECIMAL_PLACES)}
+          </div>
           <div className="card-unit">%</div>
         </div>
 
         <div className="summary-card">
           <div className="card-label">平均CPU使用率</div>
-          <div className="card-value">{summary.avg_cpu_usage.toFixed(FORMATTING.DECIMAL_PLACES)}</div>
+          <div className="card-value">
+            {summary.avg_cpu_usage.toFixed(FORMATTING.DECIMAL_PLACES)}
+          </div>
           <div className="card-unit">%</div>
         </div>
 
         <div className="summary-card">
           <div className="card-label">平均メモリ使用量</div>
-          <div className="card-value">{summary.avg_memory_usage.toFixed(FORMATTING.DECIMAL_PLACES)}</div>
+          <div className="card-value">
+            {summary.avg_memory_usage.toFixed(FORMATTING.DECIMAL_PLACES)}
+          </div>
           <div className="card-unit">MB</div>
         </div>
 
         <div className="summary-card">
           <div className="card-label">トークン使用量</div>
-          <div className="card-value">{summary.total_token_usage.toLocaleString()}</div>
+          <div className="card-value">
+            {summary.total_token_usage.toLocaleString()}
+          </div>
           <div className="card-unit">トークン</div>
         </div>
       </div>
       {autoRefresh && (
         <div className="summary-footer">
-          <span className="auto-refresh-indicator">自動更新: {refreshInterval / FORMATTING.MS_PER_SECOND}秒間隔</span>
+          <span className="auto-refresh-indicator">
+            自動更新: {refreshInterval / FORMATTING.MS_PER_SECOND}秒間隔
+          </span>
         </div>
       )}
     </div>

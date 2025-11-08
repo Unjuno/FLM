@@ -3,21 +3,16 @@
 
 use crate::utils::error::AppError;
 use std::path::PathBuf;
-use std::fs;
 
 /// バンドルされたOllamaバイナリのパスを取得
 /// TauriアプリのリソースディレクトリからOllamaバイナリを探す
 pub fn get_bundled_ollama_path() -> Result<Option<PathBuf>, AppError> {
     // Tauriアプリの実行可能ファイルのディレクトリを取得
     let exe_path = std::env::current_exe()
-        .map_err(|e| AppError::IoError {
-            message: format!("実行ファイルパス取得エラー: {}", e),
-        })?;
+        .map_err(|e| AppError::io_error(format!("実行ファイルパス取得エラー: {}", e)))?;
     
     let exe_dir = exe_path.parent()
-        .ok_or_else(|| AppError::IoError {
-            message: "実行ファイルの親ディレクトリが取得できませんでした".to_string(),
-        })?;
+        .ok_or_else(|| AppError::io_error("実行ファイルの親ディレクトリが取得できませんでした"))?;
     
     // バンドルされたOllamaバイナリのパスを構築
     // Windows: exe_dir/ollama/ollama.exe
@@ -41,9 +36,7 @@ pub fn get_bundled_ollama_path() -> Result<Option<PathBuf>, AppError> {
         let ollama_path = ollama_dir.join("ollama");
         if ollama_path.exists() {
             // 実行権限を確認
-            let metadata = fs::metadata(&ollama_path).map_err(|e| AppError::IoError {
-                message: format!("Ollamaバイナリのメタデータ取得エラー: {}", e),
-            })?;
+            let metadata = fs::metadata(&ollama_path).map_err(|e| AppError::io_error(format!("Ollamaバイナリのメタデータ取得エラー: {}", e)))?;
             
             // 実行権限がない場合は設定を試みる
             #[cfg(unix)]
@@ -51,9 +44,7 @@ pub fn get_bundled_ollama_path() -> Result<Option<PathBuf>, AppError> {
                 use std::os::unix::fs::PermissionsExt;
                 let mut perms = metadata.permissions();
                 perms.set_mode(0o755); // rwxr-xr-x
-                fs::set_permissions(&ollama_path, perms).map_err(|e| AppError::IoError {
-                    message: format!("Ollamaバイナリの実行権限設定エラー: {}", e),
-                })?;
+                fs::set_permissions(&ollama_path, perms).map_err(|e| AppError::io_error(format!("Ollamaバイナリの実行権限設定エラー: {}", e)))?;
             }
             
             return Ok(Some(ollama_path));
@@ -70,9 +61,7 @@ pub fn get_bundled_ollama_version() -> Result<Option<String>, AppError> {
         let output = std::process::Command::new(&ollama_path)
             .arg("--version")
             .output()
-            .map_err(|e| AppError::IoError {
-                message: format!("Ollamaバージョン取得エラー: {}", e),
-            })?;
+            .map_err(|e| AppError::io_error(format!("Ollamaバージョン取得エラー: {}", e)))?;
         
         if output.status.success() {
             let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
@@ -155,4 +144,5 @@ pub fn detect_ollama_by_priority() -> Result<Option<OllamaDetectionResult>, AppE
     
     Ok(None)
 }
+
 

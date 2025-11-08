@@ -3,7 +3,7 @@
 .form-switch-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--spacing-xs, 0.5rem);
 }
 
 .form-switch-wrapper-full-width {
@@ -18,7 +18,7 @@
 .form-switch-label-wrapper {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: var(--spacing-md, 0.75rem);
   cursor: pointer;
 }
 
@@ -32,10 +32,14 @@
 .form-switch {
   position: relative;
   display: inline-block;
-  background: var(--form-switch-bg, #ccc);
-  border-radius: 9999px;
-  transition: background-color 0.2s;
+  background: var(--color-bg-tertiary, #cbd5e0);
+  border-radius: var(--radius-full, 9999px);
+  transition: background-color var(--transition-base, 200ms ease);
   flex-shrink: 0;
+}
+
+[data-theme="dark"] .form-switch {
+  background: var(--color-bg-tertiary, #4a5568);
 }
 
 .form-switch-medium {
@@ -57,10 +61,14 @@
   position: absolute;
   top: 0.125rem;
   left: 0.125rem;
-  background: var(--form-switch-thumb-bg, white);
+  background: var(--color-bg-primary, #ffffff);
   border-radius: 50%;
-  transition: transform 0.2s;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  transition: transform var(--transition-base, 200ms ease);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+[data-theme="dark"] .form-switch-thumb {
+  background: var(--color-bg-primary, #f7fafc);
 }
 
 .form-switch-medium .form-switch-thumb {
@@ -81,7 +89,7 @@
 }
 
 .form-switch-checked {
-  background: var(--form-switch-bg-checked, #667eea);
+  background: var(--color-primary, #667eea);
 }
 
 .form-switch-checked .form-switch-thumb {
@@ -97,7 +105,7 @@
 }
 
 .form-switch-error {
-  background: #f56565;
+  background: var(--color-error, #f56565);
 }
 
 .form-switch-disabled {
@@ -111,22 +119,26 @@
 
 .form-switch-label {
   font-size: 0.9rem;
-  color: var(--form-switch-label-color, #333);
+  color: var(--color-text-primary, #1a202c);
   -webkit-user-select: none;
   user-select: none;
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--spacing-xs, 0.25rem);
+}
+
+[data-theme="dark"] .form-switch-label {
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .form-switch-required {
-  color: #f56565;
-  font-weight: bold;
+  color: var(--color-error, #f56565);
+  font-weight: 600;
 }
 
 .form-switch-error-message {
   font-size: 0.875rem;
-  color: #f56565;
+  color: var(--color-error, #f56565);
   margin-left: 3.75rem;
 }
 
@@ -142,38 +154,10 @@
 
 .form-switch-help-text {
   font-size: 0.875rem;
-  color: var(--form-switch-help-text-color, #666);
+  color: var(--color-text-secondary, #4a5568);
   margin-left: 3.75rem;
 }
 
-/* ダークモード対応 */
-@media (prefers-color-scheme: dark) {
-  .form-switch {
-    background: #4a5568;
-  }
-
-  .form-switch-checked {
-    background: #667eea;
-  }
-
-  .form-switch-thumb {
-    background: #e0e0e0;
-  }
-
-  .form-switch-label {
-    color: #e0e0e0;
-  }
-
-  .form-switch-help-text {
-    color: #a0aec0;
-  }
+[data-theme="dark"] .form-switch-help-text {
+  color: var(--color-text-secondary, #cbd5e0);
 }
-
-[data-theme="dark"] {
-  --form-switch-bg: #4a5568;
-  --form-switch-bg-checked: #667eea;
-  --form-switch-thumb-bg: #e0e0e0;
-  --form-switch-label-color: #e0e0e0;
-  --form-switch-help-text-color: #a0aec0;
-}
-

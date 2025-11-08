@@ -1,14 +1,43 @@
 // Ollama検出中のローディング画面コンポーネント
 
-import React from 'react';
-import { useOllamaDetection } from '../../hooks/useOllama';
+import React, { memo } from 'react';
+import type { OllamaStatus } from '../../types/ollama';
+import type { AutoSetupStepState } from '../../services/ollamaAutoSetup';
 import './OllamaDetection.css';
 
-/**
- * Ollama検出中のローディング画面
- */
-export const OllamaDetection: React.FC = () => {
-  const { status, isDetecting, error } = useOllamaDetection();
+interface OllamaDetectionProps {
+  status: OllamaStatus | null;
+  isDetecting: boolean;
+  error: string | null;
+  autoSteps: AutoSetupStepState[];
+  autoStatus: 'idle' | 'running' | 'completed' | 'error';
+  autoError: string | null;
+  onRetryAuto?: () => void;
+}
+
+const statusToClass = (status: string) => {
+  switch (status) {
+    case 'success':
+      return 'status success';
+    case 'warning':
+      return 'status warning';
+    case 'error':
+      return 'status error';
+    default:
+      return 'status info';
+  }
+};
+
+const OllamaDetectionComponent: React.FC<OllamaDetectionProps> = ({
+  status,
+  isDetecting,
+  error,
+  autoSteps,
+  autoStatus,
+  autoError,
+  onRetryAuto,
+}) => {
+  const hasAutoSteps = autoSteps.length > 0;
 
   if (isDetecting) {
     return (
@@ -17,7 +46,9 @@ export const OllamaDetection: React.FC = () => {
           <div className="spinner"></div>
         </div>
         <p className="detection-message">Ollamaを検出しています...</p>
-        <p className="detection-submessage">システムをスキャン中です。しばらくお待ちください。</p>
+        <p className="detection-submessage">
+          システムをスキャン中です。しばらくお待ちください。
+        </p>
       </div>
     );
   }
@@ -26,84 +57,87 @@ export const OllamaDetection: React.FC = () => {
     return (
       <div className="ollama-detection">
         <div className="detection-error">
-          <span className="error-icon">⚠️</span>
+          <span className="error-icon">!</span>
           <p className="error-message">{error}</p>
+          {onRetryAuto && (
+            <button className="retry-button" onClick={onRetryAuto}>
+              自動セットアップを再実行
+            </button>
+          )}
         </div>
       </div>
     );
   }
-
-  if (status?.installed || status?.portable || status?.running) {
-    return (
-      <div className="ollama-detection">
-        <div className="detection-success">
-          <span className="success-icon">✅</span>
-          <p className="success-message">Ollamaが見つかりました</p>
-          {status.version && (
-            <p className="version-info">バージョン: {status.version}</p>
-          )}
-          {status.running && (
-            <p className="running-info">実行中: はい</p>
-          )}
-          {/* パス情報は非開発者には不要なため表示しない */}
-        </div>
-      </div>
-    );
-  }
-
-  // システムインストールが必要な場合のメッセージ
-  const showSystemInstallGuide = status && !status.installed && !status.portable;
 
   return (
     <div className="ollama-detection">
-      <div className="detection-not-found">
-        <span className="not-found-icon">ℹ️</span>
-        <p className="not-found-message">Ollamaが見つかりませんでした</p>
-        <p className="not-found-submessage">ダウンロードしてインストールしてください</p>
-        
-        {showSystemInstallGuide && (
-          <div className="system-install-guide">
-            <div className="guide-section">
-              <h4 className="guide-title">⚠️ システムにインストールする場合</h4>
-              <p className="guide-warning">
-                <strong>システムにインストールするには管理者権限が必要です。</strong>
-              </p>
-              <div className="guide-steps">
-                <h5>手動インストール手順:</h5>
-                <ol className="install-steps-list">
-                  <li>
-                    <a 
-                      href="https://ollama.ai/" 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="install-link"
-                    >
-                      Ollama公式Webサイト（ollama.ai）
-                    </a>
-                    にアクセス
-                  </li>
-                  <li>ご使用のOS用のインストーラーをダウンロード</li>
-                  <li>
-                    <strong>管理者権限で</strong>インストーラーを実行
-                    <ul className="install-substeps">
-                      <li>Windows: インストーラーを右クリック → 「管理者として実行」</li>
-                      <li>macOS/Linux: <code>sudo</code>コマンドで実行</li>
-                    </ul>
-                  </li>
-                  <li>インストール完了後、FLMアプリを再起動</li>
-                </ol>
-              </div>
-              <div className="guide-alternative">
-                <p className="alternative-note">
-                  💡 <strong>推奨:</strong> 管理者権限なしで使用するには、上記の「ダウンロード開始」ボタンから
-                  FLMアプリディレクトリ内に自動的にインストールできます（権限不要・自動インストール）。
-                </p>
-              </div>
-            </div>
+      <div className="detection-status-card">
+        <div className="status-header">
+          <span className="status-icon">{status?.running ? '✅' : '🔍'}</span>
+          <div>
+            <p className="status-title">
+              {status?.running
+                ? 'Ollamaは稼働中です'
+                : status?.installed || status?.portable
+                  ? 'Ollamaを起動しています'
+                  : 'Ollamaを自動セットアップ中です'}
+            </p>
+            {status?.version && (
+              <p className="status-detail">バージョン: {status.version}</p>
+            )}
           </div>
+        </div>
+        {autoStatus === 'running' && (
+          <p className="auto-status-message">自動セットアップを実行しています...</p>
+        )}
+        {autoStatus === 'completed' && !status?.running && (
+          <p className="auto-status-message muted">
+            セットアップ完了を確認しています...
+          </p>
+        )}
+        {autoStatus === 'error' && !autoError && (
+          <p className="auto-status-message error">
+            自動セットアップに失敗しました。手動手順を試してください。
+          </p>
+        )}
+        {hasAutoSteps && (
+          <div className="auto-steps">
+            {autoSteps.map(step => (
+              <div className="auto-step" key={step.id}>
+                <div className={statusToClass(step.status)}>
+                  <span className="step-label">{step.label}</span>
+                  {step.progress !== undefined && (
+                    <span className="step-progress">
+                      {Math.round(step.progress)}%
+                    </span>
+                  )}
+                </div>
+                {step.message && (
+                  <p className="step-message">{step.message}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+
+        {autoError && (
+          <div className="auto-error">
+            <p className="error-text">{autoError}</p>
+            {onRetryAuto && (
+              <button className="retry-button" onClick={onRetryAuto}>
+                自動セットアップを再実行
+              </button>
+            )}
+          </div>
+        )}
+
+        {!hasAutoSteps && !autoError && (
+          <p className="waiting-message">準備状態を確認しています...</p>
         )}
       </div>
     </div>
   );
 };
 
+// React.memoでメモ化して不要な再レンダリングを防止
+export const OllamaDetection = memo(OllamaDetectionComponent);

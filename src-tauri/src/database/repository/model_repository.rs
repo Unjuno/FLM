@@ -12,10 +12,21 @@ impl ModelCatalogRepository {
     /// 全てのモデルカタログアイテムを取得
     pub fn find_all(conn: &Connection) -> Result<Vec<ModelCatalogItem>, DatabaseError> {
         let mut stmt = conn.prepare(
-            "SELECT name, description, size, parameters, category, recommended, author, license, updated_at FROM models_catalog ORDER BY recommended DESC, name ASC"
+            "SELECT name, description, size, parameters, category, recommended, author, license, tags, updated_at FROM models_catalog ORDER BY recommended DESC, name ASC"
         )?;
         
         let model_iter = stmt.query_map([], |row| {
+            // tagsをJSON文字列からVec<String>に変換
+            let tags_json: Option<String> = row.get(8)?;
+            let tags = tags_json
+                .and_then(|s| {
+                    if s.is_empty() {
+                        None
+                    } else {
+                        serde_json::from_str::<Vec<String>>(&s).ok()
+                    }
+                });
+            
             Ok(ModelCatalogItem {
                 name: row.get(0)?,
                 description: row.get(1)?,
@@ -25,7 +36,8 @@ impl ModelCatalogRepository {
                 recommended: row.get::<_, i32>(5)? != 0,
                 author: row.get(6)?,
                 license: row.get(7)?,
-                updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
+                tags,
+                updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
                     .map_err(|e| DatabaseError::Other(format!("Invalid updated_at format: {e}")))?
                     .with_timezone(&Utc),
             })
@@ -42,10 +54,21 @@ impl ModelCatalogRepository {
     /// 名前でモデルカタログアイテムを取得
     pub fn find_by_name(conn: &Connection, name: &str) -> Result<Option<ModelCatalogItem>, DatabaseError> {
         let mut stmt = conn.prepare(
-            "SELECT name, description, size, parameters, category, recommended, author, license, updated_at FROM models_catalog WHERE name = ?"
+            "SELECT name, description, size, parameters, category, recommended, author, license, tags, updated_at FROM models_catalog WHERE name = ?"
         )?;
         
         let model_result = stmt.query_row(params![name], |row| {
+            // tagsをJSON文字列からVec<String>に変換
+            let tags_json: Option<String> = row.get(8)?;
+            let tags = tags_json
+                .and_then(|s| {
+                    if s.is_empty() {
+                        None
+                    } else {
+                        serde_json::from_str::<Vec<String>>(&s).ok()
+                    }
+                });
+            
             Ok(ModelCatalogItem {
                 name: row.get(0)?,
                 description: row.get(1)?,
@@ -55,7 +78,8 @@ impl ModelCatalogRepository {
                 recommended: row.get::<_, i32>(5)? != 0,
                 author: row.get(6)?,
                 license: row.get(7)?,
-                updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
+                tags,
+                updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
                     .map_err(|e| DatabaseError::Other(format!("Invalid updated_at format: {e}")))?
                     .with_timezone(&Utc),
             })
@@ -74,6 +98,13 @@ impl ModelCatalogRepository {
         let updated_at = Utc::now().to_rfc3339();
         let category_str: String = model.category.clone().into();
         
+        // tagsをJSON文字列に変換
+        let tags_json = model.tags.as_ref()
+            .map(|tags| serde_json::to_string(tags))
+            .transpose()
+            .map_err(|e| DatabaseError::Other(format!("Tags JSON serialization error: {}", e)))?
+            .unwrap_or_else(|| "[]".to_string());
+        
         conn.execute(
             "INSERT INTO models_catalog (name, description, size, parameters, category, recommended, author, license, tags, created_at, updated_at) 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
@@ -85,6 +116,7 @@ impl ModelCatalogRepository {
                 recommended = excluded.recommended,
                 author = excluded.author,
                 license = excluded.license,
+                tags = excluded.tags,
                 updated_at = excluded.updated_at",
             params![
                 model.name,
@@ -95,7 +127,7 @@ impl ModelCatalogRepository {
                 if model.recommended { 1 } else { 0 },
                 model.author,
                 model.license,
-                "", // tags (将来実装)
+                tags_json,
                 created_at,
                 updated_at
             ],
@@ -118,22 +150,23 @@ impl InstalledModelRepository {
     /// 全てのインストール済みモデルを取得
     pub fn find_all(conn: &Connection) -> Result<Vec<InstalledModel>, DatabaseError> {
         let mut stmt = conn.prepare(
-            "SELECT name, size, installed_at, last_used_at, usage_count FROM installed_models ORDER BY installed_at DESC"
+            "SELECT name, size, parameters, installed_at, last_used_at, usage_count FROM installed_models ORDER BY installed_at DESC"
         )?;
         
         let model_iter = stmt.query_map([], |row| {
             Ok(InstalledModel {
                 name: row.get(0)?,
                 size: row.get(1)?,
-                installed_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(2)?)
+                parameters: row.get::<_, Option<i64>>(2)?, // parametersを取得
+                installed_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(3)?)
                     .map_err(|e| DatabaseError::Other(format!("Invalid installed_at format: {e}")))?
                     .with_timezone(&Utc),
-                last_used_at: row.get::<_, Option<String>>(3)?
+                last_used_at: row.get::<_, Option<String>>(4)?
                     .map(|s| DateTime::parse_from_rfc3339(&s)
                         .map_err(|e| DatabaseError::Other(format!("Invalid last_used_at format: {e}")))
                         .and_then(|dt| Ok(dt.with_timezone(&Utc))))
                     .transpose()?,
-                usage_count: row.get(4)?,
+                usage_count: row.get(5)?,
             })
         })?;
         
@@ -148,22 +181,23 @@ impl InstalledModelRepository {
     /// 名前でインストール済みモデルを取得
     pub fn find_by_name(conn: &Connection, name: &str) -> Result<Option<InstalledModel>, DatabaseError> {
         let mut stmt = conn.prepare(
-            "SELECT name, size, installed_at, last_used_at, usage_count FROM installed_models WHERE name = ?"
+            "SELECT name, size, parameters, installed_at, last_used_at, usage_count FROM installed_models WHERE name = ?"
         )?;
         
         let model_result = stmt.query_row(params![name], |row| {
             Ok(InstalledModel {
                 name: row.get(0)?,
                 size: row.get(1)?,
-                installed_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(2)?)
+                parameters: row.get::<_, Option<i64>>(2)?, // parametersを取得
+                installed_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(3)?)
                     .map_err(|e| DatabaseError::Other(format!("Invalid installed_at format: {e}")))?
                     .with_timezone(&Utc),
-                last_used_at: row.get::<_, Option<String>>(3)?
+                last_used_at: row.get::<_, Option<String>>(4)?
                     .map(|s| DateTime::parse_from_rfc3339(&s)
                         .map_err(|e| DatabaseError::Other(format!("Invalid last_used_at format: {e}")))
                         .and_then(|dt| Ok(dt.with_timezone(&Utc))))
                     .transpose()?,
-                usage_count: row.get(4)?,
+                usage_count: row.get(5)?,
             })
         });
         
@@ -190,7 +224,7 @@ impl InstalledModelRepository {
             params![
                 model.name,
                 model.size,
-                None::<i32>, // parameters (将来実装)
+                model.parameters.map(|p| p as i64), // parametersを実装
                 installed_at,
                 last_used_at,
                 model.usage_count
@@ -218,4 +252,5 @@ impl InstalledModelRepository {
         Ok(())
     }
 }
+
 

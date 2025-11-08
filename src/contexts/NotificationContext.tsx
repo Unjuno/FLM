@@ -1,8 +1,18 @@
 // NotificationContext - 通知コンテキスト
 
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useCallback,
+  useMemo,
+} from 'react';
 import { NOTIFICATION } from '../constants/config';
-import type { NotificationItem, NotificationType } from '../components/common/Notification';
+import type {
+  NotificationItem,
+  NotificationType,
+  NotificationAction,
+} from '../components/common/Notification';
 
 /**
  * 通知コンテキストの値
@@ -13,16 +23,17 @@ interface NotificationContextValue {
     type: NotificationType,
     title: string,
     message?: string,
-    duration?: number
+    duration?: number,
+    action?: NotificationAction
   ) => void;
   /** 成功通知を表示 */
-  showSuccess: (title: string, message?: string, duration?: number) => void;
+  showSuccess: (title: string, message?: string, duration?: number, action?: NotificationAction) => void;
   /** エラー通知を表示 */
-  showError: (title: string, message?: string, duration?: number) => void;
+  showError: (title: string, message?: string, duration?: number, action?: NotificationAction) => void;
   /** 警告通知を表示 */
-  showWarning: (title: string, message?: string, duration?: number) => void;
+  showWarning: (title: string, message?: string, duration?: number, action?: NotificationAction) => void;
   /** 情報通知を表示 */
-  showInfo: (title: string, message?: string, duration?: number) => void;
+  showInfo: (title: string, message?: string, duration?: number, action?: NotificationAction) => void;
   /** 通知を削除する */
   removeNotification: (id: string) => void;
   /** 全ての通知を削除する */
@@ -32,7 +43,9 @@ interface NotificationContextValue {
 /**
  * 通知コンテキスト
  */
-const NotificationContext = createContext<NotificationContextValue | undefined>(undefined);
+const NotificationContext = createContext<NotificationContextValue | undefined>(
+  undefined
+);
 
 /**
  * 通知プロバイダーのプロパティ
@@ -60,7 +73,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
       type: NotificationType,
       title: string,
       message?: string,
-      duration?: number
+      duration?: number,
+      action?: NotificationAction
     ) => {
       const id = `notification-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
       const newNotification: NotificationItem = {
@@ -68,11 +82,13 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
         type,
         title,
         message,
-        duration: duration !== undefined ? duration : NOTIFICATION.DEFAULT_DURATION,
+        duration:
+          duration !== undefined ? duration : NOTIFICATION.DEFAULT_DURATION,
         timestamp: Date.now(),
+        action,
       };
 
-      setNotifications((prev) => {
+      setNotifications(prev => {
         const updated = [newNotification, ...prev];
         // 最大表示数を超える場合は古いものを削除
         return updated.slice(0, maxNotifications);
@@ -85,8 +101,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
    * 成功通知を表示
    */
   const showSuccess = useCallback(
-    (title: string, message?: string, duration?: number) => {
-      showNotification('success', title, message, duration);
+    (title: string, message?: string, duration?: number, action?: NotificationAction) => {
+      showNotification('success', title, message, duration, action);
     },
     [showNotification]
   );
@@ -95,9 +111,15 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
    * エラー通知を表示
    */
   const showError = useCallback(
-    (title: string, message?: string, duration?: number) => {
+    (title: string, message?: string, duration?: number, action?: NotificationAction) => {
       // エラーは長めに表示
-      showNotification('error', title, message, duration !== undefined ? duration : NOTIFICATION.ERROR_DURATION);
+      showNotification(
+        'error',
+        title,
+        message,
+        duration !== undefined ? duration : NOTIFICATION.ERROR_DURATION,
+        action
+      );
     },
     [showNotification]
   );
@@ -106,8 +128,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
    * 警告通知を表示
    */
   const showWarning = useCallback(
-    (title: string, message?: string, duration?: number) => {
-      showNotification('warning', title, message, duration);
+    (title: string, message?: string, duration?: number, action?: NotificationAction) => {
+      showNotification('warning', title, message, duration, action);
     },
     [showNotification]
   );
@@ -116,8 +138,8 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
    * 情報通知を表示
    */
   const showInfo = useCallback(
-    (title: string, message?: string, duration?: number) => {
-      showNotification('info', title, message, duration);
+    (title: string, message?: string, duration?: number, action?: NotificationAction) => {
+      showNotification('info', title, message, duration, action);
     },
     [showNotification]
   );
@@ -126,7 +148,7 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
    * 通知を削除する
    */
   const removeNotification = useCallback((id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    setNotifications(prev => prev.filter(n => n.id !== id));
   }, []);
 
   /**
@@ -147,7 +169,15 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
       removeNotification,
       clearAll,
     }),
-    [showNotification, showSuccess, showError, showWarning, showInfo, removeNotification, clearAll]
+    [
+      showNotification,
+      showSuccess,
+      showError,
+      showWarning,
+      showInfo,
+      removeNotification,
+      clearAll,
+    ]
   );
 
   return (
@@ -183,7 +213,7 @@ const NotificationContainer: React.FC<NotificationContainerProps> = ({
 
   return (
     <div className="notification-container" role="region" aria-label="通知">
-      {notifications.map((notification) => (
+      {notifications.map(notification => (
         <NotificationItemComponent
           key={notification.id}
           notification={notification}
@@ -204,8 +234,13 @@ interface NotificationItemProps {
   onClose: (id: string) => void;
 }
 
-const NotificationItemComponent: React.FC<NotificationItemProps> = ({ notification, onClose }) => {
-  return <NotificationComponent notification={notification} onClose={onClose} />;
+const NotificationItemComponent: React.FC<NotificationItemProps> = ({
+  notification,
+  onClose,
+}) => {
+  return (
+    <NotificationComponent notification={notification} onClose={onClose} />
+  );
 };
 
 /**
@@ -214,8 +249,9 @@ const NotificationItemComponent: React.FC<NotificationItemProps> = ({ notificati
 export const useNotifications = (): NotificationContextValue => {
   const context = useContext(NotificationContext);
   if (context === undefined) {
-    throw new Error('useNotifications must be used within a NotificationProvider');
+    throw new Error(
+      'useNotifications must be used within a NotificationProvider'
+    );
   }
   return context;
 };
-

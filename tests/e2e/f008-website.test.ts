@@ -10,13 +10,19 @@ describe('F008 - Official Website E2E Tests', () => {
   beforeAll(() => {
     // このテストはTauriアプリ不要（ファイルシステムのテストのみ）
     // Tauriアプリ起動チェックは不要
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('公式WebサイトE2Eテストを開始します');
     }
   });
 
   afterAll(() => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('公式WebサイトE2Eテストを完了しました');
     }
   });
@@ -54,7 +60,7 @@ describe('F008 - Official Website E2E Tests', () => {
     it('should have valid HTML structure in index.html', () => {
       const indexPath = path.join(webRoot, 'index.html');
       const htmlContent = fs.readFileSync(indexPath, 'utf-8');
-      
+
       // 必須要素の確認
       expect(htmlContent).toContain('<!DOCTYPE html>');
       expect(htmlContent).toContain('<html lang="ja">');
@@ -67,7 +73,7 @@ describe('F008 - Official Website E2E Tests', () => {
     it('should have proper meta tags', () => {
       const indexPath = path.join(webRoot, 'index.html');
       const htmlContent = fs.readFileSync(indexPath, 'utf-8');
-      
+
       expect(htmlContent).toContain('<meta charset="UTF-8">');
       expect(htmlContent).toContain('viewport');
       expect(htmlContent).toContain('description');
@@ -76,13 +82,15 @@ describe('F008 - Official Website E2E Tests', () => {
     it('should have semantic HTML elements', () => {
       const indexPath = path.join(webRoot, 'index.html');
       if (!fs.existsSync(indexPath)) {
-        console.warn('WEB/index.htmlが見つかりません。このテストをスキップします');
+        console.warn(
+          'WEB/index.htmlが見つかりません。このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
-      
+
       const htmlContent = fs.readFileSync(indexPath, 'utf-8');
-      
+
       expect(htmlContent).toContain('<header>');
       // <nav>タグはclass属性付きで存在する可能性があるため、より柔軟な検証
       expect(htmlContent).toMatch(/<nav[\s>]/);
@@ -99,7 +107,7 @@ describe('F008 - Official Website E2E Tests', () => {
     it('should have viewport meta tag', () => {
       const indexPath = path.join(webRoot, 'index.html');
       const htmlContent = fs.readFileSync(indexPath, 'utf-8');
-      
+
       expect(htmlContent).toContain('viewport');
       expect(htmlContent).toContain('width=device-width');
       expect(htmlContent).toContain('initial-scale=1.0');
@@ -108,7 +116,7 @@ describe('F008 - Official Website E2E Tests', () => {
     it('should have responsive CSS file', () => {
       const responsiveCssPath = path.join(webRoot, 'css', 'responsive.css');
       expect(fs.existsSync(responsiveCssPath)).toBe(true);
-      
+
       const cssContent = fs.readFileSync(responsiveCssPath, 'utf-8');
       // メディアクエリが含まれていることを確認
       expect(cssContent).toMatch(/@media/);
@@ -117,7 +125,7 @@ describe('F008 - Official Website E2E Tests', () => {
     it('should have mobile menu functionality', () => {
       const indexPath = path.join(webRoot, 'index.html');
       const htmlContent = fs.readFileSync(indexPath, 'utf-8');
-      
+
       expect(htmlContent).toContain('mobile-menu-toggle');
       expect(htmlContent).toContain('nav-links');
     });
@@ -130,7 +138,7 @@ describe('F008 - Official Website E2E Tests', () => {
     it('should have OS detection JavaScript', () => {
       const mainJsPath = path.join(webRoot, 'js', 'main.js');
       expect(fs.existsSync(mainJsPath)).toBe(true);
-      
+
       const jsContent = fs.readFileSync(mainJsPath, 'utf-8');
       expect(jsContent).toMatch(/initDownloadDetection|OS|os|platform/i);
     });
@@ -138,7 +146,7 @@ describe('F008 - Official Website E2E Tests', () => {
     it('should have OS detection data attributes in HTML', () => {
       const indexPath = path.join(webRoot, 'index.html');
       const htmlContent = fs.readFileSync(indexPath, 'utf-8');
-      
+
       // data-os-detect や data-os-display 属性の確認
       expect(htmlContent).toMatch(/data-os-(detect|display)/i);
     });
@@ -156,14 +164,14 @@ describe('F008 - Official Website E2E Tests', () => {
     it('should have proper lang attribute', () => {
       const indexPath = path.join(webRoot, 'index.html');
       const htmlContent = fs.readFileSync(indexPath, 'utf-8');
-      
+
       expect(htmlContent).toContain('lang="ja"');
     });
 
     it('should have aria labels for interactive elements', () => {
       const indexPath = path.join(webRoot, 'index.html');
       const htmlContent = fs.readFileSync(indexPath, 'utf-8');
-      
+
       // モバイルメニュートグルのaria-label確認
       expect(htmlContent).toMatch(/aria-label|aria-expanded/i);
     });
@@ -171,7 +179,7 @@ describe('F008 - Official Website E2E Tests', () => {
     it('should have alt attributes for images', () => {
       const indexPath = path.join(webRoot, 'index.html');
       const htmlContent = fs.readFileSync(indexPath, 'utf-8');
-      
+
       // 画像タグがある場合、alt属性があることを確認
       if (htmlContent.includes('<img')) {
         // imgタグごとにalt属性の存在を確認
@@ -187,7 +195,7 @@ describe('F008 - Official Website E2E Tests', () => {
     it('should have proper heading hierarchy', () => {
       const indexPath = path.join(webRoot, 'index.html');
       const htmlContent = fs.readFileSync(indexPath, 'utf-8');
-      
+
       // h1タグが存在することを確認
       expect(htmlContent).toMatch(/<h1[^>]*>/);
     });
@@ -200,7 +208,7 @@ describe('F008 - Official Website E2E Tests', () => {
     it('should have navigation links', () => {
       const indexPath = path.join(webRoot, 'index.html');
       const htmlContent = fs.readFileSync(indexPath, 'utf-8');
-      
+
       expect(htmlContent).toContain('nav-links');
       expect(htmlContent).toContain('<a href');
     });
@@ -213,7 +221,7 @@ describe('F008 - Official Website E2E Tests', () => {
     it('should have smooth scroll functionality', () => {
       const mainJsPath = path.join(webRoot, 'js', 'main.js');
       const jsContent = fs.readFileSync(mainJsPath, 'utf-8');
-      
+
       expect(jsContent).toMatch(/smooth|scroll/i);
     });
   });
@@ -225,7 +233,7 @@ describe('F008 - Official Website E2E Tests', () => {
     it('should have CSS preconnect for fonts', () => {
       const indexPath = path.join(webRoot, 'index.html');
       const htmlContent = fs.readFileSync(indexPath, 'utf-8');
-      
+
       expect(htmlContent).toContain('preconnect');
     });
 
@@ -234,11 +242,10 @@ describe('F008 - Official Website E2E Tests', () => {
       cssFiles.forEach(file => {
         const cssPath = path.join(webRoot, 'css', file);
         const cssContent = fs.readFileSync(cssPath, 'utf-8');
-        
+
         // コメントが適度に含まれていることを確認（保守性）
         expect(cssContent.length).toBeGreaterThan(0);
       });
     });
   });
 });
-

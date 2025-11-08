@@ -7,21 +7,21 @@ export interface WebServiceRequirements {
   // 基本要件
   category?: 'chat' | 'code' | 'vision' | 'audio' | 'multimodal';
   useCase?: string; // 具体的な用途（例: "チャットボット", "FAQ自動応答", "画像説明生成"）
-  
+
   // パフォーマンス要件
   responseTime?: 'fast' | 'medium' | 'slow'; // レスポンス時間要件
   quality?: 'high' | 'medium' | 'low'; // 品質要件
-  
+
   // リソース要件
   availableMemory?: number; // 利用可能メモリ（GB）
   hasGpu?: boolean; // GPU利用可否
   maxModelSize?: number; // 最大モデルサイズ（GB）
-  
+
   // 機能要件
   needsVision?: boolean; // 画像処理が必要か
   needsAudio?: boolean; // 音声処理が必要か
   needsVideo?: boolean; // 動画処理が必要か
-  
+
   // その他
   preferredPort?: number; // 希望するポート番号
   enableAuth?: boolean; // 認証が必要か
@@ -60,4 +60,3 @@ export interface AutoApiCreationResult {
   status: 'created' | 'running' | 'error';
   message?: string;
 }
-

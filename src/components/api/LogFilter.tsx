@@ -45,11 +45,19 @@ export const LogFilter: React.FC<LogFilterProps> = ({
   onFilterChange,
   initialFilter,
 }) => {
-  const [startDate, setStartDate] = useState<string>(initialFilter?.startDate || '');
+  const [startDate, setStartDate] = useState<string>(
+    initialFilter?.startDate || ''
+  );
   const [endDate, setEndDate] = useState<string>(initialFilter?.endDate || '');
-  const [statusCodes, setStatusCodes] = useState<number[]>(initialFilter?.statusCodes || []);
-  const [pathFilter, setPathFilter] = useState<string>(initialFilter?.pathFilter || '');
-  const [errorsOnly, setErrorsOnly] = useState<boolean>(initialFilter?.errorsOnly || false);
+  const [statusCodes, setStatusCodes] = useState<number[]>(
+    initialFilter?.statusCodes || []
+  );
+  const [pathFilter, setPathFilter] = useState<string>(
+    initialFilter?.pathFilter || ''
+  );
+  const [errorsOnly, setErrorsOnly] = useState<boolean>(
+    initialFilter?.errorsOnly || false
+  );
 
   // フィルタ変更時に親コンポーネントに通知
   useEffect(() => {
@@ -66,9 +74,7 @@ export const LogFilter: React.FC<LogFilterProps> = ({
   // ステータスコードの選択/解除
   const handleStatusCodeToggle = (code: number) => {
     setStatusCodes(prev =>
-      prev.includes(code)
-        ? prev.filter(c => c !== code)
-        : [...prev, code]
+      prev.includes(code) ? prev.filter(c => c !== code) : [...prev, code]
     );
   };
 
@@ -97,7 +103,9 @@ export const LogFilter: React.FC<LogFilterProps> = ({
       <div className="filter-content">
         {/* 日時範囲選択 */}
         <div className="filter-section">
-          <label className="filter-label">日時範囲</label>
+          <div className="filter-label" role="group" aria-label="日時範囲">
+            日時範囲
+          </div>
           <div className="date-range-inputs">
             <div className="date-input-group">
               <label htmlFor="start-date" className="date-label">
@@ -107,7 +115,7 @@ export const LogFilter: React.FC<LogFilterProps> = ({
                 id="start-date"
                 type="datetime-local"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={e => setStartDate(e.target.value)}
                 max={getMaxStartDate()}
                 className="date-input"
               />
@@ -120,7 +128,7 @@ export const LogFilter: React.FC<LogFilterProps> = ({
                 id="end-date"
                 type="datetime-local"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={e => setEndDate(e.target.value)}
                 min={getMinEndDate()}
                 className="date-input"
               />
@@ -130,9 +138,15 @@ export const LogFilter: React.FC<LogFilterProps> = ({
 
         {/* ステータスコードフィルタ */}
         <div className="filter-section">
-          <label className="filter-label">ステータスコード</label>
+          <div
+            className="filter-label"
+            role="group"
+            aria-label="ステータスコード"
+          >
+            ステータスコード
+          </div>
           <div className="status-codes-grid">
-            {STATUS_CODE_OPTIONS.map((option) => (
+            {STATUS_CODE_OPTIONS.map(option => (
               <label key={option.value} className="status-code-checkbox">
                 <input
                   type="checkbox"
@@ -154,7 +168,7 @@ export const LogFilter: React.FC<LogFilterProps> = ({
             id="path-filter"
             type="text"
             value={pathFilter}
-            onChange={(e) => setPathFilter(e.target.value)}
+            onChange={e => setPathFilter(e.target.value)}
             placeholder="/api/chat/completions"
             className="path-filter-input"
           />
@@ -166,7 +180,7 @@ export const LogFilter: React.FC<LogFilterProps> = ({
             <input
               type="checkbox"
               checked={errorsOnly}
-              onChange={(e) => setErrorsOnly(e.target.checked)}
+              onChange={e => setErrorsOnly(e.target.checked)}
             />
             <span>エラーのみ表示（ステータスコード 400以上）</span>
           </label>

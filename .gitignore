@@ -53,4 +53,7 @@ src-tauri/gen/schemas
 *.tmp
 *.temp
 .cache/
+test-results.txt
+*.check_output*.txt
+src-tauri/check_output*.txt
 

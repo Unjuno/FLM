@@ -1,12 +1,19 @@
 // ApiDetails - API詳細ページ
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useTransition, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { generateSampleCode } from '../utils/apiCodeGenerator';
 import { SAMPLE_DATA } from '../constants/config';
+import { Breadcrumb, BreadcrumbItem } from '../components/common/Breadcrumb';
+import { SkeletonLoader } from '../components/common/SkeletonLoader';
+import { ErrorMessage } from '../components/common/ErrorMessage';
+import { useI18n } from '../contexts/I18nContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import type { ApiInfo } from '../types/api';
 import { logger } from '../utils/logger';
+import { isDev } from '../utils/env';
+import { extractErrorMessage } from '../utils/errorHandler';
 import './ApiDetails.css';
 
 /**
@@ -31,17 +38,35 @@ interface ApiDetailsLocalInfo {
 export const ApiDetails: React.FC = () => {
   const { id: apiId } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useI18n();
+  const { showSuccess, showError: showErrorNotification } = useNotifications();
   const [apiInfo, setApiInfo] = useState<ApiDetailsLocalInfo | null>(null);
   const [apiKey, setApiKey] = useState<string | null>(null);
   const [showApiKey, setShowApiKey] = useState(false);
   const [loading, setLoading] = useState(true);
   const [loadingKey, setLoadingKey] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
+
+  // パンくずリストの項目
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => {
+    const items: BreadcrumbItem[] = [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('header.apiList') || 'API一覧', path: '/api/list' },
+    ];
+    if (apiInfo) {
+      items.push({ label: apiInfo.name });
+    } else {
+      items.push({ label: 'API詳細' });
+    }
+    return items;
+  }, [t, apiInfo]);
 
   useEffect(() => {
     if (apiId) {
       loadApiInfo();
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apiId]);
 
   /**
@@ -76,7 +101,9 @@ export const ApiDetails: React.FC = () => {
         updated_at: api.updated_at,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'API情報の取得に失敗しました');
+      setError(
+        extractErrorMessage(err, 'API情報の取得に失敗しました')
+      );
     } finally {
       setLoading(false);
     }
@@ -99,11 +126,17 @@ export const ApiDetails: React.FC = () => {
       // バックエンドのget_api_keyコマンドを呼び出し
       if (apiInfo.enable_auth) {
         try {
-          const key = await safeInvoke<string | null>('get_api_key', { api_id: apiId });
+          const key = await safeInvoke<string | null>('get_api_key', {
+            api_id: apiId,
+          });
           setApiKey(key || '***（APIキーが見つかりませんでした）***');
         } catch (err) {
-          if (import.meta.env.DEV) {
-            logger.error('APIキーの取得に失敗しました', err instanceof Error ? err : new Error(String(err)), 'ApiDetails');
+          if (isDev()) {
+            logger.error(
+              'APIキーの取得に失敗しました',
+              err instanceof Error ? err : new Error(extractErrorMessage(err)),
+              'ApiDetails'
+            );
           }
           setApiKey('***（セキュリティ保護のため表示できません）***');
         }
@@ -111,7 +144,9 @@ export const ApiDetails: React.FC = () => {
         setApiKey(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'APIキーの取得に失敗しました');
+      setError(
+        extractErrorMessage(err, 'APIキーの取得に失敗しました')
+      );
     } finally {
       setLoadingKey(false);
     }
@@ -125,9 +160,9 @@ export const ApiDetails: React.FC = () => {
   const handleCopy = async (text: string): Promise<void> => {
     try {
       await navigator.clipboard.writeText(text);
-      alert('クリップボードにコピーしました');
+      showSuccess('クリップボードにコピーしました', '', 3000);
     } catch (err) {
-      alert('コピーに失敗しました');
+      showErrorNotification('コピーに失敗しました', extractErrorMessage(err, 'クリップボードへのアクセスに失敗しました'));
     }
   };
 
@@ -136,7 +171,9 @@ export const ApiDetails: React.FC = () => {
    * @param language 生成する言語（'curl' | 'python' | 'javascript'）
    * @returns サンプルコード文字列（apiInfoが存在しない場合は空文字列）
    */
-  const getSampleCode = (language: 'curl' | 'python' | 'javascript'): string => {
+  const getSampleCode = (
+    language: 'curl' | 'python' | 'javascript'
+  ): string => {
     if (!apiInfo) return '';
 
     // apiCodeGeneratorを使用してサンプルコードを生成
@@ -153,7 +190,7 @@ export const ApiDetails: React.FC = () => {
 
     return generateSampleCode(language, {
       apiInfo: apiInfoForGenerator,
-      apiKey: apiInfo.enable_auth ? (apiKey || undefined) : undefined,
+      apiKey: apiInfo.enable_auth ? apiKey || undefined : undefined,
       sampleMessage: SAMPLE_DATA.MESSAGE,
     });
   };
@@ -161,9 +198,21 @@ export const ApiDetails: React.FC = () => {
   if (loading) {
     return (
       <div className="api-details-page">
-        <div className="loading-state">
-          <div className="spinner"></div>
-          <p>API情報を読み込んでいます...</p>
+        <div className="page-container api-details-container">
+          <Breadcrumb items={breadcrumbItems} />
+          <header className="page-header api-details-header">
+            <div className="header-content">
+              <div>
+                <SkeletonLoader type="title" width="200px" />
+                <SkeletonLoader type="text" width="150px" />
+              </div>
+            </div>
+          </header>
+          <div className="api-details-content">
+            <SkeletonLoader type="card" />
+            <SkeletonLoader type="card" />
+            <SkeletonLoader type="card" />
+          </div>
         </div>
       </div>
     );
@@ -172,10 +221,23 @@ export const ApiDetails: React.FC = () => {
   if (!apiInfo || error) {
     return (
       <div className="api-details-page">
-        <div className="error-state">
-          <span className="error-icon">⚠️</span>
-          <h2>{error || 'APIが見つかりません'}</h2>
-          <button onClick={() => navigate('/api/list')}>API一覧に戻る</button>
+        <div className="page-container api-details-container">
+          <Breadcrumb items={breadcrumbItems} />
+          <header className="page-header api-details-header">
+            <div className="header-content">
+              <div>
+                <h1>API詳細</h1>
+              </div>
+            </div>
+          </header>
+          <div className="api-details-content">
+            <ErrorMessage
+              message={error || 'APIが見つかりません'}
+              type="api"
+              onClose={() => navigate('/api/list')}
+              onRetry={() => apiId && loadApiInfo()}
+            />
+          </div>
         </div>
       </div>
     );
@@ -183,8 +245,9 @@ export const ApiDetails: React.FC = () => {
 
   return (
     <div className="api-details-page">
-      <div className="api-details-container">
-        <header className="api-details-header">
+      <div className="page-container api-details-container">
+        <Breadcrumb items={breadcrumbItems} />
+        <header className="page-header api-details-header">
           <div className="header-content">
             <div>
               <h1>{apiInfo.name}</h1>
@@ -192,7 +255,9 @@ export const ApiDetails: React.FC = () => {
             </div>
             <div className="header-actions">
               <button onClick={() => navigate('/api/list')}>← API一覧</button>
-              <button onClick={() => navigate(`/api/test/${apiId}`)}>🧪 テスト</button>
+              <button onClick={() => navigate(`/api/test/${apiId}`)}>
+                テスト
+              </button>
             </div>
           </div>
         </header>
@@ -217,8 +282,11 @@ export const ApiDetails: React.FC = () => {
               <div className="info-item">
                 <span className="info-label">ステータス</span>
                 <span className={`info-value status ${apiInfo.status}`}>
-                  {apiInfo.status === 'running' ? '実行中' : 
-                   apiInfo.status === 'stopped' ? '停止中' : 'エラー'}
+                  {apiInfo.status === 'running'
+                    ? '実行中'
+                    : apiInfo.status === 'stopped'
+                      ? '停止中'
+                      : 'エラー'}
                 </span>
               </div>
               <div className="info-item">
@@ -241,11 +309,15 @@ export const ApiDetails: React.FC = () => {
             <h2>エンドポイント</h2>
             <div className="endpoint-display">
               <code className="endpoint-url">{apiInfo.endpoint}</code>
-              <button 
+              <button
                 className="copy-button"
-                onClick={() => handleCopy(apiInfo.endpoint)}
+                onClick={() => {
+                  startTransition(() => {
+                    handleCopy(apiInfo.endpoint);
+                  });
+                }}
               >
-                📋 コピー
+                コピー
               </button>
             </div>
           </section>
@@ -262,7 +334,9 @@ export const ApiDetails: React.FC = () => {
                   </div>
                 ) : apiKey ? (
                   <>
-                    <code className={`api-key-value ${showApiKey ? 'visible' : 'hidden'}`}>
+                    <code
+                      className={`api-key-value ${showApiKey ? 'visible' : 'hidden'}`}
+                    >
                       {showApiKey ? apiKey : '••••••••••••••••••••••••••••••••'}
                     </code>
                     <div className="api-key-actions">
@@ -270,28 +344,29 @@ export const ApiDetails: React.FC = () => {
                         className="toggle-button"
                         onClick={() => setShowApiKey(!showApiKey)}
                       >
-                        {showApiKey ? '👁️ 非表示' : '👁️ 表示'}
+                        {showApiKey ? '非表示' : '表示'}
                       </button>
                       <button
                         className="copy-button"
-                        onClick={() => handleCopy(showApiKey ? apiKey : '')}
+                        onClick={() => {
+                          startTransition(() => {
+                            handleCopy(showApiKey ? apiKey : '');
+                          });
+                        }}
                         disabled={!showApiKey}
                       >
-                        📋 コピー
+                        コピー
                       </button>
                     </div>
                   </>
                 ) : (
-                  <button
-                    className="load-key-button"
-                    onClick={loadApiKey}
-                  >
-                    🔑 APIキーを読み込む
+                  <button className="load-key-button" onClick={loadApiKey}>
+                    APIキーを読み込む
                   </button>
                 )}
               </div>
               <p className="api-key-warning">
-                ⚠️ APIキーは秘密情報です。他人と共有しないでください。
+                APIキーは秘密情報です。他人と共有しないでください。
               </p>
             </section>
           )}
@@ -300,15 +375,19 @@ export const ApiDetails: React.FC = () => {
           <section className="details-section">
             <h2>サンプルコード</h2>
             <div className="sample-code-tabs">
-              {(['curl', 'python', 'javascript'] as const).map((lang) => (
+              {(['curl', 'python', 'javascript'] as const).map(lang => (
                 <div key={lang} className="code-example">
                   <div className="code-header">
                     <span className="code-language">{lang}</span>
                     <button
                       className="copy-button"
-                      onClick={() => handleCopy(getSampleCode(lang))}
+                      onClick={() => {
+                        startTransition(() => {
+                          handleCopy(getSampleCode(lang));
+                        });
+                      }}
                     >
-                      📋 コピー
+                      コピー
                     </button>
                   </div>
                   <pre className="code-block">

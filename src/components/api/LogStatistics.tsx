@@ -1,11 +1,40 @@
 // LogStatistics - ログ統計情報コンポーネント
 
-import React, { useState, useEffect, useCallback, useMemo, useRef, memo } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+  memo,
+} from 'react';
 import { safeInvoke } from '../../utils/tauri';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
-import { HTTP_STATUS, FORMATTING, UI_WARNING_THRESHOLDS, CHART_CONFIG, CHART_COLORS } from '../../constants/config';
+import {
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+} from 'recharts';
+import {
+  HTTP_STATUS,
+  FORMATTING,
+  UI_WARNING_THRESHOLDS,
+  CHART_CONFIG,
+  CHART_COLORS,
+} from '../../constants/config';
 import { useI18n } from '../../contexts/I18nContext';
-import { formatNumber, formatResponseTimeMs, formatErrorRate } from '../../utils/formatters';
+import {
+  formatNumber,
+  formatResponseTimeMs,
+  formatErrorRate,
+} from '../../utils/formatters';
 import './LogStatistics.css';
 
 /**
@@ -16,7 +45,7 @@ type StatusCodeTuple = [number, number];
 
 /**
  * ログ統計情報
- * 
+ *
  * @interface LogStatistics
  * @property {number} total_requests - 総リクエスト数（0以上）
  * @property {number} avg_response_time_ms - 平均レスポンス時間（ミリ秒、0以上）
@@ -87,9 +116,10 @@ function validateAndNormalizeStatistics(raw: RawLogStatistics): LogStatistics {
     avg_response_time_ms: isValidNonNegativeNumber(raw.avg_response_time_ms)
       ? raw.avg_response_time_ms
       : 0,
-    error_rate: typeof raw.error_rate === 'number' && isFinite(raw.error_rate)
-      ? Math.max(0, Math.min(100, raw.error_rate))
-      : 0,
+    error_rate:
+      typeof raw.error_rate === 'number' && isFinite(raw.error_rate)
+        ? Math.max(0, Math.min(100, raw.error_rate))
+        : 0,
     status_code_distribution: Array.isArray(raw.status_code_distribution)
       ? raw.status_code_distribution.filter(isValidStatusCodeTuple)
       : [],
@@ -98,14 +128,14 @@ function validateAndNormalizeStatistics(raw: RawLogStatistics): LogStatistics {
 
 /**
  * ログ統計情報コンポーネントのプロパティ
- * 
+ *
  * @interface LogStatisticsProps
  * @property {string | null} apiId - 表示するAPIのID（nullの場合は全てのAPI）
  * @property {string | null} [startDate] - データ取得の開始日時（ISO 8601形式、オプション）
  * @property {string | null} [endDate] - データ取得の終了日時（ISO 8601形式、オプション）
  * @property {boolean} [autoRefresh=true] - 自動更新を有効にするかどうか（デフォルト: true）
  * @property {number} [refreshInterval=30000] - 自動更新の間隔（ミリ秒、最小値: 1000ms、デフォルト: 30000ms）
- * 
+ *
  * @example
  * ```tsx
  * <LogStatistics
@@ -132,26 +162,26 @@ interface LogStatisticsProps {
 
 /**
  * ログ統計情報コンポーネント
- * 
+ *
  * APIのリクエスト統計情報を表示します。総リクエスト数、平均レスポンス時間、エラー率、
  * ステータスコード分布をグラフとカードで可視化します。
- * 
+ *
  * 特徴:
  * - リアルタイム自動更新対応（オプション）
  * - エラーハンドリングと再試行機能
  * - アクセシビリティ対応（ARIA属性）
  * - パフォーマンス最適化（React.memo、useMemo、useCallback）
  * - 棒グラフと円グラフによるステータスコード分布の可視化
- * 
+ *
  * @component
  * @param {LogStatisticsProps} props - コンポーネントのプロパティ
  * @returns {JSX.Element} ログ統計情報コンポーネント
- * 
+ *
  * @example
  * ```tsx
  * // 基本的な使用例
  * <LogStatistics apiId="api-123" />
- * 
+ *
  * // 日時範囲を指定した使用例
  * <LogStatistics
  *   apiId="api-123"
@@ -176,7 +206,12 @@ const LogStatisticsComponent: React.FC<LogStatisticsProps> = ({
 
   // refreshIntervalのバリデーション（最小値制限、無効な値はデフォルト値を使用）
   const validRefreshInterval = useMemo(() => {
-    if (typeof refreshInterval !== 'number' || isNaN(refreshInterval) || !isFinite(refreshInterval) || refreshInterval < 1000) {
+    if (
+      typeof refreshInterval !== 'number' ||
+      isNaN(refreshInterval) ||
+      !isFinite(refreshInterval) ||
+      refreshInterval < 1000
+    ) {
       return 30000; // デフォルト: 30秒
     }
     return refreshInterval;
@@ -193,7 +228,7 @@ const LogStatisticsComponent: React.FC<LogStatisticsProps> = ({
   // 統計情報を取得（useCallbackでメモ化、メモリリーク対策）
   const loadStatistics = useCallback(async () => {
     if (!isMountedRef.current) return;
-    
+
     if (!apiId) {
       if (isMountedRef.current) {
         setStatistics(null);
@@ -204,7 +239,7 @@ const LogStatisticsComponent: React.FC<LogStatisticsProps> = ({
 
     try {
       if (!isMountedRef.current) return;
-      
+
       setLoading(true);
       setError(null);
 
@@ -213,23 +248,28 @@ const LogStatisticsComponent: React.FC<LogStatisticsProps> = ({
         start_date: startDate || null,
         end_date: endDate || null,
       };
-      const result = await safeInvoke<RawLogStatistics>('get_log_statistics', request);
+      const result = await safeInvoke<RawLogStatistics>(
+        'get_log_statistics',
+        request
+      );
 
       if (!isMountedRef.current) return;
-      
+
       // データのバリデーション（null/undefined、無効な値のチェック）
       if (!result || typeof result !== 'object') {
         setError(t('logStatistics.error.loadFailed'));
         return;
       }
-      
+
       // 統計データの検証と正規化（型安全性の向上）
       const validatedStatistics = validateAndNormalizeStatistics(result);
-      
+
       setStatistics(validatedStatistics);
     } catch (err) {
       if (!isMountedRef.current) return;
-      setError(err instanceof Error ? err.message : t('logStatistics.error.loadFailed'));
+      setError(
+        err instanceof Error ? err.message : t('logStatistics.error.loadFailed')
+      );
     } finally {
       if (isMountedRef.current) {
         setLoading(false);
@@ -266,7 +306,7 @@ const LogStatisticsComponent: React.FC<LogStatisticsProps> = ({
 
   // 円グラフ用データ（useMemoでメモ化してパフォーマンス最適化）
   const pieData = useMemo(() => {
-    return chartData.map((item) => ({
+    return chartData.map(item => ({
       name: item.status,
       value: item.count,
     }));
@@ -275,16 +315,24 @@ const LogStatisticsComponent: React.FC<LogStatisticsProps> = ({
   // ステータスコードの色を取得（useCallbackでメモ化）
   const getStatusColor = useCallback((status: number): string => {
     if (status >= HTTP_STATUS.OK && status < 300) return CHART_COLORS.SUCCESS;
-    if (status >= 300 && status < HTTP_STATUS.MIN_ERROR_CODE) return CHART_COLORS.WARNING;
-    if (status >= HTTP_STATUS.MIN_ERROR_CODE && status < 500) return CHART_COLORS.ERROR;
-    if (status >= HTTP_STATUS.INTERNAL_SERVER_ERROR) return CHART_COLORS.ERROR_DARK;
+    if (status >= 300 && status < HTTP_STATUS.MIN_ERROR_CODE)
+      return CHART_COLORS.WARNING;
+    if (status >= HTTP_STATUS.MIN_ERROR_CODE && status < 500)
+      return CHART_COLORS.ERROR;
+    if (status >= HTTP_STATUS.INTERNAL_SERVER_ERROR)
+      return CHART_COLORS.ERROR_DARK;
     return CHART_COLORS.GRAY;
   }, []);
 
   // フォーマット関数（useCallbackでメモ化してパフォーマンス最適化）
   // ユーティリティ関数をラップして、コンポーネント内でのメモ化を維持
   const formatTotalRequests = useCallback((value: number): string => {
-    if (typeof value !== 'number' || isNaN(value) || !isFinite(value) || value < 0) {
+    if (
+      typeof value !== 'number' ||
+      isNaN(value) ||
+      !isFinite(value) ||
+      value < 0
+    ) {
       return formatNumber(0);
     }
     return formatNumber(value);
@@ -300,7 +348,7 @@ const LogStatisticsComponent: React.FC<LogStatisticsProps> = ({
 
   // COLORS for pie chart（useMemoでメモ化）
   const COLORS = useMemo(() => {
-    return chartData.map((item) => {
+    return chartData.map(item => {
       const status = parseInt(item.status, 10);
       // parseIntの結果がNaNでないことを確認
       if (isNaN(status) || !isFinite(status)) {
@@ -311,21 +359,32 @@ const LogStatisticsComponent: React.FC<LogStatisticsProps> = ({
   }, [chartData, getStatusColor]);
 
   // PieChartのlabel関数（useCallbackでメモ化）
-  const pieLabelFormatter = useCallback(({ name, percent }: { name: string; percent: number }): string => {
-    return `${name}: ${(percent * FORMATTING.PERCENTAGE_MULTIPLIER).toFixed(FORMATTING.DECIMAL_PLACES_SHORT)}%`;
-  }, []);
+  const pieLabelFormatter = useCallback(
+    ({ name, percent }: { name: string; percent: number }): string => {
+      return `${name}: ${(percent * FORMATTING.PERCENTAGE_MULTIPLIER).toFixed(FORMATTING.DECIMAL_PLACES_SHORT)}%`;
+    },
+    []
+  );
 
   // チャートのマージン設定（useMemoでメモ化して再計算を防止）
-  const chartMargin = useMemo(() => ({
-    top: CHART_CONFIG.MARGIN.TOP,
-    right: CHART_CONFIG.MARGIN.RIGHT,
-    left: CHART_CONFIG.MARGIN.LEFT,
-    bottom: CHART_CONFIG.MARGIN.BOTTOM,
-  }), []);
+  const chartMargin = useMemo(
+    () => ({
+      top: CHART_CONFIG.MARGIN.TOP,
+      right: CHART_CONFIG.MARGIN.RIGHT,
+      left: CHART_CONFIG.MARGIN.LEFT,
+      bottom: CHART_CONFIG.MARGIN.BOTTOM,
+    }),
+    []
+  );
 
   if (loading && !statistics) {
     return (
-      <div className="log-statistics" role="status" aria-live="polite" aria-busy="true">
+      <div
+        className="log-statistics"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
         <div className="loading-container">
           <div className="loading-spinner" aria-hidden="true"></div>
           <p>{t('logStatistics.loading')}</p>
@@ -338,9 +397,11 @@ const LogStatisticsComponent: React.FC<LogStatisticsProps> = ({
     return (
       <div className="log-statistics" role="alert" aria-live="assertive">
         <div className="error-container">
-          <p className="error-message" role="alert">⚠️ {error}</p>
-          <button 
-            className="retry-button" 
+          <p className="error-message" role="alert">
+            ⚠️ {error}
+          </p>
+          <button
+            className="retry-button"
             onClick={loadStatistics}
             aria-label={t('logStatistics.retry')}
             type="button"
@@ -363,29 +424,62 @@ const LogStatisticsComponent: React.FC<LogStatisticsProps> = ({
   }
 
   return (
-    <div className="log-statistics" role="region" aria-labelledby="statistics-title">
-      <h3 className="statistics-title" id="statistics-title">{t('logStatistics.title')}</h3>
+    <div
+      className="log-statistics"
+      role="region"
+      aria-labelledby="statistics-title"
+    >
+      <h3 className="statistics-title" id="statistics-title">
+        {t('logStatistics.title')}
+      </h3>
 
       {/* 統計サマリーカード */}
-      <div className="statistics-summary" role="group" aria-label={t('logStatistics.summary.label')}>
-        <div className="stat-card" role="group" aria-label={t('logStatistics.summary.totalRequests.label')}>
-          <div className="stat-label">{t('logStatistics.summary.totalRequests.label')}</div>
-          <div className="stat-value" aria-live="polite">{formatTotalRequests(statistics.total_requests)}</div>
+      <div
+        className="statistics-summary"
+        role="group"
+        aria-label={t('logStatistics.summary.label')}
+      >
+        <div
+          className="stat-card"
+          role="group"
+          aria-label={t('logStatistics.summary.totalRequests.label')}
+        >
+          <div className="stat-label">
+            {t('logStatistics.summary.totalRequests.label')}
+          </div>
+          <div className="stat-value" aria-live="polite">
+            {formatTotalRequests(statistics.total_requests)}
+          </div>
         </div>
-        <div className="stat-card" role="group" aria-label={t('logStatistics.summary.avgResponseTime.label')}>
-          <div className="stat-label">{t('logStatistics.summary.avgResponseTime.label')}</div>
+        <div
+          className="stat-card"
+          role="group"
+          aria-label={t('logStatistics.summary.avgResponseTime.label')}
+        >
+          <div className="stat-label">
+            {t('logStatistics.summary.avgResponseTime.label')}
+          </div>
           <div className="stat-value" aria-live="polite">
             {formatResponseTime(statistics.avg_response_time_ms)}
           </div>
         </div>
-        <div className="stat-card" role="group" aria-label={t('logStatistics.summary.errorRate.label')}>
-          <div className="stat-label">{t('logStatistics.summary.errorRate.label')}</div>
-          <div 
+        <div
+          className="stat-card"
+          role="group"
+          aria-label={t('logStatistics.summary.errorRate.label')}
+        >
+          <div className="stat-label">
+            {t('logStatistics.summary.errorRate.label')}
+          </div>
+          <div
             className={`stat-value ${statistics.error_rate > UI_WARNING_THRESHOLDS.ERROR_RATE_HIGH ? 'error-high' : ''}`}
             aria-live="polite"
             aria-label={t('logStatistics.summary.errorRate.ariaLabel', {
               rate: formatErrorRateValue(statistics.error_rate),
-              warning: statistics.error_rate > UI_WARNING_THRESHOLDS.ERROR_RATE_HIGH ? t('logStatistics.summary.errorRate.warningExceeded') : ''
+              warning:
+                statistics.error_rate > UI_WARNING_THRESHOLDS.ERROR_RATE_HIGH
+                  ? t('logStatistics.summary.errorRate.warningExceeded')
+                  : '',
             })}
           >
             {formatErrorRateValue(statistics.error_rate)}
@@ -395,31 +489,56 @@ const LogStatisticsComponent: React.FC<LogStatisticsProps> = ({
 
       {/* ステータスコード分布グラフ */}
       {chartData.length > 0 && (
-        <div className="statistics-charts" role="group" aria-label={t('logStatistics.charts.label')}>
+        <div
+          className="statistics-charts"
+          role="group"
+          aria-label={t('logStatistics.charts.label')}
+        >
           {/* 棒グラフ */}
-          <div className="chart-container" role="img" aria-label={t('logStatistics.charts.barChart.ariaLabel')}>
-            <h4 className="chart-title">{t('logStatistics.charts.barChart.title')}</h4>
+          <div
+            className="chart-container"
+            role="img"
+            aria-label={t('logStatistics.charts.barChart.ariaLabel')}
+          >
+            <h4 className="chart-title">
+              {t('logStatistics.charts.barChart.title')}
+            </h4>
             <ResponsiveContainer width="100%" height={CHART_CONFIG.HEIGHT}>
-              <BarChart 
-                data={chartData} 
+              <BarChart
+                data={chartData}
                 margin={chartMargin}
                 aria-label={t('logStatistics.charts.barChart.ariaLabel')}
               >
                 <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="status" aria-label={t('logStatistics.charts.barChart.xAxisLabel')} />
-                <YAxis aria-label={t('logStatistics.charts.barChart.yAxisLabel')} />
+                <XAxis
+                  dataKey="status"
+                  aria-label={t('logStatistics.charts.barChart.xAxisLabel')}
+                />
+                <YAxis
+                  aria-label={t('logStatistics.charts.barChart.yAxisLabel')}
+                />
                 <Tooltip />
                 <Legend />
-                <Bar dataKey="count" fill={CHART_COLORS.PRIMARY} aria-label={t('logStatistics.charts.barChart.yAxisLabel')} />
+                <Bar
+                  dataKey="count"
+                  fill={CHART_COLORS.PRIMARY}
+                  aria-label={t('logStatistics.charts.barChart.yAxisLabel')}
+                />
               </BarChart>
             </ResponsiveContainer>
           </div>
 
           {/* 円グラフ */}
-          <div className="chart-container" role="img" aria-label={t('logStatistics.charts.pieChart.ariaLabel')}>
-            <h4 className="chart-title">{t('logStatistics.charts.pieChart.title')}</h4>
+          <div
+            className="chart-container"
+            role="img"
+            aria-label={t('logStatistics.charts.pieChart.ariaLabel')}
+          >
+            <h4 className="chart-title">
+              {t('logStatistics.charts.pieChart.title')}
+            </h4>
             <ResponsiveContainer width="100%" height={CHART_CONFIG.HEIGHT}>
-              <PieChart 
+              <PieChart
                 margin={chartMargin}
                 aria-label={t('logStatistics.charts.pieChart.ariaLabel')}
               >
@@ -435,7 +554,10 @@ const LogStatisticsComponent: React.FC<LogStatisticsProps> = ({
                   aria-label={t('logStatistics.charts.pieChart.dataLabel')}
                 >
                   {pieData.map((_, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell
+                      key={`cell-${index}`}
+                      fill={COLORS[index % COLORS.length]}
+                    />
                   ))}
                 </Pie>
                 <Tooltip />

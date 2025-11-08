@@ -58,21 +58,27 @@ export const ModelCard: React.FC<ModelCardProps> = ({
   // カテゴリ表示
   const getCategoryLabel = (category?: string): string => {
     switch (category) {
-      case 'chat': return 'チャット';
-      case 'code': return 'コード生成';
-      case 'translation': return '翻訳';
-      case 'summarization': return '要約';
-      case 'qa': return '質問応答';
-      default: return 'その他';
+      case 'chat':
+        return 'チャット';
+      case 'code':
+        return 'コード生成';
+      case 'translation':
+        return '翻訳';
+      case 'summarization':
+        return '要約';
+      case 'qa':
+        return '質問応答';
+      default:
+        return 'その他';
     }
   };
 
   return (
-    <div className={`model-card ${model.recommended ? 'recommended' : ''} ${viewMode === 'list' ? 'list-view' : 'grid-view'}`}>
-      {model.recommended && (
-        <div className="recommended-badge">⭐ 推奨</div>
-      )}
-      
+    <div
+      className={`model-card ${model.recommended ? 'recommended' : ''} ${viewMode === 'list' ? 'list-view' : 'grid-view'}`}
+    >
+      {model.recommended && <div className="recommended-badge">⭐ 推奨</div>}
+
       <div className="model-card-header">
         <h3 className="model-name">{model.name}</h3>
         {model.category && (
@@ -93,28 +99,33 @@ export const ModelCard: React.FC<ModelCardProps> = ({
         {model.parameters && (
           <div className="info-item">
             <span className="info-icon">⚙️</span>
-            <span className="info-label">パラメータ数（大きいほど高性能）:</span>
-            <span className="info-value">{formatParameters(model.parameters)}</span>
+            <span className="info-label">
+              パラメータ数（大きいほど高性能）:
+            </span>
+            <span className="info-value">
+              {formatParameters(model.parameters)}
+            </span>
           </div>
         )}
-        {model.size && (() => {
-          const sizeGB = model.size / (1024 * 1024 * 1024);
-          let sizeIcon = '📦';
-          if (sizeGB < 3) {
-            sizeIcon = '📦 小';
-          } else if (sizeGB < 7) {
-            sizeIcon = '📦 中';
-          } else {
-            sizeIcon = '📦 大';
-          }
-          return (
-            <div className="info-item">
-              <span className="info-icon">{sizeIcon}</span>
-              <span className="info-label">サイズ:</span>
-              <span className="info-value">{formatSize(model.size)}</span>
-            </div>
-          );
-        })()}
+        {model.size &&
+          (() => {
+            const sizeGB = model.size / (1024 * 1024 * 1024);
+            let sizeIcon = '📦';
+            if (sizeGB < 3) {
+              sizeIcon = '📦 小';
+            } else if (sizeGB < 7) {
+              sizeIcon = '📦 中';
+            } else {
+              sizeIcon = '📦 大';
+            }
+            return (
+              <div className="info-item">
+                <span className="info-icon">{sizeIcon}</span>
+                <span className="info-label">サイズ:</span>
+                <span className="info-value">{formatSize(model.size)}</span>
+              </div>
+            );
+          })()}
         {model.recommended && (
           <div className="info-item">
             <span className="info-icon">⭐</span>
@@ -125,17 +136,11 @@ export const ModelCard: React.FC<ModelCardProps> = ({
       </div>
 
       <div className="model-card-actions">
-        <button
-          className="action-button details"
-          onClick={onViewDetails}
-        >
+        <button className="action-button details" onClick={onViewDetails}>
           詳細を見る
         </button>
         {onUseForApi && (
-          <button
-            className="action-button use"
-            onClick={onUseForApi}
-          >
+          <button className="action-button use" onClick={onUseForApi}>
             API作成に使用
           </button>
         )}
@@ -150,4 +155,3 @@ export const ModelCard: React.FC<ModelCardProps> = ({
     </div>
   );
 };
-

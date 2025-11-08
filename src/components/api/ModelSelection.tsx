@@ -1,6 +1,12 @@
 // ModelSelection - モデル選択コンポーネント
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../../utils/tauri';
 // import { listen } from '@tauri-apps/api/event';
@@ -11,9 +17,11 @@ import type { SelectedModel, ModelCapabilities } from '../../types/api';
 import { loadWebModelConfig } from '../../utils/webModelConfig';
 import type { WebModelDefinition } from '../../types/webModel';
 import { useOllamaProcess } from '../../hooks/useOllama';
-import { FORMATTING, TIMEOUT } from '../../constants/config';
+import { FORMATTING } from '../../constants/config';
 import { formatBytes, formatDate } from '../../utils/formatters';
 import { logger } from '../../utils/logger';
+import { isDev } from '../../utils/env';
+import { useI18n } from '../../contexts/I18nContext';
 import './ModelSelection.css';
 
 /**
@@ -42,10 +50,10 @@ interface ModelSelectionProps {
 
 // エンジン名のマッピング（共通定数としてエクスポート）
 export const ENGINE_NAMES: { [key: string]: string } = {
-  'ollama': 'Ollama',
-  'lm_studio': 'LM Studio',
-  'vllm': 'vLLM',
-  'llama_cpp': 'llama.cpp',
+  ollama: 'Ollama',
+  lm_studio: 'LM Studio',
+  vllm: 'vLLM',
+  llama_cpp: 'llama.cpp',
 };
 
 export const ModelSelection: React.FC<ModelSelectionProps> = ({
@@ -55,45 +63,84 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
   onEngineChange,
 }) => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [models, setModels] = useState<OllamaModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
-  const [localSelectedModel, setLocalSelectedModel] = useState<OllamaModel | null>(null);
+  const [localSelectedModel, setLocalSelectedModel] =
+    useState<OllamaModel | null>(null);
   const [selectedEngine, setSelectedEngine] = useState<string>(engineType);
-  const [availableEngines, setAvailableEngines] = useState<string[]>(['ollama']);
+  const [availableEngines, setAvailableEngines] = useState<string[]>([
+    'ollama',
+  ]);
   const [mode] = useState<'all' | 'web'>('all');
   const [webModels, setWebModels] = useState<WebModelDefinition[]>([]);
   const [webModelLoading, setWebModelLoading] = useState(false);
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [selectedWebModel, _setSelectedWebModel] = useState<WebModelDefinition | null>(null);
-  const [installedModelNames, setInstalledModelNames] = useState<Set<string>>(new Set());
+  const [selectedWebModel, _setSelectedWebModel] =
+    useState<WebModelDefinition | null>(null);
+  const [_installedModelNames, setInstalledModelNames] = useState<Set<string>>(
+    new Set()
+  );
   // installedModelNamesは将来使用予定（モデルのインストール状態を表示するため）
   // const [downloadingModel, setDownloadingModel] = useState<string | null>(null);
   // const [downloadProgress, setDownloadProgress] = useState<{ progress: number; status: string } | null>(null);
-  
+
   // アンマウント状態を追跡するためのref
   const isMountedRef = useRef(true);
-  
+
   // Ollamaプロセス管理フック
-  const { start: startOllama, isStarting: isOllamaStarting } = useOllamaProcess();
-  
+  const { start: startOllama, isStarting: isOllamaStarting } =
+    useOllamaProcess();
+
+  // エンジン起動状態を管理（すべてのエンジン対応）
+  const [engineStarting, setEngineStarting] = useState<{
+    [key: string]: boolean;
+  }>({});
+  const [engineStartingMessage, setEngineStartingMessage] = useState<
+    string | null
+  >(null);
+
   // 自動起動試行回数を追跡（無限ループを防ぐため）
   const autoStartAttemptedRef = useRef(false);
-  
+
+  // エンジン起動中のフラグ（連打防止）
+  const isEngineStartingRef = useRef(false);
+
   // 推奨モデルのリスト
-  const recommendedModels = ['llama3', 'llama3.2', 'mistral', 'codellama', 'phi3'];
-  
+  const recommendedModels = [
+    'llama3',
+    'llama3.2',
+    'mistral',
+    'codellama',
+    'phi3',
+  ];
+
   // モデルの機能を検出（モデル名から推測）
-  const detectModelCapabilities = useCallback((modelName: string): ModelCapabilities => {
-    const name = modelName.toLowerCase();
-    return {
-      vision: name.includes('llava') || name.includes('vision') || name.includes('clip') || name.includes('blip'),
-      audio: name.includes('whisper') || name.includes('audio') || name.includes('speech') || name.includes('asr'),
-      video: name.includes('video') || name.includes('video-') || name.includes('vid2vid'),
-    };
-  }, []);
-  
+  const detectModelCapabilities = useCallback(
+    (modelName: string): ModelCapabilities => {
+      const name = modelName.toLowerCase();
+      return {
+        vision:
+          name.includes('llava') ||
+          name.includes('vision') ||
+          name.includes('clip') ||
+          name.includes('blip'),
+        audio:
+          name.includes('whisper') ||
+          name.includes('audio') ||
+          name.includes('speech') ||
+          name.includes('asr'),
+        video:
+          name.includes('video') ||
+          name.includes('video-') ||
+          name.includes('vid2vid'),
+      };
+    },
+    []
+  );
+
   // コンポーネントのアンマウント時にクリーンアップ
   useEffect(() => {
     isMountedRef.current = true;
@@ -133,8 +180,12 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
       const config = await loadWebModelConfig();
       setWebModels(config.models);
     } catch (err) {
-      if (import.meta.env.DEV) {
-        logger.error('Webサイト用モデル設定の読み込みに失敗', err instanceof Error ? err : new Error(String(err)), 'ModelSelection');
+      if (isDev()) {
+        logger.error(
+          'Webサイト用モデル設定の読み込みに失敗',
+          err instanceof Error ? err : new Error(String(err)),
+          'ModelSelection'
+        );
       }
       setWebModels([]);
     } finally {
@@ -164,11 +215,10 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
   } | null>(null);
   const [checkingEngine, setCheckingEngine] = useState(false);
 
-  // エンジンタイプが変更されたときにインストール状態を確認
+  // エンジンタイプが変更されたときにインストール状態を確認し、必要なら自動起動
   useEffect(() => {
-    const checkEngineStatus = async () => {
-      if (!selectedEngine || selectedEngine === 'ollama') {
-        // Ollamaは自動インストールされるため、特別なチェックは不要
+    const checkEngineStatusAndAutoStart = async () => {
+      if (!selectedEngine) {
         setEngineDetectionResult(null);
         return;
       }
@@ -190,14 +240,92 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
             running: result.running,
             message: result.message || undefined,
           });
+
+          // エンジンがインストールされているが、起動していない場合は自動起動
+          if (
+            result.installed &&
+            !result.running &&
+            !isEngineStartingRef.current
+          ) {
+            // 自動起動を試みる（サイレント実行）
+            isEngineStartingRef.current = true;
+            setEngineStarting(prev => ({ ...prev, [selectedEngine]: true }));
+            const engineName = ENGINE_NAMES[selectedEngine] || selectedEngine;
+            setEngineStartingMessage(t('engine.starting.message', { engineName }));
+
+            try {
+              if (selectedEngine === 'ollama') {
+                await startOllama();
+              } else {
+                // 他のエンジンの場合
+                await safeInvoke('start_engine', {
+                  engine_type: selectedEngine,
+                  config: null,
+                });
+              }
+
+              // 起動確認のため少し待機
+              await new Promise(resolve => setTimeout(resolve, 2000));
+
+              // 再検出して状態を更新
+              const recheckResult = await safeInvoke<{
+                engine_type: string;
+                installed: boolean;
+                running: boolean;
+                version?: string | null;
+                path?: string | null;
+                message?: string | null;
+              }>('detect_engine', { engine_type: selectedEngine });
+
+              if (isMountedRef.current) {
+                setEngineDetectionResult({
+                  installed: recheckResult.installed,
+                  running: recheckResult.running,
+                  message: recheckResult.message || undefined,
+                });
+              }
+
+              logger.info(`${engineName}を自動起動しました`, 'ModelSelection');
+            } catch (startErr) {
+              // 起動に失敗してもエラーを表示しない（サイレント失敗）
+              logger.warn(
+                `${engineName}の自動起動に失敗しました`,
+                startErr instanceof Error ? startErr.message : String(startErr),
+                'ModelSelection'
+              );
+            } finally {
+              if (isMountedRef.current) {
+                setEngineStarting(prev => {
+                  const newState = { ...prev };
+                  delete newState[selectedEngine];
+                  return newState;
+                });
+                setEngineStartingMessage(null);
+              }
+              isEngineStartingRef.current = false;
+            }
+          }
         }
       } catch (err) {
         logger.error('エンジン検出エラー', err, 'ModelSelection');
         if (isMountedRef.current) {
+          // エラーメッセージを詳細に取得
+          let errorMessage = t('engine.detectionFailed');
+          if (err instanceof Error) {
+            errorMessage = err.message || errorMessage;
+          } else if (typeof err === 'string') {
+            errorMessage = err;
+          }
+          
+          // Ollamaの場合、より詳細なメッセージを追加
+          if (selectedEngine === 'ollama') {
+            errorMessage = t('engine.ollama.detectionFailed', { errorMessage });
+          }
+          
           setEngineDetectionResult({
             installed: false,
             running: false,
-            message: 'エンジンの検出に失敗しました',
+            message: errorMessage,
           });
         }
       } finally {
@@ -207,7 +335,8 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
       }
     };
 
-    checkEngineStatus();
+    checkEngineStatusAndAutoStart();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedEngine]);
 
   // 既に選択されているモデルがある場合は、ローカル状態を初期化
@@ -237,7 +366,7 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
   const loadModels = useCallback(async () => {
     // アンマウントチェック
     if (!isMountedRef.current) return;
-    
+
     setLoading(true);
     setError(null);
 
@@ -248,17 +377,19 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
         modified_at?: string | null;
         parameter_size?: string | null;
       }>;
-      
+
       if (selectedEngine === 'ollama') {
         // 後方互換性のため、Ollamaの場合は既存のコマンドを使用
         // get_models_listはmodified_atがString（必須）として返す
-        const ollamaResult = await safeInvoke<Array<{
-          name: string;
-          size?: number | null;
-          modified_at: string; // 必須
-          parameter_size?: string | null;
-        }>>('get_models_list');
-        
+        const ollamaResult = await safeInvoke<
+          Array<{
+            name: string;
+            size?: number | null;
+            modified_at: string; // 必須
+            parameter_size?: string | null;
+          }>
+        >('get_models_list');
+
         // modified_atをOption<String>に統一
         result = ollamaResult.map(model => ({
           name: model.name,
@@ -269,12 +400,14 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
       } else {
         // 他のエンジンの場合はエンジン別のコマンドを使用
         // get_engine_modelsはmodified_atがOption<String>として返す
-        result = await safeInvoke<Array<{
-          name: string;
-          size?: number | null;
-          modified_at?: string | null;
-          parameter_size?: string | null;
-        }>>('get_engine_models', {
+        result = await safeInvoke<
+          Array<{
+            name: string;
+            size?: number | null;
+            modified_at?: string | null;
+            parameter_size?: string | null;
+          }>
+        >('get_engine_models', {
           engine_type: selectedEngine,
         });
       }
@@ -296,14 +429,15 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
     } catch (err) {
       // アンマウントチェック
       if (!isMountedRef.current) return;
-      
+
       // エラーの場合、ユーザーフレンドリーなメッセージを表示
-      const errorMessage = err instanceof Error ? err.message : 'モデル一覧の取得に失敗しました';
+      const errorMessage =
+        err instanceof Error ? err.message : 'モデル一覧の取得に失敗しました';
       const engineName = ENGINE_NAMES[selectedEngine] || selectedEngine;
       const errorLower = errorMessage.toLowerCase();
-      
+
       // エンジンが起動していない可能性がある場合のチェック
-      const isEngineNotRunningError = 
+      const isEngineNotRunningError =
         errorLower.includes(selectedEngine.toLowerCase()) ||
         errorLower.includes(engineName.toLowerCase()) ||
         errorLower.includes('接続') ||
@@ -314,39 +448,103 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
         errorLower.includes('start') ||
         errorLower.includes('connection') ||
         errorLower.includes('aiエンジン');
-      
-      // Ollamaの場合で、まだ自動起動を試していない場合は自動起動を試みる
-      if (selectedEngine === 'ollama' && isEngineNotRunningError && !autoStartAttemptedRef.current && !isOllamaStarting) {
-        autoStartAttemptedRef.current = true;
-        try {
-          // エラーを一時的にクリア（ローディング表示のため）
-          setError(null);
-          // Ollamaを自動起動
-          await startOllama();
-          // 起動成功後、少し待ってから再読み込み
-          await new Promise(resolve => setTimeout(resolve, TIMEOUT.RETRY_DELAY));
-          // 再読み込み（エラーはクリア済み）
-          await loadModels();
-          return; // 成功した場合はエラーを表示しない
-        } catch (startErr) {
-          // 起動に失敗した場合はエラーメッセージを表示
-          const startErrorMessage = startErr instanceof Error ? startErr.message : 'Ollamaの起動に失敗しました';
-          if (isMountedRef.current) {
-            setError(`${engineName}が起動していません。自動起動を試みましたが失敗しました: ${startErrorMessage}`);
+
+      // エンジンが起動していない場合、自動起動を試みる（すべてのエンジン対応、複数回リトライ可能）
+      if (isEngineNotRunningError && !isEngineStartingRef.current) {
+        // 自動起動を試みる（最大3回）
+        const maxRetries = 3;
+        let lastError: Error | null = null;
+
+        // 起動中フラグを設定（連打防止）
+        isEngineStartingRef.current = true;
+        setEngineStarting(prev => ({ ...prev, [selectedEngine]: true }));
+        setEngineStartingMessage(`${engineName}を起動中...`);
+
+        for (let retry = 0; retry < maxRetries; retry++) {
+          try {
+            // エラーを一時的にクリア
+            setError(null);
+            setLoading(true);
+
+            // エンジンを自動起動
+            if (selectedEngine === 'ollama') {
+              await startOllama();
+            } else {
+              // 他のエンジンの場合
+              await safeInvoke('start_engine', {
+                engine_type: selectedEngine,
+                config: null,
+              });
+            }
+
+            // 起動確認のため待機（リトライ回数に応じて待機時間を延長）
+            await new Promise(resolve =>
+              setTimeout(resolve, (retry + 1) * 2000)
+            );
+
+            // 再読み込み
+            await loadModels();
+            // 成功した場合は自動起動試行フラグをリセット
+            autoStartAttemptedRef.current = false;
+
+            // 起動中フラグを解除
+            if (isMountedRef.current) {
+              setEngineStarting(prev => {
+                const newState = { ...prev };
+                delete newState[selectedEngine];
+                return newState;
+              });
+              setEngineStartingMessage(null);
+            }
+            isEngineStartingRef.current = false;
+
+            return; // 成功した場合は終了
+          } catch (startErr) {
+            lastError =
+              startErr instanceof Error
+                ? startErr
+                : new Error(String(startErr));
+            // 最後のリトライでも失敗した場合のみログに記録（サイレント失敗）
+            if (retry === maxRetries - 1) {
+              // 最大リトライ回数に達した場合のみログに記録（エラーメッセージは表示しない）
+              logger.warn(
+                `${engineName}の自動起動に失敗しました（${maxRetries}回試行）`,
+                lastError instanceof Error
+                  ? lastError.message
+                  : String(lastError),
+                'ModelSelection'
+              );
+              // エラーメッセージは表示しない（サイレント失敗）
+            }
+            // リトライのため少し待機
+            await new Promise(resolve => setTimeout(resolve, 1000));
           }
         }
-      } else if (isEngineNotRunningError) {
+
+        // すべてのリトライが失敗した場合は、エラーメッセージを表示しない（サイレント失敗）
+        autoStartAttemptedRef.current = false; // リセットして次回も試行可能にする
+
+        // 起動中フラグを解除
         if (isMountedRef.current) {
-          setError(`${engineName}が起動していません。${engineName}を起動してから再度お試しください。`);
+          setEngineStarting(prev => {
+            const newState = { ...prev };
+            delete newState[selectedEngine];
+            return newState;
+          });
+          setEngineStartingMessage(null);
         }
+        isEngineStartingRef.current = false;
+
+        return;
       } else {
+        // その他のエラーの場合
         if (isMountedRef.current) {
           setError(errorMessage);
         }
       }
 
       // 開発用: サンプルデータを表示（デバッグ時のみ）
-      if (import.meta.env.DEV && isMountedRef.current) {
+      if (isDev() && isMountedRef.current) {
         setModels([
           {
             name: 'llama3:8b',
@@ -368,7 +566,7 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
         setLoading(false);
       }
     }
-  }, [selectedEngine, startOllama, isOllamaStarting]);
+  }, [selectedEngine, startOllama]);
 
   useEffect(() => {
     loadModels();
@@ -379,11 +577,17 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
     if (selectedEngine === 'ollama') {
       const loadInstalledModels = async () => {
         try {
-          const installed = await safeInvoke<Array<{ name: string }>>('get_installed_models');
+          const installed = await safeInvoke<Array<{ name: string }>>(
+            'get_installed_models'
+          );
           setInstalledModelNames(new Set(installed.map(m => m.name)));
         } catch (err) {
           // エラーが発生しても続行（インストール済みリストが取得できないだけ）
-          logger.warn('インストール済みモデル一覧の取得に失敗', err instanceof Error ? err.message : String(err), 'ModelSelection');
+          logger.warn(
+            'インストール済みモデル一覧の取得に失敗',
+            err instanceof Error ? err.message : String(err),
+            'ModelSelection'
+          );
         }
       };
       loadInstalledModels();
@@ -406,7 +610,9 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
 
   // 推奨モデルかどうか
   const isRecommended = (modelName: string): boolean => {
-    return recommendedModels.some(rec => modelName.toLowerCase().includes(rec.toLowerCase()));
+    return recommendedModels.some(rec =>
+      modelName.toLowerCase().includes(rec.toLowerCase())
+    );
   };
 
   const handleModelSelect = (model: OllamaModel) => {
@@ -420,7 +626,9 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
       onModelSelected({
         name: localSelectedModel.name,
         size: localSelectedModel.size,
-        description: localSelectedModel.parameter_size ? `${localSelectedModel.parameter_size} パラメータ` : undefined,
+        description: localSelectedModel.parameter_size
+          ? `${localSelectedModel.parameter_size} パラメータ`
+          : undefined,
         capabilities: capabilities,
       });
     }
@@ -435,16 +643,18 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
   }, []);
 
   // ローディング中はエラーメッセージを非表示にする（エラーがない場合のみローディング表示）
-  const isLoading = loading || isOllamaStarting;
-  
+  const isAnyEngineStarting =
+    Object.values(engineStarting).some(v => v) || isOllamaStarting;
+  const isLoading = loading || isAnyEngineStarting;
+
   if (isLoading && !error) {
     return (
       <div className="model-selection-loading">
         <div className="loading-spinner"></div>
         <p>
-          {isOllamaStarting 
-            ? 'Ollamaを起動しています...' 
-            : 'モデル一覧を読み込んでいます...'}
+          {engineStartingMessage || isOllamaStarting
+            ? engineStartingMessage || t('engine.starting.ollamaStarting')
+            : t('modelSelection.loading')}
         </p>
       </div>
     );
@@ -460,30 +670,51 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
             type="text"
             placeholder="検索..."
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={e => setSearchQuery(e.target.value)}
             className="sidebar-search-input"
           />
           <div className="sidebar-header-actions">
             <button
-              onClick={() => navigate('/models', { state: { returnTo: 'api/create', selectedEngine } })}
+              onClick={() =>
+                navigate('/models', {
+                  state: { returnTo: 'api/create', selectedEngine },
+                })
+              }
               className="sidebar-search-models-button"
               title="モデルを検索・ダウンロード（LM Studioのように多様なモデルを検索できます）"
             >
-              🔍
+              検索
             </button>
-            <button onClick={loadModels} className="sidebar-refresh-button" title="更新">
-              🔄
+            <button
+              onClick={loadModels}
+              className="sidebar-refresh-button"
+              title={
+                isAnyEngineStarting || checkingEngine
+                  ? 'エンジン起動中です...'
+                  : '更新'
+              }
+              disabled={isAnyEngineStarting || checkingEngine} // 起動中・検出中は無効化（連打防止）
+            >
+              更新
             </button>
           </div>
         </div>
 
         {/* エンジン選択 */}
         <div className="sidebar-filters">
-          <label htmlFor="engine-select" className="sidebar-filter-label">LLMエンジン</label>
+          <label htmlFor="engine-select" className="sidebar-filter-label">
+            LLMエンジン
+          </label>
           <select
             id="engine-select"
             value={selectedEngine}
-            onChange={(e) => {
+            disabled={isAnyEngineStarting || checkingEngine} // 起動中・検出中は無効化（連打防止）
+            onChange={e => {
+              // 起動中・検出中は変更を無視（連打防止）
+              if (isAnyEngineStarting || checkingEngine) {
+                return;
+              }
+
               const newEngineType = e.target.value;
               // エンジン変更を親コンポーネントに通知（最初に実行）
               if (onEngineChange) {
@@ -498,10 +729,14 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
               // モデル一覧の再読み込みは、selectedEngineの変更により自動的に行われる
             }}
             className="sidebar-filter"
-            title="LLMエンジン"
+            title={
+              isAnyEngineStarting || checkingEngine
+                ? 'エンジン起動中です...'
+                : 'LLMエンジン'
+            }
             aria-label="LLMエンジン"
           >
-            {availableEngines.map((engine) => (
+            {availableEngines.map(engine => (
               <option key={engine} value={engine}>
                 {ENGINE_NAMES[engine] || engine}
               </option>
@@ -515,11 +750,15 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
             <div className="sidebar-empty">
               <p>モデルが見つかりませんでした</p>
               <button
-                onClick={() => navigate('/models', { state: { returnTo: 'api/create', selectedEngine } })}
+                onClick={() =>
+                  navigate('/models', {
+                    state: { returnTo: 'api/create', selectedEngine },
+                  })
+                }
                 className="sidebar-empty-search-button"
                 title="モデルを検索・ダウンロード"
               >
-                🔍 モデルを検索・ダウンロード
+                モデルを検索・ダウンロード
               </button>
             </div>
           )}
@@ -531,22 +770,36 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
               </p>
             </div>
           )}
-          {filteredModels.map((model) => (
+          {filteredModels.map(model => (
             <div
               key={model.name}
               className={`sidebar-model-item ${
                 localSelectedModel?.name === model.name ? 'active' : ''
               } ${isRecommended(model.name) ? 'recommended' : ''}`}
               onClick={() => handleModelSelect(model)}
+              onKeyDown={e => {
+                if (e.key === 'Enter' || e.key === ' ') {
+                  e.preventDefault();
+                  handleModelSelect(model);
+                }
+              }}
+              role="button"
+              tabIndex={0}
+              aria-label={`${model.name}を選択`}
             >
               <div className="sidebar-model-name">{model.name}</div>
               <div className="sidebar-model-meta">
                 {model.size > 0 && (
                   <span className="sidebar-model-size">
-                    {(model.size / FORMATTING.BYTES_PER_GB).toFixed(FORMATTING.DECIMAL_PLACES_SHORT)}GB
+                    {(model.size / FORMATTING.BYTES_PER_GB).toFixed(
+                      FORMATTING.DECIMAL_PLACES_SHORT
+                    )}
+                    GB
                   </span>
                 )}
-                {isRecommended(model.name) && <span className="sidebar-recommended-badge">⭐</span>}
+                {isRecommended(model.name) && (
+                  <span className="sidebar-recommended-badge">推奨</span>
+                )}
               </div>
             </div>
           ))}
@@ -556,92 +809,126 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
       {/* メインエリア */}
       <div className="lmstudio-main">
         {/* エンジンインストール状態の警告 */}
-        {engineDetectionResult && !checkingEngine && !engineDetectionResult.installed && (
-          <InfoBanner
-            type="warning"
-            title={`${ENGINE_NAMES[selectedEngine] || selectedEngine}がインストールされていません`}
-            message={
-              (engineDetectionResult.message || 
-                `${ENGINE_NAMES[selectedEngine] || selectedEngine}を手動でインストールしてから、モデルを選択してください。`) +
-              (selectedEngine === 'lm_studio' 
-                ? ' LM Studio公式サイト（https://lmstudio.ai）からインストールしてください。'
-                : selectedEngine === 'vllm'
-                ? ' vLLMをPythonパッケージ（pip install vllm）またはDockerコンテナとしてインストールしてください。'
-                : selectedEngine === 'llama_cpp'
-                ? ' llama.cppをシステムパスにインストールしてください。'
-                : '')
-            }
-            dismissible={false}
-          />
-        )}
+        {engineDetectionResult &&
+          !checkingEngine &&
+          !engineDetectionResult.installed && (
+            <InfoBanner
+              type="warning"
+              title={
+                selectedEngine === 'ollama'
+                  ? t('engine.ollama.notInstalled')
+                  : selectedEngine === 'lm_studio'
+                    ? t('engine.lmStudio.notInstalled')
+                    : selectedEngine === 'vllm'
+                      ? t('engine.vllm.notInstalled')
+                      : selectedEngine === 'llama_cpp'
+                        ? t('engine.llamaCpp.notInstalled')
+                        : t('engine.general.notInstalled', { engineName: ENGINE_NAMES[selectedEngine] || selectedEngine })
+              }
+              message={
+                (engineDetectionResult.message ||
+                  (selectedEngine === 'ollama'
+                    ? t('engine.ollama.installMessage')
+                    : selectedEngine === 'lm_studio'
+                      ? t('engine.lmStudio.installMessage')
+                      : selectedEngine === 'vllm'
+                        ? t('engine.vllm.installMessage')
+                        : selectedEngine === 'llama_cpp'
+                          ? t('engine.llamaCpp.installMessage')
+                          : t('engine.general.installMessage', { engineName: ENGINE_NAMES[selectedEngine] || selectedEngine })))
+              }
+              dismissible={false}
+            />
+          )}
 
-        {engineDetectionResult && !checkingEngine && engineDetectionResult.installed && !engineDetectionResult.running && (
+        {/* エンジン起動中の表示 */}
+        {isAnyEngineStarting && engineStartingMessage && (
           <InfoBanner
             type="info"
-            title={`${ENGINE_NAMES[selectedEngine] || selectedEngine}が起動していません`}
-            message={engineDetectionResult.message || 
-              `${ENGINE_NAMES[selectedEngine] || selectedEngine}を起動してから、モデルを選択してください。`}
+            title={engineStartingMessage}
+            message={t('engine.starting.waitMessage')}
             dismissible={false}
           />
         )}
 
-        {/* エラーメッセージ */}
-        {error && (() => {
-          // エラーがエンジン起動に関するものかチェック
-          const errorLower = error.toLowerCase();
-          const isEngineError = 
-            errorLower.includes('起動') || 
-            errorLower.includes('接続') || 
-            errorLower.includes('running') || 
-            errorLower.includes('start') || 
-            errorLower.includes('connection') ||
-            errorLower.includes('aiエンジン') ||
-            errorLower.includes('実行されていません') ||
-            errorLower.includes('実行中か確認') ||
-            errorLower.includes('not running') ||
-            errorLower.includes('起動していません');
-          
-          // エンジン別の提案メッセージを生成
-          const engineName = ENGINE_NAMES[selectedEngine] || selectedEngine;
-          const suggestion = isEngineError 
-            ? (selectedEngine === 'ollama'
-                ? 'Ollamaを起動してから再度お試しください。Ollamaがインストールされていない場合は、ホーム画面から「Ollamaセットアップ」を実行してください。'
-                : `${engineName}を起動してから再度お試しください。${engineName}がインストールされていない場合は、設定画面からセットアップを実行してください。`)
-            : undefined;
-          
-          // エラータイプを決定（エンジンに応じて）
-          const errorType: 'ollama' | 'model' = selectedEngine === 'ollama' ? 'ollama' : 'model';
-          
-          return (
-            <ErrorMessage
-              message={error}
-              type={errorType}
-              suggestion={suggestion}
-              onRetry={() => {
-                setError(null);
-                loadModels();
-              }}
+        {engineDetectionResult &&
+          !checkingEngine &&
+          engineDetectionResult.installed &&
+          !engineDetectionResult.running &&
+          !isAnyEngineStarting && (
+            <InfoBanner
+              type="info"
+              title={`${ENGINE_NAMES[selectedEngine] || selectedEngine}が起動していません`}
+              message={`${ENGINE_NAMES[selectedEngine] || selectedEngine}を起動中です。自動的に起動しますので、しばらくお待ちください。`}
+              dismissible={false}
             />
-          );
-        })()}
+          )}
+
+        {/* エラーメッセージ */}
+        {error &&
+          (() => {
+            // エラーがエンジン起動に関するものかチェック
+            const errorLower = error.toLowerCase();
+            const isEngineError =
+              errorLower.includes('起動') ||
+              errorLower.includes('接続') ||
+              errorLower.includes('running') ||
+              errorLower.includes('start') ||
+              errorLower.includes('connection') ||
+              errorLower.includes('aiエンジン') ||
+              errorLower.includes('実行されていません') ||
+              errorLower.includes('実行中か確認') ||
+              errorLower.includes('not running') ||
+              errorLower.includes('起動していません');
+
+            // エンジン別の提案メッセージを生成
+            const engineName = ENGINE_NAMES[selectedEngine] || selectedEngine;
+            const suggestion = isEngineError
+              ? selectedEngine === 'ollama'
+                ? 'Ollamaを起動してから再度お試しください。Ollamaがインストールされていない場合は、ホーム画面から「Ollamaセットアップ」を実行してください。'
+                : `${engineName}を起動してから再度お試しください。${engineName}がインストールされていない場合は、設定画面からセットアップを実行してください。`
+              : undefined;
+
+            // エラータイプを決定（エンジンに応じて）
+            const errorType: 'ollama' | 'model' =
+              selectedEngine === 'ollama' ? 'ollama' : 'model';
+
+            return (
+              <ErrorMessage
+                message={error}
+                type={errorType}
+                suggestion={suggestion}
+                onRetry={() => {
+                  setError(null);
+                  loadModels();
+                }}
+              />
+            );
+          })()}
 
         {/* モデル詳細表示 */}
-        {(localSelectedModel || selectedWebModel) ? (
+        {localSelectedModel || selectedWebModel ? (
           <div className="main-model-details">
             <div className="detail-header">
               <div className="detail-title-section">
                 <h2 className="detail-model-name">
                   {selectedWebModel ? (
                     <>
-                      {selectedWebModel.icon && <span className="model-icon-large">{selectedWebModel.icon}</span>}
+                      {selectedWebModel.icon && (
+                        <span className="model-icon-large">
+                          {selectedWebModel.icon}
+                        </span>
+                      )}
                       {selectedWebModel.name}
                     </>
                   ) : (
-                    localSelectedModel?.name ?? 'モデル名不明'
+                    (localSelectedModel?.name ?? 'モデル名不明')
                   )}
                 </h2>
-                {(selectedWebModel?.recommended || (localSelectedModel && isRecommended(localSelectedModel.name))) && (
-                  <span className="detail-recommended-badge">⭐ 推奨モデル</span>
+                {(selectedWebModel?.recommended ||
+                  (localSelectedModel &&
+                    isRecommended(localSelectedModel.name))) && (
+                  <span className="detail-recommended-badge">推奨モデル</span>
                 )}
               </div>
               <div className="detail-actions">
@@ -670,11 +957,12 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
                     <div className="detail-info-item">
                       <span className="detail-info-label">カテゴリ</span>
                       <span className="detail-info-value">
-                        {selectedWebModel.category === 'chat' && '💬 チャット'}
-                        {selectedWebModel.category === 'code' && '💻 コード'}
-                        {selectedWebModel.category === 'vision' && '🖼️ 画像'}
-                        {selectedWebModel.category === 'audio' && '🎵 音声'}
-                        {selectedWebModel.category === 'multimodal' && '🎭 マルチモーダル'}
+                        {selectedWebModel.category === 'chat' && 'チャット'}
+                        {selectedWebModel.category === 'code' && 'コード'}
+                        {selectedWebModel.category === 'vision' && '画像'}
+                        {selectedWebModel.category === 'audio' && '音声'}
+                        {selectedWebModel.category === 'multimodal' &&
+                          'マルチモーダル'}
                       </span>
                     </div>
 
@@ -683,9 +971,21 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
                         <span className="detail-info-label">対応機能</span>
                         <span className="detail-info-value">
                           <span className="capability-badges">
-                            {selectedWebModel.capabilities.vision && <span className="capability-badge vision">🖼️ 画像</span>}
-                            {selectedWebModel.capabilities.audio && <span className="capability-badge audio">🎵 音声</span>}
-                            {selectedWebModel.capabilities.video && <span className="capability-badge video">🎬 動画</span>}
+                            {selectedWebModel.capabilities.vision && (
+                              <span className="capability-badge vision">
+                                画像
+                              </span>
+                            )}
+                            {selectedWebModel.capabilities.audio && (
+                              <span className="capability-badge audio">
+                                音声
+                              </span>
+                            )}
+                            {selectedWebModel.capabilities.video && (
+                              <span className="capability-badge video">
+                                動画
+                              </span>
+                            )}
                           </span>
                         </span>
                       </div>
@@ -695,7 +995,9 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
                       <>
                         {selectedWebModel.requirements.minMemory && (
                           <div className="detail-info-item">
-                            <span className="detail-info-label">最小メモリ</span>
+                            <span className="detail-info-label">
+                              最小メモリ
+                            </span>
                             <span className="detail-info-value">
                               {selectedWebModel.requirements.minMemory}GB
                             </span>
@@ -703,9 +1005,12 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
                         )}
                         {selectedWebModel.requirements.recommendedMemory && (
                           <div className="detail-info-item">
-                            <span className="detail-info-label">推奨メモリ</span>
+                            <span className="detail-info-label">
+                              推奨メモリ
+                            </span>
                             <span className="detail-info-value">
-                              {selectedWebModel.requirements.recommendedMemory}GB
+                              {selectedWebModel.requirements.recommendedMemory}
+                              GB
                             </span>
                           </div>
                         )}
@@ -713,105 +1018,143 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
                           <div className="detail-info-item">
                             <span className="detail-info-label">GPU</span>
                             <span className="detail-info-value">
-                              {selectedWebModel.requirements.gpuRecommended ? '推奨' : '不要'}
+                              {selectedWebModel.requirements.gpuRecommended
+                                ? '推奨'
+                                : '不要'}
                             </span>
                           </div>
                         )}
                       </>
                     )}
 
-                    {selectedWebModel.useCases && selectedWebModel.useCases.length > 0 && (
-                      <div className="detail-info-item full-width">
-                        <span className="detail-info-label">使用例</span>
-                        <div className="detail-info-value">
-                          <ul className="use-cases-list">
-                            {selectedWebModel.useCases.map((useCase, index) => (
-                              <li key={index}>{useCase}</li>
-                            ))}
-                          </ul>
+                    {selectedWebModel.useCases &&
+                      selectedWebModel.useCases.length > 0 && (
+                        <div className="detail-info-item full-width">
+                          <span className="detail-info-label">使用例</span>
+                          <div className="detail-info-value">
+                            <ul className="use-cases-list">
+                              {selectedWebModel.useCases.map(
+                                (useCase, index) => (
+                                  <li key={index}>{useCase}</li>
+                                )
+                              )}
+                            </ul>
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
                   </div>
 
                   <div className="detail-note">
-                    <p>💡 <strong>推奨設定が自動適用されます</strong></p>
-                    <p>このモデルはWebサイト用途に最適化された設定でAPIが作成されます。</p>
+                    <p>
+                      <strong>推奨設定が自動適用されます</strong>
+                    </p>
+                    <p>
+                      このモデルはWebサイト用途に最適化された設定でAPIが作成されます。
+                    </p>
                   </div>
                 </>
               ) : localSelectedModel ? (
                 <>
-              {/* 初めての方へのガイダンス */}
-              {localSelectedModel && isRecommended(localSelectedModel.name) && (
-                <InfoBanner
-                  type="tip"
-                  title="推奨モデル"
-                  message="このモデルは推奨モデルです。チャット用途やコード生成に最適化されています。"
-                  dismissible
-                />
-              )}
+                  {/* 初めての方へのガイダンス */}
+                  {localSelectedModel &&
+                    isRecommended(localSelectedModel.name) && (
+                      <InfoBanner
+                        type="tip"
+                        title="推奨モデル"
+                        message="このモデルは推奨モデルです。チャット用途やコード生成に最適化されています。"
+                        dismissible
+                      />
+                    )}
 
-              <div className="detail-info-grid">
-                {localSelectedModel && localSelectedModel.size > 0 && (
-                  <div className="detail-info-item">
-                    <span className="detail-info-label">サイズ</span>
-                    <span className="detail-info-value">
-                      {formatBytes(localSelectedModel.size, FORMATTING.DECIMAL_PLACES_SHORT)}
-                    </span>
-                  </div>
-                )}
-
-                {localSelectedModel && localSelectedModel.parameter_size && (
-                  <div className="detail-info-item">
-                    <span className="detail-info-label">パラメータ数</span>
-                    <span className="detail-info-value">
-                      {localSelectedModel.parameter_size}
-                    </span>
-                  </div>
-                )}
-
-                {localSelectedModel && (
-                  <div className="detail-info-item">
-                    <span className="detail-info-label">カテゴリ</span>
-                    <span className="detail-info-value">
-                      {getCategoryLabel(localSelectedModel.name)}
-                    </span>
-                  </div>
-                )}
-
-                {/* マルチモーダル機能の表示 */}
-                {localSelectedModel && (() => {
-                  const model = localSelectedModel;
-                  const capabilities = detectModelCapabilities(model.name);
-                  const hasMultimodal = capabilities.vision || capabilities.audio || capabilities.video;
-                  
-                  if (hasMultimodal) {
-                    return (
+                  <div className="detail-info-grid">
+                    {localSelectedModel && localSelectedModel.size > 0 && (
                       <div className="detail-info-item">
-                        <span className="detail-info-label">対応機能</span>
+                        <span className="detail-info-label">サイズ</span>
                         <span className="detail-info-value">
-                          <span className="capability-badges">
-                            {capabilities.vision && <span className="capability-badge vision">🖼️ 画像</span>}
-                            {capabilities.audio && <span className="capability-badge audio">🎵 音声</span>}
-                            {capabilities.video && <span className="capability-badge video">🎬 動画</span>}
-                          </span>
+                          {formatBytes(
+                            localSelectedModel.size,
+                            FORMATTING.DECIMAL_PLACES_SHORT
+                          )}
                         </span>
                       </div>
-                    );
-                  }
-                  return null;
-                })()}
+                    )}
 
-                {localSelectedModel && localSelectedModel.modified_at && localSelectedModel.modified_at.trim() !== '' && (
-                  <div className="detail-info-item">
-                    <span className="detail-info-label">更新日時</span>
-                    <span className="detail-info-value">
-                      {formatDate(localSelectedModel.modified_at)}
-                    </span>
+                    {localSelectedModel &&
+                      localSelectedModel.parameter_size && (
+                        <div className="detail-info-item">
+                          <span className="detail-info-label">
+                            パラメータ数
+                          </span>
+                          <span className="detail-info-value">
+                            {localSelectedModel.parameter_size}
+                          </span>
+                        </div>
+                      )}
+
+                    {localSelectedModel && (
+                      <div className="detail-info-item">
+                        <span className="detail-info-label">カテゴリ</span>
+                        <span className="detail-info-value">
+                          {getCategoryLabel(localSelectedModel.name)}
+                        </span>
+                      </div>
+                    )}
+
+                    {/* マルチモーダル機能の表示 */}
+                    {localSelectedModel &&
+                      (() => {
+                        const model = localSelectedModel;
+                        const capabilities = detectModelCapabilities(
+                          model.name
+                        );
+                        const hasMultimodal =
+                          capabilities.vision ||
+                          capabilities.audio ||
+                          capabilities.video;
+
+                        if (hasMultimodal) {
+                          return (
+                            <div className="detail-info-item">
+                              <span className="detail-info-label">
+                                対応機能
+                              </span>
+                              <span className="detail-info-value">
+                                <span className="capability-badges">
+                                  {capabilities.vision && (
+                                    <span className="capability-badge vision">
+                                      画像
+                                    </span>
+                                  )}
+                                  {capabilities.audio && (
+                                    <span className="capability-badge audio">
+                                      音声
+                                    </span>
+                                  )}
+                                  {capabilities.video && (
+                                    <span className="capability-badge video">
+                                      動画
+                                    </span>
+                                  )}
+                                </span>
+                              </span>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
+
+                    {localSelectedModel &&
+                      localSelectedModel.modified_at &&
+                      localSelectedModel.modified_at.trim() !== '' && (
+                        <div className="detail-info-item">
+                          <span className="detail-info-label">更新日時</span>
+                          <span className="detail-info-value">
+                            {formatDate(localSelectedModel.modified_at)}
+                          </span>
+                        </div>
+                      )}
                   </div>
-                )}
-              </div>
-              </>
+                </>
               ) : null}
             </div>
           </div>
@@ -819,16 +1162,22 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
           <div className="main-empty-state">
             <div className="empty-state-content">
               <h2>モデルを選択してください</h2>
-              <p>左側のサイドバーからモデルを選択すると、詳細情報が表示されます。</p>
-              
+              <p>
+                左側のサイドバーからモデルを選択すると、詳細情報が表示されます。
+              </p>
+
               {/* モデル検索ボタン */}
               <div className="empty-state-actions">
                 <button
                   className="search-models-button"
-                  onClick={() => navigate('/models', { state: { returnTo: 'api/create', selectedEngine } })}
+                  onClick={() =>
+                    navigate('/models', {
+                      state: { returnTo: 'api/create', selectedEngine },
+                    })
+                  }
                   title="モデル検索・ダウンロードページを開く"
                 >
-                  🔍 モデルを検索・ダウンロード
+                  モデルを検索・ダウンロード
                 </button>
                 <p className="empty-state-hint">
                   LM Studioのように多様なモデルを検索してダウンロードできます
@@ -838,14 +1187,23 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
               <div className="empty-state-hints">
                 <h3>推奨モデル</h3>
                 <ul>
-                  <li><strong>llama3:8b</strong> - 高性能な汎用チャットモデル</li>
-                  <li><strong>codellama:7b</strong> - コード生成に特化</li>
-                  <li><strong>mistral:7b</strong> - 効率的な多目的モデル</li>
-                  <li><strong>phi3:mini</strong> - 軽量高性能モデル</li>
+                  <li>
+                    <strong>llama3:8b</strong> - 高性能な汎用チャットモデル
+                  </li>
+                  <li>
+                    <strong>codellama:7b</strong> - コード生成に特化
+                  </li>
+                  <li>
+                    <strong>mistral:7b</strong> - 効率的な多目的モデル
+                  </li>
+                  <li>
+                    <strong>phi3:mini</strong> - 軽量高性能モデル
+                  </li>
                 </ul>
                 <p className="hint-note">
-                  💡 より多くのモデルを見つけるには、上の「モデルを検索・ダウンロード」ボタンから
-                  外部リポジトリ（Ollamaライブラリ、Hugging Faceなど）を検索できます
+                  より多くのモデルを見つけるには、上の「モデルを検索・ダウンロード」ボタンから
+                  外部リポジトリ（Ollamaライブラリ、Hugging
+                  Faceなど）を検索できます
                 </p>
               </div>
             </div>

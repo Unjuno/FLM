@@ -25,7 +25,7 @@ FLMは、Tauriベースのデスクトップアプリケーションです。フ
 
 ### 技術スタック
 
-- **フロントエンド**: React 19 + TypeScript + Vite
+- **フロントエンド**: React 18.3.1 + TypeScript + Vite
 - **バックエンド**: Rust + Tauri 2.0
 - **データベース**: SQLite (rusqlite)
 - **認証**: Express.js（認証プロキシ）

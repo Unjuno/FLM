@@ -1,0 +1,659 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`SkeletonLoader.tsx スナップショットテスト APIリストスケルトンのスナップショット 1`] = `
+<div>
+  <div
+    aria-hidden="true"
+    class="skeleton-api-list-container"
+  >
+    <div
+      class="skeleton-api-card"
+    >
+      <div
+        class="skeleton-api-card-header"
+      >
+        <div
+          class="skeleton-api-card-title"
+        >
+          <span
+            class="skeleton-shimmer"
+          />
+        </div>
+        <div
+          class="skeleton-api-card-status"
+        >
+          <span
+            class="skeleton-shimmer"
+          />
+        </div>
+      </div>
+      <div
+        class="skeleton-api-card-content"
+      >
+        <div
+          class="skeleton-api-card-row"
+        >
+          <span
+            class="skeleton-shimmer"
+          />
+        </div>
+        <div
+          class="skeleton-api-card-row"
+        >
+          <span
+            class="skeleton-shimmer"
+          />
+        </div>
+        <div
+          class="skeleton-api-card-row"
+        >
+          <span
+            class="skeleton-shimmer"
+          />
+        </div>
+      </div>
+      <div
+        class="skeleton-api-card-actions"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+        <span
+          class="skeleton-shimmer"
+        />
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+    </div>
+    <div
+      class="skeleton-api-card"
+    >
+      <div
+        class="skeleton-api-card-header"
+      >
+        <div
+          class="skeleton-api-card-title"
+        >
+          <span
+            class="skeleton-shimmer"
+          />
+        </div>
+        <div
+          class="skeleton-api-card-status"
+        >
+          <span
+            class="skeleton-shimmer"
+          />
+        </div>
+      </div>
+      <div
+        class="skeleton-api-card-content"
+      >
+        <div
+          class="skeleton-api-card-row"
+        >
+          <span
+            class="skeleton-shimmer"
+          />
+        </div>
+        <div
+          class="skeleton-api-card-row"
+        >
+          <span
+            class="skeleton-shimmer"
+          />
+        </div>
+        <div
+          class="skeleton-api-card-row"
+        >
+          <span
+            class="skeleton-shimmer"
+          />
+        </div>
+      </div>
+      <div
+        class="skeleton-api-card-actions"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+        <span
+          class="skeleton-shimmer"
+        />
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`SkeletonLoader.tsx スナップショットテスト アニメーション無効のスケルトンのスナップショット 1`] = `
+<div>
+  <div
+    aria-hidden="true"
+    class="skeleton skeleton-text skeleton-no-animation"
+  >
+    <span
+      class="skeleton-shimmer"
+    />
+  </div>
+</div>
+`;
+
+exports[`SkeletonLoader.tsx スナップショットテスト アバタースケルトンのスナップショット 1`] = `
+<div>
+  <div
+    aria-hidden="true"
+    class="skeleton skeleton-avatar skeleton-rounded"
+  >
+    <span
+      class="skeleton-shimmer"
+    />
+  </div>
+</div>
+`;
+
+exports[`SkeletonLoader.tsx スナップショットテスト カスタムスケルトンのスナップショット 1`] = `
+<div>
+  <div
+    aria-hidden="true"
+    class="skeleton skeleton-custom"
+    style="--skeleton-width: 200px; --skeleton-height: 50px;"
+  >
+    <span
+      class="skeleton-shimmer"
+    />
+  </div>
+</div>
+`;
+
+exports[`SkeletonLoader.tsx スナップショットテスト カードスケルトンのスナップショット 1`] = `
+<div>
+  <div
+    aria-hidden="true"
+    class="skeleton skeleton-card"
+  >
+    <div
+      class="skeleton-card-header"
+    >
+      <span
+        class="skeleton-shimmer"
+      />
+    </div>
+    <div
+      class="skeleton-card-content"
+    >
+      <span
+        class="skeleton-shimmer"
+      />
+      <span
+        class="skeleton-shimmer"
+      />
+      <span
+        class="skeleton-shimmer"
+      />
+    </div>
+    <div
+      class="skeleton-card-footer"
+    >
+      <span
+        class="skeleton-shimmer"
+      />
+    </div>
+  </div>
+</div>
+`;
+
+exports[`SkeletonLoader.tsx スナップショットテスト タイトルスケルトンのスナップショット 1`] = `
+<div>
+  <div
+    aria-hidden="true"
+    class="skeleton skeleton-title"
+  >
+    <span
+      class="skeleton-shimmer"
+    />
+  </div>
+</div>
+`;
+
+exports[`SkeletonLoader.tsx スナップショットテスト テキストスケルトンのスナップショット 1`] = `
+<div>
+  <div
+    aria-hidden="true"
+    class="skeleton skeleton-text"
+  >
+    <span
+      class="skeleton-shimmer"
+    />
+  </div>
+</div>
+`;
+
+exports[`SkeletonLoader.tsx スナップショットテスト テーブルスケルトンのスナップショット 1`] = `
+<div>
+  <div
+    aria-hidden="true"
+    class="skeleton-table-container"
+  >
+    <div
+      class="skeleton-table-header"
+    >
+      <div
+        class="skeleton-table-header-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-table-header-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-table-header-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-table-header-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+    </div>
+    <div
+      class="skeleton-table-row"
+    >
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+    </div>
+    <div
+      class="skeleton-table-row"
+    >
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+    </div>
+    <div
+      class="skeleton-table-row"
+    >
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+    </div>
+    <div
+      class="skeleton-table-row"
+    >
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+    </div>
+    <div
+      class="skeleton-table-row"
+    >
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-table-cell"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`SkeletonLoader.tsx スナップショットテスト フォームスケルトンのスナップショット 1`] = `
+<div>
+  <div
+    aria-hidden="true"
+    class="skeleton-form-container"
+  >
+    <div
+      class="skeleton-form-field"
+    >
+      <div
+        class="skeleton-form-label"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-form-input"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+    </div>
+    <div
+      class="skeleton-form-field"
+    >
+      <div
+        class="skeleton-form-label"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-form-input"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+    </div>
+    <div
+      class="skeleton-form-field"
+    >
+      <div
+        class="skeleton-form-label"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-form-input"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+    </div>
+    <div
+      class="skeleton-form-field"
+    >
+      <div
+        class="skeleton-form-label"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-form-input"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`SkeletonLoader.tsx スナップショットテスト ボタンスケルトンのスナップショット 1`] = `
+<div>
+  <div
+    aria-hidden="true"
+    class="skeleton skeleton-button"
+  >
+    <span
+      class="skeleton-shimmer"
+    />
+  </div>
+</div>
+`;
+
+exports[`SkeletonLoader.tsx スナップショットテスト リストスケルトンのスナップショット 1`] = `
+<div>
+  <div
+    aria-hidden="true"
+    class="skeleton-list-container"
+  >
+    <div
+      class="skeleton-list-item"
+    >
+      <div
+        class="skeleton-list-item-avatar"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-list-item-content"
+      >
+        <div
+          class="skeleton-list-item-title"
+        >
+          <span
+            class="skeleton-shimmer"
+          />
+        </div>
+        <div
+          class="skeleton-list-item-text"
+        >
+          <span
+            class="skeleton-shimmer"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      class="skeleton-list-item"
+    >
+      <div
+        class="skeleton-list-item-avatar"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-list-item-content"
+      >
+        <div
+          class="skeleton-list-item-title"
+        >
+          <span
+            class="skeleton-shimmer"
+          />
+        </div>
+        <div
+          class="skeleton-list-item-text"
+        >
+          <span
+            class="skeleton-shimmer"
+          />
+        </div>
+      </div>
+    </div>
+    <div
+      class="skeleton-list-item"
+    >
+      <div
+        class="skeleton-list-item-avatar"
+      >
+        <span
+          class="skeleton-shimmer"
+        />
+      </div>
+      <div
+        class="skeleton-list-item-content"
+      >
+        <div
+          class="skeleton-list-item-title"
+        >
+          <span
+            class="skeleton-shimmer"
+          />
+        </div>
+        <div
+          class="skeleton-list-item-text"
+        >
+          <span
+            class="skeleton-shimmer"
+          />
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`SkeletonLoader.tsx スナップショットテスト 段落スケルトンのスナップショット 1`] = `
+<div>
+  <div
+    aria-hidden="true"
+    class="skeleton-paragraph-container"
+  >
+    <div
+      class="skeleton skeleton-paragraph"
+    >
+      <span
+        class="skeleton-shimmer"
+      />
+    </div>
+    <div
+      class="skeleton skeleton-paragraph"
+    >
+      <span
+        class="skeleton-shimmer"
+      />
+    </div>
+    <div
+      class="skeleton skeleton-paragraph"
+    >
+      <span
+        class="skeleton-shimmer"
+      />
+    </div>
+  </div>
+</div>
+`;

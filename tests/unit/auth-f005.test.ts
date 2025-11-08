@@ -3,13 +3,19 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 describe('F005: Authentication Functionality Unit Tests', () => {
   beforeAll(() => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('認証機能単体テストを開始します');
     }
   });
 
   afterAll(() => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('認証機能単体テストを完了しました');
     }
   });
@@ -21,15 +27,18 @@ describe('F005: Authentication Functionality Unit Tests', () => {
     it('should generate API key with at least 32 characters', () => {
       // 32文字以上のAPIキーが生成されることを確認
       const minLength = 32;
-      const mockApiKey = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+      const mockApiKey =
+        'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
 
       expect(mockApiKey.length).toBeGreaterThanOrEqual(minLength);
     });
 
     it('should generate unique API keys', () => {
       // 毎回異なるAPIキーが生成されることを確認
-      const key1 = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
-      const key2 = 'b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef1234567a';
+      const key1 =
+        'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+      const key2 =
+        'b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef1234567a';
 
       expect(key1).not.toBe(key2);
     });
@@ -37,7 +46,8 @@ describe('F005: Authentication Functionality Unit Tests', () => {
     it('should use secure random generation', () => {
       // セキュアなランダム生成の検証（パターンの確認）
       const apiKeyPattern = /^[A-Za-z0-9+/=]+$/; // Base64文字セット
-      const mockApiKey = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+      const mockApiKey =
+        'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
 
       expect(apiKeyPattern.test(mockApiKey)).toBe(true);
     });
@@ -49,7 +59,8 @@ describe('F005: Authentication Functionality Unit Tests', () => {
   describe('API key regeneration', () => {
     it('should validate API ID before regeneration', () => {
       const validApiId = '123e4567-e89b-12d3-a456-426614174000';
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const uuidPattern =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
       expect(uuidPattern.test(validApiId)).toBe(true);
     });
@@ -179,7 +190,8 @@ describe('F005: Authentication Functionality Unit Tests', () => {
 
     it('should store key hash for verification', () => {
       // ハッシュ保存の検証
-      const keyHash = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+      const keyHash =
+        'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
       const hashPattern = /^[a-f0-9]{64}$/i; // SHA256ハッシュ
 
       expect(hashPattern.test(keyHash)).toBe(true);
@@ -201,7 +213,9 @@ describe('F005: Authentication Functionality Unit Tests', () => {
         expect(message).toBeTruthy();
         expect(typeof message).toBe('string');
         // 非開発者向けのメッセージ
-        expect(message.includes('APIキー') || message.includes('認証')).toBe(true);
+        expect(message.includes('APIキー') || message.includes('認証')).toBe(
+          true
+        );
       });
     });
 
@@ -219,4 +233,3 @@ describe('F005: Authentication Functionality Unit Tests', () => {
     });
   });
 });
-

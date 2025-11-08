@@ -5,13 +5,19 @@ import { invoke } from '@tauri-apps/api/core';
 
 describe('セキュリティテスト', () => {
   beforeAll(() => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('セキュリティテストを開始します');
     }
   });
 
   afterAll(() => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('セキュリティテストを完了しました');
     }
   });
@@ -37,24 +43,27 @@ describe('セキュリティテスト', () => {
         if (result.api_key) {
           // APIキーは32文字以上であることを確認
           expect(result.api_key.length).toBeGreaterThanOrEqual(32);
-          
+
           // クリーンアップ
           await invoke('delete_api', { api_id: result.id });
         }
       } catch (error) {
         // エラーが発生した場合はスキップ
-        console.warn('API作成に失敗したため、このテストをスキップします:', error);
+        console.warn(
+          'API作成に失敗したため、このテストをスキップします:',
+          error
+        );
       }
     }, 30000);
 
     it('should not expose sensitive information in error messages', async () => {
       const invalidApiId = 'invalid-api-id';
-      
+
       try {
         await invoke('get_api_details', { api_id: invalidApiId });
       } catch (error) {
         const errorMessage = String(error);
-        
+
         // エラーメッセージに機密情報が含まれていないことを確認
         expect(errorMessage).not.toMatch(/password|secret|private|key/i);
         // スタックトレースや内部実装詳細が含まれていないことを確認
@@ -134,7 +143,10 @@ describe('セキュリティテスト', () => {
         // クリーンアップ
         await invoke('delete_api', { api_id: result.id });
       } catch (error) {
-        console.warn('API作成に失敗したため、このテストをスキップします:', error);
+        console.warn(
+          'API作成に失敗したため、このテストをスキップします:',
+          error
+        );
       }
     }, 30000);
 
@@ -158,7 +170,10 @@ describe('セキュリティテスト', () => {
         // クリーンアップ
         await invoke('delete_api', { api_id: result.id });
       } catch (error) {
-        console.warn('API作成に失敗したため、このテストをスキップします:', error);
+        console.warn(
+          'API作成に失敗したため、このテストをスキップします:',
+          error
+        );
       }
     }, 30000);
   });
@@ -177,7 +192,7 @@ describe('セキュリティテスト', () => {
         });
       } catch (error) {
         const errorMessage = String(error);
-        
+
         // システムパスが含まれていないことを確認
         const systemPathPattern = new RegExp('C:\\\\|/usr/|\\.exe|\\.dll', 'i');
         expect(errorMessage).not.toMatch(systemPathPattern);
@@ -189,7 +204,7 @@ describe('セキュリティテスト', () => {
         await invoke('get_api_details', { api_id: 'invalid-id' });
       } catch (error) {
         const errorMessage = String(error);
-        
+
         // エラーメッセージが非開発者向けであることを確認
         expect(errorMessage.length).toBeGreaterThan(0);
         // 技術的な詳細が少ないことを確認
@@ -198,4 +213,3 @@ describe('セキュリティテスト', () => {
     });
   });
 });
-

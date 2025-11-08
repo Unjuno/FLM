@@ -11,7 +11,6 @@ pub mod modelfile;
 pub mod model_converter;
 pub mod model_sharing;
 pub mod remote_sync;
-pub mod model_review;
 pub mod scheduler;
 pub mod ip_whitelist;
 pub mod rate_limit;
@@ -21,4 +20,8 @@ pub mod letsencrypt;
 pub mod cache;
 pub mod memory_monitor;
 pub mod query_optimizer;
+pub mod logging;
+pub mod input_validation;
+pub mod http_client;
+
 

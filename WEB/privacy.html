@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FLM - プライバシーポリシー">
+  <title>プライバシーポリシー - FLM</title>
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- ヘッダー -->
+  <header>
+    <nav class="container">
+      <div class="logo">
+        <img src="images/logo.png" alt="FLM" class="logo-image" width="32" height="32" aria-hidden="true">
+        <span>FLM</span>
+      </div>
+      <button class="mobile-menu-toggle" aria-label="メニューを開く" aria-expanded="false" aria-controls="main-navigation">☰</button>
+      <ul class="nav-links" id="main-navigation" role="menubar">
+        <li role="none"><a href="index.html" role="menuitem">ホーム</a></li>
+        <li role="none"><a href="features.html" role="menuitem">機能</a></li>
+        <li role="none"><a href="guide.html" role="menuitem">使い方</a></li>
+        <li role="none"><a href="download.html" role="menuitem">ダウンロード</a></li>
+        <li role="none"><a href="faq.html" role="menuitem">FAQ</a></li>
+        <li role="none"><a href="contact.html" role="menuitem">お問い合わせ</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main id="main-content">
+    <section class="section">
+      <div class="container" style="max-width: 800px;">
+        <h1>プライバシーポリシー</h1>
+        <p style="color: #666; margin-bottom: 2rem;">
+          最終更新日: <time id="last-updated"></time>
+        </p>
+
+        <section style="margin-bottom: 3rem;">
+          <h2>1. はじめに</h2>
+          <p>
+            FLM（Local LLM API Manager）は、お客様のプライバシーを尊重します。
+            このプライバシーポリシーは、当ウェブサイトおよびアプリケーションがどのように個人情報を収集、使用、保護するかを説明します。
+          </p>
+        </section>
+
+        <section style="margin-bottom: 3rem;">
+          <h2>2. 収集する情報</h2>
+          
+          <h3>2.1 ウェブサイトでの情報収集</h3>
+          <p>
+            当ウェブサイトでは、以下の情報を収集する場合があります：
+          </p>
+          <ul>
+            <li><strong>ダウンロード統計情報</strong>（オプトイン方式）</li>
+            <ul>
+              <li>OS情報（Windows、macOS、Linuxなど）</li>
+              <li>ダウンロード日時</li>
+              <li>この情報はローカルストレージに保存され、外部サーバーには送信されません</li>
+            </ul>
+            <li><strong>ブラウザ情報</strong></li>
+            <ul>
+              <li>OS検出のためのUser-Agent情報（ローカルでのみ使用）</li>
+            </ul>
+          </ul>
+          <p>
+            <strong>重要</strong>: ダウンロード統計の収集は、ユーザーの明示的な同意がある場合のみ行われます。
+            同意がない場合、統計情報は収集されません。
+          </p>
+
+          <h3>2.2 アプリケーションでの情報収集</h3>
+          <p>
+            本アプリケーションは、すべてのデータをユーザーのローカルデバイスに保存します。
+            以下の情報がローカルに保存される場合があります：
+          </p>
+          <ul>
+            <li>API設定情報（エンドポイント、認証情報など）</li>
+            <li>リクエストログとパフォーマンスメトリクス</li>
+            <li>アプリケーション設定（テーマ、言語設定など）</li>
+            <li>モデル管理情報</li>
+            <li>監査ログ（IPアドレスはハッシュ化、ユーザーエージェントは簡略化）</li>
+          </ul>
+        </section>
+
+        <section style="margin-bottom: 3rem;">
+          <h2>3. データの使用目的</h2>
+          <p>収集したデータは、以下の目的でのみ使用されます：</p>
+          <ul>
+            <li>ダウンロード統計の分析（ウェブサイト改善のため）</li>
+            <li>APIリクエストの処理とログ記録</li>
+            <li>パフォーマンス監視と分析</li>
+            <li>アプリケーション機能の提供</li>
+            <li>ユーザー設定の保存と復元</li>
+          </ul>
+        </section>
+
+        <section style="margin-bottom: 3rem;">
+          <h2>4. データの保護</h2>
+          <p>本アプリケーションは、以下の方法でデータを保護します：</p>
+          <ul>
+            <li>APIキーなどの機密情報の暗号化保存（AES-256-GCM）</li>
+            <li>OAuthトークンの暗号化保存</li>
+            <li>ローカルデータベースへの安全な保存</li>
+            <li>IPアドレスのハッシュ化（監査ログ）</li>
+            <li>ユーザーエージェントの簡略化（監査ログ）</li>
+            <li>ネットワーク通信のセキュリティ（HTTPS使用時）</li>
+          </ul>
+        </section>
+
+        <section style="margin-bottom: 3rem;">
+          <h2>5. 外部サービスへの送信</h2>
+          <p>
+            本アプリケーションは、ユーザーの許可なく、個人情報を外部サービスに送信しません。
+            すべてのデータ処理は、ユーザーのローカルデバイス上で行われます。
+          </p>
+          <p>
+            以下の場合にのみ、外部サービスと通信します：
+          </p>
+          <ul>
+            <li>GitHub Releases API（最新バージョン情報の取得）</li>
+            <li>Hugging Face API（モデル検索、ユーザーが明示的に実行した場合のみ）</li>
+            <li>リモート同期機能（ユーザーが明示的に有効化した場合のみ）</li>
+          </ul>
+        </section>
+
+        <section style="margin-bottom: 3rem;">
+          <h2>6. ダウンロード追跡の管理</h2>
+          <p>
+            当ウェブサイトでは、ダウンロード統計の収集をオプトイン方式で行っています。
+          </p>
+          <h3>6.1 同意の取得</h3>
+          <p>
+            初回ダウンロード時に、統計収集への同意を求めるダイアログが表示されます。
+            ユーザーは「同意する」または「拒否する」を選択できます。
+          </p>
+          <h3>6.2 設定の変更</h3>
+          <p>
+            同意設定は、ブラウザのローカルストレージに保存されます。
+            設定を変更するには、ブラウザの開発者ツールから以下のキーを削除または変更してください：
+          </p>
+          <ul>
+            <li><code>flm_tracking_consent</code>: 'true'（同意）または 'false'（拒否）</li>
+            <li><code>flm_downloads</code>: ダウンロード履歴（削除すると履歴が消去されます）</li>
+          </ul>
+        </section>
+
+        <section style="margin-bottom: 3rem;">
+          <h2>7. Cookieとローカルストレージ</h2>
+          <p>
+            当ウェブサイトでは、Cookieを使用しません。
+            ただし、以下の目的でローカルストレージを使用します：
+          </p>
+          <ul>
+            <li>ダウンロード統計の保存（ユーザーの同意がある場合のみ）</li>
+            <li>プライバシー設定の保存</li>
+          </ul>
+        </section>
+
+        <section style="margin-bottom: 3rem;">
+          <h2>8. お問い合わせ</h2>
+          <p>
+            プライバシーに関するご質問やご要望がございましたら、
+            <a href="contact.html">お問い合わせページ</a>からご連絡ください。
+          </p>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <!-- フッター -->
+  <footer>
+    <div class="container">
+      <p>&copy; 2025 FLM. All rights reserved.</p>
+    </div>
+  </footer>
+
+  <script src="js/main.js"></script>
+  <script>
+    // 最終更新日を設定
+    document.getElementById('last-updated').textContent = new Date().toLocaleDateString('ja-JP', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
+  </script>
+</body>
+</html>
+

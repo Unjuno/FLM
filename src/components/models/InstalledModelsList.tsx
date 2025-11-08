@@ -1,8 +1,11 @@
 // InstalledModelsList - インストール済みモデル一覧コンポーネント
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
 import { safeInvoke } from '../../utils/tauri';
+import { useNotifications } from '../../contexts/NotificationContext';
+import { extractErrorMessage } from '../../utils/errorHandler';
 import { ModelCard } from './ModelCard';
+import { SkeletonLoader } from '../common/SkeletonLoader';
 import './InstalledModelsList.css';
 
 /**
@@ -21,17 +24,53 @@ interface InstalledModel {
  * インストール済みモデル一覧コンポーネント
  */
 interface InstalledModelsListProps {
-  onModelSelected?: (model: { name: string; size?: number; description?: string }) => void;
+  onModelSelected?: (model: {
+    name: string;
+    size?: number;
+    description?: string;
+  }) => void;
 }
 
 export const InstalledModelsList: React.FC<InstalledModelsListProps> = ({
   onModelSelected,
 }) => {
+  const { showError: showErrorNotification } = useNotifications();
   const [models, setModels] = useState<InstalledModel[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
-  const [sortBy, setSortBy] = useState<'name' | 'size' | 'installed' | 'usage'>('installed');
+  const [sortBy, setSortBy] = useState<'name' | 'size' | 'installed' | 'usage'>(
+    'installed'
+  );
   const [filterQuery, setFilterQuery] = useState('');
+  const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
+  // 確認ダイアログの状態
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+  }>({
+    isOpen: false,
+    message: '',
+    onConfirm: () => {},
+    onCancel: () => {},
+  });
+
+  // ESCキーで確認ダイアログを閉じる
+  useEffect(() => {
+    if (!confirmDialog.isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [confirmDialog.isOpen]);
 
   // インストール済みモデルを読み込む（useCallbackでメモ化）
   const loadInstalledModels = useCallback(async () => {
@@ -40,35 +79,43 @@ export const InstalledModelsList: React.FC<InstalledModelsListProps> = ({
       setError(null);
 
       // バックエンドのIPCコマンドを呼び出し
-      const result = await safeInvoke<Array<{
-        name: string;
-        size: number;
-        parameters?: number;
-        installed_at: string;
-        last_used_at?: string;
-        usage_count: number;
-      }>>('get_installed_models');
+      const result = await safeInvoke<
+        Array<{
+          name: string;
+          size: number;
+          parameters?: number;
+          installed_at: string;
+          last_used_at?: string;
+          usage_count: number;
+        }>
+      >('get_installed_models');
 
       // レスポンスをInstalledModel形式に変換
-      const models: InstalledModel[] = result.map((m: {
-        name: string;
-        size: number;
-        parameters?: number;
-        installed_at: string;
-        last_used_at?: string;
-        usage_count: number;
-      }) => ({
-        name: m.name,
-        size: m.size,
-        parameters: m.parameters,
-        installed_at: m.installed_at,
-        last_used_at: m.last_used_at,
-        usage_count: m.usage_count,
-      }));
-      
+      const models: InstalledModel[] = result.map(
+        (m: {
+          name: string;
+          size: number;
+          parameters?: number;
+          installed_at: string;
+          last_used_at?: string;
+          usage_count: number;
+        }) => ({
+          name: m.name,
+          size: m.size,
+          parameters: m.parameters,
+          installed_at: m.installed_at,
+          last_used_at: m.last_used_at,
+          usage_count: m.usage_count,
+        })
+      );
+
       setModels(models);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'インストール済みモデルの取得に失敗しました');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'インストール済みモデルの取得に失敗しました'
+      );
     } finally {
       setLoading(false);
     }
@@ -97,7 +144,10 @@ export const InstalledModelsList: React.FC<InstalledModelsListProps> = ({
         case 'size':
           return a.size - b.size;
         case 'installed':
-          return new Date(b.installed_at).getTime() - new Date(a.installed_at).getTime();
+          return (
+            new Date(b.installed_at).getTime() -
+            new Date(a.installed_at).getTime()
+          );
         case 'usage':
           return b.usage_count - a.usage_count;
         default:
@@ -109,21 +159,34 @@ export const InstalledModelsList: React.FC<InstalledModelsListProps> = ({
   }, [models, sortBy, filterQuery]);
 
   // モデル削除（useCallbackでメモ化）
-  const handleDelete = useCallback(async (modelName: string) => {
-    if (!window.confirm(`モデル "${modelName}" を削除しますか？この操作は取り消せません。`)) {
-      return;
-    }
+  const handleDelete = useCallback(
+    async (modelName: string) => {
+      setConfirmDialog({
+        isOpen: true,
+        message: `モデル "${modelName}" を削除しますか？この操作は取り消せません。`,
+        onConfirm: async () => {
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+          try {
+            // バックエンドのdelete_modelコマンドを呼び出し
+            await safeInvoke('delete_model', { name: modelName });
 
-    try {
-      // バックエンドのdelete_modelコマンドを呼び出し
-      await safeInvoke('delete_model', { name: modelName });
-
-      // 一覧を更新
-      await loadInstalledModels();
-    } catch (err) {
-      alert(`削除エラー: ${err instanceof Error ? err.message : '不明なエラー'}`);
-    }
-  }, [loadInstalledModels]);
+            // 一覧を更新
+            await loadInstalledModels();
+          } catch (err) {
+            const errorMessage = extractErrorMessage(err, '不明なエラー');
+            showErrorNotification(
+              '削除エラー',
+              errorMessage
+            );
+          }
+        },
+        onCancel: () => {
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        },
+      });
+    },
+    [loadInstalledModels, showErrorNotification]
+  );
 
   // 日時をフォーマット（useCallbackでメモ化）
   const formatDate = useCallback((isoString: string): string => {
@@ -140,7 +203,7 @@ export const InstalledModelsList: React.FC<InstalledModelsListProps> = ({
   if (loading) {
     return (
       <div className="installed-models-loading">
-        <div className="loading-spinner"></div>
+        <SkeletonLoader type="card" count={3} />
         <p>インストール済みモデルを読み込んでいます...</p>
       </div>
     );
@@ -154,12 +217,12 @@ export const InstalledModelsList: React.FC<InstalledModelsListProps> = ({
             type="text"
             placeholder="モデル名で検索..."
             value={filterQuery}
-            onChange={(e) => setFilterQuery(e.target.value)}
+            onChange={e => setFilterQuery(e.target.value)}
             className="search-input"
           />
           <select
             value={sortBy}
-            onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+            onChange={e => setSortBy(e.target.value as typeof sortBy)}
             className="sort-select"
             aria-label="ソート順"
           >
@@ -185,11 +248,13 @@ export const InstalledModelsList: React.FC<InstalledModelsListProps> = ({
         <div className="empty-state">
           <div className="empty-icon">📦</div>
           <h2>インストール済みモデルがありません</h2>
-          <p>「モデル検索・ダウンロード」タブからモデルをダウンロードしてください。</p>
+          <p>
+            「モデル検索・ダウンロード」タブからモデルをダウンロードしてください。
+          </p>
         </div>
       ) : (
         <div className="model-grid">
-          {filteredModels.map((model) => (
+          {filteredModels.map(model => (
             <div key={model.name} className="installed-model-card">
               <ModelCard
                 model={{
@@ -199,20 +264,26 @@ export const InstalledModelsList: React.FC<InstalledModelsListProps> = ({
                 }}
                 onViewDetails={() => {}}
                 onDownload={() => {}}
-                onUseForApi={() => onModelSelected?.({
-                  name: model.name,
-                  size: model.size,
-                })}
+                onUseForApi={() =>
+                  onModelSelected?.({
+                    name: model.name,
+                    size: model.size,
+                  })
+                }
               />
               <div className="model-meta">
                 <div className="meta-item">
                   <span className="meta-label">インストール日時:</span>
-                  <span className="meta-value">{formatDate(model.installed_at)}</span>
+                  <span className="meta-value">
+                    {formatDate(model.installed_at)}
+                  </span>
                 </div>
                 {model.last_used_at && (
                   <div className="meta-item">
                     <span className="meta-label">最終使用:</span>
-                    <span className="meta-value">{formatDate(model.last_used_at)}</span>
+                    <span className="meta-value">
+                      {formatDate(model.last_used_at)}
+                    </span>
                   </div>
                 )}
                 <div className="meta-item">
@@ -222,7 +293,12 @@ export const InstalledModelsList: React.FC<InstalledModelsListProps> = ({
               </div>
               <button
                 className="delete-model-button"
-                onClick={() => handleDelete(model.name)}
+                onClick={() => {
+                  startTransition(() => {
+                    handleDelete(model.name);
+                  });
+                }}
+                disabled={isPending}
               >
                 🗑️ 削除
               </button>

@@ -18,7 +18,8 @@ export interface RadioOption {
 /**
  * Radioコンポーネントのプロパティ
  */
-export interface RadioProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'type'> {
+export interface RadioProps
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'type'> {
   /** ラベル */
   label?: string;
   /** エラーメッセージ */
@@ -113,7 +114,11 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(
             {label && (
               <label htmlFor={radioId} className="form-radio-label">
                 {label}
-                {required && <span className="form-radio-required" aria-label="必須">*</span>}
+                {required && (
+                  <span className="form-radio-required" aria-label="必須">
+                    *
+                  </span>
+                )}
               </label>
             )}
           </div>
@@ -137,10 +142,18 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(
         {label && (
           <div className="form-radio-group-label">
             {label}
-            {required && <span className="form-radio-required" aria-label="必須">*</span>}
+            {required && (
+              <span className="form-radio-required" aria-label="必須">
+                *
+              </span>
+            )}
           </div>
         )}
-        <div className="form-radio-group" role="radiogroup" aria-labelledby={label ? `${radioId}-group-label` : undefined}>
+        <div
+          className="form-radio-group"
+          role="radiogroup"
+          aria-labelledby={label ? `${radioId}-group-label` : undefined}
+        >
           {options.map((option, index) => {
             const optionId = `${radioId}-${index}`;
             return (
@@ -178,4 +191,3 @@ export const Radio = forwardRef<HTMLInputElement, RadioProps>(
 );
 
 Radio.displayName = 'Radio';
-

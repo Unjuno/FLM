@@ -1,161 +1,46 @@
 /* モデル管理ページのスタイル */
+/* 共通スタイルは src/styles/common.css を参照 */
 
+/* ページ固有のスタイル */
 .model-management-page {
-  min-height: 100vh;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
-  padding: var(--spacing-xl);
-  background: linear-gradient(180deg, #87CEEB 0%, #B0E0E6 40%, #E0F6FF 100%);
-  position: relative;
-  overflow: hidden;
-}
-
-/* 雲のような装飾要素 */
-.model-management-page::before,
-.model-management-page::after {
-  content: '';
-  position: absolute;
-  border-radius: 50%;
-  opacity: 0.3;
-  pointer-events: none;
-}
-
-.model-management-page::before {
-  width: 400px;
-  height: 200px;
-  background: rgba(255, 255, 255, 0.8);
-  top: 10%;
-  right: -10%;
-  animation: float-cloud 30s ease-in-out infinite;
-  will-change: transform;
-}
-
-.model-management-page::after {
-  width: 300px;
-  height: 150px;
-  background: rgba(255, 255, 255, 0.6);
-  bottom: 15%;
-  left: -5%;
-  animation: float-cloud 25s ease-in-out infinite reverse;
-  will-change: transform;
-}
-
-@keyframes float-cloud {
-  0%, 100% {
-    transform: translate(0, 0) scale(1);
-  }
-  50% {
-    transform: translate(20px, -20px) scale(1.1);
-  }
-}
-
-[data-theme="dark"] .model-management-page {
-  background: linear-gradient(180deg, #1a3a52 0%, #2d4a66 40%, #3d5a7a 100%);
-}
-
-[data-theme="dark"] .model-management-page::before,
-[data-theme="dark"] .model-management-page::after {
-  background: rgba(255, 255, 255, 0.1);
+  /* 共通スタイルの .page-background を使用 */
 }
 
 .model-management-container {
-  max-width: 1400px;
-  width: 100%;
-  margin: var(--spacing-2xl) auto;
-  background: rgba(255, 255, 255, 0.7);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  border-radius: var(--radius-xl);
-  box-shadow: 0 8px 32px rgba(135, 206, 235, 0.2);
-  padding: var(--spacing-2xl);
-  position: relative;
-  z-index: 1;
-  border: 1px solid rgba(255, 255, 255, 0.3);
-}
-
-[data-theme="dark"] .model-management-container {
-  background: rgba(26, 58, 82, 0.6);
-  border-color: rgba(224, 246, 255, 0.2);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  /* 共通スタイルの .page-container を使用 */
 }
 
 .model-management-header {
-  margin-bottom: var(--spacing-xl);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
-  padding-bottom: var(--spacing-lg);
-}
-
-.header-top {
-  display: flex;
-  align-items: center;
-  gap: var(--spacing-lg);
-  margin-bottom: var(--spacing-lg);
-}
-
-.back-button {
-  background: rgba(255, 255, 255, 0.5);
-  border: 1px solid rgba(255, 255, 255, 0.3);
-  color: #1a3a52;
-  cursor: pointer;
-  font-size: 1rem;
-  padding: var(--spacing-sm) var(--spacing-md);
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  border-radius: var(--radius-md);
-  font-weight: 500;
-  display: inline-flex;
-  align-items: center;
-  gap: var(--spacing-sm);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 16px rgba(135, 206, 235, 0.15);
-}
-
-.back-button:hover {
-  background: rgba(255, 255, 255, 0.7);
-  border-color: rgba(255, 255, 255, 0.5);
-  box-shadow: 0 6px 20px rgba(135, 206, 235, 0.25);
-  transform: translateY(-2px);
-  color: #1a3a52;
-}
-
-[data-theme="dark"] .back-button {
-  background: rgba(26, 58, 82, 0.5);
-  border-color: rgba(224, 246, 255, 0.2);
-  color: #E0F6FF;
-}
-
-[data-theme="dark"] .back-button:hover {
-  background: rgba(26, 58, 82, 0.7);
-  border-color: rgba(224, 246, 255, 0.3);
-  color: #E0F6FF;
+  /* 共通スタイルの .page-header を使用 */
 }
 
 .model-management-header h1 {
   margin: 0;
-  font-size: clamp(1.75rem, 4vw, 2.25rem);
-  color: #1a3a52;
-  font-weight: 700;
-  letter-spacing: -0.03em;
-  text-shadow: 0 2px 10px rgba(255, 255, 255, 0.5);
+  font-size: 1.125rem;
+  color: var(--color-text-primary, #1a202c);
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 [data-theme="dark"] .model-management-header h1 {
-  color: #E0F6FF;
-  text-shadow: 0 2px 10px rgba(26, 58, 82, 0.5);
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .tab-navigation {
   display: flex;
-  gap: var(--spacing-sm);
-  border-bottom: 1px solid rgba(255, 255, 255, 0.3);
+  gap: var(--spacing-xs);
+  border-bottom: 1px solid var(--color-border-light, #e2e8f0);
   overflow-x: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+  scrollbar-color: var(--color-border-light, #e2e8f0) transparent;
+}
+
+[data-theme="dark"] .tab-navigation {
+  border-bottom-color: var(--color-border-light, #4a5568);
 }
 
 .tab-navigation::-webkit-scrollbar {
-  height: 6px;
+  height: 4px;
 }
 
 .tab-navigation::-webkit-scrollbar-track {
@@ -163,83 +48,70 @@
 }
 
 .tab-navigation::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.3);
-  border-radius: 3px;
+  background: var(--color-border-light, #e2e8f0);
+  border-radius: 2px;
+}
+
+[data-theme="dark"] .tab-navigation::-webkit-scrollbar-thumb {
+  background: var(--color-border-light, #4a5568);
 }
 
 .tab-navigation::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.5);
+  background: var(--color-border, #cbd5e0);
+}
+
+[data-theme="dark"] .tab-navigation::-webkit-scrollbar-thumb:hover {
+  background: var(--color-border, #718096);
 }
 
 .tab-button {
-  padding: var(--spacing-md) var(--spacing-lg);
-  background: rgba(255, 255, 255, 0.3);
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-bg-primary, #ffffff);
   border: none;
   border-bottom: 2px solid transparent;
   border-radius: var(--radius-md) var(--radius-md) 0 0;
   cursor: pointer;
-  color: rgba(26, 58, 82, 0.7);
-  font-size: 1rem;
-  font-weight: 600;
-  transition: all 0.3s ease;
+  color: var(--color-text-secondary, #4a5568);
+  font-size: 0.75rem;
+  font-weight: 500;
+  transition: all var(--transition-base, 200ms ease-in-out);
   margin-bottom: -1px;
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-}
-
-.tab-button:hover {
-  background: rgba(255, 255, 255, 0.5);
-  color: #1a3a52;
-}
-
-.tab-button.active {
-  background: rgba(255, 255, 255, 0.7);
-  color: #1a3a52;
-  border-bottom-color: rgba(74, 144, 226, 0.9);
 }
 
 [data-theme="dark"] .tab-button {
-  background: rgba(26, 58, 82, 0.4);
-  color: rgba(224, 246, 255, 0.7);
+  background: var(--color-bg-primary, #1a202c);
+  color: var(--color-text-secondary, #cbd5e0);
+}
+
+.tab-button:hover {
+  background: var(--color-bg-tertiary, #edf2f7);
+  color: var(--color-text-primary, #1a202c);
 }
 
 [data-theme="dark"] .tab-button:hover {
-  background: rgba(26, 58, 82, 0.6);
-  color: #E0F6FF;
+  background: var(--color-bg-tertiary, #4a5568);
+  color: var(--color-text-primary, #f7fafc);
+}
+
+.tab-button.active {
+  background: var(--color-bg-primary, #ffffff);
+  color: var(--color-text-primary, #1a202c);
+  border-bottom-color: var(--color-primary, #667eea);
 }
 
 [data-theme="dark"] .tab-button.active {
-  background: rgba(26, 58, 82, 0.7);
-  color: #E0F6FF;
-  border-bottom-color: rgba(74, 144, 226, 0.9);
+  background: var(--color-bg-primary, #1a202c);
+  color: var(--color-text-primary, #f7fafc);
+  border-bottom-color: var(--color-primary, #667eea);
 }
 
 .model-management-content {
-  min-height: 500px;
-  margin-top: var(--spacing-xl);
+  min-height: 400px;
+  margin-top: var(--spacing-md);
 }
 
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
-  .model-management-page {
-    padding: var(--spacing-md);
-  }
-
-  .model-management-page::before,
-  .model-management-page::after {
-    display: none;
-  }
-
-  .model-management-container {
-    padding: var(--spacing-lg);
-    margin: var(--spacing-lg) auto;
-  }
-
-  .header-top {
-    flex-direction: column;
-    align-items: flex-start;
-  }
-
   .tab-navigation {
     flex-direction: column;
     border-bottom: none;
@@ -259,17 +131,10 @@
 
 /* モーションを減らしたいユーザーのための設定 */
 @media (prefers-reduced-motion: reduce) {
-  .model-management-page::before,
-  .model-management-page::after {
-    animation: none;
-  }
-
-  .back-button,
   .tab-button {
     transition: none;
   }
 
-  .back-button:hover,
   .tab-button:hover {
     transform: none;
   }

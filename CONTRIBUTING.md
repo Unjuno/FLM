@@ -47,7 +47,7 @@ FLMプロジェクトへの貢献を歓迎します！
 1. リポジトリをクローン
    ```bash
    git clone https://github.com/Unjuno/FLM.git
-   cd FLLM
+   cd FLM
    ```
 
 2. 依存関係のインストール

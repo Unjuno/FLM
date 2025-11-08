@@ -1,9 +1,10 @@
 // LogDelete - ログ削除コンポーネント
 
-import React, { useState } from 'react';
+import React, { useState, useTransition, useEffect } from 'react';
 import { safeInvoke } from '../../utils/tauri';
 import { Tooltip } from '../common/Tooltip';
 import { logger } from '../../utils/logger';
+import { extractErrorMessage } from '../../utils/errorHandler';
 import './LogDelete.css';
 
 /**
@@ -27,6 +28,19 @@ export const LogDelete: React.FC<LogDeleteProps> = ({
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [beforeDate, setBeforeDate] = useState<string>('');
   const [confirmText, setConfirmText] = useState<string>('');
+  const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
+  // 確認ダイアログの状態
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+  }>({
+    isOpen: false,
+    message: '',
+    onConfirm: () => {},
+    onCancel: () => {},
+  });
 
   /**
    * ログを削除します
@@ -44,49 +58,71 @@ export const LogDelete: React.FC<LogDeleteProps> = ({
 
     // 確認用テキスト（日付を表示）
     const confirmMessage = `指定した日付（${beforeDate}）より前のログをすべて削除しますか？\n\nこの操作は取り消せません。`;
-    
+
     if (confirmText !== '削除') {
       setError('確認のため、「削除」と入力してください');
       return;
     }
 
-    const confirmed = window.confirm(confirmMessage);
-    if (!confirmed) {
-      return;
-    }
+    // 確認ダイアログを表示
+    setConfirmDialog({
+      isOpen: true,
+      message: confirmMessage,
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        try {
+          setDeleting(true);
+          setError(null);
+          setSuccessMessage(null);
 
-    try {
-      setDeleting(true);
-      setError(null);
-      setSuccessMessage(null);
+          // delete_logs IPCコマンドを呼び出し
+          const request = {
+            api_id: apiId,
+            before_date: beforeDate,
+          };
+          const response = await safeInvoke<{
+            deleted_count: number;
+          }>('delete_logs', { request });
 
-      // delete_logs IPCコマンドを呼び出し
-      const request = {
-        api_id: apiId,
-        before_date: beforeDate,
-      };
-      const response = await safeInvoke<{
-        deleted_count: number;
-      }>('delete_logs', { request });
+          setSuccessMessage(`${response.deleted_count}件のログを削除しました`);
+          setTimeout(() => setSuccessMessage(null), 5000);
 
-      setSuccessMessage(`${response.deleted_count}件のログを削除しました`);
-      setTimeout(() => setSuccessMessage(null), 5000);
+          // コールバックを呼び出し
+          if (onDeleteComplete) {
+            onDeleteComplete(response.deleted_count);
+          }
 
-      // コールバックを呼び出し
-      if (onDeleteComplete) {
-        onDeleteComplete(response.deleted_count);
-      }
-
-      // フォームをリセット
-      setBeforeDate('');
-      setConfirmText('');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'ログの削除に失敗しました');
-      logger.error('ログ削除エラー', err, 'LogDelete');
-    } finally {
-      setDeleting(false);
-    }
+          // フォームをリセット
+          setBeforeDate('');
+          setConfirmText('');
+        } catch (err) {
+          setError(extractErrorMessage(err, 'ログの削除に失敗しました'));
+          logger.error('ログ削除エラー', err, 'LogDelete');
+        } finally {
+          setDeleting(false);
+        }
+      },
+      onCancel: () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+      },
+    });
   };
+
+  // ESCキーで確認ダイアログを閉じる
+  useEffect(() => {
+    if (!confirmDialog.isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [confirmDialog.isOpen]);
 
   return (
     <div className="log-delete">
@@ -102,12 +138,15 @@ export const LogDelete: React.FC<LogDeleteProps> = ({
                 削除する日付（この日付より前のログを削除）:
               </label>
             </Tooltip>
-            <Tooltip content="指定した日付より前のログをすべて削除します。この操作は取り消せませんので、慎重に日付を選択してください。" position="bottom">
+            <Tooltip
+              content="指定した日付より前のログをすべて削除します。この操作は取り消せませんので、慎重に日付を選択してください。"
+              position="bottom"
+            >
               <input
                 id="before-date"
                 type="date"
                 value={beforeDate}
-                onChange={(e) => setBeforeDate(e.target.value)}
+                onChange={e => setBeforeDate(e.target.value)}
                 disabled={deleting || !apiId}
                 className="date-input"
               />
@@ -120,12 +159,15 @@ export const LogDelete: React.FC<LogDeleteProps> = ({
                 確認のため「削除」と入力してください:
               </label>
             </Tooltip>
-            <Tooltip content="誤削除を防ぐため、「削除」と入力してください。" position="bottom">
+            <Tooltip
+              content="誤削除を防ぐため、「削除」と入力してください。"
+              position="bottom"
+            >
               <input
                 id="confirm-text"
                 type="text"
                 value={confirmText}
-                onChange={(e) => setConfirmText(e.target.value)}
+                onChange={e => setConfirmText(e.target.value)}
                 disabled={deleting || !apiId}
                 placeholder="削除"
                 className="confirm-input"
@@ -133,10 +175,19 @@ export const LogDelete: React.FC<LogDeleteProps> = ({
             </Tooltip>
           </div>
 
-          <Tooltip content="指定した日付より前のログを削除します。この操作は取り消せません。削除されたログは復元できませんので、十分に確認してください。" position="top">
+          <Tooltip
+            content="指定した日付より前のログを削除します。この操作は取り消せません。削除されたログは復元できませんので、十分に確認してください。"
+            position="top"
+          >
             <button
-              onClick={handleDelete}
-              disabled={deleting || !apiId || !beforeDate || confirmText !== '削除'}
+              onClick={() => {
+                startTransition(() => {
+                  handleDelete();
+                });
+              }}
+              disabled={
+                deleting || !apiId || !beforeDate || confirmText !== '削除' || isPending
+              }
               className="delete-button"
             >
               {deleting ? '削除中...' : 'ログを削除'}
@@ -144,22 +195,46 @@ export const LogDelete: React.FC<LogDeleteProps> = ({
           </Tooltip>
         </div>
 
-        {error && (
-          <div className="delete-error">
-            {error}
-          </div>
-        )}
+        {error && <div className="delete-error">{error}</div>}
         {successMessage && (
-          <div className="delete-success">
-            {successMessage}
-          </div>
+          <div className="delete-success">{successMessage}</div>
         )}
-        {!apiId && (
-          <div className="delete-warning">
-            APIを選択してください
-          </div>
-        )}
+        {!apiId && <div className="delete-warning">APIを選択してください</div>}
       </div>
+
+      {/* 確認ダイアログ */}
+      {confirmDialog.isOpen && (
+        <div
+          className="confirm-dialog-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-dialog-title"
+        >
+          <div
+            className="confirm-dialog"
+            role="document"
+          >
+            <h3 id="confirm-dialog-title">確認</h3>
+            <p style={{ whiteSpace: 'pre-line' }}>{confirmDialog.message}</p>
+            <div className="confirm-dialog-actions">
+              <button
+                className="confirm-button cancel"
+                onClick={confirmDialog.onCancel}
+                type="button"
+              >
+                キャンセル
+              </button>
+              <button
+                className="confirm-button confirm"
+                onClick={confirmDialog.onConfirm}
+                type="button"
+              >
+                確認
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

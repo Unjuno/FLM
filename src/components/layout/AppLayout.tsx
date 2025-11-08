@@ -1,8 +1,7 @@
 // AppLayout - アプリケーションレイアウトコンポーネント
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Header, HeaderProps } from './Header';
-import { Sidebar, SidebarProps } from './Sidebar';
 import { Footer, FooterProps } from './Footer';
 import './AppLayout.css';
 
@@ -19,12 +18,8 @@ export interface AppLayoutProps {
   children: React.ReactNode;
   /** レイアウトタイプ */
   layoutType?: LayoutType;
-  /** サイドバーを表示するか */
-  showSidebar?: boolean;
   /** ヘッダーのプロパティ */
   headerProps?: HeaderProps;
-  /** サイドバーのプロパティ */
-  sidebarProps?: SidebarProps;
   /** フッターのプロパティ */
   footerProps?: FooterProps;
   /** カスタムクラス名 */
@@ -33,56 +28,40 @@ export interface AppLayoutProps {
 
 /**
  * アプリケーションレイアウトコンポーネント
- * ヘッダー、サイドバー、メインコンテンツ、フッターを統合した共通レイアウト
+ * ヘッダー、メインコンテンツ、フッターを統合した共通レイアウト
+ * すべての機能はホーム画面からアクセスします
  */
 export const AppLayout: React.FC<AppLayoutProps> = ({
   children,
   layoutType = 'default',
-  showSidebar = false,
   headerProps,
-  sidebarProps,
   footerProps,
   className = '',
 }) => {
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(sidebarProps?.defaultCollapsed || false);
-
-  const handleSidebarCollapseChange = (collapsed: boolean) => {
-    setSidebarCollapsed(collapsed);
-    if (sidebarProps?.onCollapseChange) {
-      sidebarProps.onCollapseChange(collapsed);
-    }
-  };
-
   if (layoutType === 'minimal') {
     return (
       <div className={`app-layout minimal ${className}`}>
-        <main className="main-content minimal-content">
-          {children}
-        </main>
+        <main className="main-content minimal-content">{children}</main>
       </div>
     );
   }
 
+  // デフォルトのヘッダープロパティ（ロゴを含む）
+  const defaultHeaderProps: HeaderProps = {
+    logoUrl: '/logo.png',
+    appName: 'FLM',
+    ...headerProps,
+  };
+
   return (
-    <div className={`app-layout ${layoutType} ${showSidebar ? 'with-sidebar' : ''} ${sidebarCollapsed ? 'sidebar-collapsed' : ''} ${className}`}>
-      <Header {...headerProps} />
-      
+    <div className={`app-layout ${layoutType} ${className}`}>
+      <Header {...defaultHeaderProps} />
+
       <div className="layout-body">
-        {showSidebar && (
-          <Sidebar
-            {...sidebarProps}
-            defaultCollapsed={sidebarCollapsed}
-            onCollapseChange={handleSidebarCollapseChange}
-          />
-        )}
-        
-        <main className={`main-content ${showSidebar ? 'with-sidebar' : ''}`}>
-          {children}
-        </main>
+        <main className="main-content">{children}</main>
       </div>
-      
+
       <Footer {...footerProps} />
     </div>
   );
 };
-

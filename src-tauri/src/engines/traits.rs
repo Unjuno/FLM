@@ -38,3 +38,4 @@ pub trait LLMEngine: Send + Sync {
     fn supports_openai_compatible_api(&self) -> bool;
 }
 
+

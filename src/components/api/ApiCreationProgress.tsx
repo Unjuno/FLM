@@ -1,70 +1,53 @@
 // ApiCreationProgress - API作成進行中コンポーネント
 
-import React, { useRef, useEffect } from 'react';
-import './ApiCreationProgress.css';
-
-/**
- * 進行状況情報
- */
-interface ProgressInfo {
-  step: string;
-  progress: number;
-}
+import React from 'react';
+import { ProgressDisplay, ProgressInfo } from '../common/ProgressDisplay';
 
 /**
  * API作成進行中コンポーネント
  */
 interface ApiCreationProgressProps {
   progress: ProgressInfo;
+  onCancel?: () => void;
 }
 
-export const ApiCreationProgress: React.FC<ApiCreationProgressProps> = ({ progress }) => {
-  const progressPercent = Math.round(progress.progress);
-  const progressBarRef = useRef<HTMLDivElement>(null);
-  
-  useEffect(() => {
-    if (progressBarRef.current) {
-      progressBarRef.current.style.setProperty('--progress', `${progressPercent}%`);
-    }
-  }, [progressPercent]);
-  
-  return (
-    <div className="api-creation-progress">
-      <div className="progress-container">
-        <div className="progress-icon">
-          <div className="spinner"></div>
-        </div>
-        <h2>APIを作成中...</h2>
-        <p className="progress-step">{progress.step}</p>
-        
-        <div className="progress-bar-container">
-          <div 
-            ref={progressBarRef}
-            className="progress-bar" 
-            data-progress={progressPercent}
-          ></div>
-        </div>
-        <div className="progress-percentage">{progressPercent}%</div>
+export const ApiCreationProgress: React.FC<ApiCreationProgressProps> = ({
+  progress,
+  onCancel,
+}) => {
+  // デフォルトのステップ情報を生成
+  const steps = progress.steps || [
+    {
+      label: 'エンジン確認',
+      completed: progress.progress >= 20,
+      active: progress.progress >= 0 && progress.progress < 20,
+    },
+    {
+      label: '設定保存',
+      completed: progress.progress >= 40,
+      active: progress.progress >= 20 && progress.progress < 40,
+    },
+    {
+      label: '認証プロキシ起動',
+      completed: progress.progress >= 60,
+      active: progress.progress >= 40 && progress.progress < 60,
+    },
+    {
+      label: '完了',
+      completed: progress.progress >= 100,
+      active: progress.progress >= 60 && progress.progress < 100,
+    },
+  ];
 
-        <div className="progress-steps">
-          <div className={`progress-step-item ${progress.progress >= 20 ? 'completed' : ''}`}>
-            <span className="step-number">1</span>
-            <span className="step-label">エンジン確認</span>
-          </div>
-          <div className={`progress-step-item ${progress.progress >= 40 ? 'completed' : ''}`}>
-            <span className="step-number">2</span>
-            <span className="step-label">設定保存</span>
-          </div>
-          <div className={`progress-step-item ${progress.progress >= 60 ? 'completed' : ''}`}>
-            <span className="step-number">3</span>
-            <span className="step-label">認証プロキシ起動</span>
-          </div>
-          <div className={`progress-step-item ${progress.progress >= 100 ? 'completed' : ''}`}>
-            <span className="step-number">4</span>
-            <span className="step-label">完了</span>
-          </div>
-        </div>
-      </div>
-    </div>
+  return (
+    <ProgressDisplay
+      progress={{
+        ...progress,
+        steps,
+      }}
+      onCancel={onCancel}
+      title="APIを作成中..."
+      className="api-creation-progress"
+    />
   );
 };

@@ -6,7 +6,8 @@ import './Checkbox.css';
 /**
  * Checkboxコンポーネントのプロパティ
  */
-export interface CheckboxProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'type'> {
+export interface CheckboxProps
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'type'> {
   /** ラベル */
   label?: string;
   /** エラーメッセージ */
@@ -92,12 +93,20 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
           {label && (
             <label htmlFor={checkboxId} className="form-checkbox-label">
               {label}
-              {required && <span className="form-checkbox-required" aria-label="必須">*</span>}
+              {required && (
+                <span className="form-checkbox-required" aria-label="必須">
+                  *
+                </span>
+              )}
             </label>
           )}
         </div>
         {error && (
-          <div id={errorId} className="form-checkbox-error-message" role="alert">
+          <div
+            id={errorId}
+            className="form-checkbox-error-message"
+            role="alert"
+          >
             {error}
           </div>
         )}
@@ -112,4 +121,3 @@ export const Checkbox = forwardRef<HTMLInputElement, CheckboxProps>(
 );
 
 Checkbox.displayName = 'Checkbox';
-

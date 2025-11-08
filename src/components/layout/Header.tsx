@@ -52,20 +52,23 @@ export const Header: React.FC<HeaderProps> = ({
   const currentPath = location.pathname;
 
   // パスがアクティブかどうかを判定（useCallbackでメモ化）
-  const isActive = useCallback((path: string): boolean => {
-    return currentPath === path;
-  }, [currentPath]);
+  const isActive = useCallback(
+    (path: string): boolean => {
+      return currentPath === path;
+    },
+    [currentPath]
+  );
 
   // ナビゲーションアイテム（useMemoでメモ化）
   const navigationItems: NavigationItem[] = useMemo(
     () => [
-      { path: '/', label: t('header.home'), icon: '🏠' },
-      { path: '/api/list', label: t('header.apiList'), icon: '📡' },
-      { path: '/models', label: t('header.modelManagement'), icon: '🤖' },
-      { path: '/logs', label: t('header.logs'), icon: '📊' },
-      { path: '/performance', label: t('header.performance'), icon: '⚡' },
-      { path: '/settings', label: t('header.settings'), icon: '⚙️' },
-      { path: '/help', label: t('header.help'), icon: '❓' },
+      { path: '/', label: t('header.home'), icon: '' },
+      { path: '/api/list', label: t('header.apiList'), icon: '' },
+      { path: '/models', label: t('header.modelManagement'), icon: '' },
+      { path: '/logs', label: t('header.logs'), icon: '' },
+      { path: '/performance', label: t('header.performance'), icon: '' },
+      { path: '/settings', label: t('header.settings'), icon: '' },
+      { path: '/help', label: t('header.help'), icon: '' },
     ],
     [t]
   );
@@ -75,19 +78,20 @@ export const Header: React.FC<HeaderProps> = ({
     navigate('/');
   }, [navigate]);
 
-  // ナビゲーションハンドラ
-  const handleNavigation = useCallback((path: string) => {
-    navigate(path);
+  // ナビゲーションハンドラ（ホーム中心のナビゲーション）
+  // すべての機能はホーム画面から選択するため、すべての項目をクリックした場合はホームに遷移
+  const handleNavigation = useCallback(() => {
+    navigate('/');
   }, [navigate]);
 
   // モバイルメニューのトグル
   const toggleMobileMenu = useCallback(() => {
-    setShowMobileMenu((prev) => !prev);
+    setShowMobileMenu(prev => !prev);
   }, []);
 
-  // モバイルナビゲーションハンドラ
-  const handleMobileNavigation = useCallback((path: string) => {
-    navigate(path);
+  // モバイルナビゲーションハンドラ（ホーム中心のナビゲーション）
+  const handleMobileNavigation = useCallback(() => {
+    navigate('/');
     setShowMobileMenu(false);
   }, [navigate]);
 
@@ -96,20 +100,41 @@ export const Header: React.FC<HeaderProps> = ({
     return className.trim() ? `app-header ${className.trim()}` : 'app-header';
   }, [className]);
 
+  // ホームページ以外で戻るボタンを表示するかどうか
+  const showBackButton = currentPath !== '/';
+
+  // 戻るボタンのハンドラ（ホームページに戻る）
+  const handleBack = useCallback(() => {
+    navigate('/');
+  }, [navigate]);
+
   return (
     <header className={headerClassName}>
       <div className="header-container">
+        {/* 戻るボタン（ホーム以外で表示） */}
+        {showBackButton && (
+          <Tooltip content={t('header.back')}>
+            <button
+              className="back-button"
+              onClick={handleBack}
+              aria-label={t('header.back')}
+            >
+              ← {t('header.back')}
+            </button>
+          </Tooltip>
+        )}
+
         {/* ロゴとアプリ名 */}
         <div className="header-brand">
-          <button 
-            className="brand-link" 
+          <button
+            className="brand-link"
             onClick={handleHomeNavigation}
             aria-label={t('header.home')}
           >
             {logoUrl ? (
               <img src={logoUrl} alt={appName} className="header-logo" />
             ) : (
-              <span className="header-logo-text">🚀</span>
+              <span className="header-logo-text"></span>
             )}
             <span className="header-app-name">{appName}</span>
           </button>
@@ -118,9 +143,9 @@ export const Header: React.FC<HeaderProps> = ({
         {/* デスクトップナビゲーション */}
         <nav className="header-nav" aria-label="メインナビゲーション">
           <ul className="nav-list">
-            {navigationItems.map((item) => {
+            {navigationItems.map(item => {
               const active = isActive(item.path);
-              const handleClick = () => handleNavigation(item.path);
+              const handleClick = () => handleNavigation();
               return (
                 <li key={item.path}>
                   <Tooltip content={item.label}>
@@ -147,23 +172,19 @@ export const Header: React.FC<HeaderProps> = ({
 
           {showNotifications && (
             <Tooltip content={t('header.notifications')}>
-              <button 
+              <button
                 className="action-button notification-button"
                 aria-label={t('header.notifications')}
-              >
-                🔔
-              </button>
+              ></button>
             </Tooltip>
           )}
-          
+
           {showUserMenu && (
             <Tooltip content={t('header.userMenu')}>
-              <button 
+              <button
                 className="action-button user-menu-button"
                 aria-label={t('header.userMenu')}
-              >
-                👤
-              </button>
+              ></button>
             </Tooltip>
           )}
 
@@ -171,10 +192,12 @@ export const Header: React.FC<HeaderProps> = ({
           <button
             className="mobile-menu-toggle"
             onClick={toggleMobileMenu}
-            aria-label={showMobileMenu ? t('header.closeMenu') : t('header.openMenu')}
+            aria-label={
+              showMobileMenu ? t('header.closeMenu') : t('header.openMenu')
+            }
             {...(showMobileMenu && { 'aria-expanded': true })}
           >
-            {showMobileMenu ? '✕' : '☰'}
+            {showMobileMenu ? '×' : '≡'}
           </button>
         </div>
       </div>
@@ -183,9 +206,9 @@ export const Header: React.FC<HeaderProps> = ({
       {showMobileMenu && (
         <nav className="mobile-nav" aria-label={t('header.home')}>
           <ul className="mobile-nav-list">
-            {navigationItems.map((item) => {
+            {navigationItems.map(item => {
               const active = isActive(item.path);
-              const handleClick = () => handleMobileNavigation(item.path);
+              const handleClick = () => handleMobileNavigation();
               return (
                 <li key={item.path}>
                   <button
@@ -206,4 +229,3 @@ export const Header: React.FC<HeaderProps> = ({
     </header>
   );
 };
-

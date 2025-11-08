@@ -84,7 +84,10 @@ describe('Project Initialization Verification', () => {
     });
 
     it('should have valid tauri.conf.json structure', () => {
-      const tauriConfigPath = path.join(projectRoot, 'src-tauri/tauri.conf.json');
+      const tauriConfigPath = path.join(
+        projectRoot,
+        'src-tauri/tauri.conf.json'
+      );
       const tauriConfig = JSON.parse(fs.readFileSync(tauriConfigPath, 'utf-8'));
 
       expect(tauriConfig).toHaveProperty('build');
@@ -125,4 +128,3 @@ describe('Project Initialization Verification', () => {
     });
   });
 });
-

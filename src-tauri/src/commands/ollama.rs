@@ -7,6 +7,8 @@ use tauri::{AppHandle, Emitter};
 
 use crate::utils::error::AppError;
 use crate::ollama::{self, OllamaDetectionResult};
+// ログマクロをインポート
+use crate::{debug_log, error_log, log_pid};
 
 /// Ollama状態レスポンス（IPC用）
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -17,6 +19,12 @@ pub struct OllamaStatus {
     pub version: Option<String>,
     pub portable_path: Option<String>,
     pub system_path: Option<String>,
+}
+
+#[derive(Debug, Serialize)]
+pub struct OllamaHealthStatus {
+    pub running: bool,
+    pub port_available: bool,
 }
 
 impl From<OllamaDetectionResult> for OllamaStatus {
@@ -37,8 +45,22 @@ impl From<OllamaDetectionResult> for OllamaStatus {
 /// システムパス上、実行中のプロセス、ポータブル版の順に検出を試みます
 #[tauri::command]
 pub async fn detect_ollama() -> Result<OllamaStatus, AppError> {
-    let result = ollama::detect_ollama().await?;
-    Ok(OllamaStatus::from(result))
+    eprintln!("=== [IPC] detect_ollamaコマンドが呼び出されました ===");
+    let result = match ollama::detect_ollama().await {
+        Ok(r) => {
+            eprintln!("✓ Ollama検出が成功しました");
+            eprintln!("検出結果: installed={}, running={}, portable={:?}", 
+                     r.installed, r.running, r.portable);
+            r
+        },
+        Err(e) => {
+            eprintln!("✗ Ollama検出が失敗しました: {e:?}");
+            return Err(e);
+        }
+    };
+    let status = OllamaStatus::from(result);
+    eprintln!("=== [IPC] detect_ollamaコマンド完了 ===");
+    Ok(status)
 }
 
 /// Ollamaの自動ダウンロード
@@ -64,7 +86,22 @@ pub async fn download_ollama(
 /// Ollamaプロセスの起動
 #[tauri::command]
 pub async fn start_ollama(ollama_path: Option<String>) -> Result<u32, AppError> {
-    let pid = ollama::start_ollama(ollama_path).await?;
+    debug_log!("=== [IPC] start_ollamaコマンドが呼び出されました ===");
+    if let Some(ref path) = ollama_path {
+        debug_log!("指定されたパス: {:?}", path);
+    }
+    let pid = match ollama::start_ollama(ollama_path).await {
+        Ok(pid) => {
+            log_pid!(pid, "✓ Ollama起動が成功しました (PID: {})");
+            pid
+        },
+        Err(e) => {
+            error_log!("✗ Ollama起動が失敗しました: {:?}", e);
+            error_log!("エラー詳細: {}", e);
+            return Err(e);
+        }
+    };
+    debug_log!("=== [IPC] start_ollamaコマンド完了 ===");
     Ok(pid)
 }
 
@@ -73,6 +110,18 @@ pub async fn start_ollama(ollama_path: Option<String>) -> Result<u32, AppError> 
 pub async fn stop_ollama() -> Result<(), AppError> {
     ollama::stop_ollama().await?;
     Ok(())
+}
+
+/// Ollamaのヘルスチェック
+#[tauri::command]
+pub async fn check_ollama_health() -> Result<OllamaHealthStatus, AppError> {
+    let running = ollama::check_ollama_running().await.unwrap_or(false);
+    let port_available = crate::commands::port::is_port_available(11434);
+
+    Ok(OllamaHealthStatus {
+        running,
+        port_available,
+    })
 }
 
 /// Ollamaのアップデート確認
@@ -128,5 +177,69 @@ pub async fn update_ollama(
     }
 
     Ok(new_path)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    /// OllamaStatusの構造体テスト
+    #[test]
+    fn test_ollama_status_struct() {
+        let status = OllamaStatus {
+            installed: true,
+            running: false,
+            portable: true,
+            version: Some("0.1.0".to_string()),
+            portable_path: Some("/path/to/ollama".to_string()),
+            system_path: None,
+        };
+        
+        assert!(status.installed);
+        assert!(!status.running);
+        assert!(status.portable);
+        assert_eq!(status.version, Some("0.1.0".to_string()));
+        assert_eq!(status.portable_path, Some("/path/to/ollama".to_string()));
+    }
+    
+    /// OllamaHealthStatusの構造体テスト
+    #[test]
+    fn test_ollama_health_status_struct() {
+        let health = OllamaHealthStatus {
+            running: true,
+            port_available: true,
+        };
+        
+        assert!(health.running);
+        assert!(health.port_available);
+    }
+    
+    /// OllamaStatusの境界値テスト
+    #[test]
+    fn test_ollama_status_boundaries() {
+        // インストールされていない状態
+        let not_installed = OllamaStatus {
+            installed: false,
+            running: false,
+            portable: false,
+            version: None,
+            portable_path: None,
+            system_path: None,
+        };
+        assert!(!not_installed.installed);
+        assert!(!not_installed.running);
+        
+        // 実行中の状態
+        let running = OllamaStatus {
+            installed: true,
+            running: true,
+            portable: false,
+            version: Some("0.1.0".to_string()),
+            portable_path: None,
+            system_path: Some("/usr/bin/ollama".to_string()),
+        };
+        assert!(running.installed);
+        assert!(running.running);
+    }
 }
 

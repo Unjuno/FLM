@@ -24,11 +24,8 @@ declare module 'jest-axe' {
     options?: unknown
   ): Promise<AxeResults>;
 
-  export function toHaveNoViolations(
-    received: AxeResults
-  ): {
+  export function toHaveNoViolations(received: AxeResults): {
     message: () => string;
     pass: boolean;
   };
 }
-

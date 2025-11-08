@@ -6,7 +6,8 @@ import './Input.css';
 /**
  * Inputコンポーネントのプロパティ
  */
-export interface InputProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
+export interface InputProps
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size'> {
   /** ラベル */
   label?: string;
   /** エラーメッセージ */
@@ -87,7 +88,16 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         classes.push(className.trim());
       }
       return classes.join(' ');
-    }, [size, error, success, disabled, readOnly, leftIcon, rightIcon, className]);
+    }, [
+      size,
+      error,
+      success,
+      disabled,
+      readOnly,
+      leftIcon,
+      rightIcon,
+      className,
+    ]);
 
     const wrapperClassName = useMemo(() => {
       const classes = ['form-input-wrapper'];
@@ -102,11 +112,19 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
         {label && (
           <label htmlFor={inputId} className="form-input-label">
             {label}
-            {required && <span className="form-input-required" aria-label="必須">*</span>}
+            {required && (
+              <span className="form-input-required" aria-label="必須">
+                *
+              </span>
+            )}
           </label>
         )}
         <div className="form-input-container">
-          {leftIcon && <span className="form-input-icon form-input-icon-left">{leftIcon}</span>}
+          {leftIcon && (
+            <span className="form-input-icon form-input-icon-left">
+              {leftIcon}
+            </span>
+          )}
           <input
             ref={ref}
             id={inputId}
@@ -118,7 +136,11 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
             {...(required && { 'aria-required': 'true' })}
             {...props}
           />
-          {rightIcon && <span className="form-input-icon form-input-icon-right">{rightIcon}</span>}
+          {rightIcon && (
+            <span className="form-input-icon form-input-icon-right">
+              {rightIcon}
+            </span>
+          )}
         </div>
         {error && (
           <div id={errorId} className="form-input-error-message" role="alert">
@@ -136,4 +158,3 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 );
 
 Input.displayName = 'Input';
-

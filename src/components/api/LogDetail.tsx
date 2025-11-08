@@ -1,8 +1,12 @@
 // LogDetail - ログ詳細表示コンポーネント
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useTransition, useEffect, useRef } from 'react';
 import { HTTP_STATUS, TIMEOUT } from '../../constants/config';
-import { formatDateTime, formatResponseTime, formatJSON } from '../../utils/formatters';
+import {
+  formatDateTime,
+  formatResponseTime,
+  formatJSON,
+} from '../../utils/formatters';
 import { logger } from '../../utils/logger';
 import './LogDetail.css';
 
@@ -29,19 +33,19 @@ interface LogDetailProps {
   onClose: () => void;
 }
 
-
 /**
  * ステータスコードに応じたクラス名を取得
  */
 const getStatusClass = (status: number | null): string => {
   if (status === null) return 'status-unknown';
   if (status >= HTTP_STATUS.OK && status < 300) return 'status-success';
-  if (status >= 300 && status < HTTP_STATUS.MIN_ERROR_CODE) return 'status-redirect';
-  if (status >= HTTP_STATUS.MIN_ERROR_CODE && status < 500) return 'status-client-error';
+  if (status >= 300 && status < HTTP_STATUS.MIN_ERROR_CODE)
+    return 'status-redirect';
+  if (status >= HTTP_STATUS.MIN_ERROR_CODE && status < 500)
+    return 'status-client-error';
   if (status >= HTTP_STATUS.INTERNAL_SERVER_ERROR) return 'status-server-error';
   return 'status-unknown';
 };
-
 
 /**
  * ログ詳細モーダルコンポーネント
@@ -50,6 +54,78 @@ const getStatusClass = (status: number | null): string => {
 export const LogDetail: React.FC<LogDetailProps> = ({ log, onClose }) => {
   const [activeTab, setActiveTab] = useState<'request' | 'response'>('request');
   const [copiedField, setCopiedField] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
+  const modalRef = useRef<HTMLDivElement>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
+
+  // フォーカストラップの実装
+  useEffect(() => {
+    if (!log) return;
+
+    // モーダルが開いたときの処理
+    previousActiveElement.current = document.activeElement as HTMLElement;
+
+    // 最初のフォーカス可能な要素にフォーカスを移動
+    const modal = modalRef.current;
+    if (modal) {
+      const focusableElements = modal.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const firstFocusable = focusableElements[0];
+      if (firstFocusable) {
+        firstFocusable.focus();
+      }
+    }
+
+    // フォーカストラップのハンドラー
+    const handleTabKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab' || !modal) return;
+
+      const focusableElements = Array.from(
+        modal.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null);
+
+      if (focusableElements.length === 0) return;
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (e.shiftKey) {
+        // Shift+Tab: 逆方向
+        if (document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        }
+      } else {
+        // Tab: 順方向
+        if (document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        }
+      }
+    };
+
+    // ESCキーで閉じる
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    document.addEventListener('keydown', handleTabKey);
+    document.addEventListener('keydown', handleEscape);
+
+    // クリーンアップ: モーダルが閉じたときに元の要素にフォーカスを戻す
+    return () => {
+      document.removeEventListener('keydown', handleTabKey);
+      document.removeEventListener('keydown', handleEscape);
+      if (previousActiveElement.current) {
+        previousActiveElement.current.focus();
+      }
+    };
+  }, [log, onClose]);
 
   // JSONをフォーマット（メモ化）
   const formattedRequestBody = useMemo(
@@ -64,18 +140,46 @@ export const LogDetail: React.FC<LogDetailProps> = ({ log, onClose }) => {
       setCopiedField(fieldName);
       setTimeout(() => setCopiedField(null), TIMEOUT.COPY_NOTIFICATION);
     } catch (err) {
-      logger.error('コピーに失敗しました', err instanceof Error ? err : new Error(String(err)), 'LogDetail');
+      logger.error(
+        'コピーに失敗しました',
+        err instanceof Error ? err : new Error(String(err)),
+        'LogDetail'
+      );
     }
   };
 
   if (!log) return null;
 
+  const handleOverlayKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape' || e.key === 'Enter') {
+      onClose();
+    }
+  };
+
   return (
-    <div className="log-detail-overlay" onClick={onClose}>
-      <div className="log-detail-modal" onClick={(e) => e.stopPropagation()}>
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
+    <div
+      className="log-detail-overlay"
+      onClick={onClose}
+      onKeyDown={handleOverlayKeyDown}
+      role="dialog"
+      aria-modal="true"
+      tabIndex={-1}
+    >
+      {/* eslint-disable-next-line jsx-a11y/no-static-element-interactions */}
+      <div
+        ref={modalRef}
+        className="log-detail-modal"
+        onClick={e => e.stopPropagation()}
+        onKeyDown={e => e.stopPropagation()}
+      >
         <div className="modal-header">
           <h2>ログ詳細</h2>
-          <button className="close-button" onClick={onClose} aria-label="閉じる">
+          <button
+            className="close-button"
+            onClick={onClose}
+            aria-label="閉じる"
+          >
             ✕
           </button>
         </div>
@@ -91,7 +195,9 @@ export const LogDetail: React.FC<LogDetailProps> = ({ log, onClose }) => {
               </div>
               <div className="detail-item">
                 <span className="detail-label">メソッド:</span>
-                <span className={`method-badge method-${log.method.toLowerCase()}`}>
+                <span
+                  className={`method-badge method-${log.method.toLowerCase()}`}
+                >
                   {log.method}
                 </span>
               </div>
@@ -101,17 +207,23 @@ export const LogDetail: React.FC<LogDetailProps> = ({ log, onClose }) => {
               </div>
               <div className="detail-item">
                 <span className="detail-label">ステータス:</span>
-                <span className={`status-badge ${getStatusClass(log.response_status)}`}>
+                <span
+                  className={`status-badge ${getStatusClass(log.response_status)}`}
+                >
                   {log.response_status || 'N/A'}
                 </span>
               </div>
               <div className="detail-item">
                 <span className="detail-label">レスポンス時間:</span>
-                <span className="detail-value">{formatResponseTime(log.response_time_ms)}</span>
+                <span className="detail-value">
+                  {formatResponseTime(log.response_time_ms)}
+                </span>
               </div>
               <div className="detail-item">
                 <span className="detail-label">日時:</span>
-                <span className="detail-value">{formatDateTime(log.created_at)}</span>
+                <span className="detail-value">
+                  {formatDateTime(log.created_at)}
+                </span>
               </div>
             </div>
             {log.error_message && (
@@ -146,9 +258,16 @@ export const LogDetail: React.FC<LogDetailProps> = ({ log, onClose }) => {
                 {formattedRequestBody && (
                   <button
                     className="copy-button"
-                    onClick={() => handleCopy(formattedRequestBody, 'request')}
+                    onClick={() => {
+                      startTransition(() => {
+                        handleCopy(formattedRequestBody, 'request');
+                      });
+                    }}
+                    disabled={isPending}
                   >
-                    {copiedField === 'request' ? '✓ コピーしました' : '📋 コピー'}
+                    {copiedField === 'request'
+                      ? '✓ コピーしました'
+                      : '📋 コピー'}
                   </button>
                 )}
               </div>
@@ -169,18 +288,24 @@ export const LogDetail: React.FC<LogDetailProps> = ({ log, onClose }) => {
               <div className="response-info">
                 <div className="info-row">
                   <span className="info-label">ステータスコード:</span>
-                  <span className={`status-badge ${getStatusClass(log.response_status)}`}>
+                  <span
+                    className={`status-badge ${getStatusClass(log.response_status)}`}
+                  >
                     {log.response_status || 'N/A'}
                   </span>
                 </div>
                 <div className="info-row">
                   <span className="info-label">レスポンス時間:</span>
-                  <span className="info-value">{formatResponseTime(log.response_time_ms)}</span>
+                  <span className="info-value">
+                    {formatResponseTime(log.response_time_ms)}
+                  </span>
                 </div>
                 {log.error_message && (
                   <div className="info-row">
                     <span className="info-label">エラーメッセージ:</span>
-                    <span className="info-value error-text">{log.error_message}</span>
+                    <span className="info-value error-text">
+                      {log.error_message}
+                    </span>
                   </div>
                 )}
               </div>

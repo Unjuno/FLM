@@ -44,4 +44,3 @@ export type {
   WebModelDefinition,
   WebModelConfig,
 } from './webModel';
-

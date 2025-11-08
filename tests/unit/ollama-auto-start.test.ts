@@ -1,7 +1,18 @@
 // ollama-auto-start - Ollama自動起動機能のユニットテスト
 
-import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-function isEngineNotRunningError(errorMessage: string, selectedEngine: string, engineName: string): boolean {
+import {
+  describe,
+  it,
+  expect,
+  beforeEach,
+  afterEach,
+  jest,
+} from '@jest/globals';
+function isEngineNotRunningError(
+  errorMessage: string,
+  selectedEngine: string,
+  engineName: string
+): boolean {
   const errorLower = errorMessage.toLowerCase();
   return (
     errorLower.includes(selectedEngine.toLowerCase()) ||
@@ -45,8 +56,12 @@ describe('Ollama自動起動機能 ユニットテスト', () => {
       const selectedEngine = 'ollama';
       const engineName = 'Ollama';
 
-      errorMessages.forEach((errorMsg) => {
-        const result = isEngineNotRunningError(errorMsg, selectedEngine, engineName);
+      errorMessages.forEach(errorMsg => {
+        const result = isEngineNotRunningError(
+          errorMsg,
+          selectedEngine,
+          engineName
+        );
         expect(result).toBe(true);
       });
     });
@@ -61,8 +76,12 @@ describe('Ollama自動起動機能 ユニットテスト', () => {
       const selectedEngine = 'ollama';
       const engineName = 'Ollama';
 
-      errorMessages.forEach((errorMsg) => {
-        const result = isEngineNotRunningError(errorMsg, selectedEngine, engineName);
+      errorMessages.forEach(errorMsg => {
+        const result = isEngineNotRunningError(
+          errorMsg,
+          selectedEngine,
+          engineName
+        );
         expect(result).toBe(false);
       });
     });
@@ -82,7 +101,11 @@ describe('Ollama自動起動機能 ユニットテスト', () => {
       const engineName = 'Ollama';
 
       testCases.forEach(({ message, expected }) => {
-        const result = isEngineNotRunningError(message, selectedEngine, engineName);
+        const result = isEngineNotRunningError(
+          message,
+          selectedEngine,
+          engineName
+        );
         expect(result).toBe(expected);
       });
     });
@@ -134,17 +157,28 @@ describe('Ollama自動起動機能 ユニットテスト', () => {
 
       const engineName = 'Ollama';
 
-      testCases.forEach(({ selectedEngine, errorMessage, autoStartAttempted, isOllamaStarting, shouldAutoStart }) => {
-        const isEngineError = isEngineNotRunningError(errorMessage, selectedEngine, engineName);
-        const actualShouldAutoStart = 
-          selectedEngine === 'ollama' && 
-          isEngineError && 
-          !autoStartAttempted && 
-          !isOllamaStarting;
+      testCases.forEach(
+        ({
+          selectedEngine,
+          errorMessage,
+          autoStartAttempted,
+          isOllamaStarting,
+          shouldAutoStart,
+        }) => {
+          const isEngineError = isEngineNotRunningError(
+            errorMessage,
+            selectedEngine,
+            engineName
+          );
+          const actualShouldAutoStart =
+            selectedEngine === 'ollama' &&
+            isEngineError &&
+            !autoStartAttempted &&
+            !isOllamaStarting;
 
-        expect(actualShouldAutoStart).toBe(shouldAutoStart);
-      });
+          expect(actualShouldAutoStart).toBe(shouldAutoStart);
+        }
+      );
     });
   });
 });
-

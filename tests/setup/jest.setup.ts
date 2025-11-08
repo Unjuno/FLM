@@ -1,5 +1,39 @@
 // jest.setup - Jestセットアップファイル
 
+// import.meta.envをグローバルにモック（すべてのテスト環境で使用可能）
+if (typeof global !== 'undefined') {
+  // @ts-ignore
+  global.import = {
+    meta: {
+      env: {
+        DEV: process.env.NODE_ENV === 'development' || false,
+      },
+    },
+  };
+}
+
+// ResizeObserverをモック（Rechartsなどのライブラリが使用）
+if (typeof global.ResizeObserver === 'undefined') {
+  global.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as typeof ResizeObserver;
+}
+
+// windowにもResizeObserverを設定（jsdom環境で必要）
+if (
+  typeof window !== 'undefined' &&
+  typeof window.ResizeObserver === 'undefined'
+) {
+  // @ts-ignore
+  window.ResizeObserver = class ResizeObserver {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  };
+}
+
 // Tauri APIが使用するwindowオブジェクトを提供
 // node環境でもwindowが利用可能になるように設定
 // 注意: モジュール読み込み前に実行されるようにsetupFilesを使用する必要がある場合がある
@@ -91,7 +125,7 @@ beforeAll(() => {
       };
     }
   }
-  
+
   // globalThis.windowも設定（すべての環境で利用可能）
   if (typeof globalThis !== 'undefined') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -111,8 +145,11 @@ beforeAll(() => {
       };
     }
   }
-  
-  if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+
+  if (
+    process.env.NODE_ENV === 'development' ||
+    process.env.JEST_DEBUG === '1'
+  ) {
     console.log('テスト環境を初期化しています...');
   }
 });
@@ -120,7 +157,10 @@ beforeAll(() => {
 afterAll(() => {
   // テスト終了時にモックストレージをクリア（次のテストスイートのため）
   clearMockApiStorage();
-  if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+  if (
+    process.env.NODE_ENV === 'development' ||
+    process.env.JEST_DEBUG === '1'
+  ) {
     console.log('テスト環境をクリーンアップしています...');
   }
 });
@@ -171,7 +211,10 @@ import { clearMockApiStorage } from './tauri-mock';
 // fetch APIのモック（jsdom環境ではデフォルトで提供されていない）
 if (typeof globalThis.fetch === 'undefined') {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (globalThis as any).fetch = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
+  (globalThis as any).fetch = async (
+    url: string | URL | Request,
+    init?: RequestInit
+  ): Promise<Response> => {
     // モックレスポンスを返す
     const mockResponse = {
       ok: false,
@@ -181,7 +224,7 @@ if (typeof globalThis.fetch === 'undefined') {
       json: async () => ({ error: { message: 'Unauthorized' } }),
       text: async () => JSON.stringify({ error: { message: 'Unauthorized' } }),
     } as Response;
-    
+
     return Promise.resolve(mockResponse);
   };
 }
@@ -190,22 +233,28 @@ if (typeof globalThis.fetch === 'undefined') {
 beforeAll(() => {
   if (typeof globalThis.fetch === 'undefined') {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    (globalThis as any).fetch = async (url: string | URL | Request, init?: RequestInit): Promise<Response> => {
+    (globalThis as any).fetch = async (
+      url: string | URL | Request,
+      init?: RequestInit
+    ): Promise<Response> => {
       const mockResponse = {
         ok: false,
         status: 401,
         statusText: 'Unauthorized',
         headers: new Headers(),
         json: async () => ({ error: { message: 'Unauthorized' } }),
-        text: async () => JSON.stringify({ error: { message: 'Unauthorized' } }),
+        text: async () =>
+          JSON.stringify({ error: { message: 'Unauthorized' } }),
       } as Response;
-      
+
       return Promise.resolve(mockResponse);
     };
   }
-  
-  if (typeof window !== 'undefined' && typeof (window as any).fetch === 'undefined') {
+
+  if (
+    typeof window !== 'undefined' &&
+    typeof (window as any).fetch === 'undefined'
+  ) {
     (window as any).fetch = globalThis.fetch;
   }
 });
-

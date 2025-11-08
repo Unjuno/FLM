@@ -1,9 +1,9 @@
 /**
  * FLM - F008: ログ削除機能 E2Eテスト
- * 
+ *
  * QAエージェント (QA) 実装
  * ログ削除UIのE2Eテスト
- * 
+ *
  * 注意: TauriアプリケーションのE2Eテストは、実際のUI操作ではなく、
  * フロントエンドからバックエンドへの完全なフローのテストとして実装します
  */
@@ -28,7 +28,7 @@ interface RequestLogInfo {
 
 /**
  * F008: ログ削除機能E2Eテストスイート
- * 
+ *
  * テスト項目:
  * - ログ削除フロー全体の検証
  * - 削除後のログ一覧更新
@@ -41,12 +41,14 @@ describe('F008: ログ削除機能 E2Eテスト', () => {
   beforeAll(async () => {
     // Tauriアプリが起動していない場合はスキップ
     if (!process.env.TAURI_APP_AVAILABLE) {
-      console.warn('Tauriアプリが起動していないため、このテストスイートをスキップします');
+      console.warn(
+        'Tauriアプリが起動していないため、このテストスイートをスキップします'
+      );
       return;
     }
-    
+
     console.log('F008 ログ削除機能E2Eテストを開始します');
-    
+
     // テスト用のAPIを作成
     try {
       const result = await invoke<{
@@ -63,7 +65,7 @@ describe('F008: ログ削除機能 E2Eテスト', () => {
         port: 8885,
         enable_auth: false,
       });
-      
+
       testApiId = result.id;
       console.log(`テスト用APIを作成しました: ${testApiId}`);
 
@@ -73,7 +75,9 @@ describe('F008: ログ削除機能 E2Eテスト', () => {
         {
           method: 'POST',
           path: '/v1/chat/completions',
-          request_body: JSON.stringify({ messages: [{ role: 'user', content: 'Log 1' }] }),
+          request_body: JSON.stringify({
+            messages: [{ role: 'user', content: 'Log 1' }],
+          }),
           response_status: 200,
           response_time_ms: 100,
           error_message: null,
@@ -81,7 +85,9 @@ describe('F008: ログ削除機能 E2Eテスト', () => {
         {
           method: 'POST',
           path: '/v1/chat/completions',
-          request_body: JSON.stringify({ messages: [{ role: 'user', content: 'Log 2' }] }),
+          request_body: JSON.stringify({
+            messages: [{ role: 'user', content: 'Log 2' }],
+          }),
           response_status: 200,
           response_time_ms: 150,
           error_message: null,
@@ -89,7 +95,9 @@ describe('F008: ログ削除機能 E2Eテスト', () => {
         {
           method: 'POST',
           path: '/v1/chat/completions',
-          request_body: JSON.stringify({ messages: [{ role: 'user', content: 'Log 3' }] }),
+          request_body: JSON.stringify({
+            messages: [{ role: 'user', content: 'Log 3' }],
+          }),
           response_status: 400,
           response_time_ms: 50,
           error_message: 'Bad Request',
@@ -156,8 +164,10 @@ describe('F008: ログ削除機能 E2Eテスト', () => {
       console.log(`削除前のログ数: ${initialCount}`);
 
       // ステップ2: 日付範囲指定でログを削除
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      
+      const oneDayAgo = new Date(
+        Date.now() - 24 * 60 * 60 * 1000
+      ).toISOString();
+
       const deleteResult = await invoke<{
         deleted_count: number;
       }>('delete_logs', {
@@ -173,7 +183,7 @@ describe('F008: ログ削除機能 E2Eテスト', () => {
 
       // ステップ3: 削除後のログ一覧を取得して検証
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       const logsAfter = await invoke<RequestLogInfo[]>('get_request_logs', {
         request: {
           api_id: testApiId,
@@ -208,7 +218,7 @@ describe('F008: ログ削除機能 E2Eテスト', () => {
           port: 8884,
           enable_auth: false,
         });
-        
+
         testApiId2 = result2.id;
 
         // 両方のAPIにログを作成
@@ -223,7 +233,9 @@ describe('F008: ログ削除機能 E2Eテスト', () => {
               api_id: log.apiId,
               method: 'POST',
               path: '/v1/chat/completions',
-              request_body: JSON.stringify({ messages: [{ role: 'user', content: log.content }] }),
+              request_body: JSON.stringify({
+                messages: [{ role: 'user', content: log.content }],
+              }),
               response_status: 200,
               response_time_ms: 100,
               error_message: null,
@@ -236,8 +248,10 @@ describe('F008: ログ削除機能 E2Eテスト', () => {
         await new Promise(resolve => setTimeout(resolve, 500));
 
         // testApiIdのログのみを削除
-        const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-        
+        const oneDayAgo = new Date(
+          Date.now() - 24 * 60 * 60 * 1000
+        ).toISOString();
+
         await invoke('delete_logs', {
           request: {
             api_id: testApiId,
@@ -282,7 +296,7 @@ describe('F008: ログ削除機能 E2Eテスト', () => {
 
       // 未来の日付で削除（すべてのログが削除される）
       const futureDate = new Date(Date.now() + 60 * 60 * 1000).toISOString();
-      
+
       const deleteResult = await invoke<{
         deleted_count: number;
       }>('delete_logs', {
@@ -297,7 +311,7 @@ describe('F008: ログ削除機能 E2Eテスト', () => {
 
       // 削除後のログ数を確認
       await new Promise(resolve => setTimeout(resolve, 500));
-      
+
       const logsAfter = await invoke<RequestLogInfo[]>('get_request_logs', {
         request: {
           api_id: testApiId,
@@ -318,12 +332,16 @@ describe('F008: ログ削除機能 E2Eテスト', () => {
     it('should handle invalid API ID gracefully', async () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
-      
+
       const invalidApiId = 'invalid-api-id-12345';
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+      const oneDayAgo = new Date(
+        Date.now() - 24 * 60 * 60 * 1000
+      ).toISOString();
 
       // 無効なAPI IDで削除を試行（エラーではなく、削除件数0が返されることを期待）
       const result = await invoke<{
@@ -342,10 +360,12 @@ describe('F008: ログ削除機能 E2Eテスト', () => {
     it('should prevent deletion when both conditions are null', async () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
-      
+
       try {
         await invoke('delete_logs', {
           request: {
@@ -358,9 +378,12 @@ describe('F008: ログ削除機能 E2Eテスト', () => {
       } catch (error) {
         expect(error).toBeDefined();
         // エラーは文字列またはErrorオブジェクトの可能性がある
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         // エラーメッセージに安全に関する記述があることを確認（より柔軟なマッチング）
-        const hasSecurityMessage = /許可|安全|条件|削除|全ログ/i.test(errorMessage);
+        const hasSecurityMessage = /許可|安全|条件|削除|全ログ/i.test(
+          errorMessage
+        );
         expect(hasSecurityMessage).toBe(true);
       }
     });
@@ -380,7 +403,9 @@ describe('F008: ログ削除機能 E2Eテスト', () => {
       const logToCreate = {
         method: 'POST',
         path: '/v1/chat/completions',
-        request_body: JSON.stringify({ messages: [{ role: 'user', content: 'New Test Log' }] }),
+        request_body: JSON.stringify({
+          messages: [{ role: 'user', content: 'New Test Log' }],
+        }),
         response_status: 200,
         response_time_ms: 120,
         error_message: null,
@@ -399,20 +424,25 @@ describe('F008: ログ削除機能 E2Eテスト', () => {
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // ステップ2: 作成したログが存在することを確認
-      const logsAfterCreation = await invoke<RequestLogInfo[]>('get_request_logs', {
-        request: {
-          api_id: testApiId,
-          limit: 100,
-          offset: 0,
-        },
-      });
+      const logsAfterCreation = await invoke<RequestLogInfo[]>(
+        'get_request_logs',
+        {
+          request: {
+            api_id: testApiId,
+            limit: 100,
+            offset: 0,
+          },
+        }
+      );
 
       expect(Array.isArray(logsAfterCreation)).toBe(true);
       const countAfterCreation = logsAfterCreation.length;
 
       // ステップ3: ログを削除
-      const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
-      
+      const oneDayAgo = new Date(
+        Date.now() - 24 * 60 * 60 * 1000
+      ).toISOString();
+
       const deleteResult = await invoke<{
         deleted_count: number;
       }>('delete_logs', {
@@ -427,18 +457,20 @@ describe('F008: ログ削除機能 E2Eテスト', () => {
 
       // ステップ4: 削除後のログ数を確認
       await new Promise(resolve => setTimeout(resolve, 500));
-      
-      const logsAfterDeletion = await invoke<RequestLogInfo[]>('get_request_logs', {
-        request: {
-          api_id: testApiId,
-          limit: 100,
-          offset: 0,
-        },
-      });
+
+      const logsAfterDeletion = await invoke<RequestLogInfo[]>(
+        'get_request_logs',
+        {
+          request: {
+            api_id: testApiId,
+            limit: 100,
+            offset: 0,
+          },
+        }
+      );
 
       const countAfterDeletion = logsAfterDeletion.length;
       expect(countAfterDeletion).toBeLessThanOrEqual(countAfterCreation);
     }, 20000);
   });
 });
-

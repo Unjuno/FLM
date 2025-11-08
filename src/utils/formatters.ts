@@ -1,6 +1,10 @@
 // formatters - フォーマット関連のユーティリティ関数
 
-import { FORMATTING, DATE_TIME_FORMAT, FORMAT_STRINGS } from '../constants/config';
+import {
+  FORMATTING,
+  DATE_TIME_FORMAT,
+  FORMAT_STRINGS,
+} from '../constants/config';
 
 /**
  * 日時フォーマットオプション
@@ -72,7 +76,10 @@ export function formatDateTime(
  * @param locale ロケール（デフォルト: 'ja-JP'）
  * @returns フォーマットされた日付文字列
  */
-export function formatDate(dateString: string, locale: string = DATE_TIME_FORMAT.DEFAULT_LOCALE): string {
+export function formatDate(
+  dateString: string,
+  locale: string = DATE_TIME_FORMAT.DEFAULT_LOCALE
+): string {
   if (!dateString || dateString.trim() === '') {
     return FORMAT_STRINGS.UNKNOWN;
   }
@@ -154,7 +161,10 @@ export function formatNumber(
  * @param decimals 小数点以下の桁数（デフォルト: 2）
  * @returns フォーマットされた文字列（例: "1.5 MB"）
  */
-export function formatBytes(bytes: number, decimals: number = FORMATTING.DECIMAL_PLACES): string {
+export function formatBytes(
+  bytes: number,
+  decimals: number = FORMATTING.DECIMAL_PLACES
+): string {
   if (bytes === 0) return '0 Bytes';
 
   const k = FORMATTING.BYTES_PER_KB;
@@ -185,7 +195,9 @@ export function formatResponseTime(ms: number | null): string {
   }
 
   const minutes = Math.floor(ms / (FORMATTING.MS_PER_SECOND * 60));
-  const seconds = Math.floor((ms % (FORMATTING.MS_PER_SECOND * 60)) / FORMATTING.MS_PER_SECOND);
+  const seconds = Math.floor(
+    (ms % (FORMATTING.MS_PER_SECOND * 60)) / FORMATTING.MS_PER_SECOND
+  );
   return `${minutes}m ${seconds}s`;
 }
 
@@ -220,7 +232,10 @@ export function formatErrorRate(rate: number): string {
  * @param indent インデント（デフォルト: 2）
  * @returns フォーマットされたJSON文字列
  */
-export function formatJSON(jsonString: string | null, indent: number = 2): string {
+export function formatJSON(
+  jsonString: string | null,
+  indent: number = 2
+): string {
   if (!jsonString) return '';
 
   try {
@@ -230,4 +245,3 @@ export function formatJSON(jsonString: string | null, indent: number = 2): strin
     return jsonString;
   }
 }
-

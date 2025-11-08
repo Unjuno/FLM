@@ -32,10 +32,10 @@
   --color-secondary-hover: #6a3f8f;
   --color-secondary-active: #5d357c;
 
-  /* テキストカラー */
-  --color-text-primary: #1a202c;
-  --color-text-secondary: #4a5568;
-  --color-text-tertiary: #718096;
+  /* テキストカラー（WCAG 2.1 AA基準を満たすコントラスト比） */
+  --color-text-primary: #1a202c; /* 白背景とのコントラスト比: 16.6:1 ✅ */
+  --color-text-secondary: #2d3748; /* 白背景とのコントラスト比: 12.6:1 ✅ (改善: #4a5568 → #2d3748) */
+  --color-text-tertiary: #4a5568; /* 白背景とのコントラスト比: 7.0:1 ✅ (改善: #718096 → #4a5568) */
   --color-text-inverse: #ffffff;
 
   /* 背景カラー */
@@ -92,10 +92,10 @@
 
 /* ダークモード */
 [data-theme="dark"] {
-  /* テキストカラー */
-  --color-text-primary: #f7fafc;
-  --color-text-secondary: #cbd5e0;
-  --color-text-tertiary: #a0aec0;
+  /* テキストカラー（WCAG 2.1 AA基準を満たすコントラスト比） */
+  --color-text-primary: #f7fafc; /* ダーク背景とのコントラスト比: 15.8:1 ✅ */
+  --color-text-secondary: #e2e8f0; /* ダーク背景とのコントラスト比: 11.6:1 ✅ (改善: #cbd5e0 → #e2e8f0) */
+  --color-text-tertiary: #cbd5e0; /* ダーク背景とのコントラスト比: 7.4:1 ✅ (改善: #a0aec0 → #cbd5e0) */
   --color-text-inverse: #1a202c;
 
   /* 背景カラー */
@@ -217,6 +217,9 @@ button {
   gap: var(--spacing-sm);
   white-space: nowrap;
   box-shadow: var(--shadow-sm);
+  /* タッチターゲットの最小サイズを確保（WCAG 2.1推奨: 44x44px） */
+  min-height: 44px;
+  min-width: 44px;
 }
 
 button:focus-visible {
@@ -294,6 +297,10 @@ select {
   transition: all var(--transition-base);
   width: 100%;
   box-shadow: var(--shadow-sm);
+  /* モバイルでのタッチ入力を最適化 */
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  appearance: none;
 }
 
 input:focus,
@@ -511,5 +518,99 @@ textarea::placeholder {
   /* 要素の内部でのページ区切りを避ける */
   .no-break {
     page-break-inside: avoid;
+  }
+}
+
+/* ページ読み込み中のフォールバック */
+.page-loading {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: var(--spacing-md, 1rem);
+  min-height: 200px;
+  color: var(--color-text-secondary, #475569);
+}
+
+.page-loading-logo {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+
+/* ========== モバイル対応の改善 ========== */
+
+/* タッチデバイス向けの最適化 */
+@media (hover: none) and (pointer: coarse) {
+  /* タッチターゲットのサイズを確保 */
+  button,
+  .btn,
+  .button,
+  .primary-button,
+  .secondary-button,
+  .text-button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.75rem 1.5rem;
+  }
+
+  /* フォーム入力フィールドの最適化 */
+  input,
+  textarea,
+  select {
+    font-size: 16px; /* iOSでズームを防ぐための最小フォントサイズ */
+    padding: 0.75rem 1rem;
+    min-height: 44px;
+  }
+
+  /* 小さなボタンやアイコンボタンも最小サイズを確保 */
+  button.small,
+  .btn-small {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.625rem 1rem;
+  }
+}
+
+/* モバイル画面（768px以下）での最適化 */
+@media (max-width: 768px) {
+  /* ボタンのタッチターゲットサイズを確保 */
+  button,
+  .btn,
+  .button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+  }
+
+  /* フォーム入力フィールドの最適化 */
+  input,
+  textarea,
+  select {
+    font-size: 16px; /* iOSでズームを防ぐ */
+    padding: 0.75rem 1rem;
+    min-height: 44px;
+  }
+
+  /* テキストボタンも最小サイズを確保 */
+  button.text,
+  .text-button {
+    min-height: 44px;
+    min-width: 44px;
+    padding: 0.75rem 1rem;
+  }
+}
+
+/* 横スクロールの防止（既に実装済みだが、念のため追加） */
+@media (max-width: 768px) {
+  body,
+  html {
+    overflow-x: hidden;
+    max-width: 100vw;
+  }
+
+  * {
+    max-width: 100%;
   }
 }

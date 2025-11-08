@@ -3,7 +3,7 @@
 .form-checkbox-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--spacing-xs, 0.5rem);
 }
 
 .form-checkbox-wrapper-full-width {
@@ -13,14 +13,14 @@
 .form-checkbox-container {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: var(--spacing-xs, 0.5rem);
 }
 
 .form-checkbox {
   width: 1.25rem;
   height: 1.25rem;
   cursor: pointer;
-  accent-color: #667eea;
+  accent-color: var(--color-primary, #667eea);
   flex-shrink: 0;
 }
 
@@ -40,7 +40,7 @@
 }
 
 .form-checkbox-error {
-  accent-color: #f56565;
+  accent-color: var(--color-error, #f56565);
 }
 
 .form-checkbox-disabled {
@@ -50,17 +50,21 @@
 
 .form-checkbox-label {
   font-size: 0.9rem;
-  color: #333;
+  color: var(--color-text-primary, #1a202c);
   cursor: pointer;
   -webkit-user-select: none;
   user-select: none;
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--spacing-xs, 0.25rem);
+}
+
+[data-theme="dark"] .form-checkbox-label {
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .form-checkbox-label:hover {
-  color: #667eea;
+  color: var(--color-primary, #667eea);
 }
 
 .form-checkbox-disabled + .form-checkbox-label {
@@ -69,48 +73,30 @@
 }
 
 .form-checkbox-disabled + .form-checkbox-label:hover {
-  color: #333;
+  color: var(--color-text-primary, #1a202c);
+}
+
+[data-theme="dark"] .form-checkbox-disabled + .form-checkbox-label:hover {
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .form-checkbox-required {
-  color: #f56565;
-  font-weight: bold;
+  color: var(--color-error, #f56565);
+  font-weight: 600;
 }
 
 .form-checkbox-error-message {
   font-size: 0.875rem;
-  color: #f56565;
+  color: var(--color-error, #f56565);
   margin-left: 1.75rem;
 }
 
 .form-checkbox-help-text {
   font-size: 0.875rem;
-  color: #666;
+  color: var(--color-text-secondary, #4a5568);
   margin-left: 1.75rem;
 }
 
-/* ダークモード対応 */
-@media (prefers-color-scheme: dark) {
-  .form-checkbox-label {
-    color: #e0e0e0;
-  }
-
-  .form-checkbox-label:hover {
-    color: #667eea;
-  }
-
-  .form-checkbox-disabled + .form-checkbox-label:hover {
-    color: #e0e0e0;
-  }
-
-  .form-checkbox-help-text {
-    color: #a0aec0;
-  }
+[data-theme="dark"] .form-checkbox-help-text {
+  color: var(--color-text-secondary, #cbd5e0);
 }
-
-[data-theme="dark"] {
-  --form-checkbox-label-color: #e0e0e0;
-  --form-checkbox-label-hover-color: #667eea;
-  --form-checkbox-help-text-color: #a0aec0;
-}
-

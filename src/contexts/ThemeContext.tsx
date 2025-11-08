@@ -1,6 +1,13 @@
 // ThemeContext - テーマコンテキスト
 
-import React, { createContext, useContext, useState, useEffect, useCallback, useMemo } from 'react';
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from 'react';
 import { safeInvoke, isTauriAvailable } from '../utils/tauri';
 
 /**
@@ -39,7 +46,9 @@ const getSystemTheme = (): ActualTheme => {
   if (typeof window === 'undefined' || !window.matchMedia) {
     return 'light';
   }
-  return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  return window.matchMedia('(prefers-color-scheme: dark)').matches
+    ? 'dark'
+    : 'light';
 };
 
 /**
@@ -65,7 +74,9 @@ interface ThemeProviderProps {
  */
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [theme, setThemeState] = useState<ThemeType>('auto');
-  const [actualTheme, setActualTheme] = useState<ActualTheme>(calculateActualTheme('auto'));
+  const [actualTheme, setActualTheme] = useState<ActualTheme>(
+    calculateActualTheme('auto')
+  );
   const [isLoading, setIsLoading] = useState(true);
 
   // システム設定の変更を監視
@@ -110,16 +121,20 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       // Tauri環境が利用可能かチェック
       if (!isTauriAvailable()) {
         // Tauri環境がない場合はデフォルト値を使用（開発環境やブラウザでの実行時）
-        console.warn('Tauri環境が利用できないため、デフォルトテーマを使用します');
+        console.warn(
+          'Tauri環境が利用できないため、デフォルトテーマを使用します'
+        );
         setThemeState('auto');
         setActualTheme(calculateActualTheme('auto'));
         setIsLoading(false);
         return;
       }
 
-      const settings = await safeInvoke<{ theme: string | null }>('get_app_settings');
+      const settings = await safeInvoke<{ theme: string | null }>(
+        'get_app_settings'
+      );
       const savedTheme = settings.theme as ThemeType | null;
-      
+
       if (savedTheme && ['light', 'dark', 'auto'].includes(savedTheme)) {
         setThemeState(savedTheme);
         const newActualTheme = calculateActualTheme(savedTheme);
@@ -132,9 +147,10 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       }
     } catch (error) {
       // エラーログは開発者向けに残すが、ユーザーには分かりやすいメッセージを表示
-      const errorMessage = error instanceof Error ? error.message : '不明なエラー';
+      const errorMessage =
+        error instanceof Error ? error.message : '不明なエラー';
       console.error('テーマ設定の読み込みに失敗しました:', errorMessage);
-      
+
       // エラー時はデフォルト値を使用（アプリは継続して動作）
       setThemeState('auto');
       setActualTheme(calculateActualTheme('auto'));
@@ -161,14 +177,15 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
       await safeInvoke('update_app_settings', {
         settings: { theme: newTheme },
       });
-      
+
       setThemeState(newTheme);
       const newActualTheme = calculateActualTheme(newTheme);
       setActualTheme(newActualTheme);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : '不明なエラー';
+      const errorMessage =
+        error instanceof Error ? error.message : '不明なエラー';
       console.error('テーマ設定の保存に失敗しました:', errorMessage);
-      
+
       // ユーザーフレンドリーなエラーをスロー
       throw new Error(
         'テーマ設定の保存に失敗しました。アプリケーションを再起動してください。'
@@ -222,4 +239,3 @@ export const useTheme = (): ThemeContextValue => {
   }
   return context;
 };
-

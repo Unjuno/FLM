@@ -9,17 +9,25 @@ describe('Complete API Flow E2E Tests', () => {
   beforeAll(() => {
     // Tauriアプリが起動していない場合はスキップ
     if (!process.env.TAURI_APP_AVAILABLE) {
-      console.warn('Tauriアプリが起動していないため、このテストスイートをスキップします');
+      console.warn(
+        'Tauriアプリが起動していないため、このテストスイートをスキップします'
+      );
       return;
     }
-    
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('完全なAPIフローE2Eテストを開始します');
     }
   });
 
   afterAll(() => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('完全なAPIフローE2Eテストを完了しました');
     }
   });
@@ -31,7 +39,9 @@ describe('Complete API Flow E2E Tests', () => {
     it('should complete full lifecycle: detection → selection → creation → testing → deletion', async () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
       // ステップ1: Ollama検出・起動
@@ -48,9 +58,7 @@ describe('Complete API Flow E2E Tests', () => {
       // ステップ2: モデル選択
       const modelSelection = {
         step: 'model_selection',
-        models: [
-          { name: 'llama3:8b', size: 5000000000 },
-        ],
+        models: [{ name: 'llama3:8b', size: 5000000000 }],
         selectedModel: 'llama3:8b',
       };
 
@@ -113,7 +121,9 @@ describe('Complete API Flow E2E Tests', () => {
         },
       };
 
-      expect(apiTest.request.endpoint).toMatch(/^http:\/\/localhost:\d+\/v1\/chat\/completions$/);
+      expect(apiTest.request.endpoint).toMatch(
+        /^http:\/\/localhost:\d+\/v1\/chat\/completions$/
+      );
       expect(apiTest.response.status).toBe(200);
 
       // ステップ6: API削除
@@ -129,7 +139,9 @@ describe('Complete API Flow E2E Tests', () => {
     it('should maintain data consistency throughout lifecycle', () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
       // データ整合性の検証
@@ -171,7 +183,9 @@ describe('Complete API Flow E2E Tests', () => {
     it('should handle errors at each step gracefully', () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
       const errorScenarios = [
@@ -207,20 +221,32 @@ describe('Complete API Flow E2E Tests', () => {
         expect(scenario.error).toBeTruthy();
         expect(scenario.recovery).toBeTruthy();
         // 非開発者向けのエラーメッセージ
-        const errorStr = typeof scenario.error === 'string' ? scenario.error : String(scenario.error);
-        expect(errorStr.includes('失敗') || errorStr.includes('エラー') || errorStr.includes('無効')).toBe(true);
+        const errorStr =
+          typeof scenario.error === 'string'
+            ? scenario.error
+            : String(scenario.error);
+        expect(
+          errorStr.includes('失敗') ||
+            errorStr.includes('エラー') ||
+            errorStr.includes('無効')
+        ).toBe(true);
       });
     });
   });
 
   /**
    * 複数APIの同時管理
+   * 注意: これは1人のユーザーが複数のAPIを同時に管理する機能のテストです。
+   * マルチユーザー機能（複数のユーザーが異なるAPIを管理する機能）ではありません。
+   * 本アプリケーションはシングルユーザー環境専用です。
    */
   describe('multiple API management', () => {
     it('should manage multiple APIs simultaneously', () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
       const multipleApis = [
@@ -257,7 +283,9 @@ describe('Complete API Flow E2E Tests', () => {
     it('should handle port conflicts', () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
       const portConflict = {
@@ -275,4 +303,3 @@ describe('Complete API Flow E2E Tests', () => {
     });
   });
 });
-

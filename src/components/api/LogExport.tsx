@@ -1,10 +1,11 @@
 // LogExport - ログエクスポートコンポーネント
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useTransition, useEffect, useRef } from 'react';
 import { safeInvoke } from '../../utils/tauri';
 import { Tooltip } from '../common/Tooltip';
 import { exportLogsToPdf } from '../../utils/pdfExport';
 import { logger } from '../../utils/logger';
+import { extractErrorMessage } from '../../utils/errorHandler';
 
 /**
  * ログフィルタの型定義
@@ -36,6 +37,10 @@ interface ExportRequest {
   end_date: string | null;
   status_codes: number[] | null;
   path_filter: string | null;
+  include_request_body?: boolean;
+  mask_request_body?: boolean;
+  encrypt?: boolean;
+  password?: string | null;
 }
 
 /**
@@ -78,15 +83,54 @@ export const LogExport: React.FC<LogExportProps> = ({
 }) => {
   const [exporting, setExporting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
+  const [includeRequestBody, setIncludeRequestBody] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
+  const [pendingFormat, setPendingFormat] = useState<'csv' | 'json' | null>(null);
+  const [encryptFile, setEncryptFile] = useState(false);
+  const [encryptionPassword, setEncryptionPassword] = useState('');
+  const warningDialogRef = useRef<HTMLDivElement>(null);
+  const previousActiveElement = useRef<HTMLElement | null>(null);
+  // 確認ダイアログの状態
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+  }>({
+    isOpen: false,
+    message: '',
+    onConfirm: () => {},
+    onCancel: () => {},
+  });
+
+  // ESCキーで確認ダイアログを閉じる
+  useEffect(() => {
+    if (!confirmDialog.isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [confirmDialog.isOpen]);
 
   /**
    * ステータスコードをフィルタリング
    */
   const getFilteredStatusCodes = useCallback((): number[] | null => {
     if (filter.errorsOnly) {
-      const errorCodes = filter.statusCodes.length > 0
-        ? filter.statusCodes.filter(code => code >= HTTP_STATUS.MIN_ERROR_CODE)
-        : [...DEFAULT_ERROR_CODES];
+      const errorCodes =
+        filter.statusCodes.length > 0
+          ? filter.statusCodes.filter(
+              code => code >= HTTP_STATUS.MIN_ERROR_CODE
+            )
+          : [...DEFAULT_ERROR_CODES];
       return errorCodes.length > 0 ? errorCodes : [...DEFAULT_ERROR_CODES];
     }
     return filter.statusCodes.length > 0 ? filter.statusCodes : null;
@@ -95,66 +139,93 @@ export const LogExport: React.FC<LogExportProps> = ({
   /**
    * エクスポートリクエストを構築
    */
-  const buildExportRequest = useCallback((format: string): ExportRequest => {
-    return {
-      api_id: apiId,
-      format,
-      start_date: filter.startDate || null,
-      end_date: filter.endDate || null,
-      status_codes: getFilteredStatusCodes(),
-      path_filter: filter.pathFilter || null,
-    };
-  }, [apiId, filter, getFilteredStatusCodes]);
+  const buildExportRequest = useCallback(
+    (format: string, includeBody: boolean = false): ExportRequest => {
+      return {
+        api_id: apiId,
+        format,
+        start_date: filter.startDate || null,
+        end_date: filter.endDate || null,
+        status_codes: getFilteredStatusCodes(),
+        path_filter: filter.pathFilter || null,
+        include_request_body: includeBody,
+        mask_request_body: includeBody, // デフォルトでマスク処理を有効化
+        encrypt: encryptFile,
+        password: encryptFile && encryptionPassword ? encryptionPassword : null,
+      };
+    },
+    [apiId, filter, getFilteredStatusCodes, encryptFile, encryptionPassword]
+  );
 
   /**
    * ファイルをダウンロード
    */
-  const downloadFile = useCallback((data: string, format: 'csv' | 'json'): void => {
-    const blob = new Blob([data], {
-      type: MIME_TYPES[format],
-    });
-    
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `api-logs-${new Date().toISOString().split('T')[0]}.${format}`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-  }, []);
+  const downloadFile = useCallback(
+    (data: string, format: string): void => {
+      // 暗号化ファイルの場合はMIMEタイプをapplication/octet-streamに設定
+      const mimeType = format.endsWith('.encrypted') 
+        ? 'application/octet-stream' 
+        : (format === 'csv' ? MIME_TYPES.csv : MIME_TYPES.json);
+      
+      const blob = new Blob([data], {
+        type: mimeType,
+      });
+
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `api-logs-${new Date().toISOString().split('T')[0]}.${format}`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+    },
+    []
+  );
 
   /**
    * CSV/JSONエクスポートを実行
    */
-  const exportToFile = useCallback(async (format: 'csv' | 'json'): Promise<void> => {
-    if (!apiId) {
-      setError(ERROR_MESSAGES.NO_API);
-      return;
-    }
-
-    try {
-      setExporting(true);
-      setError(null);
-
-      const request = buildExportRequest(format);
-      const response = await safeInvoke<ExportResponse>('export_logs', { request });
-
-      downloadFile(response.data, format);
-
-      logger.info(`ログデータをエクスポートしました: ${response.count}件 (${format.toUpperCase()})`, 'LogExport');
-      
-      if (onExportComplete) {
-        onExportComplete(response.count);
+  const exportToFile = useCallback(
+    async (format: 'csv' | 'json', includeBody: boolean = false): Promise<void> => {
+      if (!apiId) {
+        setError(ERROR_MESSAGES.NO_API);
+        return;
       }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : ERROR_MESSAGES.EXPORT_FAILED;
-      setError(errorMessage);
-      logger.error('ログエクスポートエラー', err, 'LogExport');
-    } finally {
-      setExporting(false);
-    }
-  }, [apiId, buildExportRequest, downloadFile, onExportComplete]);
+
+      try {
+        setExporting(true);
+        setError(null);
+
+        const request = buildExportRequest(format, includeBody);
+        const response = await safeInvoke<ExportResponse>('export_logs', {
+          request,
+        });
+
+        // 暗号化されている場合は拡張子を変更
+        const fileFormat = request.encrypt ? `${format}.encrypted` : format;
+        downloadFile(response.data, fileFormat);
+
+        logger.info(
+          `ログデータをエクスポートしました: ${response.count}件 (${format.toUpperCase()})`,
+          'LogExport'
+        );
+
+        if (onExportComplete) {
+          onExportComplete(response.count);
+        }
+      } catch (err) {
+        const errorMessage = extractErrorMessage(err, ERROR_MESSAGES.EXPORT_FAILED);
+        setError(errorMessage);
+        logger.error('ログエクスポートエラー', err, 'LogExport');
+      } finally {
+        setExporting(false);
+        setShowWarning(false);
+        setPendingFormat(null);
+      }
+    },
+    [apiId, buildExportRequest, downloadFile, onExportComplete]
+  );
 
   /**
    * PDFエクスポートを実行
@@ -163,13 +234,13 @@ export const LogExport: React.FC<LogExportProps> = ({
     try {
       setExporting(true);
       setError(null);
-      
+
       await exportLogsToPdf([], {
         title: 'APIログ一覧',
         filename: `api-logs_${new Date().toISOString().split('T')[0]}`,
       });
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : ERROR_MESSAGES.PDF_EXPORT_FAILED;
+      const errorMessage = extractErrorMessage(err, ERROR_MESSAGES.PDF_EXPORT_FAILED);
       setError(errorMessage);
       logger.error('PDFエクスポートエラー', err, 'LogExport');
     } finally {
@@ -178,55 +249,261 @@ export const LogExport: React.FC<LogExportProps> = ({
   }, []);
 
   /**
-   * ログデータをエクスポートします
+   * ログデータをエクスポートします（警告表示付き）
    */
-  const handleExport = useCallback(async (format: 'csv' | 'json' | 'pdf'): Promise<void> => {
-    if (format === 'pdf') {
-      await exportToPdf();
-      return;
+  const handleExport = useCallback(
+    async (format: 'csv' | 'json' | 'pdf'): Promise<void> => {
+      if (format === 'pdf') {
+        await exportToPdf();
+        return;
+      }
+
+      // 暗号化が有効な場合、パスワードを確認
+      if (encryptFile && (!encryptionPassword || encryptionPassword.length < 8)) {
+        setError('暗号化を有効にする場合は、8文字以上のパスワードを入力してください。');
+        return;
+      }
+
+      // リクエストボディを含める場合、警告を表示
+      if (includeRequestBody) {
+        setPendingFormat(format);
+        setShowWarning(true);
+        return;
+      }
+
+      // 警告を表示（機密情報が含まれる可能性があることを通知）
+      const warningMessage = 
+        '⚠️ プライバシー警告\n\n' +
+        'エクスポートされるログデータには機密情報が含まれる可能性があります。\n' +
+        'リクエストボディはデフォルトで除外されていますが、エクスポートファイルには\n' +
+        'API ID、パス、エラーメッセージなどの情報が含まれます。\n\n' +
+        (encryptFile ? 'ファイルは暗号化されます。\n\n' : '') +
+        'エクスポートを続行しますか？';
+
+      setConfirmDialog({
+        isOpen: true,
+        message: warningMessage,
+        onConfirm: async () => {
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+          await exportToFile(format, false);
+        },
+        onCancel: () => {
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        },
+      });
+    },
+    [includeRequestBody, encryptFile, encryptionPassword, exportToPdf, exportToFile]
+  );
+
+  /**
+   * 警告ダイアログで確認された場合のエクスポート実行
+   */
+  const handleConfirmExport = useCallback(() => {
+    if (pendingFormat) {
+      // 暗号化が有効な場合、パスワードを確認
+      if (encryptFile && (!encryptionPassword || encryptionPassword.length < 8)) {
+        setError('暗号化を有効にする場合は、8文字以上のパスワードを入力してください。');
+        setShowWarning(false);
+        setPendingFormat(null);
+        return;
+      }
+      exportToFile(pendingFormat, includeRequestBody);
     }
-    await exportToFile(format);
-  }, [exportToPdf, exportToFile]);
+  }, [pendingFormat, includeRequestBody, encryptFile, encryptionPassword, exportToFile]);
+
+  /**
+   * 警告ダイアログをキャンセル
+   */
+  const handleCancelExport = useCallback(() => {
+    setShowWarning(false);
+    setPendingFormat(null);
+  }, []);
+
+  // 警告ダイアログのフォーカストラップ実装
+  useEffect(() => {
+    if (!showWarning) return;
+
+    // モーダルが開いたときの処理
+    previousActiveElement.current = document.activeElement as HTMLElement;
+
+    // 最初のフォーカス可能な要素にフォーカスを移動
+    const dialog = warningDialogRef.current;
+    if (dialog) {
+      const focusableElements = dialog.querySelectorAll<HTMLElement>(
+        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+      );
+      const firstFocusable = focusableElements[0];
+      if (firstFocusable) {
+        firstFocusable.focus();
+      }
+    }
+
+    // フォーカストラップのハンドラー
+    const handleTabKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Tab' || !dialog) return;
+
+      const focusableElements = Array.from(
+        dialog.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        )
+      ).filter(el => !el.hasAttribute('disabled') && el.offsetParent !== null);
+
+      if (focusableElements.length === 0) return;
+
+      const firstElement = focusableElements[0];
+      const lastElement = focusableElements[focusableElements.length - 1];
+
+      if (e.shiftKey) {
+        // Shift+Tab: 逆方向
+        if (document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement.focus();
+        }
+      } else {
+        // Tab: 順方向
+        if (document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement.focus();
+        }
+      }
+    };
+
+    // ESCキーで閉じる
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        handleCancelExport();
+      }
+    };
+
+    document.addEventListener('keydown', handleTabKey);
+    document.addEventListener('keydown', handleEscape);
+
+    // クリーンアップ: モーダルが閉じたときに元の要素にフォーカスを戻す
+    return () => {
+      document.removeEventListener('keydown', handleTabKey);
+      document.removeEventListener('keydown', handleEscape);
+      if (previousActiveElement.current) {
+        previousActiveElement.current.focus();
+      }
+    };
+  }, [showWarning, handleCancelExport]);
 
   const isDisabled = exporting || !apiId;
   const buttonText = exporting ? 'エクスポート中...' : '';
 
   return (
     <div className="log-export">
+      {/* エクスポートオプション */}
+      <div className="log-export-options">
+        <label className="log-export-option-label">
+          <input
+            type="checkbox"
+            checked={includeRequestBody}
+            onChange={e => setIncludeRequestBody(e.target.checked)}
+            disabled={isDisabled}
+            aria-label="リクエストボディを含める（機密情報が含まれる可能性があります）"
+          />
+          <span>
+            リクエストボディを含める
+            <Tooltip
+              content="リクエストボディには機密情報（APIキー、パスワードなど）が含まれる可能性があります。含める場合は自動的にマスク処理されます。"
+              position="top"
+            >
+              <span className="tooltip-trigger-icon">ℹ️</span>
+            </Tooltip>
+          </span>
+        </label>
+        <label className="log-export-option-label">
+          <input
+            type="checkbox"
+            checked={encryptFile}
+            onChange={e => {
+              setEncryptFile(e.target.checked);
+              if (!e.target.checked) {
+                setEncryptionPassword('');
+              }
+            }}
+            disabled={isDisabled}
+            aria-label="エクスポートファイルを暗号化する"
+          />
+          <span>
+            ファイルを暗号化する
+            <Tooltip
+              content="エクスポートファイルをパスワードで暗号化します。機密情報を含む場合に推奨されます。"
+              position="top"
+            >
+              <span className="tooltip-trigger-icon">🔒</span>
+            </Tooltip>
+          </span>
+        </label>
+        {encryptFile && (
+          <div className="log-export-password-input">
+            <label htmlFor="encryption-password">
+              暗号化パスワード:
+              <input
+                id="encryption-password"
+                type="password"
+                value={encryptionPassword}
+                onChange={e => setEncryptionPassword(e.target.value)}
+                disabled={isDisabled}
+                placeholder="パスワードを入力"
+                aria-label="暗号化パスワード"
+                minLength={8}
+              />
+            </label>
+            <span className="log-export-password-hint">
+              8文字以上のパスワードを入力してください。このパスワードは復号時に必要です。
+            </span>
+          </div>
+        )}
+      </div>
+
       <div className="log-export-buttons">
-        <Tooltip 
-          content="現在のフィルタ条件に一致するログをCSV形式でエクスポートします。Excelなどで開いて分析できます。" 
+        <Tooltip
+          content="現在のフィルタ条件に一致するログをCSV形式でエクスポートします。Excelなどで開いて分析できます。"
           position="top"
         >
           <button
-            onClick={() => handleExport('csv')}
-            disabled={isDisabled}
+            onClick={() => {
+              startTransition(() => {
+                handleExport('csv');
+              });
+            }}
+            disabled={isDisabled || isPending}
             className="export-button export-button-csv"
             aria-label="CSV形式でログをエクスポート"
           >
             {buttonText || 'CSVでエクスポート'}
           </button>
         </Tooltip>
-        <Tooltip 
-          content="現在のフィルタ条件に一致するログをJSON形式でエクスポートします。プログラムでの処理や分析に適しています。" 
+        <Tooltip
+          content="現在のフィルタ条件に一致するログをJSON形式でエクスポートします。プログラムでの処理や分析に適しています。"
           position="top"
         >
           <button
-            onClick={() => handleExport('json')}
-            disabled={isDisabled}
+            onClick={() => {
+              startTransition(() => {
+                handleExport('json');
+              });
+            }}
+            disabled={isDisabled || isPending}
             className="export-button export-button-json"
             aria-label="JSON形式でログをエクスポート"
           >
             {buttonText || 'JSONでエクスポート'}
           </button>
         </Tooltip>
-        <Tooltip 
-          content="現在のログ一覧をPDF形式でエクスポートします。印刷ダイアログからPDFとして保存できます。" 
+        <Tooltip
+          content="現在のログ一覧をPDF形式でエクスポートします。印刷ダイアログからPDFとして保存できます。"
           position="top"
         >
           <button
-            onClick={() => handleExport('pdf')}
-            disabled={isDisabled}
+            onClick={() => {
+              startTransition(() => {
+                handleExport('pdf');
+              });
+            }}
+            disabled={isDisabled || isPending}
             className="export-button export-button-pdf"
             aria-label="PDF形式でログをエクスポート"
           >
@@ -234,9 +511,88 @@ export const LogExport: React.FC<LogExportProps> = ({
           </button>
         </Tooltip>
       </div>
+
+      {/* 警告ダイアログ */}
+      {showWarning && (
+        <div className="log-export-warning-overlay" role="dialog" aria-modal="true">
+          <div ref={warningDialogRef} className="log-export-warning-dialog">
+            <div className="log-export-warning-header">
+              <h3>⚠️ プライバシー警告</h3>
+            </div>
+            <div className="log-export-warning-content">
+              <p>
+                リクエストボディを含めてエクスポートしようとしています。
+              </p>
+              <p>
+                <strong>注意事項：</strong>
+              </p>
+              <ul>
+                <li>リクエストボディには機密情報（APIキー、パスワード、トークンなど）が含まれる可能性があります</li>
+                <li>機密情報は自動的にマスク処理されますが、完全な保護を保証するものではありません</li>
+                <li>エクスポートファイルは適切に管理し、不要になったら削除してください</li>
+                <li>エクスポートファイルを共有する際は、機密情報が含まれていないことを確認してください</li>
+              </ul>
+              <p>
+                本当にリクエストボディを含めてエクスポートしますか？
+              </p>
+            </div>
+            <div className="log-export-warning-actions">
+              <button
+                onClick={handleCancelExport}
+                className="log-export-warning-button log-export-warning-button-cancel"
+                disabled={exporting}
+              >
+                キャンセル
+              </button>
+              <button
+                onClick={handleConfirmExport}
+                className="log-export-warning-button log-export-warning-button-confirm"
+                disabled={exporting}
+              >
+                {exporting ? 'エクスポート中...' : 'エクスポートを続行'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {error && (
         <div className="export-error" role="alert">
           {error}
+        </div>
+      )}
+
+      {/* 確認ダイアログ */}
+      {confirmDialog.isOpen && (
+        <div
+          className="confirm-dialog-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-dialog-title"
+        >
+          <div
+            className="confirm-dialog"
+            role="document"
+          >
+            <h3 id="confirm-dialog-title">確認</h3>
+            <p style={{ whiteSpace: 'pre-line' }}>{confirmDialog.message}</p>
+            <div className="confirm-dialog-actions">
+              <button
+                className="confirm-button cancel"
+                onClick={confirmDialog.onCancel}
+                type="button"
+              >
+                キャンセル
+              </button>
+              <button
+                className="confirm-button confirm"
+                onClick={confirmDialog.onConfirm}
+                type="button"
+              >
+                確認
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

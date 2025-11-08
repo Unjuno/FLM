@@ -5,21 +5,26 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 2rem;
+  padding: var(--spacing-xl, 2rem);
   min-height: 300px;
 }
 
 .detection-spinner {
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--spacing-lg, 1.5rem);
 }
 
 .spinner {
   width: 48px;
   height: 48px;
-  border: 4px solid rgba(0, 0, 0, 0.1);
-  border-left-color: #396cd8;
-  border-radius: 50%;
+  border: 4px solid var(--color-bg-tertiary, rgba(0, 0, 0, 0.1));
+  border-left-color: var(--color-primary, #667eea);
+  border-radius: var(--radius-full, 50%);
   animation: spin 1s linear infinite;
+}
+
+[data-theme="dark"] .spinner {
+  border-color: var(--color-bg-tertiary, rgba(255, 255, 255, 0.1));
+  border-left-color: var(--color-primary, #667eea);
 }
 
 @keyframes spin {
@@ -31,33 +36,49 @@
 .detection-message {
   font-size: 1.2rem;
   font-weight: 500;
-  color: #0f0f0f;
-  margin-bottom: 0.5rem;
+  color: var(--color-text-primary, #1a202c);
+  margin-bottom: var(--spacing-xs, 0.5rem);
+}
+
+[data-theme="dark"] .detection-message {
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .detection-submessage {
   font-size: 0.9rem;
-  color: #666;
+  color: var(--color-text-secondary, #4a5568);
   margin: 0;
+}
+
+[data-theme="dark"] .detection-submessage {
+  color: var(--color-text-secondary, #cbd5e0);
 }
 
 .detection-error,
 .detection-success,
-.detection-not-found {
+.detection-not-found,
+.detection-status-card {
   display: flex;
   flex-direction: column;
   align-items: center;
-  padding: 1.5rem;
-  border-radius: 8px;
-  background-color: rgba(255, 255, 255, 0.1);
+  padding: var(--spacing-lg, 1.5rem);
+  border-radius: var(--radius-lg, 0.75rem);
+  background-color: var(--color-bg-secondary, rgba(255, 255, 255, 0.1));
   text-align: center;
+}
+
+[data-theme="dark"] .detection-error,
+[data-theme="dark"] .detection-success,
+[data-theme="dark"] .detection-not-found,
+[data-theme="dark"] .detection-status-card {
+  background-color: var(--color-bg-secondary, rgba(255, 255, 255, 0.05));
 }
 
 .error-icon,
 .success-icon,
 .not-found-icon {
   font-size: 3rem;
-  margin-bottom: 1rem;
+  margin-bottom: var(--spacing-md, 1rem);
 }
 
 .error-message,
@@ -65,98 +86,293 @@
 .not-found-message {
   font-size: 1.1rem;
   font-weight: 500;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--spacing-xs, 0.5rem);
 }
 
 .detection-error .error-message {
-  color: #d32f2f;
+  color: var(--color-error, #f56565);
 }
 
 .detection-success .success-message {
-  color: #2e7d32;
+  color: var(--color-success, #48bb78);
 }
 
 .detection-not-found .not-found-message {
-  color: #666;
+  color: var(--color-text-secondary, #4a5568);
+}
+
+[data-theme="dark"] .detection-not-found .not-found-message {
+  color: var(--color-text-secondary, #cbd5e0);
+}
+
+.detection-status-card {
+  align-items: stretch;
+  gap: var(--spacing-md, 1rem);
+  width: 100%;
+  max-width: 600px;
+}
+
+.status-header {
+  display: flex;
+  gap: var(--spacing-md, 1rem);
+  align-items: center;
+}
+
+.status-icon {
+  font-size: 2.5rem;
+}
+
+.status-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #1a202c);
+}
+
+[data-theme="dark"] .status-title {
+  color: var(--color-text-primary, #f7fafc);
+}
+
+.status-detail {
+  margin: var(--spacing-xs, 0.25rem) 0 0;
+  color: var(--color-text-secondary, #4a5568);
+  font-size: 0.95rem;
+}
+
+[data-theme="dark"] .status-detail {
+  color: var(--color-text-secondary, #cbd5e0);
+}
+
+.auto-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-sm, 0.75rem);
+}
+
+.auto-status-message {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--color-text-secondary, #4a5568);
+}
+
+.auto-status-message.muted {
+  color: var(--color-text-muted, #6b7280);
+}
+
+.auto-status-message.error {
+  color: var(--color-error, #f56565);
+}
+
+[data-theme="dark"] .auto-status-message {
+  color: var(--color-text-secondary, #cbd5e0);
+}
+
+[data-theme="dark"] .auto-status-message.muted {
+  color: var(--color-text-muted, #94a3b8);
+}
+
+.auto-step {
+  text-align: left;
+}
+
+.status {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+  background: rgba(148, 163, 184, 0.2);
+  color: var(--color-text-primary, #1a202c);
+}
+
+.status.success {
+  background: rgba(34, 197, 94, 0.15);
+  color: #15803d;
+}
+
+.status.warning {
+  background: rgba(234, 179, 8, 0.15);
+  color: #b45309;
+}
+
+.status.error {
+  background: rgba(248, 113, 113, 0.18);
+  color: #b91c1c;
+}
+
+.status.info {
+  background: rgba(59, 130, 246, 0.15);
+  color: #1d4ed8;
+}
+
+.step-label {
+  font-weight: 600;
+}
+
+.step-progress {
+  margin-left: var(--spacing-xs, 0.5rem);
+  font-size: 0.85rem;
+  color: var(--color-text-secondary, #4a5568);
+}
+
+[data-theme="dark"] .step-progress {
+  color: var(--color-text-secondary, #cbd5e0);
+}
+
+.step-message {
+  margin: var(--spacing-xs, 0.35rem) 0 0;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary, #4a5568);
+  line-height: 1.5;
+}
+
+[data-theme="dark"] .step-message {
+  color: var(--color-text-secondary, #cbd5e0);
+}
+
+.auto-error {
+  background: rgba(239, 68, 68, 0.12);
+  border-radius: var(--radius-md, 0.5rem);
+  padding: var(--spacing-sm, 0.75rem) var(--spacing-md, 1rem);
+  text-align: left;
+}
+
+.auto-error .error-text {
+  margin: 0;
+  color: var(--color-error, #f56565);
+  font-size: 0.95rem;
+}
+
+.retry-button {
+  margin-top: var(--spacing-sm, 0.75rem);
+  padding: var(--spacing-xs, 0.5rem) var(--spacing-md, 1.25rem);
+  border: none;
+  border-radius: var(--radius-md, 0.5rem);
+  background: var(--color-primary, #667eea);
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.retry-button:hover {
+  background: var(--color-primary-dark, #4c51bf);
+}
+
+.waiting-message {
+  margin: 0;
+  color: var(--color-text-secondary, #4a5568);
+  font-size: 0.95rem;
+}
+
+[data-theme="dark"] .waiting-message {
+  color: var(--color-text-secondary, #cbd5e0);
 }
 
 .version-info,
 .path-info,
 .running-info {
   font-size: 0.9rem;
-  color: #666;
-  margin: 0.25rem 0;
+  color: var(--color-text-secondary, #4a5568);
+  margin: var(--spacing-xs, 0.25rem) 0;
+}
+
+[data-theme="dark"] .version-info,
+[data-theme="dark"] .path-info,
+[data-theme="dark"] .running-info {
+  color: var(--color-text-secondary, #cbd5e0);
 }
 
 .not-found-submessage {
   font-size: 0.9rem;
-  color: #999;
-  margin: 0.5rem 0 0 0;
+  color: var(--color-text-secondary, #718096);
+  margin: var(--spacing-xs, 0.5rem) 0 0 0;
+}
+
+[data-theme="dark"] .not-found-submessage {
+  color: var(--color-text-secondary, #a0aec0);
 }
 
 /* システムインストールガイド */
 .system-install-guide {
-  margin-top: 1.5rem;
+  margin-top: var(--spacing-lg, 1.5rem);
   width: 100%;
   max-width: 600px;
   text-align: left;
 }
 
 .guide-section {
-  background-color: rgba(255, 193, 7, 0.1);
-  border: 1px solid rgba(255, 193, 7, 0.3);
-  border-radius: 8px;
-  padding: 1.5rem;
+  background-color: var(--color-warning-light, rgba(255, 193, 7, 0.1));
+  border: 1px solid var(--color-warning, rgba(255, 193, 7, 0.3));
+  border-radius: var(--radius-lg, 0.75rem);
+  padding: var(--spacing-lg, 1.5rem);
+}
+
+[data-theme="dark"] .guide-section {
+  background-color: var(--color-warning-light, rgba(255, 193, 7, 0.15));
+  border-color: var(--color-warning, rgba(255, 193, 7, 0.4));
 }
 
 .guide-title {
-  margin: 0 0 0.75rem 0;
+  margin: 0 0 var(--spacing-md, 0.75rem) 0;
   font-size: 1.1rem;
-  color: #f57c00;
+  color: var(--color-warning-dark, #c05621);
   font-weight: 600;
 }
 
+[data-theme="dark"] .guide-title {
+  color: var(--color-warning-light, #ffb74d);
+}
+
 .guide-warning {
-  margin: 0.5rem 0 1rem 0;
-  color: #d32f2f;
+  margin: var(--spacing-xs, 0.5rem) 0 var(--spacing-md, 1rem) 0;
+  color: var(--color-error, #f56565);
   font-size: 0.95rem;
 }
 
 .guide-steps {
-  margin-top: 1rem;
+  margin-top: var(--spacing-md, 1rem);
 }
 
 .guide-steps h5 {
-  margin: 0 0 0.75rem 0;
+  margin: 0 0 var(--spacing-md, 0.75rem) 0;
   font-size: 1rem;
-  color: #0f0f0f;
+  color: var(--color-text-primary, #1a202c);
   font-weight: 500;
 }
 
+[data-theme="dark"] .guide-steps h5 {
+  color: var(--color-text-primary, #f7fafc);
+}
+
 .install-steps-list {
-  margin: 0.5rem 0;
-  padding-left: 1.5rem;
-  color: #333;
+  margin: var(--spacing-xs, 0.5rem) 0;
+  padding-left: var(--spacing-lg, 1.5rem);
+  color: var(--color-text-primary, #1a202c);
+}
+
+[data-theme="dark"] .install-steps-list {
+  color: var(--color-text-primary, #e0e0e0);
 }
 
 .install-steps-list li {
-  margin-bottom: 0.75rem;
+  margin-bottom: var(--spacing-md, 0.75rem);
   line-height: 1.6;
 }
 
 .install-substeps {
-  margin-top: 0.5rem;
-  padding-left: 1.25rem;
+  margin-top: var(--spacing-xs, 0.5rem);
+  padding-left: var(--spacing-md, 1.25rem);
   list-style-type: disc;
 }
 
 .install-substeps li {
-  margin-bottom: 0.25rem;
+  margin-bottom: var(--spacing-xs, 0.25rem);
   font-size: 0.9rem;
 }
 
 .install-link {
-  color: #396cd8;
+  color: var(--color-primary, #667eea);
   text-decoration: none;
   font-weight: 500;
 }
@@ -166,56 +382,18 @@
 }
 
 .guide-alternative {
-  margin-top: 1.25rem;
-  padding-top: 1rem;
-  border-top: 1px solid rgba(255, 193, 7, 0.2);
+  margin-top: var(--spacing-md, 1.25rem);
+  padding-top: var(--spacing-md, 1rem);
+  border-top: 1px solid var(--color-warning, rgba(255, 193, 7, 0.2));
 }
 
 .alternative-note {
   margin: 0;
-  color: #2e7d32;
+  color: var(--color-success, #48bb78);
   font-size: 0.9rem;
   line-height: 1.6;
 }
 
-@media (prefers-color-scheme: dark) {
-  .detection-message {
-    color: #f6f6f6;
-  }
-
-  .detection-submessage {
-    color: #aaa;
-  }
-
-  .version-info,
-  .path-info,
-  .not-found-submessage {
-    color: #aaa;
-  }
-
-  .guide-section {
-    background-color: rgba(255, 193, 7, 0.15);
-    border-color: rgba(255, 193, 7, 0.4);
-  }
-
-  .guide-title {
-    color: #ffb74d;
-  }
-
-  .guide-steps h5 {
-    color: #f6f6f6;
-  }
-
-  .install-steps-list {
-    color: #e0e0e0;
-  }
-
-  .install-link {
-    color: #64b5f6;
-  }
-
-  .alternative-note {
-    color: #81c784;
-  }
+[data-theme="dark"] .alternative-note {
+  color: var(--color-success-light, #81c784);
 }
-

@@ -54,7 +54,9 @@ const ERROR_MESSAGES = {
  * @param targetElement セレクタ文字列またはHTMLElement
  * @returns 取得した要素またはnull
  */
-const getTargetElement = (targetElement?: string | HTMLElement): HTMLElement | null => {
+const getTargetElement = (
+  targetElement?: string | HTMLElement
+): HTMLElement | null => {
   if (typeof targetElement === 'string') {
     return document.querySelector<HTMLElement>(targetElement);
   }
@@ -84,7 +86,10 @@ const PDF_EXPORT_CLASS = 'pdf-export-active';
  * @param element 対象要素
  * @param isActive アクティブ状態
  */
-const togglePdfExportClass = (element: HTMLElement, isActive: boolean): void => {
+const togglePdfExportClass = (
+  element: HTMLElement,
+  isActive: boolean
+): void => {
   element.classList.toggle(PDF_EXPORT_CLASS, isActive);
 };
 
@@ -95,7 +100,9 @@ const togglePdfExportClass = (element: HTMLElement, isActive: boolean): void => 
  * @param options PDFエクスポートオプション
  * @throws Error 要素が見つからない場合、またはエクスポートに失敗した場合
  */
-export const exportToPdf = async (options: PdfExportOptions = {}): Promise<void> => {
+export const exportToPdf = async (
+  options: PdfExportOptions = {}
+): Promise<void> => {
   const {
     targetElement,
     title,
@@ -124,10 +131,13 @@ export const exportToPdf = async (options: PdfExportOptions = {}): Promise<void>
 
     await printElement(printOptions);
   } catch (error) {
-    logger.error(ERROR_MESSAGES.EXPORT_FAILED, error instanceof Error ? error : new Error(String(error)), 'pdfExport');
-    const errorMessage = error instanceof Error 
-      ? error.message 
-      : ERROR_MESSAGES.EXPORT_FAILED;
+    logger.error(
+      ERROR_MESSAGES.EXPORT_FAILED,
+      error instanceof Error ? error : new Error(String(error)),
+      'pdfExport'
+    );
+    const errorMessage =
+      error instanceof Error ? error.message : ERROR_MESSAGES.EXPORT_FAILED;
     throw new Error(errorMessage);
   }
 };
@@ -182,7 +192,8 @@ export interface PerformanceReportData {
  * パフォーマンスレポートのタイトルを生成
  */
 const generateReportTitle = (apiName?: string): string => {
-  const baseTitle = DEFAULT_VALUES.PERFORMANCE_REPORT_TITLE || 'パフォーマンスレポート';
+  const baseTitle =
+    DEFAULT_VALUES.PERFORMANCE_REPORT_TITLE || 'パフォーマンスレポート';
   return apiName ? `${baseTitle} - ${apiName}` : baseTitle;
 };
 

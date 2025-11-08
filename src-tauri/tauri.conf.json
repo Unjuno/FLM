@@ -17,12 +17,14 @@
         "height": 800,
         "minWidth": 800,
         "minHeight": 600,
-        "resizable": true
+        "resizable": true,
+        "dragDropEnabled": false
       }
     ],
     "macOSPrivateApi": true,
+    "withGlobalTauri": true,
     "security": {
-      "csp": null
+      "csp": "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https:; font-src 'self' data:; connect-src 'self' http://localhost:11434 http://localhost:1420 https://api.github.com https://huggingface.co https://*.huggingface.co; frame-ancestors 'none'; base-uri 'self'; form-action 'self'; upgrade-insecure-requests;"
     }
   },
   "bundle": {

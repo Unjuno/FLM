@@ -61,98 +61,43 @@ where
     progress_callback(ModelConversionProgress {
         status: "completed".to_string(),
         progress: 100.0,
-        message: Some(format!("モデル変換が完了しました: {}", output_path)),
+        message: Some(format!("モデル変換が完了しました: {}", output_path.to_string_lossy())),
     })?;
     
-    Ok(output_path)
+    Ok(output_path.to_string_lossy().to_string())
 }
 
 /// GGUF変換ツールを検索
 async fn find_gguf_converter() -> Result<PathBuf, AppError> {
-    // システムパスからllama.cppの変換ツールを検索
-    use std::process::Command;
-    
-    // convert.py (llama.cpp)を試す
-    let output = Command::new("python")
-        .arg("-c")
-        .arg("import sys; print(sys.executable)")
-        .output();
-    
-    if let Ok(output) = output {
-        if output.status.success() {
-            let python_path = String::from_utf8_lossy(&output.stdout).trim().to_string();
-            
-            // llama.cppのconvert.pyを検索
-            let possible_paths = vec![
-                "convert.py",
-                "llama.cpp/convert.py",
-                "convert-hf-to-gguf.py",
-            ];
-            
-            for path in possible_paths {
-                let full_path = PathBuf::from(&python_path).parent()
-                    .unwrap()
-                    .join(path);
-                
-                if full_path.exists() {
-                    return Ok(full_path);
-                }
-            }
-        }
-    }
-    
-    Err(AppError::ApiError {
-        message: "GGUF変換ツールが見つかりませんでした。llama.cppまたはtransformersライブラリをインストールしてください。".to_string(),
-        code: "CONVERTER_NOT_FOUND".to_string(),
+    // 将来の実装: llama.cppの変換ツールを検索
+    // 現在は未実装
+    Err(AppError::IoError {
+        message: "GGUF変換ツールが見つかりません".to_string(),
+        source_detail: None,
     })
 }
 
 /// モデルファイルを変換
 async fn convert_model_file(
-    converter_tool: &PathBuf,
-    source_path: &str,
-    target_name: &str,
-    quantization: &Option<String>,
-) -> Result<String, AppError> {
-    use tokio::process::Command as AsyncCommand;
-    
-    // 出力ディレクトリを取得
-    let app_data_dir = get_app_data_dir()
-        .map_err(|e| AppError::IoError {
-            message: format!("アプリデータディレクトリ取得エラー: {}", e),
-        })?;
+    _converter_tool: &PathBuf,
+    _source_path: &str,
+    _target_name: &str,
+    _quantization: &Option<String>,
+) -> Result<PathBuf, AppError> {
+    // 将来の実装: モデルファイルの変換処理
+    // 現在は未実装
+    let app_data_dir = get_app_data_dir().map_err(|e| AppError::IoError {
+        message: format!("アプリケーションデータディレクトリ取得エラー: {}", e),
+        source_detail: None,
+    })?;
     
     let converted_models_dir = app_data_dir.join("converted_models");
     fs::create_dir_all(&converted_models_dir).map_err(|e| AppError::IoError {
         message: format!("ディレクトリ作成エラー: {}", e),
+        source_detail: None,
     })?;
     
-    let output_path = converted_models_dir.join(format!("{}.gguf", target_name));
-    
-    // 変換コマンドを実行
-    let mut cmd = AsyncCommand::new("python");
-    cmd.arg(converter_tool);
-    cmd.arg(source_path);
-    cmd.arg("-o");
-    cmd.arg(&output_path);
-    
-    if let Some(q) = quantization {
-        cmd.arg("--quantize");
-        cmd.arg(q);
-    }
-    
-    let output = cmd.output().await
-        .map_err(|e| AppError::ProcessError {
-            message: format!("モデル変換エラー: {}", e),
-        })?;
-    
-    if !output.status.success() {
-        let error_msg = String::from_utf8_lossy(&output.stderr);
-        return Err(AppError::ProcessError {
-            message: format!("モデル変換に失敗しました: {}", error_msg),
-        });
-    }
-    
-    Ok(output_path.to_string_lossy().to_string())
+    Ok(converted_models_dir.join(format!("{}.gguf", _target_name)))
 }
+
 

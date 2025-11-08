@@ -1,11 +1,16 @@
 // ApiEdit - API編集ページ
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useTransition, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { Breadcrumb, BreadcrumbItem } from '../components/common/Breadcrumb';
+import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import { SecuritySettingsSection } from '../components/api/SecuritySettings';
+import { useI18n } from '../contexts/I18nContext';
+import { useNotifications } from '../contexts/NotificationContext';
 import { PORT_RANGE, API_NAME } from '../constants/config';
+import { extractErrorMessage } from '../utils/errorHandler';
 import type { ApiUpdateRequest } from '../types/api';
 import './ApiEdit.css';
 
@@ -24,6 +29,8 @@ interface ApiSettings {
 export const ApiEdit: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useI18n();
+  const { showSuccess, showError: showErrorNotification } = useNotifications();
   const [settings, setSettings] = useState<ApiSettings>({
     name: '',
     port: 8080,
@@ -33,6 +40,36 @@ export const ApiEdit: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [errors, setErrors] = useState<{ [key: string]: string }>({});
+  const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
+  // 確認ダイアログの状態
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+  }>({
+    isOpen: false,
+    message: '',
+    onConfirm: () => {},
+    onCancel: () => {},
+  });
+
+  // パンくずリストの項目
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => {
+    const items: BreadcrumbItem[] = [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('header.apiList') || 'API一覧', path: '/api/list' },
+    ];
+    if (settings.name) {
+      items.push(
+        { label: settings.name, path: `/api/details/${id}` },
+        { label: '編集' }
+      );
+    } else {
+      items.push({ label: 'API編集' });
+    }
+    return items;
+  }, [t, settings.name, id]);
 
   useEffect(() => {
     if (id) {
@@ -47,20 +84,22 @@ export const ApiEdit: React.FC = () => {
       setError(null);
 
       // バックエンドのIPCコマンドを呼び出し（list_apisから該当APIを取得）
-      const apis = await safeInvoke<Array<{
-        id: string;
-        name: string;
-        endpoint: string;
-        model_name: string;
-        port: number;
-        enable_auth: boolean;
-        status: string;
-        created_at: string;
-        updated_at: string;
-      }>>('list_apis');
+      const apis = await safeInvoke<
+        Array<{
+          id: string;
+          name: string;
+          endpoint: string;
+          model_name: string;
+          port: number;
+          enable_auth: boolean;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        }>
+      >('list_apis');
 
-      const api = apis.find((a) => a.id === apiId);
-      
+      const api = apis.find(a => a.id === apiId);
+
       if (!api) {
         setError('APIが見つかりませんでした');
         return;
@@ -72,7 +111,7 @@ export const ApiEdit: React.FC = () => {
         enableAuth: api.enable_auth,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : '設定の取得に失敗しました');
+      setError(extractErrorMessage(err, '設定の取得に失敗しました'));
     } finally {
       setLoading(false);
     }
@@ -116,12 +155,15 @@ export const ApiEdit: React.FC = () => {
           enable_auth: settings.enableAuth,
         },
       };
-      await safeInvoke('update_api', updateRequest as unknown as Record<string, unknown>);
+      await safeInvoke(
+        'update_api',
+        updateRequest as unknown as Record<string, unknown>
+      );
 
       // 成功したら詳細画面に遷移
       navigate(`/api/details/${id}`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : '設定の保存に失敗しました');
+      setError(extractErrorMessage(err, '設定の保存に失敗しました'));
     } finally {
       setSaving(false);
     }
@@ -131,40 +173,57 @@ export const ApiEdit: React.FC = () => {
   const handleRegenerateApiKey = async () => {
     if (!id) return;
 
-    const confirmed = window.confirm(
-      'APIキーを再生成すると、現在のAPIキーは無効になります。続行しますか？'
-    );
+    setConfirmDialog({
+      isOpen: true,
+      message: 'APIキーを再生成すると、現在のAPIキーは無効になります。続行しますか？',
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        try {
+          setSaving(true);
+          setError(null);
 
-    if (!confirmed) return;
+          // バックエンドのregenerate_api_keyコマンドを呼び出し
+          const newApiKey = await safeInvoke<string>('regenerate_api_key', {
+            api_id: id,
+          });
 
-    try {
-      setSaving(true);
-      setError(null);
+          // 新しいAPIキーを通知で表示
+          showSuccess(
+            'APIキーが再生成されました',
+            `新しいAPIキー: ${newApiKey}\n\nこのキーは今回のみ表示されます。コピーして安全な場所に保存してください。`,
+            10000
+          );
 
-      // バックエンドのregenerate_api_keyコマンドを呼び出し
-      const newApiKey = await safeInvoke<string>('regenerate_api_key', { api_id: id });
-
-      // 新しいAPIキーを表示
-      alert(`APIキーが再生成されました。\n新しいAPIキー: ${newApiKey}\n\nこのキーは今回のみ表示されます。コピーして安全な場所に保存してください。`);
-      
-      // 設定を再読み込みして反映
-      if (id) {
-        loadApiSettings(id);
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'APIキーの再生成に失敗しました');
-    } finally {
-      setSaving(false);
-    }
+          // 設定を再読み込みして反映
+          if (id) {
+            loadApiSettings(id);
+          }
+        } catch (err) {
+          setError(
+            extractErrorMessage(err, 'APIキーの再生成に失敗しました')
+          );
+          showErrorNotification('APIキーの再生成に失敗しました', extractErrorMessage(err));
+        } finally {
+          setSaving(false);
+        }
+      },
+      onCancel: () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+      },
+    });
   };
 
   if (loading) {
     return (
       <div className="api-edit-page">
-        <div className="api-edit-container">
-          <div className="loading-container">
-            <div className="loading-spinner"></div>
-            <p>設定を読み込んでいます...</p>
+        <div className="page-container api-edit-container">
+          <Breadcrumb items={breadcrumbItems} />
+          <header className="page-header api-edit-header">
+            <SkeletonLoader type="button" width="100px" />
+            <SkeletonLoader type="title" width="200px" />
+          </header>
+          <div className="api-edit-form">
+            <SkeletonLoader type="form" count={3} />
           </div>
         </div>
       </div>
@@ -173,9 +232,13 @@ export const ApiEdit: React.FC = () => {
 
   return (
     <div className="api-edit-page">
-      <div className="api-edit-container">
-        <header className="api-edit-header">
-          <button className="back-button" onClick={() => navigate(`/api/details/${id}`)}>
+      <div className="page-container api-edit-container">
+        <Breadcrumb items={breadcrumbItems} />
+        <header className="page-header api-edit-header">
+          <button
+            className="back-button"
+            onClick={() => navigate(`/api/details/${id}`)}
+          >
             ← 戻る
           </button>
           <h1>API設定を変更</h1>
@@ -189,7 +252,13 @@ export const ApiEdit: React.FC = () => {
           />
         )}
 
-        <form className="api-edit-form" onSubmit={(e) => { e.preventDefault(); handleSave(); }}>
+        <form
+          className="api-edit-form"
+          onSubmit={e => {
+            e.preventDefault();
+            handleSave();
+          }}
+        >
           <div className="form-section">
             <h2>基本設定</h2>
 
@@ -202,7 +271,9 @@ export const ApiEdit: React.FC = () => {
                 type="text"
                 className={`form-input ${errors.name ? 'error' : ''}`}
                 value={settings.name}
-                onChange={(e) => setSettings({ ...settings, name: e.target.value })}
+                onChange={e =>
+                  setSettings({ ...settings, name: e.target.value })
+                }
                 maxLength={API_NAME.MAX_LENGTH}
                 required
               />
@@ -218,7 +289,12 @@ export const ApiEdit: React.FC = () => {
                 type="number"
                 className={`form-input ${errors.port ? 'error' : ''}`}
                 value={settings.port}
-                onChange={(e) => setSettings({ ...settings, port: parseInt(e.target.value) || PORT_RANGE.DEFAULT })}
+                onChange={e =>
+                  setSettings({
+                    ...settings,
+                    port: parseInt(e.target.value) || PORT_RANGE.DEFAULT,
+                  })
+                }
                 min={PORT_RANGE.MIN}
                 max={PORT_RANGE.MAX}
                 required
@@ -235,11 +311,11 @@ export const ApiEdit: React.FC = () => {
                   type="checkbox"
                   className="form-checkbox"
                   checked={settings.enableAuth}
-                  onChange={(e) => setSettings({ ...settings, enableAuth: e.target.checked })}
+                  onChange={e =>
+                    setSettings({ ...settings, enableAuth: e.target.checked })
+                  }
                 />
-                <span className="form-checkbox-text">
-                  認証を有効にする
-                </span>
+                <span className="form-checkbox-text">認証を有効にする</span>
               </label>
               <small className="form-hint">
                 認証を無効にすると、APIキーなしでアクセスできるようになります（非推奨）。
@@ -251,14 +327,21 @@ export const ApiEdit: React.FC = () => {
             <h2>セキュリティ設定</h2>
 
             <div className="form-group">
-              <label className="form-label">APIキー</label>
+              <div className="form-label" role="group" aria-label="APIキー">
+                APIキー
+              </div>
               <div className="api-key-actions">
                 <button
                   type="button"
                   className="button-warning"
-                  onClick={handleRegenerateApiKey}
+                  onClick={() => {
+                    startTransition(() => {
+                      handleRegenerateApiKey();
+                    });
+                  }}
+                  disabled={isPending}
                 >
-                  🔑 APIキーを再生成
+                  APIキーを再生成
                 </button>
               </div>
               <small className="form-hint">
@@ -277,17 +360,46 @@ export const ApiEdit: React.FC = () => {
             >
               キャンセル
             </button>
-            <button
-              type="submit"
-              className="button-primary"
-              disabled={saving}
-            >
+            <button type="submit" className="button-primary" disabled={saving}>
               {saving ? '保存中...' : '変更を保存'}
             </button>
           </div>
         </form>
       </div>
+
+      {/* 確認ダイアログ */}
+      {confirmDialog.isOpen && (
+        <div
+          className="confirm-dialog-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-dialog-title"
+        >
+          <div
+            className="confirm-dialog"
+            role="document"
+          >
+            <h3 id="confirm-dialog-title">確認</h3>
+            <p>{confirmDialog.message}</p>
+            <div className="confirm-dialog-actions">
+              <button
+                className="confirm-button cancel"
+                onClick={confirmDialog.onCancel}
+                type="button"
+              >
+                キャンセル
+              </button>
+              <button
+                className="confirm-button confirm"
+                onClick={confirmDialog.onConfirm}
+                type="button"
+              >
+                確認
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-

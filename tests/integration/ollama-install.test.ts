@@ -1,10 +1,11 @@
 // ollama-install - Ollama自動インストール機能の統合テスト
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
+import { debugLog } from '../setup/debug';
 
 /**
  * Ollama自動インストール統合テストスイート
- * 
+ *
  * テスト項目:
  * - Ollama検出機能
  * - 自動ダウンロード機能
@@ -13,15 +14,11 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
  */
 describe('Ollama Auto-Install Integration Tests', () => {
   beforeAll(() => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-      console.log('Ollama自動インストールテストを開始します');
-    }
+    debugLog('Ollama自動インストールテストを開始します');
   });
 
   afterAll(() => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-      console.log('Ollama自動インストールテストを完了しました');
-    }
+    debugLog('Ollama自動インストールテストを完了しました');
   });
 
   /**
@@ -44,10 +41,7 @@ describe('Ollama Auto-Install Integration Tests', () => {
 
     it('should detect running Ollama instance', async () => {
       // 実行中インスタンスの検出
-      const checkMethods = [
-        'HTTP API check',
-        'process check',
-      ];
+      const checkMethods = ['HTTP API check', 'process check'];
 
       checkMethods.forEach(method => {
         expect(method).toBeDefined();
@@ -56,10 +50,7 @@ describe('Ollama Auto-Install Integration Tests', () => {
 
     it('should detect portable Ollama installation', () => {
       // ポータブル版の検出
-      const portablePaths = [
-        './ollama',
-        './ollama.exe',
-      ];
+      const portablePaths = ['./ollama', './ollama.exe'];
 
       portablePaths.forEach(path => {
         expect(path).toBeDefined();
@@ -73,7 +64,8 @@ describe('Ollama Auto-Install Integration Tests', () => {
    */
   describe('auto-download functionality', () => {
     it('should fetch latest version from GitHub Releases', () => {
-      const githubReleasesApi = 'https://api.github.com/repos/ollama/ollama/releases/latest';
+      const githubReleasesApi =
+        'https://api.github.com/repos/ollama/ollama/releases/latest';
 
       expect(githubReleasesApi).toContain('github.com');
       expect(githubReleasesApi).toContain('releases/latest');
@@ -96,7 +88,8 @@ describe('Ollama Auto-Install Integration Tests', () => {
     it('should verify SHA256 checksum', () => {
       // チェックサム検証
       const checksumPattern = /^[a-f0-9]{64}$/i;
-      const validChecksum = 'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
+      const validChecksum =
+        'a1b2c3d4e5f6789012345678901234567890abcdef1234567890abcdef123456';
 
       expect(checksumPattern.test(validChecksum)).toBe(true);
     });
@@ -104,7 +97,7 @@ describe('Ollama Auto-Install Integration Tests', () => {
     it('should set execute permissions on Unix systems', () => {
       // Unix系OSでの実行権限設定
       const isUnix = process.platform !== 'win32';
-      
+
       if (isUnix) {
         // 実行権限設定の検証
         expect(isUnix).toBe(true);
@@ -128,11 +121,7 @@ describe('Ollama Auto-Install Integration Tests', () => {
 
     it('should monitor process status', async () => {
       // プロセス状態監視
-      const statusChecks = [
-        'running',
-        'stopped',
-        'error',
-      ];
+      const statusChecks = ['running', 'stopped', 'error'];
 
       statusChecks.forEach(status => {
         expect(['running', 'stopped', 'error']).toContain(status);
@@ -195,16 +184,14 @@ describe('Ollama Auto-Install Integration Tests', () => {
         expect(message).toBeTruthy();
         expect(typeof message).toBe('string');
         // 非開発者向けのメッセージ
-        expect(message.includes('失敗') || message.includes('エラー')).toBe(true);
+        expect(message.includes('失敗') || message.includes('エラー')).toBe(
+          true
+        );
       });
     });
 
     it('should handle network errors gracefully', () => {
-      const networkErrors = [
-        'ECONNREFUSED',
-        'ETIMEDOUT',
-        'ENOTFOUND',
-      ];
+      const networkErrors = ['ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND'];
 
       networkErrors.forEach(error => {
         expect(error).toBeDefined();
@@ -212,11 +199,7 @@ describe('Ollama Auto-Install Integration Tests', () => {
     });
 
     it('should handle file system errors', () => {
-      const fileSystemErrors = [
-        'EACCES',
-        'ENOENT',
-        'EISDIR',
-      ];
+      const fileSystemErrors = ['EACCES', 'ENOENT', 'EISDIR'];
 
       fileSystemErrors.forEach(error => {
         expect(error).toBeDefined();
@@ -224,4 +207,3 @@ describe('Ollama Auto-Install Integration Tests', () => {
     });
   });
 });
-

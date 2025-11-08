@@ -89,7 +89,9 @@ describe('Checkbox.tsx', () => {
     it('必須マーカーを表示する', () => {
       render(<Checkbox label="ラベル" required />);
       const label = screen.getByText('ラベル');
-      expect(label.querySelector('.form-checkbox-required')).toBeInTheDocument();
+      expect(
+        label.querySelector('.form-checkbox-required')
+      ).toBeInTheDocument();
     });
 
     it('必須時はaria-requiredが設定される', () => {
@@ -99,4 +101,3 @@ describe('Checkbox.tsx', () => {
     });
   });
 });
-

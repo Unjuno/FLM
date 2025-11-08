@@ -31,7 +31,7 @@ pub async fn export_settings_for_remote() -> Result<String, AppError> {
 #[tauri::command]
 pub async fn import_settings_from_remote(
     settings_json: String,
-) -> Result<u32, AppError> {
+) -> Result<(), AppError> {
     crate::utils::remote_sync::import_settings_from_remote(&settings_json).await
 }
 
@@ -40,4 +40,5 @@ pub async fn import_settings_from_remote(
 pub fn generate_device_id() -> String {
     crate::utils::remote_sync::generate_device_id()
 }
+
 

@@ -4,7 +4,7 @@
 use std::collections::HashMap;
 use crate::utils::error::AppError;
 use super::traits::LLMEngine;
-use super::models::{EngineDetectionResult, EngineConfig};
+use super::models::{EngineDetectionResult, EngineConfig, ModelInfo};
 use super::ollama::OllamaEngine;
 use super::lm_studio::LMStudioEngine;
 use super::vllm::VLLMEngine;
@@ -50,6 +50,7 @@ impl EngineManager {
                         version: None,
                         path: None,
                         message: Some(format!("検出エラー: {}", e)),
+                        portable: None,
                     });
                 }
             }
@@ -58,7 +59,7 @@ impl EngineManager {
         results
     }
     
-    /// 特定のエンジンを検出
+    /// エンジンを検出
     pub async fn detect_engine(&self, engine_type: &str) -> Result<EngineDetectionResult, AppError> {
         match engine_type {
             "ollama" => {
@@ -80,6 +81,7 @@ impl EngineManager {
             _ => Err(AppError::ApiError {
                 message: format!("不明なエンジンタイプ: {}", engine_type),
                 code: "UNKNOWN_ENGINE".to_string(),
+                source_detail: None,
             })
         }
     }
@@ -91,42 +93,66 @@ impl EngineManager {
             "lm_studio" => 1234,
             "vllm" => 8000,
             "llama_cpp" => 8080,
-            _ => return Err(AppError::ApiError {
-                message: format!("不明なエンジンタイプ: {}", engine_type),
-                code: "UNKNOWN_ENGINE".to_string(),
-            })
+            _ => {
+                eprintln!("[ERROR] 不明なエンジンタイプ: {}", engine_type);
+                return Err(AppError::ApiError {
+                    message: format!("不明なエンジンタイプ: {}", engine_type),
+                    code: "UNKNOWN_ENGINE".to_string(),
+                    source_detail: None,
+                });
+            }
         };
         
-        let config = config.unwrap_or_else(|| EngineConfig {
-            engine_type: engine_type.to_string(),
-            base_url: None,
-            executable_path: None,
-            port: Some(default_port),
-            auto_detect: true,
+        let config = config.unwrap_or_else(|| {
+            eprintln!("[DEBUG] デフォルト設定を使用");
+            EngineConfig {
+                engine_type: engine_type.to_string(),
+                base_url: None,
+                executable_path: None,
+                port: Some(default_port),
+                auto_detect: true,
+            }
         });
         
-        match engine_type {
+        eprintln!("[DEBUG] エンジン設定: エンジンタイプ={}, ベースURL={:?}, ポート={:?}, 自動検出={}", 
+            config.engine_type, config.base_url, config.port, config.auto_detect);
+        
+        let result = match engine_type {
             "ollama" => {
+                eprintln!("[DEBUG] Ollamaエンジンを起動します");
                 let engine = OllamaEngine::new();
                 engine.start(&config).await
             }
             "lm_studio" => {
+                eprintln!("[DEBUG] LM Studioエンジンを起動します");
                 let engine = LMStudioEngine::new();
                 engine.start(&config).await
             }
             "vllm" => {
+                eprintln!("[DEBUG] vLLMエンジンを起動します");
                 let engine = VLLMEngine::new();
                 engine.start(&config).await
             }
             "llama_cpp" => {
+                eprintln!("[DEBUG] llama.cppエンジンを起動します");
                 let engine = LlamaCppEngine::new();
                 engine.start(&config).await
             }
-            _ => Err(AppError::ApiError {
-                message: format!("不明なエンジンタイプ: {}", engine_type),
-                code: "UNKNOWN_ENGINE".to_string(),
-            })
+            _ => {
+                eprintln!("[ERROR] 不明なエンジンタイプ（match内）: {}", engine_type);
+                Err(AppError::ApiError {
+                    message: format!("不明なエンジンタイプ: {}", engine_type),
+                    code: "UNKNOWN_ENGINE".to_string(),
+                    source_detail: None,
+                })
+            }
+        };
+        
+        if let Err(e) = &result {
+            eprintln!("[ERROR] エンジンの起動に失敗: エンジンタイプ={}, エラー={:?}", engine_type, e);
         }
+        
+        result
     }
     
     /// エンジンを停止
@@ -149,34 +175,9 @@ impl EngineManager {
                 engine.stop().await
             }
             _ => Err(AppError::ApiError {
-                message: format!("不明なエンジンタイプ: {}", engine_type),
+                message: format!("不明なエンジンタイプ:  {}", engine_type),
                 code: "UNKNOWN_ENGINE".to_string(),
-            })
-        }
-    }
-    
-    /// エンジンからモデル一覧を取得
-    pub async fn get_engine_models(&self, engine_type: &str) -> Result<Vec<super::models::ModelInfo>, AppError> {
-        match engine_type {
-            "ollama" => {
-                let engine = OllamaEngine::new();
-                engine.get_models().await
-            }
-            "lm_studio" => {
-                let engine = LMStudioEngine::new();
-                engine.get_models().await
-            }
-            "vllm" => {
-                let engine = VLLMEngine::new();
-                engine.get_models().await
-            }
-            "llama_cpp" => {
-                let engine = LlamaCppEngine::new();
-                engine.get_models().await
-            }
-            _ => Err(AppError::ApiError {
-                message: format!("不明なエンジンタイプ: {}", engine_type),
-                code: "UNKNOWN_ENGINE".to_string(),
+                source_detail: None,
             })
         }
     }
@@ -214,6 +215,34 @@ impl EngineManager {
             _ => Err(AppError::ApiError {
                 message: format!("不明なエンジンタイプ: {}", engine_type),
                 code: "UNKNOWN_ENGINE".to_string(),
+                source_detail: None,
+            })
+        }
+    }
+    
+    /// エンジンのモデル一覧を取得
+    pub async fn get_engine_models(&self, engine_type: &str) -> Result<Vec<ModelInfo>, AppError> {
+        match engine_type {
+            "ollama" => {
+                let engine = OllamaEngine::new();
+                engine.get_models().await
+            }
+            "lm_studio" => {
+                let engine = LMStudioEngine::new();
+                engine.get_models().await
+            }
+            "vllm" => {
+                let engine = VLLMEngine::new();
+                engine.get_models().await
+            }
+            "llama_cpp" => {
+                let engine = LlamaCppEngine::new();
+                engine.get_models().await
+            }
+            _ => Err(AppError::ApiError {
+                message: format!("不明なエンジンタイプ: {}", engine_type),
+                code: "UNKNOWN_ENGINE".to_string(),
+                source_detail: None,
             })
         }
     }
@@ -228,4 +257,5 @@ impl Default for EngineManager {
         Self::new()
     }
 }
+
 

@@ -106,20 +106,36 @@ v1.0リリース完了後の開発履歴ドキュメントは `docs/archive/` �
 - **[LICENSE](../LICENSE)** - MIT License
 - **[SECURITY_POLICY.md](../SECURITY_POLICY.md)** - セキュリティポリシー
 
-#### 実装完了レポート
-- **[DEVELOPER_EXPERT_ULTIMATE_COMPREHENSIVE_REPORT.md](../DEVELOPER_EXPERT_ULTIMATE_COMPREHENSIVE_REPORT.md)** - 開発者専門家による究極包括レポート（最新・最も詳細）
+#### 📁 ドキュメントディレクトリ
+詳細なドキュメントは以下のディレクトリに整理されています：
 
-#### テスト関連
-- **[FINAL_TEST_REPORT.md](../FINAL_TEST_REPORT.md)** - 最終テスト実行レポート（最新）
-- **[TESTING_GUIDE.md](../TESTING_GUIDE.md)** - テストガイド
-- **[TEST_EXECUTION_GUIDE.md](../TEST_EXECUTION_GUIDE.md)** - テスト実行ガイド（証明書生成機能専用）
-- **[QUICK_TEST_GUIDE.md](../QUICK_TEST_GUIDE.md)** - クイックテストガイド
+**プロジェクト概要**:
+- **[docs/overview/APP_INFO.md](../docs/overview/APP_INFO.md)** - アプリケーション情報（種類、セキュリティ）
+- **[docs/overview/USAGE_STATUS.md](../docs/overview/USAGE_STATUS.md)** - 使用可能状況レポート
+
+**実装・テストレポート**:
+- **[docs/reports/](../docs/reports/)** - 実装完了、テスト実行、評価レポート
+  - `DEVELOPER_EXPERT_ULTIMATE_COMPREHENSIVE_REPORT.md` - 開発者専門家による究極包括レポート（最新・最も詳細）
+  - `FINAL_TEST_REPORT.md` - 最終テスト実行レポート（最新）
+  - その他の実装・評価レポート
+
+**テストガイド**:
+- **[docs/tests/guides/](../docs/tests/guides/)** - テスト実行ガイド
+  - `TESTING_GUIDE.md` - テストガイド
+  - `TEST_EXECUTION_GUIDE.md` - テスト実行ガイド（証明書生成機能専用）
+  - `QUICK_TEST_GUIDE.md` - クイックテストガイド
+  - `LLM_TEST_GUIDE.md` - LLMテストガイド
+
+**リリース関連**:
+- **[docs/release/](../docs/release/)** - リリース準備・完了ドキュメント
+
+**手順書**:
+- **[docs/procedures/](../docs/procedures/)** - 公開手順・開発手順
+
+**ガイド**:
+- **[docs/guides/](../docs/guides/)** - 各種機能の使用方法ガイド
 
 **注意**: 古いテストレポート（`TEST_EXECUTION_REPORT.md`、`TEST_RESULTS.md`）は`DOCKS/archive/reports/`にアーカイブされています。
-
-#### その他
-- **[APP_INFO.md](../APP_INFO.md)** - アプリケーション情報（種類、セキュリティ）
-- **[USAGE_STATUS.md](../USAGE_STATUS.md)** - 使用可能状況レポート
 
 ---
 
@@ -176,7 +192,7 @@ v1.0リリース完了後の開発履歴ドキュメントは `docs/archive/` �
 
 ### 現在の構造
 ```
-FLLM/
+FLM/
 ├── DOCKS/              # 設計・仕様・アーキテクチャ
 │   ├── ARCHITECTURE.md # システムアーキテクチャ設計書
 │   ├── INTERFACE_SPEC.md # モジュール間インターフェース仕様

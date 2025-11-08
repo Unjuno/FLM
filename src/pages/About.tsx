@@ -1,9 +1,12 @@
 // About - Aboutページ
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
+import { Breadcrumb, BreadcrumbItem } from '../components/common/Breadcrumb';
+import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useI18n } from '../contexts/I18nContext';
 import { logger } from '../utils/logger';
 import './About.css';
 
@@ -22,11 +25,18 @@ interface AppInfo {
  */
 export const About: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [appInfo, setAppInfo] = useState<AppInfo | null>(null);
   const [loading, setLoading] = useState(true);
 
   // グローバルキーボードショートカットを有効化
   useGlobalKeyboardShortcuts();
+
+  // パンくずリストの項目
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
+    { label: t('header.home') || 'ホーム', path: '/' },
+    { label: 'このアプリについて' },
+  ], [t]);
 
   // アプリケーション情報を取得
   useEffect(() => {
@@ -48,11 +58,27 @@ export const About: React.FC = () => {
   const dependencies = [
     { name: 'React', version: '19.1.0', description: 'UIライブラリ' },
     { name: 'TypeScript', version: '5.x', description: '型安全なJavaScript' },
-    { name: 'Tauri', version: '2.x', description: 'デスクトップアプリケーションフレームワーク' },
-    { name: 'React Router', version: '7.9.5', description: 'ルーティングライブラリ' },
-    { name: 'Recharts', version: '2.15.4', description: 'グラフ描画ライブラリ' },
+    {
+      name: 'Tauri',
+      version: '2.x',
+      description: 'デスクトップアプリケーションフレームワーク',
+    },
+    {
+      name: 'React Router',
+      version: '7.9.5',
+      description: 'ルーティングライブラリ',
+    },
+    {
+      name: 'Recharts',
+      version: '2.15.4',
+      description: 'グラフ描画ライブラリ',
+    },
     { name: 'SQLite', version: '3.x', description: 'データベースエンジン' },
-    { name: 'Rust', version: '1.x', description: 'バックエンドプログラミング言語' },
+    {
+      name: 'Rust',
+      version: '1.x',
+      description: 'バックエンドプログラミング言語',
+    },
     { name: 'Ollama', description: 'ローカルLLM実行エンジン' },
   ];
 
@@ -60,7 +86,14 @@ export const About: React.FC = () => {
     return (
       <div className="about-page">
         <div className="about-container">
-          <div className="about-loading">読み込み中...</div>
+          <Breadcrumb items={breadcrumbItems} />
+          <header className="about-header">
+            <SkeletonLoader type="title" width="200px" />
+          </header>
+          <div className="about-content">
+            <SkeletonLoader type="card" count={1} />
+            <SkeletonLoader type="paragraph" count={3} />
+          </div>
         </div>
       </div>
     );
@@ -69,6 +102,7 @@ export const About: React.FC = () => {
   return (
     <div className="about-page">
       <div className="about-container">
+        <Breadcrumb items={breadcrumbItems} />
         <header className="about-header">
           <button className="about-back-button" onClick={() => navigate('/')}>
             ← ホームに戻る
@@ -81,10 +115,19 @@ export const About: React.FC = () => {
           <section className="about-section">
             <h2 className="about-section-title">アプリケーション情報</h2>
             <div className="about-info-card">
-              <div className="about-logo">🚀</div>
+              <img 
+                src="/logo.png" 
+                alt="FLM" 
+                className="about-logo" 
+                width="64" 
+                height="64"
+                aria-hidden="true"
+              />
               <div className="about-info">
                 <h3 className="about-app-name">{appInfo?.name || 'FLM'}</h3>
-                <p className="about-app-version">バージョン {appInfo?.version || '1.0.0'}</p>
+                <p className="about-app-version">
+                  バージョン {appInfo?.version || '1.0.0'}
+                </p>
                 <p className="about-app-description">
                   {appInfo?.description || 'Local LLM API Management Tool'}
                 </p>
@@ -97,11 +140,13 @@ export const About: React.FC = () => {
             <h2 className="about-section-title">アプリケーションについて</h2>
             <div className="about-text-content">
               <p>
-                FLM（Local LLM API Manager）は、技術知識がなくても、コードを書かずに、
+                FLM（Local LLM API
+                Manager）は、技術知識がなくても、コードを書かずに、
                 ローカルLLMのAPIを作成・利用できるデスクトップアプリケーションです。
               </p>
               <p>
-                非開発者が5分以内でローカルLLM APIを作成し、利用できることを目標としています。
+                非開発者が5分以内でローカルLLM
+                APIを作成し、利用できることを目標としています。
               </p>
             </div>
           </section>
@@ -139,10 +184,14 @@ export const About: React.FC = () => {
                   <div key={index} className="about-dependency-item">
                     <div className="about-dependency-name">{dep.name}</div>
                     {dep.version && (
-                      <div className="about-dependency-version">{dep.version}</div>
+                      <div className="about-dependency-version">
+                        {dep.version}
+                      </div>
                     )}
                     {dep.description && (
-                      <div className="about-dependency-description">{dep.description}</div>
+                      <div className="about-dependency-description">
+                        {dep.description}
+                      </div>
                     )}
                   </div>
                 ))}
@@ -183,7 +232,9 @@ export const About: React.FC = () => {
                 📄 利用規約
               </button>
               <div className="about-link-note">
-                <p>更新履歴や詳細な情報については、プロジェクトのリポジトリを参照してください。</p>
+                <p>
+                  更新履歴や詳細な情報については、プロジェクトのリポジトリを参照してください。
+                </p>
               </div>
             </div>
           </section>
@@ -199,4 +250,3 @@ export const About: React.FC = () => {
     </div>
   );
 };
-

@@ -330,4 +330,3 @@ export const CHART_COLORS = {
   ORANGE: '#ff9800', // オレンジ
   BLUE: '#2196f3', // 青
 } as const;
-

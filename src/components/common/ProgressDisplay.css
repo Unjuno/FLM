@@ -1,0 +1,251 @@
+/* ProgressDisplay - 汎用的な進捗表示コンポーネントのスタイル */
+
+.progress-display {
+  width: 100%;
+  max-width: 600px;
+  margin: 0 auto;
+}
+
+.progress-container {
+  background: var(--color-background, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 2rem;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.progress-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  gap: 1rem;
+}
+
+.progress-icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.progress-icon .spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--color-border, #e2e8f0);
+  border-top-color: var(--color-primary, #3b82f6);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.progress-header h2 {
+  flex: 1;
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-text, #1a202c);
+}
+
+.progress-cancel-button {
+  padding: 0.5rem 1rem;
+  background: var(--color-danger, #ef4444);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.progress-cancel-button:hover {
+  background: var(--color-danger-hover, #dc2626);
+}
+
+.progress-cancel-button:active {
+  background: var(--color-danger-active, #b91c1c);
+}
+
+.progress-step {
+  margin: 0 0 1.5rem 0;
+  font-size: 1rem;
+  color: var(--color-text-secondary, #4a5568);
+  text-align: center;
+}
+
+.progress-bar-container {
+  width: 100%;
+  height: 8px;
+  background: var(--color-border, #e2e8f0);
+  border-radius: 4px;
+  overflow: hidden;
+  margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+  height: 100%;
+  background: var(--color-primary, #3b82f6);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+  width: var(--progress, 0%);
+}
+
+.progress-percentage {
+  text-align: center;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: var(--color-text, #1a202c);
+  margin-bottom: 1.5rem;
+}
+
+.progress-details {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: var(--color-background-secondary, #f7fafc);
+  border-radius: 6px;
+}
+
+.progress-detail-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.875rem;
+}
+
+.detail-label {
+  color: var(--color-text-secondary, #4a5568);
+  font-weight: 500;
+}
+
+.detail-value {
+  color: var(--color-text, #1a202c);
+  font-weight: 600;
+}
+
+.progress-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.progress-step-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: var(--color-background-secondary, #f7fafc);
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.progress-step-item.active {
+  background: var(--color-primary-light, #dbeafe);
+  border: 1px solid var(--color-primary, #3b82f6);
+}
+
+.progress-step-item.completed {
+  background: var(--color-success-light, #d1fae5);
+  border: 1px solid var(--color-success, #10b981);
+}
+
+.step-number {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--color-border, #e2e8f0);
+  border-radius: 50%;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--color-text-secondary, #4a5568);
+  flex-shrink: 0;
+}
+
+.progress-step-item.active .step-number {
+  background: var(--color-primary, #3b82f6);
+  color: white;
+}
+
+.progress-step-item.completed .step-number {
+  background: var(--color-success, #10b981);
+  color: white;
+}
+
+.step-label {
+  flex: 1;
+  font-size: 0.875rem;
+  color: var(--color-text, #1a202c);
+  font-weight: 500;
+}
+
+.step-checkmark {
+  color: var(--color-success, #10b981);
+  font-size: 1.25rem;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+/* ダークテーマ対応 */
+[data-theme='dark'] .progress-container {
+  background: var(--color-background, #1a202c);
+  border-color: var(--color-border, #2d3748);
+}
+
+[data-theme='dark'] .progress-header h2 {
+  color: var(--color-text, #f7fafc);
+}
+
+[data-theme='dark'] .progress-step {
+  color: var(--color-text-secondary, #cbd5e0);
+}
+
+[data-theme='dark'] .progress-percentage {
+  color: var(--color-text, #f7fafc);
+}
+
+[data-theme='dark'] .progress-details {
+  background: var(--color-background-secondary, #2d3748);
+}
+
+[data-theme='dark'] .detail-label {
+  color: var(--color-text-secondary, #cbd5e0);
+}
+
+[data-theme='dark'] .detail-value {
+  color: var(--color-text, #f7fafc);
+}
+
+[data-theme='dark'] .progress-step-item {
+  background: var(--color-background-secondary, #2d3748);
+}
+
+[data-theme='dark'] .progress-step-item.active {
+  background: var(--color-primary-light, #1e3a8a);
+  border-color: var(--color-primary, #3b82f6);
+}
+
+[data-theme='dark'] .progress-step-item.completed {
+  background: var(--color-success-light, #065f46);
+  border-color: var(--color-success, #10b981);
+}
+
+[data-theme='dark'] .step-number {
+  background: var(--color-border, #4a5568);
+  color: var(--color-text-secondary, #cbd5e0);
+}
+
+[data-theme='dark'] .step-label {
+  color: var(--color-text, #f7fafc);
+}
+

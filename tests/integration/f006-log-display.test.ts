@@ -1,7 +1,16 @@
 // f006-log-display - ログ表示機能の統合テスト
 
-import { describe, it, expect, beforeAll, afterAll, beforeEach } from '@jest/globals';
+import {
+  describe,
+  it,
+  expect,
+  beforeAll,
+  afterAll,
+  beforeEach,
+} from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
+import { cleanupTestApis, createTestApi, handleTauriAppNotRunningError } from '../setup/test-helpers';
+import { debugLog, debugWarn } from '../setup/debug';
 
 /**
  * リクエストログ情報
@@ -30,7 +39,7 @@ interface LogStatistics {
 
 /**
  * F006: ログ表示機能統合テストスイート
- * 
+ *
  * テスト項目:
  * - ログ取得機能のテスト（フィルタ有無）
  * - ログ統計情報取得のテスト
@@ -40,56 +49,31 @@ describe('F006: ログ表示機能 統合テスト', () => {
   let testApiId: string | null = null;
 
   beforeAll(async () => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-      console.log('F006 ログ表示機能統合テストを開始します');
-    }
-    
+    debugLog('F006 ログ表示機能統合テストを開始します');
+
     try {
-      const result = await invoke<{
-        id: string;
-        name: string;
-        endpoint: string;
-        api_key: string | null;
-        model_name: string;
-        port: number;
-        status: string;
-      }>('create_api', {
+      testApiId = await createTestApi({
         name: 'Test API for Log Display',
         model_name: 'llama3:8b',
         port: 8888,
         enable_auth: false,
       });
-      
-      testApiId = result.id;
-      if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-        console.log(`テスト用APIを作成しました: ${testApiId}`);
-      }
+      debugLog(`テスト用APIを作成しました: ${testApiId}`);
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
-      if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-      } else if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-        console.warn('テスト用APIの作成に失敗しました:', error);
+      if (handleTauriAppNotRunningError(error)) {
+        // テストは続行（testApiIdがnullのまま）
+      } else {
+        debugWarn('テスト用APIの作成に失敗しました:', error);
       }
     }
   });
 
   afterAll(async () => {
     if (testApiId) {
-      try {
-        await invoke('delete_api', { api_id: testApiId });
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.log(`テスト用APIを削除しました: ${testApiId}`);
-        }
-      } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト後のクリーンアップに失敗しました:', error);
-        }
-      }
+      await cleanupTestApis([testApiId]);
+      debugLog(`テスト用APIを削除しました: ${testApiId}`);
     }
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-      console.log('F006 ログ表示機能統合テストを完了しました');
-    }
+    debugLog('F006 ログ表示機能統合テストを完了しました');
   });
 
   beforeEach(async () => {
@@ -103,8 +87,11 @@ describe('F006: ログ表示機能 統合テスト', () => {
   describe('get_request_logs 基本機能', () => {
     it('should return empty array when no logs exist', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが作成されていないため、スキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが作成されていないため、スキップします');
         }
         return;
       }
@@ -121,10 +108,15 @@ describe('F006: ログ表示機能 統合テスト', () => {
         expect(Array.isArray(result)).toBe(true);
         // 新規作成されたAPIにはログがないため、空配列または初期ログがある可能性
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
+          debugWarn(
+            'Tauriアプリが起動していないため、このテストをスキップします'
+          );
+          expect(errorMessage).toContain(
+            'Tauriアプリケーションが起動していません'
+          );
         } else {
           throw error;
         }
@@ -133,8 +125,11 @@ describe('F006: ログ表示機能 統合テスト', () => {
 
     it('should return logs with API ID filter', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが作成されていないため、スキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが作成されていないため、スキップします');
         }
         return;
       }
@@ -146,7 +141,9 @@ describe('F006: ログ表示機能 統合テスト', () => {
             api_id: testApiId,
             method: 'POST',
             path: '/v1/chat/completions',
-            request_body: JSON.stringify({ messages: [{ role: 'user', content: 'test' }] }),
+            request_body: JSON.stringify({
+              messages: [{ role: 'user', content: 'test' }],
+            }),
             response_status: 200,
             response_time_ms: 150,
             error_message: null,
@@ -169,12 +166,20 @@ describe('F006: ログ表示機能 統合テスト', () => {
           expect(result[0].path).toBe('/v1/chat/completions');
         }
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
-        } else if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('ログ保存・取得テストでエラー:', error);
+          debugWarn(
+            'Tauriアプリが起動していないため、このテストをスキップします'
+          );
+          expect(errorMessage).toContain(
+            'Tauriアプリケーションが起動していません'
+          );
+        } else if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('ログ保存・取得テストでエラー:', error);
         } else {
           // テストをスキップせず、エラーを報告
           throw error;
@@ -184,8 +189,11 @@ describe('F006: ログ表示機能 統合テスト', () => {
 
     it('should respect limit and offset parameters', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが作成されていないため、スキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが作成されていないため、スキップします');
         }
         return;
       }
@@ -205,8 +213,11 @@ describe('F006: ログ表示機能 統合テスト', () => {
             },
           });
         } catch (error) {
-          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-            console.warn(`ログ保存に失敗 (${i}):`, error);
+          if (
+            process.env.NODE_ENV === 'development' ||
+            process.env.JEST_DEBUG === '1'
+          ) {
+            debugWarn(`ログ保存に失敗 (${i}):`, error);
           }
         }
       }
@@ -247,8 +258,11 @@ describe('F006: ログ表示機能 統合テスト', () => {
   describe('get_request_logs フィルタ機能', () => {
     it('should filter logs by date range', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが作成されていないため、スキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが作成されていないため、スキップします');
         }
         return;
       }
@@ -285,16 +299,22 @@ describe('F006: ログ表示機能 統合テスト', () => {
         expect(Array.isArray(result)).toBe(true);
         // フィルタされたログが返されることを確認
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('日付フィルタテストでエラー:', error);
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('日付フィルタテストでエラー:', error);
         }
       }
     }, 15000);
 
     it('should filter logs by status codes', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが作成されていないため、スキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが作成されていないため、スキップします');
         }
         return;
       }
@@ -337,20 +357,26 @@ describe('F006: ログ表示機能 統合テスト', () => {
 
         expect(Array.isArray(result)).toBe(true);
         // 全てのログが200ステータスであることを確認
-        result.forEach((log) => {
+        result.forEach(log => {
           expect(log.response_status).toBe(200);
         });
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('ステータスコードフィルタテストでエラー:', error);
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('ステータスコードフィルタテストでエラー:', error);
         }
       }
     }, 15000);
 
     it('should filter logs by path', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが作成されていないため、スキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが作成されていないため、スキップします');
         }
         return;
       }
@@ -393,12 +419,15 @@ describe('F006: ログ表示機能 統合テスト', () => {
 
         expect(Array.isArray(result)).toBe(true);
         // 全てのログが'chat'を含むパスであることを確認
-        result.forEach((log) => {
+        result.forEach(log => {
           expect(log.path).toContain('chat');
         });
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('パスフィルタテストでエラー:', error);
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('パスフィルタテストでエラー:', error);
         }
       }
     }, 15000);
@@ -410,8 +439,11 @@ describe('F006: ログ表示機能 統合テスト', () => {
   describe('get_log_statistics 統計情報取得', () => {
     it('should return statistics for API', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが作成されていないため、スキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが作成されていないため、スキップします');
         }
         return;
       }
@@ -463,8 +495,11 @@ describe('F006: ログ表示機能 統合テスト', () => {
         expect(result.error_rate).toBeLessThanOrEqual(100);
         expect(Array.isArray(result.status_code_distribution)).toBe(true);
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('統計情報取得テストでエラー:', error);
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('統計情報取得テストでエラー:', error);
         }
         throw error;
       }
@@ -472,8 +507,11 @@ describe('F006: ログ表示機能 統合テスト', () => {
 
     it('should return statistics with date range filter', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが作成されていないため、スキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが作成されていないため、スキップします');
         }
         return;
       }
@@ -510,16 +548,22 @@ describe('F006: ログ表示機能 統合テスト', () => {
         expect(typeof result.error_rate).toBe('number');
         expect(Array.isArray(result.status_code_distribution)).toBe(true);
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('日付範囲付き統計情報取得テストでエラー:', error);
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('日付範囲付き統計情報取得テストでエラー:', error);
         }
       }
     }, 15000);
 
     it('should calculate error rate correctly', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが作成されていないため、スキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが作成されていないため、スキップします');
         }
         return;
       }
@@ -569,8 +613,11 @@ describe('F006: ログ表示機能 統合テスト', () => {
         expect(result.error_rate).toBeGreaterThanOrEqual(0);
         expect(result.error_rate).toBeLessThanOrEqual(100);
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('エラー率計算テストでエラー:', error);
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('エラー率計算テストでエラー:', error);
         }
       }
     }, 20000);
@@ -582,8 +629,11 @@ describe('F006: ログ表示機能 統合テスト', () => {
   describe('エッジケーステスト', () => {
     it('should handle API with no logs', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが作成されていないため、スキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが作成されていないため、スキップします');
         }
         return;
       }
@@ -623,16 +673,22 @@ describe('F006: ログ表示機能 統合テスト', () => {
         expect(result.error_rate).toBe(0);
         expect(result.status_code_distribution).toEqual([]);
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('ログなしAPIテストでエラー:', error);
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('ログなしAPIテストでエラー:', error);
         }
       } finally {
         if (newApiId) {
           try {
             await invoke('delete_api', { api_id: newApiId });
           } catch (error) {
-            if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-              console.warn('クリーンアップエラー:', error);
+            if (
+              process.env.NODE_ENV === 'development' ||
+              process.env.JEST_DEBUG === '1'
+            ) {
+              debugWarn('クリーンアップエラー:', error);
             }
           }
         }
@@ -659,8 +715,11 @@ describe('F006: ログ表示機能 統合テスト', () => {
 
     it('should handle very large limit parameter', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが作成されていないため、スキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが作成されていないため、スキップします');
         }
         return;
       }
@@ -677,8 +736,11 @@ describe('F006: ログ表示機能 統合テスト', () => {
         expect(Array.isArray(result)).toBe(true);
         // 大量データでも正常に処理されることを確認
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('大量データ取得テストでエラー:', error);
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('大量データ取得テストでエラー:', error);
         }
         // エラーが発生しても許容（リソース制限の可能性）
       }

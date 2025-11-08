@@ -2,6 +2,7 @@
 
 import type { WebModelConfig, WebModelDefinition } from '../types/webModel';
 import { PORT_RANGE } from '../constants/config';
+import { isDev } from './env';
 
 /**
  * デフォルト設定ファイルのパス
@@ -29,7 +30,7 @@ export async function loadWebModelConfig(
 
     return config;
   } catch (error) {
-    if (import.meta.env.DEV) {
+    if (isDev()) {
       console.error('Webサイト用モデル設定の読み込みエラー:', error);
     }
     throw new Error(
@@ -41,13 +42,15 @@ export async function loadWebModelConfig(
 /**
  * 設定ファイルのバリデーション
  */
-export function validateConfig(config: unknown): asserts config is WebModelConfig {
+export function validateConfig(
+  config: unknown
+): asserts config is WebModelConfig {
   if (typeof config !== 'object' || config === null) {
     throw new Error('設定ファイルはオブジェクトである必要があります');
   }
-  
+
   const configObj = config as Record<string, unknown>;
-  
+
   // 必須フィールドのチェック
   if (!configObj.version || typeof configObj.version !== 'string') {
     throw new Error('設定ファイルにversionフィールドが必要です');
@@ -71,9 +74,11 @@ export function validateConfig(config: unknown): asserts config is WebModelConfi
 
   configObj.models.forEach((model: unknown, index: number) => {
     if (typeof model !== 'object' || model === null) {
-      throw new Error(`モデル定義 ${index + 1}: モデル定義はオブジェクトである必要があります`);
+      throw new Error(
+        `モデル定義 ${index + 1}: モデル定義はオブジェクトである必要があります`
+      );
     }
-    
+
     const modelObj = model as Record<string, unknown>;
     // 必須フィールドのチェック
     if (!modelObj.id || typeof modelObj.id !== 'string') {
@@ -93,21 +98,31 @@ export function validateConfig(config: unknown): asserts config is WebModelConfi
     }
 
     if (!modelObj.description || typeof modelObj.description !== 'string') {
-      throw new Error(`モデル定義 ${index + 1}: descriptionフィールドが必要です`);
+      throw new Error(
+        `モデル定義 ${index + 1}: descriptionフィールドが必要です`
+      );
     }
 
     if (!modelObj.category || typeof modelObj.category !== 'string') {
       throw new Error(`モデル定義 ${index + 1}: categoryフィールドが必要です`);
     }
 
-    if (!modelObj.defaultSettings || typeof modelObj.defaultSettings !== 'object' || modelObj.defaultSettings === null) {
-      throw new Error(`モデル定義 ${index + 1}: defaultSettingsオブジェクトが必要です`);
+    if (
+      !modelObj.defaultSettings ||
+      typeof modelObj.defaultSettings !== 'object' ||
+      modelObj.defaultSettings === null
+    ) {
+      throw new Error(
+        `モデル定義 ${index + 1}: defaultSettingsオブジェクトが必要です`
+      );
     }
 
     // IDの一意性チェック
     const modelId = modelObj.id;
     if (modelIds.has(modelId)) {
-      throw new Error(`モデル定義 ${index + 1}: id "${modelId}" が重複しています`);
+      throw new Error(
+        `モデル定義 ${index + 1}: id "${modelId}" が重複しています`
+      );
     }
     modelIds.add(modelId);
 
@@ -126,7 +141,11 @@ export function validateConfig(config: unknown): asserts config is WebModelConfi
     const defaultSettings = modelObj.defaultSettings as Record<string, unknown>;
     if (defaultSettings.port !== undefined) {
       const port = defaultSettings.port;
-      if (typeof port !== 'number' || port < PORT_RANGE.MIN || port > PORT_RANGE.MAX) {
+      if (
+        typeof port !== 'number' ||
+        port < PORT_RANGE.MIN ||
+        port > PORT_RANGE.MAX
+      ) {
         throw new Error(
           `モデル定義 ${index + 1}: portは${PORT_RANGE.MIN}-${PORT_RANGE.MAX}の範囲である必要があります`
         );
@@ -151,7 +170,7 @@ export function filterByCategory(
   config: WebModelConfig,
   category: string
 ): WebModelDefinition[] {
-  return config.models.filter((model) => model.category === category);
+  return config.models.filter(model => model.category === category);
 }
 
 /**
@@ -160,7 +179,7 @@ export function filterByCategory(
 export function getRecommendedModels(
   config: WebModelConfig
 ): WebModelDefinition[] {
-  return config.models.filter((model) => model.recommended === true);
+  return config.models.filter(model => model.recommended === true);
 }
 
 /**
@@ -170,7 +189,7 @@ export function findModelById(
   config: WebModelConfig,
   id: string
 ): WebModelDefinition | undefined {
-  return config.models.find((model) => model.id === id);
+  return config.models.find(model => model.id === id);
 }
 
 /**
@@ -182,7 +201,6 @@ export function findModelByName(
   engine: string
 ): WebModelDefinition | undefined {
   return config.models.find(
-    (model) => model.modelName === modelName && model.engine === engine
+    model => model.modelName === modelName && model.engine === engine
   );
 }
-

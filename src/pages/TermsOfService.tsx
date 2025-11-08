@@ -1,8 +1,9 @@
 // TermsOfService - 利用規約ページ
 
-import React from 'react';
+import React, { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { Breadcrumb, BreadcrumbItem } from '../components/common/Breadcrumb';
 import './TermsOfService.css';
 
 /**
@@ -15,12 +16,19 @@ export const TermsOfService: React.FC = () => {
   // グローバルキーボードショートカットを有効化
   useGlobalKeyboardShortcuts();
 
+  // パンくずリストの項目
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
+    { label: 'ホーム', path: '/' },
+    { label: '利用規約' },
+  ], []);
+
   return (
     <div className="terms-of-service-page">
       <div className="terms-of-service-container">
+        <Breadcrumb items={breadcrumbItems} />
         <header className="terms-of-service-header">
-          <button 
-            className="terms-of-service-back-button" 
+          <button
+            className="terms-of-service-back-button"
             onClick={() => navigate('/')}
             aria-label="ホームに戻る"
           >
@@ -28,7 +36,12 @@ export const TermsOfService: React.FC = () => {
           </button>
           <h1 className="terms-of-service-title">利用規約</h1>
           <p className="terms-of-service-updated-date">
-            最終更新日: {new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' })}
+            最終更新日:{' '}
+            {new Date().toLocaleDateString('ja-JP', {
+              year: 'numeric',
+              month: 'long',
+              day: 'numeric',
+            })}
           </p>
         </header>
 
@@ -38,7 +51,8 @@ export const TermsOfService: React.FC = () => {
             <h2 className="terms-of-service-section-title">1. はじめに</h2>
             <div className="terms-of-service-text-content">
               <p>
-                本利用規約は、FLM（Local LLM API Manager）アプリケーション（以下「本アプリケーション」）の利用に関する条件を定めるものです。
+                本利用規約は、FLM（Local LLM API
+                Manager）アプリケーション（以下「本アプリケーション」）の利用に関する条件を定めるものです。
                 本アプリケーションを利用することにより、お客様は本規約に同意したものとみなされます。
               </p>
             </div>
@@ -49,10 +63,19 @@ export const TermsOfService: React.FC = () => {
             <h2 className="terms-of-service-section-title">2. 定義</h2>
             <div className="terms-of-service-text-content">
               <ul>
-                <li>「本アプリケーション」とは、FLM（Local LLM API Manager）を指します。</li>
-                <li>「ユーザー」とは、本アプリケーションを利用する個人または組織を指します。</li>
-                <li>「サービス」とは、本アプリケーションが提供するすべての機能を指します。</li>
-                <li>「データ」とは、本アプリケーションを通じて処理されるすべての情報を指します。</li>
+                <li>
+                  「本アプリケーション」とは、FLM（Local LLM API
+                  Manager）を指します。
+                </li>
+                <li>
+                  「ユーザー」とは、本アプリケーションを利用する個人または組織を指します。
+                </li>
+                <li>
+                  「サービス」とは、本アプリケーションが提供するすべての機能を指します。
+                </li>
+                <li>
+                  「データ」とは、本アプリケーションを通じて処理されるすべての情報を指します。
+                </li>
               </ul>
             </div>
           </section>
@@ -67,9 +90,7 @@ export const TermsOfService: React.FC = () => {
                 本ライセンスに従って、ユーザーは本アプリケーションを使用、複製、修正、配布することができます。
               </p>
               <h3>3.2 利用条件</h3>
-              <p>
-                ユーザーは、本アプリケーションを以下の条件で利用できます：
-              </p>
+              <p>ユーザーは、本アプリケーションを以下の条件で利用できます：</p>
               <ul>
                 <li>ローカルデバイス上での使用</li>
                 <li>個人利用および商業利用</li>
@@ -82,7 +103,9 @@ export const TermsOfService: React.FC = () => {
           <section className="terms-of-service-section">
             <h2 className="terms-of-service-section-title">4. 禁止事項</h2>
             <div className="terms-of-service-text-content">
-              <p>ユーザーは、本アプリケーションの利用において、以下の行為を禁止します：</p>
+              <p>
+                ユーザーは、本アプリケーションの利用において、以下の行為を禁止します：
+              </p>
               <ul>
                 <li>違法な目的での使用</li>
                 <li>第三者の権利を侵害する行為</li>
@@ -137,7 +160,9 @@ export const TermsOfService: React.FC = () => {
 
           {/* データの所有権 */}
           <section className="terms-of-service-section">
-            <h2 className="terms-of-service-section-title">8. データの所有権</h2>
+            <h2 className="terms-of-service-section-title">
+              8. データの所有権
+            </h2>
             <div className="terms-of-service-text-content">
               <p>
                 ユーザーが本アプリケーションを使用して作成または保存したすべてのデータは、
@@ -149,7 +174,9 @@ export const TermsOfService: React.FC = () => {
 
           {/* サービスの変更・終了 */}
           <section className="terms-of-service-section">
-            <h2 className="terms-of-service-section-title">9. サービスの変更・終了</h2>
+            <h2 className="terms-of-service-section-title">
+              9. サービスの変更・終了
+            </h2>
             <div className="terms-of-service-text-content">
               <p>
                 開発者は、予告なく、本アプリケーションの機能を変更、追加、削除、または終了する権利を留保します。
@@ -217,4 +244,3 @@ export const TermsOfService: React.FC = () => {
     </div>
   );
 };
-

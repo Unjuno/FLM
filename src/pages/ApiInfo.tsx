@@ -1,11 +1,16 @@
 // ApiInfo - API情報ページ
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { API_KEY, TIMEOUT } from '../constants/config';
 import type { ApiInfo as BaseApiInfo, ApiDetailsResponse } from '../types/api';
 import { generateSampleCode } from '../utils/apiCodeGenerator';
+import { Breadcrumb, BreadcrumbItem } from '../components/common/Breadcrumb';
+import { SkeletonLoader } from '../components/common/SkeletonLoader';
+import { ErrorMessage } from '../components/common/ErrorMessage';
+import { useI18n } from '../contexts/I18nContext';
+import { extractErrorMessage } from '../utils/errorHandler';
 import './ApiInfo.css';
 
 /**
@@ -22,12 +27,27 @@ interface ApiInfoWithKey extends BaseApiInfo {
 export const ApiInfo: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
+  const { t } = useI18n();
   const [apiInfo, setApiInfo] = useState<ApiInfoWithKey | null>(null);
   const [showApiKey, setShowApiKey] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [copied, setCopied] = useState<string | null>(null);
-  const [activeTab, setActiveTab] = useState<'curl' | 'python' | 'javascript'>('curl');
+  const [activeTab, setActiveTab] = useState<'curl' | 'python' | 'javascript'>(
+    'curl'
+  );
+
+  // パンくずリストの項目
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => {
+    const items: BreadcrumbItem[] = [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('header.apiList') || 'API一覧', path: '/api/list' },
+    ];
+    if (apiInfo) {
+      items.push({ label: apiInfo.name });
+    }
+    return items;
+  }, [t, apiInfo]);
 
   useEffect(() => {
     if (id) {
@@ -41,7 +61,10 @@ export const ApiInfo: React.FC = () => {
       setError(null);
 
       // バックエンドのIPCコマンドを呼び出してAPI詳細を取得（APIキーを含む）
-      const apiDetails = await safeInvoke<ApiDetailsResponse>('get_api_details', { api_id: apiId });
+      const apiDetails = await safeInvoke<ApiDetailsResponse>(
+        'get_api_details',
+        { api_id: apiId }
+      );
 
       setApiInfo({
         id: apiDetails.id,
@@ -50,12 +73,16 @@ export const ApiInfo: React.FC = () => {
         apiKey: apiDetails.api_key || undefined,
         port: apiDetails.port,
         model_name: apiDetails.model_name,
-        status: (apiDetails.status === 'running' ? 'running' : 'stopped') as 'running' | 'stopped',
+        status: (apiDetails.status === 'running' ? 'running' : 'stopped') as
+          | 'running'
+          | 'stopped',
         created_at: apiDetails.created_at,
         updated_at: apiDetails.updated_at,
       });
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'API情報の取得に失敗しました');
+      setError(
+        extractErrorMessage(err, 'API情報の取得に失敗しました')
+      );
     } finally {
       setLoading(false);
     }
@@ -73,22 +100,29 @@ export const ApiInfo: React.FC = () => {
   };
 
   // サンプルコード生成
-  const getSampleCode = useCallback((language: 'curl' | 'python' | 'javascript'): string => {
-    if (!apiInfo) return '';
+  const getSampleCode = useCallback(
+    (language: 'curl' | 'python' | 'javascript'): string => {
+      if (!apiInfo) return '';
 
-    return generateSampleCode(language, {
-      apiInfo,
-      apiKey: apiInfo.apiKey,
-    });
-  }, [apiInfo]);
+      return generateSampleCode(language, {
+        apiInfo,
+        apiKey: apiInfo.apiKey,
+      });
+    },
+    [apiInfo]
+  );
 
   if (loading) {
     return (
       <div className="api-info-page">
         <div className="api-info-container">
-          <div className="loading-state">
-            <div className="spinner"></div>
-            <p>API情報を読み込んでいます...</p>
+          <Breadcrumb items={breadcrumbItems} />
+          <header className="api-info-header">
+            <SkeletonLoader type="title" width="200px" />
+          </header>
+          <div className="api-info-content">
+            <SkeletonLoader type="card" count={3} />
+            <SkeletonLoader type="paragraph" count={2} />
           </div>
         </div>
       </div>
@@ -99,13 +133,12 @@ export const ApiInfo: React.FC = () => {
     return (
       <div className="api-info-page">
         <div className="api-info-container">
-          <div className="error-state">
-            <span className="error-icon">⚠️</span>
-            <p>{error || 'API情報が見つかりませんでした'}</p>
-            <button className="back-button" onClick={() => navigate('/api/list')}>
-              API一覧に戻る
-            </button>
-          </div>
+          <Breadcrumb items={breadcrumbItems} />
+          <ErrorMessage
+            message={error || 'API情報が見つかりませんでした'}
+            type="api"
+            onClose={() => navigate('/api/list')}
+          />
         </div>
       </div>
     );
@@ -114,6 +147,7 @@ export const ApiInfo: React.FC = () => {
   return (
     <div className="api-info-page">
       <div className="api-info-container">
+        <Breadcrumb items={breadcrumbItems} />
         <header className="api-info-header">
           <button className="back-button" onClick={() => navigate('/api/list')}>
             ← API一覧に戻る
@@ -169,13 +203,18 @@ export const ApiInfo: React.FC = () => {
             <section className="info-section">
               <h2>APIキー</h2>
               <div className="api-key-display">
-                <code className={`api-key-value ${showApiKey ? 'visible' : 'hidden'}`}>
-                  {showApiKey ? apiInfo.apiKey : '•'.repeat(API_KEY.DEFAULT_LENGTH)}
+                <code
+                  className={`api-key-value ${showApiKey ? 'visible' : 'hidden'}`}
+                >
+                  {showApiKey
+                    ? apiInfo.apiKey
+                    : '•'.repeat(API_KEY.DEFAULT_LENGTH)}
                 </code>
                 <div className="api-key-actions">
                   {apiInfo.apiKey.startsWith('***') ? (
                     <p className="api-key-note">
-                      ⚠️ APIキーは作成時にのみ表示されます。キーを紛失した場合は再生成してください。
+                      ⚠️
+                      APIキーは作成時にのみ表示されます。キーを紛失した場合は再生成してください。
                     </p>
                   ) : (
                     <>
@@ -187,7 +226,9 @@ export const ApiInfo: React.FC = () => {
                       </button>
                       <button
                         className="copy-button"
-                        onClick={() => copyToClipboard(apiInfo.apiKey!, 'apikey')}
+                        onClick={() =>
+                          copyToClipboard(apiInfo.apiKey!, 'apikey')
+                        }
                       >
                         {copied === 'apikey' ? '✓ コピー済み' : '📋 コピー'}
                       </button>
@@ -206,19 +247,19 @@ export const ApiInfo: React.FC = () => {
           <section className="info-section">
             <h2>サンプルコード</h2>
             <div className="sample-code-tabs">
-              <button 
+              <button
                 className={`tab-button ${activeTab === 'curl' ? 'active' : ''}`}
                 onClick={() => setActiveTab('curl')}
               >
                 curl
               </button>
-              <button 
+              <button
                 className={`tab-button ${activeTab === 'python' ? 'active' : ''}`}
                 onClick={() => setActiveTab('python')}
               >
                 Python
               </button>
-              <button 
+              <button
                 className={`tab-button ${activeTab === 'javascript' ? 'active' : ''}`}
                 onClick={() => setActiveTab('javascript')}
               >
@@ -226,7 +267,9 @@ export const ApiInfo: React.FC = () => {
               </button>
             </div>
             <div className="sample-code-container">
-              <div className={`sample-code-block ${activeTab === 'curl' ? 'active' : ''}`}>
+              <div
+                className={`sample-code-block ${activeTab === 'curl' ? 'active' : ''}`}
+              >
                 <pre>
                   <code>{getSampleCode('curl')}</code>
                 </pre>
@@ -237,24 +280,32 @@ export const ApiInfo: React.FC = () => {
                   {copied === 'curl' ? '✓ コピー済み' : '📋 コピー'}
                 </button>
               </div>
-              <div className={`sample-code-block ${activeTab === 'python' ? 'active' : ''}`}>
+              <div
+                className={`sample-code-block ${activeTab === 'python' ? 'active' : ''}`}
+              >
                 <pre>
                   <code>{getSampleCode('python')}</code>
                 </pre>
                 <button
                   className="copy-button"
-                  onClick={() => copyToClipboard(getSampleCode('python'), 'python')}
+                  onClick={() =>
+                    copyToClipboard(getSampleCode('python'), 'python')
+                  }
                 >
                   {copied === 'python' ? '✓ コピー済み' : '📋 コピー'}
                 </button>
               </div>
-              <div className={`sample-code-block ${activeTab === 'javascript' ? 'active' : ''}`}>
+              <div
+                className={`sample-code-block ${activeTab === 'javascript' ? 'active' : ''}`}
+              >
                 <pre>
                   <code>{getSampleCode('javascript')}</code>
                 </pre>
                 <button
                   className="copy-button"
-                  onClick={() => copyToClipboard(getSampleCode('javascript'), 'javascript')}
+                  onClick={() =>
+                    copyToClipboard(getSampleCode('javascript'), 'javascript')
+                  }
                 >
                   {copied === 'javascript' ? '✓ コピー済み' : '📋 コピー'}
                 </button>
@@ -289,4 +340,3 @@ export const ApiInfo: React.FC = () => {
     </div>
   );
 };
-

@@ -1,0 +1,173 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ConfirmDialog.tsx スナップショットテスト dangerバリアントのスナップショット 1`] = `
+<div>
+  <div
+    aria-labelledby="confirm-dialog-title"
+    aria-modal="true"
+    class="confirm-dialog-overlay"
+    role="dialog"
+  >
+    <div
+      class="confirm-dialog"
+      role="document"
+    >
+      <h3
+        id="confirm-dialog-title"
+      >
+        確認
+      </h3>
+      <p>
+        テストメッセージ
+      </p>
+      <div
+        class="confirm-dialog-actions"
+      >
+        <button
+          aria-label="キャンセル"
+          class="confirm-button cancel"
+          type="button"
+        >
+          キャンセル
+        </button>
+        <button
+          aria-label="確認"
+          class="confirm-button confirm danger"
+          type="button"
+        >
+          確認
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ConfirmDialog.tsx スナップショットテスト primaryバリアントのスナップショット 1`] = `
+<div>
+  <div
+    aria-labelledby="confirm-dialog-title"
+    aria-modal="true"
+    class="confirm-dialog-overlay"
+    role="dialog"
+  >
+    <div
+      class="confirm-dialog"
+      role="document"
+    >
+      <h3
+        id="confirm-dialog-title"
+      >
+        確認
+      </h3>
+      <p>
+        テストメッセージ
+      </p>
+      <div
+        class="confirm-dialog-actions"
+      >
+        <button
+          aria-label="キャンセル"
+          class="confirm-button cancel"
+          type="button"
+        >
+          キャンセル
+        </button>
+        <button
+          aria-label="確認"
+          class="confirm-button confirm primary"
+          type="button"
+        >
+          確認
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ConfirmDialog.tsx スナップショットテスト カスタムタイトルとラベルのスナップショット 1`] = `
+<div>
+  <div
+    aria-labelledby="confirm-dialog-title"
+    aria-modal="true"
+    class="confirm-dialog-overlay"
+    role="dialog"
+  >
+    <div
+      class="confirm-dialog"
+      role="document"
+    >
+      <h3
+        id="confirm-dialog-title"
+      >
+        削除確認
+      </h3>
+      <p>
+        この操作は取り消せません
+      </p>
+      <div
+        class="confirm-dialog-actions"
+      >
+        <button
+          aria-label="キャンセル"
+          class="confirm-button cancel"
+          type="button"
+        >
+          キャンセル
+        </button>
+        <button
+          aria-label="削除"
+          class="confirm-button confirm danger"
+          type="button"
+        >
+          削除
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+`;
+
+exports[`ConfirmDialog.tsx スナップショットテスト 基本的な確認ダイアログのスナップショット 1`] = `
+<div>
+  <div
+    aria-labelledby="confirm-dialog-title"
+    aria-modal="true"
+    class="confirm-dialog-overlay"
+    role="dialog"
+  >
+    <div
+      class="confirm-dialog"
+      role="document"
+    >
+      <h3
+        id="confirm-dialog-title"
+      >
+        確認
+      </h3>
+      <p>
+        テストメッセージ
+      </p>
+      <div
+        class="confirm-dialog-actions"
+      >
+        <button
+          aria-label="キャンセル"
+          class="confirm-button cancel"
+          type="button"
+        >
+          キャンセル
+        </button>
+        <button
+          aria-label="確認"
+          class="confirm-button confirm primary"
+          type="button"
+        >
+          確認
+        </button>
+      </div>
+    </div>
+  </div>
+</div>
+`;

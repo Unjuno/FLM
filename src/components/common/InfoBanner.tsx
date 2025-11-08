@@ -79,4 +79,3 @@ export const InfoBanner: React.FC<InfoBannerProps> = ({
     </div>
   );
 };
-

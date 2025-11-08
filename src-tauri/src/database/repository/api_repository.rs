@@ -1,6 +1,6 @@
 // API Repository
 
-use rusqlite::{Connection, params};
+use rusqlite::{Connection, params, Error as RusqliteError, types::Type};
 use chrono::{DateTime, Utc};
 use crate::database::{DatabaseError, models::Api, models::ApiStatus};
 
@@ -28,10 +28,10 @@ impl ApiRepository {
                 engine_type: row.get::<_, Option<String>>(6)?,
                 engine_config: row.get::<_, Option<String>>(7)?,
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
-                    .map_err(|e| DatabaseError::Other(format!("Invalid created_at format: {}", e)))?
+                    .map_err(|_| RusqliteError::InvalidColumnType(8, "created_at".to_string(), Type::Text))?
                     .with_timezone(&Utc),
                 updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
-                    .map_err(|e| DatabaseError::Other(format!("Invalid updated_at format: {}", e)))?
+                    .map_err(|_| RusqliteError::InvalidColumnType(9, "updated_at".to_string(), Type::Text))?
                     .with_timezone(&Utc),
             })
         })?;
@@ -45,6 +45,7 @@ impl ApiRepository {
     }
     
     /// IDでAPIを取得
+    #[allow(dead_code)]
     pub fn find_by_id(conn: &Connection, id: &str) -> Result<Option<Api>, DatabaseError> {
         let mut stmt = conn.prepare(
             "SELECT id, name, model, port, enable_auth, status, 
@@ -63,10 +64,10 @@ impl ApiRepository {
                 engine_type: row.get::<_, Option<String>>(6)?,
                 engine_config: row.get::<_, Option<String>>(7)?,
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
-                    .map_err(|e| DatabaseError::Other(format!("Invalid created_at format: {}", e)))?
+                    .map_err(|_| RusqliteError::InvalidColumnType(8, "created_at".to_string(), Type::Text))?
                     .with_timezone(&Utc),
                 updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
-                    .map_err(|e| DatabaseError::Other(format!("Invalid updated_at format: {}", e)))?
+                    .map_err(|_| RusqliteError::InvalidColumnType(9, "updated_at".to_string(), Type::Text))?
                     .with_timezone(&Utc),
             })
         });
@@ -79,6 +80,7 @@ impl ApiRepository {
     }
     
     /// 名前でAPIを取得
+    #[allow(dead_code)]
     pub fn find_by_name(conn: &Connection, name: &str) -> Result<Option<Api>, DatabaseError> {
         let mut stmt = conn.prepare(
             "SELECT id, name, model, port, enable_auth, status, 
@@ -97,10 +99,10 @@ impl ApiRepository {
                 engine_type: row.get::<_, Option<String>>(6)?,
                 engine_config: row.get::<_, Option<String>>(7)?,
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
-                    .map_err(|e| DatabaseError::Other(format!("Invalid created_at format: {}", e)))?
+                    .map_err(|_| RusqliteError::InvalidColumnType(8, "created_at".to_string(), Type::Text))?
                     .with_timezone(&Utc),
                 updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
-                    .map_err(|e| DatabaseError::Other(format!("Invalid updated_at format: {}", e)))?
+                    .map_err(|_| RusqliteError::InvalidColumnType(9, "updated_at".to_string(), Type::Text))?
                     .with_timezone(&Utc),
             })
         });
@@ -113,6 +115,7 @@ impl ApiRepository {
     }
     
     /// ポート番号でAPIを取得
+    #[allow(dead_code)]
     pub fn find_by_port(conn: &Connection, port: u16) -> Result<Option<Api>, DatabaseError> {
         let mut stmt = conn.prepare(
             "SELECT id, name, model, port, enable_auth, status, 
@@ -131,10 +134,10 @@ impl ApiRepository {
                 engine_type: row.get::<_, Option<String>>(6)?,
                 engine_config: row.get::<_, Option<String>>(7)?,
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
-                    .map_err(|e| DatabaseError::Other(format!("Invalid created_at format: {}", e)))?
+                    .map_err(|_| RusqliteError::InvalidColumnType(8, "created_at".to_string(), Type::Text))?
                     .with_timezone(&Utc),
                 updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
-                    .map_err(|e| DatabaseError::Other(format!("Invalid updated_at format: {}", e)))?
+                    .map_err(|_| RusqliteError::InvalidColumnType(9, "updated_at".to_string(), Type::Text))?
                     .with_timezone(&Utc),
             })
         });
@@ -147,6 +150,7 @@ impl ApiRepository {
     }
     
     /// ステータスでAPIを取得
+    #[allow(dead_code)]
     pub fn find_by_status(conn: &Connection, status: ApiStatus) -> Result<Vec<Api>, DatabaseError> {
         let status_str = status.as_str();
         let mut stmt = conn.prepare(
@@ -166,10 +170,10 @@ impl ApiRepository {
                 engine_type: row.get::<_, Option<String>>(6)?,
                 engine_config: row.get::<_, Option<String>>(7)?,
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
-                    .map_err(|e| DatabaseError::Other(format!("Invalid created_at format: {}", e)))?
+                    .map_err(|_| RusqliteError::InvalidColumnType(8, "created_at".to_string(), Type::Text))?
                     .with_timezone(&Utc),
                 updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
-                    .map_err(|e| DatabaseError::Other(format!("Invalid updated_at format: {}", e)))?
+                    .map_err(|_| RusqliteError::InvalidColumnType(9, "updated_at".to_string(), Type::Text))?
                     .with_timezone(&Utc),
             })
         })?;
@@ -183,6 +187,7 @@ impl ApiRepository {
     }
     
     /// APIを作成
+    #[allow(dead_code)]
     pub fn create(conn: &Connection, api: &Api) -> Result<(), DatabaseError> {
         let created_at = api.created_at.to_rfc3339();
         let updated_at = api.updated_at.to_rfc3339();
@@ -208,8 +213,21 @@ impl ApiRepository {
         
         Ok(())
     }
+
+    /// ポート番号のみを更新
+    pub fn update_port(conn: &Connection, id: &str, new_port: u16) -> Result<(), DatabaseError> {
+        let updated_at = Utc::now().to_rfc3339();
+
+        conn.execute(
+            "UPDATE apis SET port = ?, updated_at = ? WHERE id = ?",
+            params![new_port as i32, updated_at, id],
+        )?;
+
+        Ok(())
+    }
     
     /// APIを更新
+    #[allow(dead_code)]
     pub fn update(conn: &Connection, api: &Api) -> Result<(), DatabaseError> {
         let updated_at = Utc::now().to_rfc3339();
         let status_str = api.status.as_str();
@@ -234,6 +252,7 @@ impl ApiRepository {
     }
     
     /// APIステータスを更新
+    #[allow(dead_code)]
     pub fn update_status(conn: &Connection, id: &str, status: ApiStatus) -> Result<(), DatabaseError> {
         let updated_at = Utc::now().to_rfc3339();
         let status_str = status.as_str();
@@ -247,9 +266,11 @@ impl ApiRepository {
     }
     
     /// APIを削除
+    #[allow(dead_code)]
     pub fn delete(conn: &Connection, id: &str) -> Result<(), DatabaseError> {
         conn.execute("DELETE FROM apis WHERE id = ?", params![id])?;
         Ok(())
     }
 }
+
 

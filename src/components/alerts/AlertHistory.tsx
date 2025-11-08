@@ -41,6 +41,34 @@ export const AlertHistorySection: React.FC<AlertHistorySectionProps> = ({
   const [showResolved, setShowResolved] = useState(false);
   const [selectedAlerts, setSelectedAlerts] = useState<Set<string>>(new Set());
   const [apiNames, setApiNames] = useState<Map<string, string>>(new Map());
+  // 確認ダイアログの状態
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+  }>({
+    isOpen: false,
+    message: '',
+    onConfirm: () => {},
+    onCancel: () => {},
+  });
+
+  // ESCキーで確認ダイアログを閉じる
+  useEffect(() => {
+    if (!confirmDialog.isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [confirmDialog.isOpen]);
 
   /**
    * アラート履歴を読み込む
@@ -58,7 +86,7 @@ export const AlertHistorySection: React.FC<AlertHistorySectionProps> = ({
       setHistory(result);
     } catch (err) {
       logger.error('アラート履歴の読み込みに失敗しました', err, 'AlertHistory');
-      const errorMessage = err instanceof Error ? err.message : 'アラート履歴の読み込みに失敗しました';
+      const errorMessage = extractErrorMessage(err, 'アラート履歴の読み込みに失敗しました');
       showError('アラート履歴の読み込みエラー', errorMessage);
     } finally {
       setLoading(false);
@@ -70,10 +98,12 @@ export const AlertHistorySection: React.FC<AlertHistorySectionProps> = ({
    */
   const loadApiList = useCallback(async () => {
     try {
-      const apis = await safeInvoke<Array<{
-        id: string;
-        name: string;
-      }>>('list_apis');
+      const apis = await safeInvoke<
+        Array<{
+          id: string;
+          name: string;
+        }>
+      >('list_apis');
       const apiMap = new Map<string, string>();
       apis.forEach(api => apiMap.set(api.id, api.name));
       setApiNames(apiMap);
@@ -94,39 +124,57 @@ export const AlertHistorySection: React.FC<AlertHistorySectionProps> = ({
   /**
    * アラートを解決済みとしてマーク
    */
-  const handleResolve = useCallback(async (alertId: string) => {
-    try {
-      await safeInvoke('resolve_alert', { alert_id: alertId });
-      showSuccess('アラートを解決済みとしてマークしました');
-      loadHistory(); // 履歴を再読み込み
-    } catch (err) {
-      logger.error('アラートの解決に失敗しました', err, 'AlertHistory');
-      const errorMessage = err instanceof Error ? err.message : 'アラートの解決に失敗しました';
-      showError('アラートの解決エラー', errorMessage);
-    }
-  }, [loadHistory, showSuccess, showError]);
+  const handleResolve = useCallback(
+    async (alertId: string) => {
+      try {
+        await safeInvoke('resolve_alert', { alert_id: alertId });
+        showSuccess('アラートを解決済みとしてマークしました');
+        loadHistory(); // 履歴を再読み込み
+      } catch (err) {
+        logger.error('アラートの解決に失敗しました', err, 'AlertHistory');
+        const errorMessage = extractErrorMessage(err, 'アラートの解決に失敗しました');
+        showError('アラートの解決エラー', errorMessage);
+      }
+    },
+    [loadHistory, showSuccess, showError]
+  );
 
   /**
    * 複数のアラートを一括で解決済みとしてマーク
    */
-  const handleResolveMultiple = useCallback(async (alertIds: string[]) => {
-    if (alertIds.length === 0) return;
-    
-    if (!confirm(`${alertIds.length}件のアラートを解決済みとしてマークしますか？`)) {
-      return;
-    }
+  const handleResolveMultiple = useCallback(
+    async (alertIds: string[]) => {
+      if (alertIds.length === 0) return;
 
-    try {
-      const resolvedCount = await safeInvoke<number>('resolve_alerts', { alert_ids: alertIds });
-      showSuccess('アラート一括解決完了', `${resolvedCount}件のアラートを解決済みとしてマークしました`);
-      setSelectedAlerts(new Set()); // 選択をクリア
-      loadHistory(); // 履歴を再読み込み
-    } catch (err) {
-      logger.error('アラートの一括解決に失敗しました', err, 'AlertHistory');
-      const errorMessage = err instanceof Error ? err.message : 'アラートの一括解決に失敗しました';
-      showError('アラート一括解決エラー', errorMessage);
-    }
-  }, [loadHistory, showSuccess, showError]);
+      setConfirmDialog({
+        isOpen: true,
+        message: `${alertIds.length}件のアラートを解決済みとしてマークしますか？`,
+        onConfirm: async () => {
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+          try {
+            const resolvedCount = await safeInvoke<number>('resolve_alerts', {
+              alert_ids: alertIds,
+            });
+            showSuccess(
+              'アラート一括解決完了',
+              `${resolvedCount}件のアラートを解決済みとしてマークしました`
+            );
+            setSelectedAlerts(new Set()); // 選択をクリア
+            loadHistory(); // 履歴を再読み込み
+          } catch (err) {
+            logger.error('アラートの一括解決に失敗しました', err, 'AlertHistory');
+            const errorMessage =
+              extractErrorMessage(err, 'アラートの一括解決に失敗しました');
+            showError('アラート一括解決エラー', errorMessage);
+          }
+        },
+        onCancel: () => {
+          setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        },
+      });
+    },
+    [loadHistory, showSuccess, showError]
+  );
 
   /**
    * アラートタイプの日本語名を取得
@@ -174,7 +222,7 @@ export const AlertHistorySection: React.FC<AlertHistorySectionProps> = ({
             <input
               type="checkbox"
               checked={showResolved}
-              onChange={(e) => setShowResolved(e.target.checked)}
+              onChange={e => setShowResolved(e.target.checked)}
             />
             <span>解決済みも表示</span>
           </label>
@@ -206,7 +254,7 @@ export const AlertHistorySection: React.FC<AlertHistorySectionProps> = ({
         </div>
       ) : (
         <div className="alert-history-list">
-          {history.map((alert) => (
+          {history.map(alert => (
             <div
               key={alert.id}
               className={`alert-history-item ${alert.resolved_at ? 'resolved' : 'active'}`}
@@ -218,7 +266,7 @@ export const AlertHistorySection: React.FC<AlertHistorySectionProps> = ({
                       <input
                         type="checkbox"
                         checked={selectedAlerts.has(alert.id)}
-                        onChange={(e) => {
+                        onChange={e => {
                           const newSelected = new Set(selectedAlerts);
                           if (e.target.checked) {
                             newSelected.add(alert.id);
@@ -233,11 +281,17 @@ export const AlertHistorySection: React.FC<AlertHistorySectionProps> = ({
                       <span className="sr-only">アラートを選択</span>
                     </label>
                   )}
-                  <span className="alert-history-type-badge">{getAlertTypeName(alert.alert_type)}</span>
+                  <span className="alert-history-type-badge">
+                    {getAlertTypeName(alert.alert_type)}
+                  </span>
                   {alert.resolved_at ? (
-                    <span className="alert-history-status-badge resolved">解決済み</span>
+                    <span className="alert-history-status-badge resolved">
+                      解決済み
+                    </span>
                   ) : (
-                    <span className="alert-history-status-badge active">アクティブ</span>
+                    <span className="alert-history-status-badge active">
+                      アクティブ
+                    </span>
                   )}
                 </div>
                 <div className="alert-history-item-actions">
@@ -281,7 +335,40 @@ export const AlertHistorySection: React.FC<AlertHistorySectionProps> = ({
           ))}
         </div>
       )}
+
+      {/* 確認ダイアログ */}
+      {confirmDialog.isOpen && (
+        <div
+          className="confirm-dialog-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-dialog-title"
+        >
+          <div
+            className="confirm-dialog"
+            role="document"
+          >
+            <h3 id="confirm-dialog-title">確認</h3>
+            <p>{confirmDialog.message}</p>
+            <div className="confirm-dialog-actions">
+              <button
+                className="confirm-button cancel"
+                onClick={confirmDialog.onCancel}
+                type="button"
+              >
+                キャンセル
+              </button>
+              <button
+                className="confirm-button confirm"
+                onClick={confirmDialog.onConfirm}
+                type="button"
+              >
+                確認
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </section>
   );
 };
-

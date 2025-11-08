@@ -2,6 +2,8 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
+import { cleanupTestApis, createTestApi, handleTauriAppNotRunningError } from '../setup/test-helpers';
+import { debugLog, debugWarn } from '../setup/debug';
 
 /**
  * パフォーマンスメトリクス情報
@@ -43,7 +45,7 @@ interface ApiInfo {
 
 /**
  * F007: パフォーマンス監視機能統合テストスイート
- * 
+ *
  * テスト項目:
  * - メトリクス記録機能のテスト
  * - メトリクス取得機能のテスト（各種フィルタ）
@@ -52,41 +54,45 @@ interface ApiInfo {
  */
 describe('F007: パフォーマンス監視機能 統合テスト', () => {
   let testApiId: string | null = null;
-  let testMetricIds: number[] = [];
+  const testMetricIds: number[] = [];
 
   beforeAll(async () => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-      console.log('F007 パフォーマンス監視機能統合テストを開始します');
-    }
-    
+    debugLog('F007 パフォーマンス監視機能統合テストを開始します');
+
     try {
-      const result = await invoke<ApiInfo>('create_api', {
-        config: {
-          name: 'E2E Test API for Performance',
-          model_name: 'llama3:8b',
-          port: 8094,
-          enable_auth: true,
-        },
+      testApiId = await createTestApi({
+        name: 'E2E Test API for Performance',
+        model_name: 'llama3:8b',
+        port: 8094,
+        enable_auth: true,
       });
-      testApiId = result.id;
-      if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-        console.log(`テスト用APIを作成しました: ${testApiId}`);
-      }
+      debugLog(`テスト用APIを作成しました: ${testApiId}`);
     } catch (error) {
-      if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-        console.warn('テスト用APIの作成に失敗しました（既存APIを使用）:', error);
+      if (handleTauriAppNotRunningError(error)) {
+        // テストは続行（testApiIdがnullのまま）
+      } else {
+        debugWarn(
+          'テスト用APIの作成に失敗しました（既存APIを使用）:',
+          error
+        );
       }
       try {
         const apis = await invoke<ApiInfo[]>('list_apis');
         if (apis.length > 0) {
           testApiId = apis[0].id;
-          if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-            console.log(`既存のAPIを使用します: ${testApiId}`);
+          if (
+            process.env.NODE_ENV === 'development' ||
+            process.env.JEST_DEBUG === '1'
+          ) {
+            debugLog(`既存のAPIを使用します: ${testApiId}`);
           }
         }
       } catch (err) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.error('APIの取得に失敗しました:', err);
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('APIの取得に失敗しました:', err);
         }
       }
     }
@@ -156,29 +162,43 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
               },
             });
             // 作成後にメトリクスを取得してIDを取得
-            const createdMetrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-              request: {
-                api_id: metric.api_id,
-                metric_type: metric.metric_type,
-                start_date: null,
-                end_date: null,
-              },
-            });
+            const createdMetrics = await invoke<PerformanceMetricInfo[]>(
+              'get_performance_metrics',
+              {
+                request: {
+                  api_id: metric.api_id,
+                  metric_type: metric.metric_type,
+                  start_date: null,
+                  end_date: null,
+                },
+              }
+            );
             if (createdMetrics.length > 0) {
               testMetricIds.push(createdMetrics[createdMetrics.length - 1].id);
             }
           } catch (err) {
-            if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-              console.warn('メトリクスの作成に失敗しました:', err);
+            if (
+              process.env.NODE_ENV === 'development' ||
+              process.env.JEST_DEBUG === '1'
+            ) {
+              debugWarn('メトリクスの作成に失敗しました:', err);
             }
           }
         }
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.log(`テスト用メトリクスを ${testMetricIds.length} 件作成しました`);
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugLog(
+            `テスト用メトリクスを ${testMetricIds.length} 件作成しました`
+          );
         }
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用メトリクスの作成に失敗しました:', error);
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用メトリクスの作成に失敗しました:', error);
         }
       }
     }
@@ -190,27 +210,10 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
     // テスト用APIを削除
     if (testApiId) {
-      try {
-        // APIが実行中の場合は停止
-        try {
-          await invoke('stop_api', { apiId: testApiId });
-        } catch (error) {
-          // 既に停止している可能性がある
-        }
-        await invoke('delete_api', { apiId: testApiId });
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.log('テスト用APIを削除しました');
-        }
-      } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIの削除に失敗しました:', error);
-        }
-      }
+      await cleanupTestApis([testApiId]);
+      debugLog('テスト用APIを削除しました');
     }
-
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-      console.log('F007 パフォーマンス監視機能統合テストを完了しました');
-    }
+    debugLog('F007 パフォーマンス監視機能統合テストを完了しました');
   });
 
   /**
@@ -219,8 +222,11 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
   describe('record_performance_metric のテスト', () => {
     it('should record performance metric successfully', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが存在しないため、テストをスキップします');
         }
         return;
       }
@@ -234,14 +240,17 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
       });
 
       // 作成されたメトリクスを取得して確認
-      const metrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-        request: {
-          api_id: testApiId,
-          metric_type: 'avg_response_time',
-          start_date: null,
-          end_date: null,
-        },
-      });
+      const metrics = await invoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        {
+          request: {
+            api_id: testApiId,
+            metric_type: 'avg_response_time',
+            start_date: null,
+            end_date: null,
+          },
+        }
+      );
 
       expect(metrics.length).toBeGreaterThan(0);
       const newMetric = metrics.find(m => Math.abs(m.value - 175.5) < 0.1);
@@ -250,8 +259,11 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
     it('should record different metric types', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが存在しないため、テストをスキップします');
         }
         return;
       }
@@ -274,14 +286,17 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
         });
 
         // 作成されたメトリクスを確認
-        const metrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-          request: {
-            api_id: testApiId,
-            metric_type: metricType,
-            start_date: null,
-            end_date: null,
-          },
-        });
+        const metrics = await invoke<PerformanceMetricInfo[]>(
+          'get_performance_metrics',
+          {
+            request: {
+              api_id: testApiId,
+              metric_type: metricType,
+              start_date: null,
+              end_date: null,
+            },
+          }
+        );
 
         expect(metrics.length).toBeGreaterThan(0);
       }
@@ -289,7 +304,7 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
     it('should handle invalid API ID gracefully', async () => {
       const invalidApiId = 'invalid-api-id-12345';
-      
+
       try {
         await invoke('record_performance_metric', {
           request: {
@@ -298,7 +313,7 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
             value: 100.0,
           },
         });
-        
+
         // エラーが発生するか、有効なメトリクスIDが返されることを確認
         // （外部キー制約によりエラーが発生する可能性がある）
       } catch (error) {
@@ -314,24 +329,30 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
   describe('get_performance_metrics のテスト', () => {
     it('should retrieve all metrics for an API', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが存在しないため、テストをスキップします');
         }
         return;
       }
 
-      const metrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-        request: {
-          api_id: testApiId,
-          metric_type: null,
-          start_date: null,
-          end_date: null,
-        },
-      });
+      const metrics = await invoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        {
+          request: {
+            api_id: testApiId,
+            metric_type: null,
+            start_date: null,
+            end_date: null,
+          },
+        }
+      );
 
       expect(metrics).toBeDefined();
       expect(Array.isArray(metrics)).toBe(true);
-      
+
       if (metrics.length > 0) {
         const metric = metrics[0];
         expect(metric).toHaveProperty('id');
@@ -345,21 +366,27 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
     it('should filter metrics by type', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが存在しないため、テストをスキップします');
         }
         return;
       }
 
       const metricType = 'avg_response_time';
-      const metrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-        request: {
-          api_id: testApiId,
-          metric_type: metricType,
-          start_date: null,
-          end_date: null,
-        },
-      });
+      const metrics = await invoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        {
+          request: {
+            api_id: testApiId,
+            metric_type: metricType,
+            start_date: null,
+            end_date: null,
+          },
+        }
+      );
 
       expect(metrics).toBeDefined();
       expect(Array.isArray(metrics)).toBe(true);
@@ -372,8 +399,11 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
     it('should filter metrics by date range', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが存在しないため、テストをスキップします');
         }
         return;
       }
@@ -382,14 +412,17 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
       const startDate = new Date(now.getTime() - 60 * 60 * 1000).toISOString(); // 1時間前
       const endDate = now.toISOString();
 
-      const metrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-        request: {
-          api_id: testApiId,
-          metric_type: null,
-          start_date: startDate,
-          end_date: endDate,
-        },
-      });
+      const metrics = await invoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        {
+          request: {
+            api_id: testApiId,
+            metric_type: null,
+            start_date: startDate,
+            end_date: endDate,
+          },
+        }
+      );
 
       expect(metrics).toBeDefined();
       expect(Array.isArray(metrics)).toBe(true);
@@ -397,15 +430,22 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
       // フィルタされたメトリクスが指定した日時範囲内にあることを確認
       for (const metric of metrics) {
         const metricDate = new Date(metric.timestamp);
-        expect(metricDate.getTime()).toBeGreaterThanOrEqual(new Date(startDate).getTime());
-        expect(metricDate.getTime()).toBeLessThanOrEqual(new Date(endDate).getTime());
+        expect(metricDate.getTime()).toBeGreaterThanOrEqual(
+          new Date(startDate).getTime()
+        );
+        expect(metricDate.getTime()).toBeLessThanOrEqual(
+          new Date(endDate).getTime()
+        );
       }
     });
 
     it('should filter metrics by type and date range', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが存在しないため、テストをスキップします');
         }
         return;
       }
@@ -415,14 +455,17 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
       const endDate = now.toISOString();
       const metricType = 'avg_response_time';
 
-      const metrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-        request: {
-          api_id: testApiId,
-          metric_type: metricType,
-          start_date: startDate,
-          end_date: endDate,
-        },
-      });
+      const metrics = await invoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        {
+          request: {
+            api_id: testApiId,
+            metric_type: metricType,
+            start_date: startDate,
+            end_date: endDate,
+          },
+        }
+      );
 
       expect(metrics).toBeDefined();
       expect(Array.isArray(metrics)).toBe(true);
@@ -431,22 +474,29 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
       for (const metric of metrics) {
         expect(metric.metric_type).toBe(metricType);
         const metricDate = new Date(metric.timestamp);
-        expect(metricDate.getTime()).toBeGreaterThanOrEqual(new Date(startDate).getTime());
-        expect(metricDate.getTime()).toBeLessThanOrEqual(new Date(endDate).getTime());
+        expect(metricDate.getTime()).toBeGreaterThanOrEqual(
+          new Date(startDate).getTime()
+        );
+        expect(metricDate.getTime()).toBeLessThanOrEqual(
+          new Date(endDate).getTime()
+        );
       }
     });
 
     it('should return empty array for non-existent API', async () => {
       const nonExistentApiId = 'non-existent-api-id-12345';
-      
-      const metrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-        request: {
-          api_id: nonExistentApiId,
-          metric_type: null,
-          start_date: null,
-          end_date: null,
-        },
-      });
+
+      const metrics = await invoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        {
+          request: {
+            api_id: nonExistentApiId,
+            metric_type: null,
+            start_date: null,
+            end_date: null,
+          },
+        }
+      );
 
       expect(metrics).toBeDefined();
       expect(Array.isArray(metrics)).toBe(true);
@@ -460,18 +510,24 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
   describe('get_performance_summary のテスト', () => {
     it('should retrieve performance summary', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが存在しないため、テストをスキップします');
         }
         return;
       }
 
-      const summary = await invoke<PerformanceSummary>('get_performance_summary', {
-        request: {
-          api_id: testApiId,
-          period: '24h',
-        },
-      });
+      const summary = await invoke<PerformanceSummary>(
+        'get_performance_summary',
+        {
+          request: {
+            api_id: testApiId,
+            period: '24h',
+          },
+        }
+      );
 
       expect(summary).toBeDefined();
       expect(summary).toHaveProperty('avg_response_time');
@@ -504,19 +560,25 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
     it('should calculate summary with date range filter', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが存在しないため、テストをスキップします');
         }
         return;
       }
 
       // 24時間の期間でサマリーを取得
-      const summary = await invoke<PerformanceSummary>('get_performance_summary', {
-        request: {
-          api_id: testApiId,
-          period: '24h',
-        },
-      });
+      const summary = await invoke<PerformanceSummary>(
+        'get_performance_summary',
+        {
+          request: {
+            api_id: testApiId,
+            period: '24h',
+          },
+        }
+      );
 
       expect(summary).toBeDefined();
       expect(summary).toHaveProperty('avg_response_time');
@@ -526,8 +588,11 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
     it('should return zero values for API with no metrics', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが存在しないため、テストをスキップします');
         }
         return;
       }
@@ -545,22 +610,28 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
         });
         newApiId = result.id;
 
-        const summary = await invoke<PerformanceSummary>('get_performance_summary', {
-          request: {
-            api_id: newApiId,
-            period: '24h',
-          },
-        });
+        const summary = await invoke<PerformanceSummary>(
+          'get_performance_summary',
+          {
+            request: {
+              api_id: newApiId,
+              period: '24h',
+            },
+          }
+        );
 
         expect(summary).toBeDefined();
         // メトリクスがない場合、0またはNaNが返される可能性がある
         expect(summary.request_count).toBe(0);
-        
+
         // クリーンアップ
         await invoke('delete_api', { apiId: newApiId });
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIの作成/削除に失敗しました:', error);
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIの作成/削除に失敗しました:', error);
         }
         if (newApiId) {
           try {
@@ -579,8 +650,11 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
   describe('エッジケーステスト', () => {
     it('should handle empty metrics list', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが存在しないため、テストをスキップします');
         }
         return;
       }
@@ -598,24 +672,30 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
         });
         newApiId = result.id;
 
-        const metrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-          request: {
-            api_id: newApiId,
-            metric_type: null,
-            start_date: null,
-            end_date: null,
-          },
-        });
+        const metrics = await invoke<PerformanceMetricInfo[]>(
+          'get_performance_metrics',
+          {
+            request: {
+              api_id: newApiId,
+              metric_type: null,
+              start_date: null,
+              end_date: null,
+            },
+          }
+        );
 
         expect(metrics).toBeDefined();
         expect(Array.isArray(metrics)).toBe(true);
         expect(metrics.length).toBe(0);
-        
+
         // クリーンアップ
         await invoke('delete_api', { apiId: newApiId });
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIの作成/削除に失敗しました:', error);
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIの作成/削除に失敗しました:', error);
         }
         if (newApiId) {
           try {
@@ -629,8 +709,11 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
     it('should handle invalid date range (start > end)', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが存在しないため、テストをスキップします');
         }
         return;
       }
@@ -639,14 +722,17 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
       const startDate = now.toISOString();
       const endDate = new Date(now.getTime() - 60 * 60 * 1000).toISOString(); // 1時間前
 
-      const metrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-        request: {
-          api_id: testApiId,
-          metric_type: null,
-          start_date: startDate,
-          end_date: endDate,
-        },
-      });
+      const metrics = await invoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        {
+          request: {
+            api_id: testApiId,
+            metric_type: null,
+            start_date: startDate,
+            end_date: endDate,
+          },
+        }
+      );
 
       expect(metrics).toBeDefined();
       expect(Array.isArray(metrics)).toBe(true);
@@ -656,24 +742,34 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
     it('should handle future date range', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが存在しないため、テストをスキップします');
         }
         return;
       }
 
       // 将来の日時範囲（メトリクスが存在しない）
-      const futureStart = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-      const futureEnd = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+      const futureStart = new Date(
+        Date.now() + 24 * 60 * 60 * 1000
+      ).toISOString();
+      const futureEnd = new Date(
+        Date.now() + 48 * 60 * 60 * 1000
+      ).toISOString();
 
-      const metrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-        request: {
-          api_id: testApiId,
-          metric_type: null,
-          start_date: futureStart,
-          end_date: futureEnd,
-        },
-      });
+      const metrics = await invoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        {
+          request: {
+            api_id: testApiId,
+            metric_type: null,
+            start_date: futureStart,
+            end_date: futureEnd,
+          },
+        }
+      );
 
       expect(metrics).toBeDefined();
       expect(Array.isArray(metrics)).toBe(true);
@@ -683,8 +779,11 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
     it('should handle negative values gracefully', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト用APIが存在しないため、テストをスキップします');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          debugWarn('テスト用APIが存在しないため、テストをスキップします');
         }
         return;
       }
@@ -701,14 +800,17 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
 
         // 負の値が許可される場合、エラーが発生しない
         // メトリクスを取得して確認
-        const metrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-          request: {
-            api_id: testApiId,
-            metric_type: 'avg_response_time',
-            start_date: null,
-            end_date: null,
-          },
-        });
+        const metrics = await invoke<PerformanceMetricInfo[]>(
+          'get_performance_metrics',
+          {
+            request: {
+              api_id: testApiId,
+              metric_type: 'avg_response_time',
+              start_date: null,
+              end_date: null,
+            },
+          }
+        );
 
         expect(metrics.length).toBeGreaterThan(0);
       } catch (error) {
@@ -718,4 +820,3 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
     });
   });
 });
-

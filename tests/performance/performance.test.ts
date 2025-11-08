@@ -5,13 +5,19 @@ import { invoke } from '@tauri-apps/api/core';
 
 describe('パフォーマンステスト', () => {
   beforeAll(() => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('パフォーマンステストを開始します');
     }
   });
 
   afterAll(() => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('パフォーマンステストを完了しました');
     }
   });
@@ -32,10 +38,10 @@ describe('パフォーマンステスト', () => {
     it('should handle multiple concurrent IPC requests efficiently', async () => {
       const requestCount = 10;
       const startTime = Date.now();
-      
-      const requests = Array(requestCount).fill(null).map(() => 
-        invoke('get_app_info')
-      );
+
+      const requests = Array(requestCount)
+        .fill(null)
+        .map(() => invoke('get_app_info'));
 
       await Promise.all(requests);
       const endTime = Date.now();
@@ -64,7 +70,7 @@ describe('パフォーマンステスト', () => {
     it('should retrieve API details quickly', async () => {
       // 既存のAPIがある場合、そのIDを使用
       const apis = await invoke<Array<{ id: string }>>('list_apis');
-      
+
       if (apis.length > 0) {
         const apiId = apis[0].id;
         const startTime = Date.now();
@@ -111,7 +117,7 @@ describe('パフォーマンステスト', () => {
   describe('メモリ使用量の監視', () => {
     it('should not cause memory leaks in repeated operations', async () => {
       const iterations = 10;
-      
+
       for (let i = 0; i < iterations; i++) {
         await invoke('list_apis');
       }
@@ -127,4 +133,3 @@ describe('パフォーマンステスト', () => {
     }, 15000);
   });
 });
-

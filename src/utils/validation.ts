@@ -1,6 +1,69 @@
 // validation - フォームバリデーションシステム
 
 /**
+ * 翻訳関数の型定義
+ */
+type TranslateFunction = (key: string, params?: Record<string, string | number>) => string;
+
+/**
+ * グローバルな翻訳関数（デフォルトは日本語）
+ */
+let globalTranslate: TranslateFunction | null = null;
+
+/**
+ * 翻訳関数を設定
+ */
+export function setValidationTranslateFunction(translate: TranslateFunction): void {
+  globalTranslate = translate;
+}
+
+/**
+ * 翻訳関数を取得（設定されていない場合はデフォルトの日本語メッセージを返す）
+ */
+function t(key: string, params?: Record<string, string | number>): string {
+  if (globalTranslate) {
+    return globalTranslate(key, params);
+  }
+  // デフォルトの日本語メッセージ（フォールバック）
+  return getDefaultMessage(key, params);
+}
+
+/**
+ * デフォルトの日本語メッセージを取得
+ */
+function getDefaultMessage(key: string, params?: Record<string, string | number>): string {
+  const messages: Record<string, string> = {
+    'errors.validation.required': 'この項目は必須です。',
+    'errors.validation.minLength': `最低${params?.min || 0}文字以上入力してください。`,
+    'errors.validation.maxLength': `${params?.max || 0}文字以下で入力してください。`,
+    'errors.validation.min': `最小値は${params?.min || 0}です。`,
+    'errors.validation.max': `最大値は${params?.max || 0}です。`,
+    'errors.validation.pattern': '正しい形式で入力してください。',
+    'errors.validation.emailRequired': 'メールアドレスを入力してください。',
+    'errors.validation.emailInvalid': '正しいメールアドレス形式で入力してください。',
+    'errors.validation.urlRequired': 'URLを入力してください。',
+    'errors.validation.urlInvalid': '正しいURL形式で入力してください。',
+    'errors.validation.numberRequired': '数値を入力してください。',
+    'errors.validation.integerRequired': '整数を入力してください。',
+    'errors.validation.positiveRequired': '正の数を入力してください。',
+    'errors.validation.passwordMinLength': 'パスワードは8文字以上である必要があります。',
+    'errors.validation.passwordUppercase': 'パスワードには大文字が含まれている必要があります。',
+    'errors.validation.passwordLowercase': 'パスワードには小文字が含まれている必要があります。',
+    'errors.validation.passwordNumber': 'パスワードには数字が含まれている必要があります。',
+    'errors.validation.dateRequired': '日付を入力してください。',
+    'errors.validation.dateInvalid': '正しい日付形式で入力してください。',
+  };
+  
+  let message = messages[key] || key;
+  if (params) {
+    Object.entries(params).forEach(([paramKey, paramValue]) => {
+      message = message.replace(`{{${paramKey}}}`, String(paramValue));
+    });
+  }
+  return message;
+}
+
+/**
  * バリデーション結果の型定義
  */
 export interface ValidationResult {
@@ -13,12 +76,16 @@ export interface ValidationResult {
 /**
  * バリデーションルールの型定義
  */
-export type ValidationRule<T = unknown> = (value: T) => ValidationResult | Promise<ValidationResult>;
+export type ValidationRule<T = unknown> = (
+  value: T
+) => ValidationResult | Promise<ValidationResult>;
 
 /**
  * 複数のバリデーションルールをチェックする関数
  */
-export type Validator<T = unknown> = (value: T) => ValidationResult | Promise<ValidationResult>;
+export type Validator<T = unknown> = (
+  value: T
+) => ValidationResult | Promise<ValidationResult>;
 
 /**
  * バリデーションルールビルダー
@@ -30,17 +97,17 @@ export class ValidationRuleBuilder<T = unknown> {
    * 必須チェックを追加
    */
   required(message?: string): this {
-    this.rules.push((value) => {
+    this.rules.push(value => {
       if (value === null || value === undefined || value === '') {
         return {
           isValid: false,
-          error: message || 'この項目は必須です。',
+          error: message || t('errors.validation.required'),
         };
       }
       if (typeof value === 'string' && value.trim() === '') {
         return {
           isValid: false,
-          error: message || 'この項目は必須です。',
+          error: message || t('errors.validation.required'),
         };
       }
       return { isValid: true };
@@ -52,11 +119,11 @@ export class ValidationRuleBuilder<T = unknown> {
    * 最小長チェックを追加
    */
   minLength(min: number, message?: string): this {
-    this.rules.push((value) => {
+    this.rules.push(value => {
       if (typeof value === 'string' && value.length < min) {
         return {
           isValid: false,
-          error: message || `最低${min}文字以上入力してください。`,
+          error: message || t('errors.validation.minLength', { min }),
         };
       }
       return { isValid: true };
@@ -68,11 +135,11 @@ export class ValidationRuleBuilder<T = unknown> {
    * 最大長チェックを追加
    */
   maxLength(max: number, message?: string): this {
-    this.rules.push((value) => {
+    this.rules.push(value => {
       if (typeof value === 'string' && value.length > max) {
         return {
           isValid: false,
-          error: message || `${max}文字以下で入力してください。`,
+          error: message || t('errors.validation.maxLength', { max }),
         };
       }
       return { isValid: true };
@@ -84,12 +151,12 @@ export class ValidationRuleBuilder<T = unknown> {
    * 最小値チェックを追加
    */
   min(min: number, message?: string): this {
-    this.rules.push((value) => {
+    this.rules.push(value => {
       const num = typeof value === 'number' ? value : Number(value);
       if (!isNaN(num) && num < min) {
         return {
           isValid: false,
-          error: message || `最小値は${min}です。`,
+          error: message || t('errors.validation.min', { min }),
         };
       }
       return { isValid: true };
@@ -101,12 +168,12 @@ export class ValidationRuleBuilder<T = unknown> {
    * 最大値チェックを追加
    */
   max(max: number, message?: string): this {
-    this.rules.push((value) => {
+    this.rules.push(value => {
       const num = typeof value === 'number' ? value : Number(value);
       if (!isNaN(num) && num > max) {
         return {
           isValid: false,
-          error: message || `最大値は${max}です。`,
+          error: message || t('errors.validation.max', { max }),
         };
       }
       return { isValid: true };
@@ -118,11 +185,11 @@ export class ValidationRuleBuilder<T = unknown> {
    * 正規表現チェックを追加
    */
   pattern(regex: RegExp, message?: string): this {
-    this.rules.push((value) => {
+    this.rules.push(value => {
       if (typeof value === 'string' && !regex.test(value)) {
         return {
           isValid: false,
-          error: message || '正しい形式で入力してください。',
+          error: message || t('errors.validation.pattern'),
         };
       }
       return { isValid: true };
@@ -134,7 +201,7 @@ export class ValidationRuleBuilder<T = unknown> {
    * カスタムルールを追加
    */
   custom(rule: ValidationRule<T>, message?: string): this {
-    this.rules.push(async (value) => {
+    this.rules.push(async value => {
       const result = await rule(value);
       if (!result.isValid && message) {
         return {
@@ -180,10 +247,13 @@ export function validate<T = unknown>(): ValidationRuleBuilder<T> {
 export const validateEmail = (value: string): ValidationResult => {
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!value || value.trim() === '') {
-    return { isValid: false, error: 'メールアドレスを入力してください。' };
+    return { isValid: false, error: t('errors.validation.emailRequired') };
   }
   if (!emailRegex.test(value)) {
-    return { isValid: false, error: '正しいメールアドレス形式で入力してください。' };
+    return {
+      isValid: false,
+      error: t('errors.validation.emailInvalid'),
+    };
   }
   return { isValid: true };
 };
@@ -193,13 +263,13 @@ export const validateEmail = (value: string): ValidationResult => {
  */
 export const validateUrl = (value: string): ValidationResult => {
   if (!value || value.trim() === '') {
-    return { isValid: false, error: 'URLを入力してください。' };
+    return { isValid: false, error: t('errors.validation.urlRequired') };
   }
   try {
     new URL(value);
     return { isValid: true };
   } catch {
-    return { isValid: false, error: '正しいURL形式で入力してください。' };
+    return { isValid: false, error: t('errors.validation.urlInvalid') };
   }
 };
 
@@ -208,11 +278,11 @@ export const validateUrl = (value: string): ValidationResult => {
  */
 export const validateNumber = (value: string | number): ValidationResult => {
   if (value === null || value === undefined || value === '') {
-    return { isValid: false, error: '数値を入力してください。' };
+    return { isValid: false, error: t('errors.validation.numberRequired') };
   }
   const num = typeof value === 'number' ? value : Number(value);
   if (isNaN(num)) {
-    return { isValid: false, error: '数値を入力してください。' };
+    return { isValid: false, error: t('errors.validation.numberRequired') };
   }
   return { isValid: true };
 };
@@ -227,7 +297,7 @@ export const validateInteger = (value: string | number): ValidationResult => {
   }
   const num = typeof value === 'number' ? value : Number(value);
   if (!Number.isInteger(num)) {
-    return { isValid: false, error: '整数を入力してください。' };
+    return { isValid: false, error: t('errors.validation.integerRequired') };
   }
   return { isValid: true };
 };
@@ -242,7 +312,7 @@ export const validatePositive = (value: string | number): ValidationResult => {
   }
   const num = typeof value === 'number' ? value : Number(value);
   if (num <= 0) {
-    return { isValid: false, error: '正の数を入力してください。' };
+    return { isValid: false, error: t('errors.validation.positiveRequired') };
   }
   return { isValid: true };
 };
@@ -252,16 +322,28 @@ export const validatePositive = (value: string | number): ValidationResult => {
  */
 export const validatePasswordStrength = (value: string): ValidationResult => {
   if (!value || value.length < 8) {
-    return { isValid: false, error: 'パスワードは8文字以上である必要があります。' };
+    return {
+      isValid: false,
+      error: t('errors.validation.passwordMinLength'),
+    };
   }
   if (!/[A-Z]/.test(value)) {
-    return { isValid: false, error: 'パスワードには大文字が含まれている必要があります。' };
+    return {
+      isValid: false,
+      error: t('errors.validation.passwordUppercase'),
+    };
   }
   if (!/[a-z]/.test(value)) {
-    return { isValid: false, error: 'パスワードには小文字が含まれている必要があります。' };
+    return {
+      isValid: false,
+      error: t('errors.validation.passwordLowercase'),
+    };
   }
   if (!/[0-9]/.test(value)) {
-    return { isValid: false, error: 'パスワードには数字が含まれている必要があります。' };
+    return {
+      isValid: false,
+      error: t('errors.validation.passwordNumber'),
+    };
   }
   return { isValid: true };
 };
@@ -271,11 +353,11 @@ export const validatePasswordStrength = (value: string): ValidationResult => {
  */
 export const validateDate = (value: string | Date): ValidationResult => {
   if (!value) {
-    return { isValid: false, error: '日付を入力してください。' };
+    return { isValid: false, error: t('errors.validation.dateRequired') };
   }
   const date = value instanceof Date ? value : new Date(value);
   if (isNaN(date.getTime())) {
-    return { isValid: false, error: '正しい日付形式で入力してください。' };
+    return { isValid: false, error: t('errors.validation.dateInvalid') };
   }
   return { isValid: true };
 };
@@ -286,7 +368,10 @@ export const validateDate = (value: string | Date): ValidationResult => {
 export const combineValidationResults = (
   results: ValidationResult[]
 ): ValidationResult => {
-  const errors = results.filter((r) => !r.isValid).map((r) => r.error).filter((e): e is string => !!e);
+  const errors = results
+    .filter(r => !r.isValid)
+    .map(r => r.error)
+    .filter((e): e is string => !!e);
   if (errors.length > 0) {
     return {
       isValid: false,
@@ -295,4 +380,3 @@ export const combineValidationResults = (
   }
   return { isValid: true };
 };
-

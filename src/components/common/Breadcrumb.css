@@ -1,0 +1,95 @@
+/* Breadcrumb Component Styles */
+
+.breadcrumb {
+  margin-bottom: var(--spacing-md, 1rem);
+  padding: var(--spacing-sm, 0.5rem) 0;
+}
+
+.breadcrumb-list {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: var(--spacing-xs, 0.25rem);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.breadcrumb-item {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-xs, 0.25rem);
+}
+
+.breadcrumb-link {
+  background: transparent;
+  border: none;
+  padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+  color: var(--color-text-secondary, #2d3748); /* WCAG AA基準を満たすコントラスト比に改善 */
+  font-size: 0.875rem;
+  text-decoration: none;
+  cursor: pointer;
+  border-radius: var(--radius-sm, 0.25rem);
+  transition: all 0.2s ease;
+  display: inline-flex;
+  align-items: center;
+}
+
+.breadcrumb-link:hover {
+  color: var(--color-text-primary, #1e293b);
+  background-color: var(--color-bg-tertiary, rgba(0, 0, 0, 0.05));
+}
+
+.breadcrumb-link:focus-visible {
+  outline: 2px solid var(--color-primary, #3b82f6);
+  outline-offset: 2px;
+}
+
+[data-theme="dark"] .breadcrumb-link {
+  color: var(--color-text-secondary, #e2e8f0); /* WCAG AA基準を満たすコントラスト比に改善 */
+}
+
+[data-theme="dark"] .breadcrumb-link:hover {
+  color: var(--color-text-primary, #f1f5f9);
+  background-color: var(--color-bg-tertiary, rgba(255, 255, 255, 0.1));
+}
+
+.breadcrumb-link-current {
+  color: var(--color-text-primary, #1e293b);
+  font-weight: 500;
+  cursor: default;
+  pointer-events: none;
+}
+
+[data-theme="dark"] .breadcrumb-link-current {
+  color: var(--color-text-primary, #f1f5f9);
+}
+
+.breadcrumb-separator {
+  color: var(--color-text-tertiary, #4a5568); /* WCAG AA基準を満たすコントラスト比に改善 */
+  font-size: 0.875rem;
+  margin: 0 var(--spacing-xs, 0.25rem);
+  user-select: none;
+}
+
+[data-theme="dark"] .breadcrumb-separator {
+  color: var(--color-text-tertiary, #cbd5e0); /* WCAG AA基準を満たすコントラスト比に改善 */
+}
+
+/* モバイル対応 */
+@media (max-width: 640px) {
+  .breadcrumb {
+    margin-bottom: var(--spacing-sm, 0.5rem);
+  }
+
+  .breadcrumb-link {
+    font-size: 0.8125rem;
+    padding: var(--spacing-xs, 0.25rem);
+  }
+
+  .breadcrumb-separator {
+    font-size: 0.8125rem;
+    margin: 0 var(--spacing-xs, 0.25rem);
+  }
+}
+

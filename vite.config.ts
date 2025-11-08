@@ -45,6 +45,7 @@ export default defineConfig(async () => ({
         manualChunks: {
           'react-vendor': ['react', 'react-dom', 'react-router-dom'],
           'charts-vendor': ['recharts'],
+          'virtual-scroll': ['@tanstack/react-virtual'],
         },
       },
     },

@@ -4,9 +4,12 @@
 use rusqlite::{Connection, Row, params};
 use chrono::Utc;
 use crate::database::{DatabaseError, models::*};
+use crate::database::encryption::{encrypt_oauth_token, decrypt_oauth_token};
 
 // サブモジュールのエクスポート
+pub mod api_repository;
 pub mod security_repository;
+pub mod error_log_repository;
 
 /// API設定のリポジトリ
 pub struct ApiRepository<'a> {
@@ -652,6 +655,7 @@ impl<'a> RequestLogRepository<'a> {
     /// - `end_date`: 終了日時（ISO 8601形式、オプション）
     /// - `status_codes`: ステータスコード配列（オプション、IN句で使用）
     /// - `path_filter`: パス検索文字列（LIKE検索、オプション）
+    /// - `errors_only`: エラーメッセージが存在するログのみを取得するかどうか（デフォルト: false）
     /// 
     /// # 返り値
     /// フィルタ条件に一致するリクエストログのベクタ（作成日時降順）
@@ -664,6 +668,7 @@ impl<'a> RequestLogRepository<'a> {
         end_date: Option<&str>,
         status_codes: Option<&[i32]>,
         path_filter: Option<&str>,
+        errors_only: bool,
     ) -> Result<Vec<RequestLog>, DatabaseError> {
         let limit_value = limit.unwrap_or(100);
         let offset_value = offset.unwrap_or(0);
@@ -709,6 +714,11 @@ impl<'a> RequestLogRepository<'a> {
                 let param_idx = conditions.len() + 1;
                 conditions.push(format!("path LIKE ?{}", param_idx));
             }
+        }
+        
+        // エラーメッセージフィルタ
+        if errors_only {
+            conditions.push("error_message IS NOT NULL AND error_message != ''".to_string());
         }
         
         // WHERE句の追加
@@ -808,6 +818,7 @@ impl<'a> RequestLogRepository<'a> {
         end_date: Option<&str>,
         status_codes: Option<&[i32]>,
         path_filter: Option<&str>,
+        errors_only: bool,
     ) -> Result<i64, DatabaseError> {
         // SQLクエリの構築（動的にWHERE句を追加）
         let mut query = String::from("SELECT COUNT(*) FROM request_logs");
@@ -848,6 +859,11 @@ impl<'a> RequestLogRepository<'a> {
                 let param_idx = conditions.len() + 1;
                 conditions.push(format!("path LIKE ?{}", param_idx));
             }
+        }
+        
+        // エラーメッセージフィルタ
+        if errors_only {
+            conditions.push("error_message IS NOT NULL AND error_message != ''".to_string());
         }
         
         // WHERE句の追加
@@ -1612,3 +1628,198 @@ mod tests {
         assert_eq!(updated, Some("updated_value".to_string()));
     }
 }
+
+/// OAuthトークンのリポジトリ
+/// 将来のOAuth実装で使用予定
+#[allow(dead_code)]
+pub struct OAuthTokenRepository<'a> {
+    conn: &'a Connection,
+}
+
+impl<'a> OAuthTokenRepository<'a> {
+    #[allow(dead_code)] // 将来のOAuth実装で使用予定
+    pub fn new(conn: &'a Connection) -> Self {
+        Self { conn }
+    }
+    
+    /// OAuthトークンを作成または更新（暗号化して保存）
+    #[allow(dead_code)] // 将来のOAuth実装で使用予定
+    pub fn save(&self, token: &OAuthToken) -> Result<(), DatabaseError> {
+        // アクセストークンを暗号化
+        let encrypted_access_token = encrypt_oauth_token(&token.access_token)
+            .map_err(|e| DatabaseError::QueryFailed(format!("アクセストークンの暗号化エラー: {}", e)))?;
+        
+        // リフレッシュトークンを暗号化（存在する場合）
+        let encrypted_refresh_token = token.refresh_token.as_ref()
+            .map(|rt| encrypt_oauth_token(rt))
+            .transpose()
+            .map_err(|e| DatabaseError::QueryFailed(format!("リフレッシュトークンの暗号化エラー: {}", e)))?;
+        
+        // スコープをJSON文字列に変換
+        let scope_json = token.scope.as_ref()
+            .map(|s| s.clone())
+            .or_else(|| {
+                // スコープがNoneの場合は空のJSON配列を返す
+                Some("[]".to_string())
+            });
+        
+        // INSERT OR REPLACEを使用して、既存のトークンがあれば更新、なければ作成
+        self.conn.execute(
+            r#"
+            INSERT OR REPLACE INTO oauth_tokens 
+            (id, api_id, access_token, refresh_token, token_type, expires_at, scope, client_id, created_at, updated_at)
+            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10)
+            "#,
+            params![
+                token.id,
+                token.api_id,
+                encrypted_access_token,
+                encrypted_refresh_token,
+                token.token_type,
+                token.expires_at,
+                scope_json,
+                token.client_id,
+                token.created_at.to_rfc3339(),
+                token.updated_at.to_rfc3339(),
+            ],
+        )?;
+        
+        Ok(())
+    }
+    
+    /// OAuthトークンを取得（復号化して返す）
+    #[allow(dead_code)] // 将来のOAuth実装で使用予定
+    pub fn find_by_api_id(&self, api_id: &str) -> Result<Option<OAuthToken>, DatabaseError> {
+        let mut stmt = self.conn.prepare(
+            r#"
+            SELECT id, api_id, access_token, refresh_token, token_type, expires_at, scope, client_id, created_at, updated_at
+            FROM oauth_tokens
+            WHERE api_id = ?1
+            ORDER BY updated_at DESC
+            LIMIT 1
+            "#
+        )?;
+        
+        let mut rows = stmt.query_map(params![api_id], |row| {
+            let encrypted_access_token: String = row.get(2)?;
+            let encrypted_refresh_token: Option<String> = row.get(3)?;
+            
+            // アクセストークンを復号化
+            let access_token = decrypt_oauth_token(&encrypted_access_token)
+                .map_err(|e| rusqlite::Error::InvalidColumnType(2, format!("復号化エラー: {}", e), rusqlite::types::Type::Text))?;
+            
+            // リフレッシュトークンを復号化（存在する場合）
+            let refresh_token = encrypted_refresh_token
+                .map(|ert| decrypt_oauth_token(&ert))
+                .transpose()
+                .map_err(|e| rusqlite::Error::InvalidColumnType(3, format!("復号化エラー: {}", e), rusqlite::types::Type::Text))?;
+            
+            Ok(OAuthToken {
+                id: row.get(0)?,
+                api_id: row.get(1)?,
+                access_token,
+                refresh_token,
+                token_type: row.get(4)?,
+                expires_at: row.get(5)?,
+                scope: row.get(6)?,
+                client_id: row.get(7)?,
+                created_at: chrono::DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
+                    .map_err(|e| rusqlite::Error::InvalidColumnType(8, format!("日時解析エラー: {}", e), rusqlite::types::Type::Text))?
+                    .with_timezone(&Utc),
+                updated_at: chrono::DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
+                    .map_err(|e| rusqlite::Error::InvalidColumnType(9, format!("日時解析エラー: {}", e), rusqlite::types::Type::Text))?
+                    .with_timezone(&Utc),
+            })
+        })?;
+        
+        match rows.next() {
+            Some(result) => Ok(Some(result?)),
+            None => Ok(None),
+        }
+    }
+    
+    /// OAuthトークンを取得（アクセストークンで検索、復号化して返す）
+    #[allow(dead_code)] // 将来のOAuth実装で使用予定
+    pub fn find_by_access_token(&self, access_token: &str) -> Result<Option<OAuthToken>, DatabaseError> {
+        // データベース内のすべてのトークンを取得して、復号化後に比較
+        // 注意: パフォーマンスのため、大量のトークンがある場合は別の方法を検討
+        let mut stmt = self.conn.prepare(
+            r#"
+            SELECT id, api_id, access_token, refresh_token, token_type, expires_at, scope, client_id, created_at, updated_at
+            FROM oauth_tokens
+            "#
+        )?;
+        
+        let rows = stmt.query_map([], |row| {
+            let encrypted_access_token: String = row.get(2)?;
+            let encrypted_refresh_token: Option<String> = row.get(3)?;
+            
+            // アクセストークンを復号化
+            let decrypted_access_token = decrypt_oauth_token(&encrypted_access_token)
+                .map_err(|e| rusqlite::Error::InvalidColumnType(2, format!("復号化エラー: {}", e), rusqlite::types::Type::Text))?;
+            
+            // リフレッシュトークンを復号化（存在する場合）
+            let refresh_token = encrypted_refresh_token
+                .map(|ert| decrypt_oauth_token(&ert))
+                .transpose()
+                .map_err(|e| rusqlite::Error::InvalidColumnType(3, format!("復号化エラー: {}", e), rusqlite::types::Type::Text))?;
+            
+            // アクセストークンをクローンして返す（所有権の問題を回避）
+            // 2回使用するため、2回クローンする
+            let access_token_for_return = decrypted_access_token.clone();
+            let access_token_for_struct = decrypted_access_token.clone();
+            
+            Ok((
+                access_token_for_return,
+                OAuthToken {
+                    id: row.get(0)?,
+                    api_id: row.get(1)?,
+                    access_token: access_token_for_struct,
+                    refresh_token,
+                    token_type: row.get(4)?,
+                    expires_at: row.get(5)?,
+                    scope: row.get(6)?,
+                    client_id: row.get(7)?,
+                    created_at: chrono::DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
+                        .map_err(|e| rusqlite::Error::InvalidColumnType(8, format!("日時解析エラー: {}", e), rusqlite::types::Type::Text))?
+                        .with_timezone(&Utc),
+                    updated_at: chrono::DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
+                        .map_err(|e| rusqlite::Error::InvalidColumnType(9, format!("日時解析エラー: {}", e), rusqlite::types::Type::Text))?
+                        .with_timezone(&Utc),
+                }
+            ))
+        })?;
+        
+        // 復号化したトークンと比較
+        for row_result in rows {
+            let (decrypted_token, token) = row_result?;
+            if decrypted_token == access_token {
+                return Ok(Some(token));
+            }
+        }
+        
+        Ok(None)
+    }
+    
+    /// OAuthトークンを削除
+    #[allow(dead_code)] // 将来のOAuth実装で使用予定
+    pub fn delete_by_api_id(&self, api_id: &str) -> Result<(), DatabaseError> {
+        self.conn.execute(
+            "DELETE FROM oauth_tokens WHERE api_id = ?1",
+            params![api_id],
+        )?;
+        Ok(())
+    }
+    
+    /// 期限切れのOAuthトークンを削除
+    #[allow(dead_code)] // 将来のOAuth実装で使用予定
+    pub fn delete_expired(&self) -> Result<usize, DatabaseError> {
+        let now = Utc::now().to_rfc3339();
+        let rows_affected = self.conn.execute(
+            "DELETE FROM oauth_tokens WHERE expires_at IS NOT NULL AND expires_at < ?1",
+            params![now],
+        )?;
+        Ok(rows_affected)
+    }
+}
+

@@ -1,27 +1,35 @@
 /* CloudSyncSettings - クラウド同期設定コンポーネントのスタイル */
 
 .cloud-sync-settings-section {
-  margin-top: 2rem;
+  margin-top: var(--spacing-xl, 2rem);
 }
 
 .cloud-sync-settings-loading {
-  padding: 2rem;
+  padding: var(--spacing-xl, 2rem);
   text-align: center;
-  color: var(--text-secondary);
+  color: var(--color-text-secondary, #4a5568);
+}
+
+[data-theme="dark"] .cloud-sync-settings-loading {
+  color: var(--color-text-secondary, #cbd5e0);
 }
 
 .settings-section-description {
   font-size: 0.875rem;
-  color: var(--text-secondary);
-  margin-bottom: 1.5rem;
+  color: var(--color-text-secondary, #4a5568);
+  margin-bottom: var(--spacing-lg, 1.5rem);
   line-height: 1.5;
+}
+
+[data-theme="dark"] .settings-section-description {
+  color: var(--color-text-secondary, #cbd5e0);
 }
 
 .cloud-sync-actions {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 1rem;
-  margin-bottom: 1rem;
+  gap: var(--spacing-xs, 0.5rem);
+  margin-top: var(--spacing-md, 1rem);
+  margin-bottom: var(--spacing-md, 1rem);
 }
 
 .cloud-sync-actions .settings-button {
@@ -30,18 +38,25 @@
 
 .settings-select {
   width: 100%;
-  padding: 0.5rem;
+  padding: var(--spacing-sm, 0.5rem);
   font-size: 1rem;
-  border: 1px solid var(--border-color);
-  border-radius: 4px;
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  border: 1px solid var(--color-border-light, #e2e8f0);
+  border-radius: var(--radius-md, 0.5rem);
+  background: var(--color-bg-primary, #ffffff);
+  color: var(--color-text-primary, #1a202c);
+  transition: border-color var(--transition-base, 200ms ease);
+}
+
+[data-theme="dark"] .settings-select {
+  background: var(--color-bg-primary, #1a202c);
+  border-color: var(--color-border-light, #4a5568);
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .settings-select:focus {
   outline: none;
-  border-color: var(--primary-color);
-  box-shadow: 0 0 0 2px rgba(var(--primary-color-rgb), 0.2);
+  border-color: var(--color-primary, #667eea);
+  box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
 }
 
 /* レスポンシブ対応 */
@@ -50,4 +65,3 @@
     flex-direction: column;
   }
 }
-

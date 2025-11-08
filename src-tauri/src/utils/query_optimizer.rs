@@ -19,6 +19,7 @@ pub struct QueryAnalysisResult {
 pub fn analyze_query(query: &str) -> Result<QueryAnalysisResult, AppError> {
     let conn = get_connection().map_err(|e| AppError::DatabaseError {
         message: format!("データベース接続エラー: {}", e),
+        source_detail: Some(format!("{:?}", e)),
     })?;
     
     // EXPLAIN QUERY PLANを使用してクエリを分析
@@ -29,9 +30,10 @@ pub fn analyze_query(query: &str) -> Result<QueryAnalysisResult, AppError> {
     // クエリを実行（実際にはEXPLAIN QUERY PLANを実行）
     let mut stmt = conn.prepare(&explain_query).map_err(|e| AppError::DatabaseError {
         message: format!("クエリ準備エラー: {}", e),
+        source_detail: Some(format!("{:?}", e)),
     })?;
     
-    let mut rows = stmt.query_map([], |row| {
+    let rows = stmt.query_map([], |row| {
         Ok(format!(
             "{}|{}|{}|{}",
             row.get::<_, i64>(0)?,
@@ -41,12 +43,14 @@ pub fn analyze_query(query: &str) -> Result<QueryAnalysisResult, AppError> {
         ))
     }).map_err(|e| AppError::DatabaseError {
         message: format!("クエリ実行エラー: {}", e),
+        source_detail: Some(format!("{:?}", e)),
     })?;
     
     let mut plan_lines = Vec::new();
     for row in rows {
         plan_lines.push(row.map_err(|e| AppError::DatabaseError {
             message: format!("行取得エラー: {}", e),
+            source_detail: Some(format!("{:?}", e)),
         })?);
     }
     
@@ -127,6 +131,7 @@ fn generate_recommendations(
 pub fn optimize_database() -> Result<Vec<String>, AppError> {
     let conn = get_connection().map_err(|e| AppError::DatabaseError {
         message: format!("データベース接続エラー: {}", e),
+        source_detail: Some(format!("{:?}", e)),
     })?;
     
     let mut optimizations = Vec::new();
@@ -134,12 +139,14 @@ pub fn optimize_database() -> Result<Vec<String>, AppError> {
     // ANALYZEを実行して統計情報を更新
     conn.execute("ANALYZE", []).map_err(|e| AppError::DatabaseError {
         message: format!("ANALYZE実行エラー: {}", e),
+        source_detail: Some(format!("{:?}", e)),
     })?;
     optimizations.push("統計情報を更新しました（ANALYZE実行）".to_string());
     
     // VACUUMを実行してデータベースを最適化
     conn.execute("VACUUM", []).map_err(|e| AppError::DatabaseError {
         message: format!("VACUUM実行エラー: {}", e),
+        source_detail: Some(format!("{:?}", e)),
     })?;
     optimizations.push("データベースを最適化しました（VACUUM実行）".to_string());
     
@@ -158,17 +165,21 @@ pub fn measure_query_performance(query: &str, iterations: u32) -> Result<QueryPe
         
         let conn = get_connection().map_err(|e| AppError::DatabaseError {
             message: format!("データベース接続エラー: {}", e),
+            source_detail: Some(format!("{:?}", e)),
         })?;
         
         conn.execute(query, []).map_err(|e| AppError::DatabaseError {
             message: format!("クエリ実行エラー: {}", e),
+            source_detail: Some(format!("{:?}", e)),
         })?;
         
         let elapsed = start_time.elapsed().as_secs_f64() * 1000.0; // ミリ秒
         times.push(elapsed);
     }
     
-    times.sort_by(|a, b| a.partial_cmp(b).unwrap());
+    // NaNを除外してからソート（監査レポート推奨修正）
+    times.retain(|&x| x.is_finite());
+    times.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     
     let min_time = times.first().copied().unwrap_or(0.0);
     let max_time = times.last().copied().unwrap_or(0.0);
@@ -199,4 +210,5 @@ pub struct QueryPerformanceMetrics {
     pub avg_time_ms: f64,
     pub median_time_ms: f64,
 }
+
 

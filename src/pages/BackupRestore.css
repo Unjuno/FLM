@@ -2,245 +2,384 @@
 
 .backup-restore-page {
   min-height: 100vh;
-  background: var(--color-bg);
-  color: var(--color-text);
-  padding: 2rem;
+  background: var(--color-bg-secondary, #f7fafc);
+  color: var(--color-text-primary, #1a202c);
+  padding: var(--spacing-md);
+}
+
+[data-theme="dark"] .backup-restore-page {
+  background: var(--color-bg-secondary, #2d3748);
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .backup-restore-container {
-  max-width: 900px;
+  max-width: var(--layout-max-width, 1200px);
   margin: 0 auto;
 }
 
 .backup-restore-header {
-  margin-bottom: 2rem;
+  margin-bottom: var(--spacing-md);
 }
 
 .backup-restore-back-button {
-  background: transparent;
-  border: none;
-  color: var(--color-text-secondary);
-  font-size: 0.9rem;
+  background: var(--color-bg-primary, #ffffff);
+  border: 1px solid var(--color-border-light, #e2e8f0);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary, #4a5568);
+  font-size: 0.75rem;
   cursor: pointer;
-  padding: 0.5rem;
-  margin-bottom: 1rem;
-  transition: color 0.2s;
+  padding: var(--spacing-xs) var(--spacing-sm);
+  margin-bottom: var(--spacing-sm);
+  transition: all var(--transition-base, 200ms ease-in-out);
+  font-weight: 500;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+[data-theme="dark"] .backup-restore-back-button {
+  background: var(--color-bg-primary, #1a202c);
+  border-color: var(--color-border-light, #4a5568);
+  color: var(--color-text-secondary, #cbd5e0);
 }
 
 .backup-restore-back-button:hover {
-  color: var(--color-text);
+  background: var(--color-bg-tertiary, #edf2f7);
+  border-color: var(--color-border, #cbd5e0);
+  color: var(--color-text-primary, #1a202c);
+}
+
+[data-theme="dark"] .backup-restore-back-button:hover {
+  background: var(--color-bg-tertiary, #4a5568);
+  border-color: var(--color-border, #718096);
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .backup-restore-title {
-  font-size: 2rem;
-  font-weight: 700;
-  margin: 0 0 0.5rem 0;
-  color: var(--color-text);
+  font-size: 1.125rem;
+  font-weight: 600;
+  margin: 0 0 var(--spacing-xs) 0;
+  color: var(--color-text-primary, #1a202c);
+}
+
+[data-theme="dark"] .backup-restore-title {
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .backup-restore-subtitle {
-  font-size: 1rem;
-  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  color: var(--color-text-secondary, #4a5568);
   margin: 0;
+}
+
+[data-theme="dark"] .backup-restore-subtitle {
+  color: var(--color-text-secondary, #cbd5e0);
 }
 
 .backup-restore-content {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: var(--spacing-md);
 }
 
 .backup-restore-section {
-  background: var(--color-card-bg);
-  border-radius: 12px;
-  padding: 1.5rem;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  background: var(--color-bg-primary, #ffffff);
+  border-radius: var(--radius-md);
+  padding: var(--spacing-md);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+  border: 1px solid var(--color-border-light, #e2e8f0);
+}
+
+[data-theme="dark"] .backup-restore-section {
+  background: var(--color-bg-primary, #1a202c);
+  box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.4));
+  border-color: var(--color-border-light, #4a5568);
 }
 
 .backup-restore-section-title {
   font-size: 1.3rem;
   font-weight: 600;
-  margin: 0 0 1rem 0;
-  color: var(--color-text);
-  border-bottom: 2px solid var(--color-border);
-  padding-bottom: 0.5rem;
+  margin: 0 0 var(--spacing-md, 1rem) 0;
+  color: var(--color-text-primary, #1a202c);
+  border-bottom: 2px solid var(--color-primary, #667eea);
+  padding-bottom: var(--spacing-xs, 0.25rem);
+}
+
+[data-theme="dark"] .backup-restore-section-title {
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .backup-restore-section-content {
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: var(--spacing-md, 1rem);
 }
 
 .backup-restore-description {
-  color: var(--color-text-secondary);
+  color: var(--color-text-secondary, #4a5568);
   line-height: 1.6;
   margin: 0;
 }
 
+[data-theme="dark"] .backup-restore-description {
+  color: var(--color-text-secondary, #cbd5e0);
+}
+
 .backup-restore-description strong {
-  color: var(--color-text);
+  color: var(--color-text-primary, #1a202c);
   font-weight: 600;
+}
+
+[data-theme="dark"] .backup-restore-description strong {
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .backup-restore-info,
 .backup-restore-warning {
-  background: var(--color-bg);
-  border-radius: 8px;
-  padding: 1rem;
-  border-left: 4px solid var(--color-primary);
+  background: var(--color-bg-secondary, #f7fafc);
+  border-radius: var(--radius-lg, 0.75rem);
+  padding: var(--spacing-md, 1rem);
+  border-left: 4px solid var(--color-primary, #667eea);
+  border-top: 1px solid var(--color-border-light, #e2e8f0);
+  border-right: 1px solid var(--color-border-light, #e2e8f0);
+  border-bottom: 1px solid var(--color-border-light, #e2e8f0);
+}
+
+[data-theme="dark"] .backup-restore-info {
+  background: var(--color-bg-secondary, #2d3748);
+  border-top-color: var(--color-border-light, #4a5568);
+  border-right-color: var(--color-border-light, #4a5568);
+  border-bottom-color: var(--color-border-light, #4a5568);
 }
 
 .backup-restore-warning {
-  border-left-color: var(--color-warning, #f59e0b);
-  background: var(--color-warning-bg, rgba(245, 158, 11, 0.1));
+  border-left-color: var(--color-warning, #ed8936);
+  background: var(--color-warning-light, rgba(245, 158, 11, 0.1));
+}
+
+[data-theme="dark"] .backup-restore-warning {
+  background: var(--color-warning-light, rgba(245, 158, 11, 0.2));
+  border-top-color: var(--color-border-light, #4a5568);
+  border-right-color: var(--color-border-light, #4a5568);
+  border-bottom-color: var(--color-border-light, #4a5568);
 }
 
 .backup-restore-info p,
 .backup-restore-warning p {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 var(--spacing-xs, 0.25rem) 0;
   font-weight: 600;
-  color: var(--color-text);
+  color: var(--color-text-primary, #1a202c);
+}
+
+[data-theme="dark"] .backup-restore-info p,
+[data-theme="dark"] .backup-restore-warning p {
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .backup-restore-info ul,
 .backup-restore-warning ul {
-  margin: 0.5rem 0 0 1.5rem;
+  margin: var(--spacing-xs, 0.25rem) 0 0 var(--spacing-lg, 1.5rem);
   padding: 0;
-  color: var(--color-text-secondary);
+  color: var(--color-text-secondary, #4a5568);
+}
+
+[data-theme="dark"] .backup-restore-info ul,
+[data-theme="dark"] .backup-restore-warning ul {
+  color: var(--color-text-secondary, #cbd5e0);
 }
 
 .backup-restore-info li,
 .backup-restore-warning li {
-  margin: 0.25rem 0;
+  margin: var(--spacing-xs, 0.25rem) 0;
   line-height: 1.6;
 }
 
 .backup-restore-button {
   border: none;
-  border-radius: 8px;
-  padding: 0.75rem 1.5rem;
+  border-radius: var(--radius-lg, 0.75rem);
+  padding: var(--spacing-md, 1rem) var(--spacing-lg, 1.5rem);
   font-size: 1rem;
-  font-weight: 500;
+  font-weight: 600;
   cursor: pointer;
-  transition: background 0.2s, transform 0.1s;
+  transition: all var(--transition-base, 200ms ease-in-out);
   align-self: flex-start;
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
 }
 
 .backup-restore-button.primary {
-  background: var(--color-primary);
-  color: white;
+  background: var(--color-primary, #667eea);
+  color: var(--color-text-inverse, #ffffff);
 }
 
 .backup-restore-button.primary:hover:not(:disabled) {
-  background: var(--color-primary-hover);
+  background: var(--color-primary-hover, #5568d3);
   transform: translateY(-1px);
+  box-shadow: var(--shadow, 0 1px 3px 0 rgba(0, 0, 0, 0.1));
 }
 
 .backup-restore-button.secondary {
-  background: var(--color-secondary, #6b7280);
-  color: white;
+  background: var(--color-bg-tertiary, #edf2f7);
+  color: var(--color-text-primary, #1a202c);
+  border: 1px solid var(--color-border, #cbd5e0);
+}
+
+[data-theme="dark"] .backup-restore-button.secondary {
+  background: var(--color-bg-tertiary, #4a5568);
+  color: var(--color-text-primary, #f7fafc);
+  border-color: var(--color-border, #718096);
 }
 
 .backup-restore-button.secondary:hover:not(:disabled) {
-  background: var(--color-secondary-hover, #4b5563);
+  background: var(--color-bg-tertiary, #cbd5e0);
+  border-color: var(--color-border-dark, #a0aec0);
   transform: translateY(-1px);
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
+}
+
+[data-theme="dark"] .backup-restore-button.secondary:hover:not(:disabled) {
+  background: var(--color-bg-tertiary, #718096);
 }
 
 .backup-restore-button:active:not(:disabled) {
   transform: translateY(0);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
 }
 
 .backup-restore-button:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
+  transform: none;
+}
+
+.backup-restore-button:disabled:hover {
+  transform: none;
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+.backup-restore-status {
+  margin-top: var(--spacing-md, 1rem);
+  padding: var(--spacing-md, 1rem);
+  border-radius: var(--radius-lg, 0.75rem);
+  font-weight: 500;
+}
+
+.backup-restore-status.success {
+  background: var(--color-success-light, #c6f6d5);
+  color: var(--color-success, #22543d);
+  border: 1px solid var(--color-success, #48bb78);
+}
+
+[data-theme="dark"] .backup-restore-status.success {
+  background: var(--color-success-light, rgba(72, 187, 120, 0.2));
+  color: var(--color-success, #48bb78);
+  border-color: var(--color-success, #48bb78);
+}
+
+.backup-restore-status.error {
+  background: var(--color-error-light, #fed7d7);
+  color: var(--color-error, #c53030);
+  border: 1px solid var(--color-error, #f56565);
+}
+
+[data-theme="dark"] .backup-restore-status.error {
+  background: var(--color-error-light, rgba(245, 101, 101, 0.2));
+  color: var(--color-error, #f56565);
+  border-color: var(--color-error, #f56565);
+}
+
+/* 暗号化オプション */
+.backup-restore-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-md, 1rem);
+  margin-top: var(--spacing-md, 1rem);
+  padding: var(--spacing-md, 1rem);
+  background: var(--color-bg-secondary, #f7fafc);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light, #e2e8f0);
+}
+
+[data-theme="dark"] .backup-restore-options {
+  background: var(--color-bg-secondary, #2d3748);
+  border-color: var(--color-border-light, #4a5568);
+}
+
+.backup-restore-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm, 0.5rem);
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--color-text-primary, #1a202c);
+}
+
+[data-theme="dark"] .backup-restore-checkbox-label {
+  color: var(--color-text-primary, #f7fafc);
+}
+
+.backup-restore-checkbox {
+  width: 1.25rem;
+  height: 1.25rem;
+  cursor: pointer;
+  accent-color: var(--color-primary, #667eea);
+}
+
+.backup-restore-password-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs, 0.25rem);
+  margin-top: var(--spacing-sm, 0.5rem);
+}
+
+.backup-restore-password-label {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs, 0.25rem);
+  font-weight: 500;
+  color: var(--color-text-primary, #1a202c);
+}
+
+[data-theme="dark"] .backup-restore-password-label {
+  color: var(--color-text-primary, #f7fafc);
+}
+
+.backup-restore-password-input {
+  padding: var(--spacing-sm, 0.5rem);
+  border: 1px solid var(--color-border, #cbd5e0);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  background: var(--color-bg-primary, #ffffff);
+  color: var(--color-text-primary, #1a202c);
+  transition: border-color var(--transition-base, 200ms ease-in-out);
+}
+
+[data-theme="dark"] .backup-restore-password-input {
+  background: var(--color-bg-primary, #1a202c);
+  border-color: var(--color-border, #718096);
+  color: var(--color-text-primary, #f7fafc);
+}
+
+.backup-restore-password-input:focus {
+  outline: none;
+  border-color: var(--color-primary, #667eea);
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.backup-restore-password-hint {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary, #4a5568);
+  margin: 0;
+  line-height: 1.5;
+}
+
+[data-theme="dark"] .backup-restore-password-hint {
+  color: var(--color-text-secondary, #cbd5e0);
 }
 
 .backup-restore-file-selector {
   display: flex;
-  align-items: center;
-  gap: 1rem;
-}
-
-.backup-restore-progress {
-  padding: 1rem;
-  background: var(--color-bg);
-  border-radius: 8px;
-  text-align: center;
-  color: var(--color-text-secondary);
-}
-
-.backup-restore-result {
-  margin-top: 1rem;
-  padding: 1rem;
-  background: var(--color-bg);
-  border-radius: 8px;
-  border: 1px solid var(--color-border);
-}
-
-.backup-restore-result-title {
-  font-size: 1.1rem;
-  font-weight: 600;
-  margin: 0 0 1rem 0;
-  color: var(--color-text);
-}
-
-.backup-restore-result-details {
-  display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-}
-
-.backup-restore-result-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0.5rem 0;
-  border-bottom: 1px solid var(--color-border);
-}
-
-.backup-restore-result-item:last-child {
-  border-bottom: none;
-}
-
-.backup-restore-result-label {
-  font-weight: 500;
-  color: var(--color-text-secondary);
-}
-
-.backup-restore-result-value {
-  font-weight: 600;
-  color: var(--color-text);
-  word-break: break-all;
-  text-align: right;
-  margin-left: 1rem;
-}
-
-.backup-restore-result-note {
-  margin-top: 1rem;
-  padding: 1rem;
-  background: var(--color-success-bg, rgba(34, 197, 94, 0.1));
-  border-radius: 8px;
-  border-left: 4px solid var(--color-success, #22c55e);
-}
-
-.backup-restore-result-note p {
-  margin: 0;
-  color: var(--color-text);
-  line-height: 1.6;
-}
-
-/* ダークモード対応 */
-@media (prefers-color-scheme: dark) {
-  .backup-restore-section {
-    background: var(--color-card-bg);
-  }
-
-  .backup-restore-info,
-  .backup-restore-warning,
-  .backup-restore-result {
-    background: var(--color-bg);
-  }
+  gap: var(--spacing-sm, 0.5rem);
 }
 
 .backup-restore-file-input {
@@ -250,26 +389,135 @@
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
   .backup-restore-page {
-    padding: 1rem;
-  }
-
-  .backup-restore-title {
-    font-size: 1.5rem;
+    padding: var(--spacing-md, 1rem);
   }
 
   .backup-restore-section {
-    padding: 1rem;
+    padding: var(--spacing-md, 1rem);
   }
 
-  .backup-restore-result-item {
-    flex-direction: column;
-    align-items: flex-start;
-    gap: 0.25rem;
-  }
-
-  .backup-restore-result-value {
-    text-align: left;
-    margin-left: 0;
+  .backup-restore-button {
+    width: 100%;
+    align-self: stretch;
   }
 }
 
+/* 確認ダイアログのスタイル */
+.confirm-dialog-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: var(--spacing-md);
+}
+
+.confirm-dialog {
+  background-color: var(--color-bg-primary, #ffffff);
+  border-radius: var(--radius-lg, 0.75rem);
+  padding: var(--spacing-xl, 2rem);
+  max-width: 500px;
+  width: 100%;
+  box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
+}
+
+[data-theme="dark"] .confirm-dialog {
+  background-color: var(--color-bg-primary, #1a202c);
+  box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.3));
+}
+
+.confirm-dialog h3 {
+  margin: 0 0 var(--spacing-md, 1rem) 0;
+  font-size: 1.25rem;
+  color: var(--color-text-primary, #1a202c);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .confirm-dialog h3 {
+  color: var(--color-text-primary, #f7fafc);
+}
+
+.confirm-dialog p {
+  margin: 0 0 var(--spacing-xl, 2rem) 0;
+  color: var(--color-text-secondary, #4a5568);
+  line-height: 1.6;
+}
+
+[data-theme="dark"] .confirm-dialog p {
+  color: var(--color-text-secondary, #cbd5e0);
+}
+
+.confirm-dialog-actions {
+  display: flex;
+  gap: var(--spacing-md, 1rem);
+  justify-content: flex-end;
+}
+
+.confirm-button {
+  padding: var(--spacing-sm, 0.5rem) var(--spacing-lg, 1.5rem);
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: none;
+  border-radius: var(--radius-md, 0.5rem);
+  cursor: pointer;
+  transition: all var(--transition-base, 200ms ease-in-out);
+  min-width: 100px;
+}
+
+.confirm-button.cancel {
+  background-color: var(--color-bg-tertiary, #edf2f7);
+  color: var(--color-text-primary, #1a202c);
+  border: 1px solid var(--color-border-light, #e2e8f0);
+}
+
+[data-theme="dark"] .confirm-button.cancel {
+  background-color: var(--color-bg-tertiary, #4a5568);
+  color: var(--color-text-primary, #f7fafc);
+  border-color: var(--color-border-light, #4a5568);
+}
+
+.confirm-button.cancel:hover {
+  background-color: var(--color-bg-secondary, #e2e8f0);
+  border-color: var(--color-border, #cbd5e0);
+}
+
+[data-theme="dark"] .confirm-button.cancel:hover {
+  background-color: var(--color-bg-secondary, #2d3748);
+  border-color: var(--color-border, #718096);
+}
+
+.confirm-button.confirm {
+  background-color: var(--color-primary, #667eea);
+  color: var(--color-text-inverse, #ffffff);
+}
+
+.confirm-button.confirm:hover {
+  background-color: var(--color-primary-hover, #5568d3);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+.confirm-button:active {
+  transform: translateY(0);
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 480px) {
+  .confirm-dialog {
+    padding: var(--spacing-lg, 1.5rem);
+    margin: var(--spacing-md, 1rem);
+  }
+
+  .confirm-dialog-actions {
+    flex-direction: column;
+  }
+
+  .confirm-button {
+    width: 100%;
+  }
+}

@@ -60,16 +60,35 @@ jobs:
         run: npm ci
       
       - name: Run unit tests
-        run: npm test -- --testPathPattern=unit --passWithNoTests --no-coverage
-        continue-on-error: true
+        run: npm test -- --testPathPattern=unit --passWithNoTests --coverage
+        # continue-on-error: true を削除（監査レポートの推奨事項に基づき、テスト失敗を無視しない）
       
       - name: Run integration tests
-        run: npm test -- --testPathPattern=integration --passWithNoTests --no-coverage
-        continue-on-error: true
+        run: npm test -- --testPathPattern=integration --passWithNoTests --coverage
+        continue-on-error: true  # Tauriアプリが必要なため、環境依存のテストとして失敗を許容
+        env:
+          TAURI_APP_AVAILABLE: ${{ secrets.TAURI_APP_AVAILABLE != '' && secrets.TAURI_APP_AVAILABLE || (github.event_name == 'workflow_dispatch' && 'true') || 'false' }}
       
       - name: Generate coverage report
         run: npm run test:coverage
-        continue-on-error: true
+        # continue-on-error: true を削除（監査レポートの推奨事項に基づき、カバレッジレポート生成の失敗を無視しない）
+      
+      - name: Check coverage threshold
+        run: |
+          if [ -f "coverage/coverage-summary.json" ]; then
+            COVERAGE=$(cat coverage/coverage-summary.json | jq -r '.total.lines.pct')
+            echo "Current coverage: $COVERAGE%"
+            # jest.config.cjsのカバレッジ閾値（80%）に合わせて調整
+            if (( $(echo "$COVERAGE < 80" | bc -l) )); then
+              echo "❌ Coverage is below 80%: $COVERAGE%"
+              exit 1
+            else
+              echo "✅ Coverage is above 80%: $COVERAGE%"
+            fi
+          else
+            echo "⚠️ Coverage report not found"
+            exit 1
+          fi
       
       - name: Upload coverage to artifacts
         uses: actions/upload-artifact@v4
@@ -108,13 +127,13 @@ jobs:
       
       - name: Check Rust code format
         working-directory: src-tauri
-        run: cargo fmt --check --all || true
+        run: cargo fmt --check --all
       
       - name: Run Clippy
         working-directory: src-tauri
-        run: cargo clippy --all-targets --all-features -- -D warnings || true
+        run: cargo clippy --all-targets --all-features -- -D warnings
       
       - name: Run Rust tests
         working-directory: src-tauri
-        run: cargo test --workspace || true
+        run: cargo test --workspace
 

@@ -64,7 +64,7 @@ export const NavItem: React.FC<NavItemProps> = ({
   // クリックハンドラ
   const handleClick = useCallback(() => {
     if (disabled) return;
-    
+
     if (onClick) {
       onClick();
     } else {
@@ -73,14 +73,17 @@ export const NavItem: React.FC<NavItemProps> = ({
   }, [disabled, onClick, navigate, path]);
 
   // キーボードナビゲーションハンドラ
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLButtonElement>) => {
-    if (disabled) return;
-    
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      handleClick();
-    }
-  }, [disabled, handleClick]);
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLButtonElement>) => {
+      if (disabled) return;
+
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        handleClick();
+      }
+    },
+    [disabled, handleClick]
+  );
 
   // className を安全に結合
   const itemClassName = useMemo(() => {
@@ -130,4 +133,3 @@ export const NavItem: React.FC<NavItemProps> = ({
     </li>
   );
 };
-

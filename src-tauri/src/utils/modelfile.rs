@@ -2,8 +2,6 @@
 // Ollama Modelfileの作成・編集・管理
 
 use crate::utils::error::AppError;
-use std::path::PathBuf;
-use std::fs;
 use serde::{Deserialize, Serialize};
 
 /// Modelfile設定
@@ -24,81 +22,35 @@ pub fn generate_modelfile(config: &ModelfileConfig) -> String {
     
     // FROM句
     if let Some(base_model) = &config.base_model {
-        modelfile.push_str(&format!("FROM {}\n\n", base_model));
+        modelfile.push_str(&format!("FROM {}\n", base_model));
     }
     
     // SYSTEMプロンプト
     if let Some(system_prompt) = &config.system_prompt {
-        modelfile.push_str(&format!("SYSTEM \"\"\"{}\"\"\"\n\n", system_prompt.replace("\"", "\\\"")));
+        modelfile.push_str(&format!("SYSTEM \"\"\"\n{}\n\"\"\"\n", system_prompt));
     }
     
     // テンプレート
     if let Some(template) = &config.template {
-        modelfile.push_str(&format!("TEMPLATE \"\"\"{}\"\"\"\n\n", template.replace("\"", "\\\"")));
+        modelfile.push_str(&format!("TEMPLATE \"\"\"\n{}\n\"\"\"\n", template));
     }
     
     // パラメータ
     if let Some(parameters) = &config.parameters {
-        modelfile.push_str(&format!("PARAMETER {}\n\n", parameters));
+        modelfile.push_str(&format!("PARAMETER {}\n", parameters));
     }
     
     // アダプター
     if let Some(adapter_path) = &config.adapter_path {
-        modelfile.push_str(&format!("ADAPTER {}\n\n", adapter_path));
+        modelfile.push_str(&format!("ADAPTER {}\n", adapter_path));
     }
     
     // ライセンス
     if let Some(license) = &config.license {
-        modelfile.push_str(&format!("LICENSE \"\"\"{}\"\"\"\n\n", license.replace("\"", "\\\"")));
+        modelfile.push_str(&format!("LICENSE \"\"\"\n{}\n\"\"\"\n", license));
     }
     
     modelfile
-}
-
-/// Modelfileを保存
-pub async fn save_modelfile(
-    model_name: &str,
-    modelfile_content: &str,
-) -> Result<PathBuf, AppError> {
-    // Modelfileの保存場所
-    let app_data_dir = crate::database::connection::get_app_data_dir()
-        .map_err(|e| AppError::IoError {
-            message: format!("アプリデータディレクトリ取得エラー: {}", e),
-        })?;
-    
-    let modelfiles_dir = app_data_dir.join("modelfiles");
-    fs::create_dir_all(&modelfiles_dir).map_err(|e| AppError::IoError {
-        message: format!("ディレクトリ作成エラー: {}", e),
-    })?;
-    
-    let modelfile_path = modelfiles_dir.join(format!("{}.Modelfile", model_name));
-    
-    fs::write(&modelfile_path, modelfile_content).map_err(|e| AppError::IoError {
-        message: format!("Modelfile保存エラー: {}", e),
-    })?;
-    
-    Ok(modelfile_path)
-}
-
-/// Modelfileを読み込む
-pub async fn load_modelfile(model_name: &str) -> Result<String, AppError> {
-    let app_data_dir = crate::database::connection::get_app_data_dir()
-        .map_err(|e| AppError::IoError {
-            message: format!("アプリデータディレクトリ取得エラー: {}", e),
-        })?;
-    
-    let modelfile_path = app_data_dir.join("modelfiles").join(format!("{}.Modelfile", model_name));
-    
-    if !modelfile_path.exists() {
-        return Err(AppError::ApiError {
-            message: format!("Modelfile '{}' が見つかりません", model_name),
-            code: "FILE_NOT_FOUND".to_string(),
-        });
-    }
-    
-    fs::read_to_string(&modelfile_path).map_err(|e| AppError::IoError {
-        message: format!("Modelfile読み込みエラー: {}", e),
-    })
 }
 
 /// Modelfileを解析して設定に変換
@@ -177,4 +129,3 @@ pub fn parse_modelfile(modelfile_content: &str) -> Result<ModelfileConfig, AppEr
     
     Ok(config)
 }
-

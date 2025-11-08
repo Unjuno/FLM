@@ -6,7 +6,8 @@ import './Switch.css';
 /**
  * Switchコンポーネントのプロパティ
  */
-export interface SwitchProps extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'type'> {
+export interface SwitchProps
+  extends Omit<React.InputHTMLAttributes<HTMLInputElement>, 'size' | 'type'> {
   /** ラベル */
   label?: string;
   /** エラーメッセージ */
@@ -81,9 +82,15 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
               id={switchId}
               className="form-switch-input"
               disabled={disabled}
-              {...(checked !== undefined ? { checked } : defaultChecked !== undefined ? { defaultChecked } : {})}
+              {...(checked !== undefined
+                ? { checked }
+                : defaultChecked !== undefined
+                  ? { defaultChecked }
+                  : {})}
               role="switch"
-              {...((checked !== undefined ? checked : defaultChecked) && { 'aria-checked': true })}
+              {...((checked !== undefined ? checked : defaultChecked) && {
+                'aria-checked': true,
+              })}
               {...(error && { 'aria-invalid': true })}
               {...(error && { 'aria-describedby': errorId })}
               {...(!error && helpText && { 'aria-describedby': helpId })}
@@ -96,7 +103,11 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
             {label && (
               <span className="form-switch-label">
                 {label}
-                {required && <span className="form-switch-required" aria-label="必須">*</span>}
+                {required && (
+                  <span className="form-switch-required" aria-label="必須">
+                    *
+                  </span>
+                )}
               </span>
             )}
           </label>
@@ -117,4 +128,3 @@ export const Switch = forwardRef<HTMLInputElement, SwitchProps>(
 );
 
 Switch.displayName = 'Switch';
-

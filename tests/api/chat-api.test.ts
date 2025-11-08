@@ -52,36 +52,38 @@ describe('Chat API Tests', () => {
   describe('POST /v1/chat/completions', () => {
     it('should respond to chat completion request', async () => {
       if (!apiEndpoint || !apiKey) {
-        console.warn('APIエンドポイントまたはAPIキーが設定されていないため、スキップします');
+        console.warn(
+          'APIエンドポイントまたはAPIキーが設定されていないため、スキップします'
+        );
         expect(true).toBe(true);
         return;
       }
 
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
-      
+
       const response = await fetch(`${apiEndpoint}/v1/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           model: 'llama3:8b',
-          messages: [
-            { role: 'user', content: 'Hello, world!' }
-          ],
+          messages: [{ role: 'user', content: 'Hello, world!' }],
         }),
       });
 
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data).toBeDefined();
-      
+
       // OpenAI互換形式の確認
       if (data.choices) {
         expect(Array.isArray(data.choices)).toBe(true);
@@ -93,23 +95,27 @@ describe('Chat API Tests', () => {
 
     it('should return error for invalid request', async () => {
       if (!apiEndpoint || !apiKey) {
-        console.warn('APIエンドポイントまたはAPIキーが設定されていないため、スキップします');
+        console.warn(
+          'APIエンドポイントまたはAPIキーが設定されていないため、スキップします'
+        );
         expect(true).toBe(true);
         return;
       }
 
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
-      
+
       const response = await fetch(`${apiEndpoint}/v1/chat/completions`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
         },
         body: JSON.stringify({
           // 無効なリクエスト（modelが欠落）
@@ -130,11 +136,13 @@ describe('Chat API Tests', () => {
 
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
-      
+
       const response = await fetch(`${apiEndpoint}/v1/chat/completions`, {
         method: 'POST',
         headers: {
@@ -154,28 +162,32 @@ describe('Chat API Tests', () => {
   describe('GET /v1/models', () => {
     it('should return list of models', async () => {
       if (!apiEndpoint || !apiKey) {
-        console.warn('APIエンドポイントまたはAPIキーが設定されていないため、スキップします');
+        console.warn(
+          'APIエンドポイントまたはAPIキーが設定されていないため、スキップします'
+        );
         expect(true).toBe(true);
         return;
       }
 
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
-      
+
       const response = await fetch(`${apiEndpoint}/v1/models`, {
         headers: {
-          'Authorization': `Bearer ${apiKey}`,
+          Authorization: `Bearer ${apiKey}`,
         },
       });
 
       expect(response.status).toBe(200);
       const data = await response.json();
       expect(data).toBeDefined();
-      
+
       // OpenAI互換形式の確認
       if (data.data) {
         expect(Array.isArray(data.data)).toBe(true);
@@ -183,4 +195,3 @@ describe('Chat API Tests', () => {
     }, 10000);
   });
 });
-

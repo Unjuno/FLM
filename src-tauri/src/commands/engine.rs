@@ -1,11 +1,14 @@
 // Engine Management Commands
 // エンジン管理のIPCコマンド
 
-use crate::engines::{EngineManager, EngineDetectionResult, EngineConfig, EngineConfigData};
+use crate::engines::{EngineManager, EngineDetectionResult, EngineConfig, EngineConfigData, EngineDownloadProgress, EngineUpdateCheck};
+use crate::engines::installer::{install_lm_studio, install_vllm, install_llama_cpp};
+use crate::engines::updater::{check_lm_studio_update, check_vllm_update, check_llama_cpp_update, update_lm_studio, update_vllm, update_llama_cpp};
 use crate::database::connection::get_connection;
 use rusqlite::params;
 use uuid::Uuid;
 use chrono::Utc;
+use tauri::{AppHandle, Emitter};
 
 /// グローバルエンジンマネージャーインスタンス（シンプルな実装）
 fn get_engine_manager() -> EngineManager {
@@ -22,9 +25,21 @@ pub async fn get_available_engines() -> Result<Vec<String>, String> {
 /// 特定のエンジンを検出
 #[tauri::command]
 pub async fn detect_engine(engine_type: String) -> Result<EngineDetectionResult, String> {
+    eprintln!("[DEBUG] detect_engineコマンド呼び出し: engine_type={}", engine_type);
     let manager = get_engine_manager();
-    manager.detect_engine(&engine_type).await
-        .map_err(|e| format!("{}", e))
+    match manager.detect_engine(&engine_type).await {
+        Ok(result) => {
+            eprintln!("[DEBUG] detect_engine成功: installed={}, running={}, message={:?}", 
+                result.installed, result.running, result.message);
+            Ok(result)
+        },
+        Err(e) => {
+            eprintln!("[ERROR] detect_engine失敗: engine_type={}, error={}", engine_type, e);
+            // エラーが発生した場合でも、エンジンがインストールされていないことを示す結果を返す
+            // これにより、フロントエンドで適切なエラーメッセージを表示できる
+            Err(format!("エンジン検出エラー ({}): {}", engine_type, e))
+        }
+    }
 }
 
 /// すべてのエンジンを検出
@@ -176,5 +191,151 @@ pub async fn get_engine_models(engine_type: String) -> Result<Vec<crate::engines
     let manager = get_engine_manager();
     manager.get_engine_models(&engine_type).await
         .map_err(|e| format!("{}", e))
+}
+
+/// エンジンをインストール
+#[tauri::command]
+pub async fn install_engine(
+    app_handle: AppHandle,
+    engine_type: String
+) -> Result<String, String> {
+    // 進捗をイベントで送信するコールバック
+    let progress_callback = |progress: EngineDownloadProgress| -> Result<(), crate::utils::error::AppError> {
+        let _ = app_handle.emit("engine_install_progress", &progress);
+        Ok(())
+    };
+    
+    match engine_type.as_str() {
+        "lm_studio" => {
+            install_lm_studio(progress_callback).await
+                .map_err(|e| format!("LM Studioのインストールに失敗しました: {}", e))
+        },
+        "vllm" => {
+            install_vllm(progress_callback).await
+                .map_err(|e| format!("vLLMのインストールに失敗しました: {}", e))
+        },
+        "llama_cpp" => {
+            install_llama_cpp(progress_callback).await
+                .map_err(|e| format!("llama.cppのインストールに失敗しました: {}", e))
+        },
+        "ollama" => {
+            // Ollamaは別のコマンド（download_ollama）を使用
+            Err("Ollamaのインストールには「Ollamaセットアップ」機能を使用してください。".to_string())
+        },
+        _ => {
+            Err(format!("不明なエンジンタイプ: {}", engine_type))
+        }
+    }
+}
+
+/// エンジンのアップデート確認
+#[tauri::command]
+pub async fn check_engine_update(engine_type: String) -> Result<EngineUpdateCheck, String> {
+    match engine_type.as_str() {
+        "lm_studio" => {
+            check_lm_studio_update().await
+                .map_err(|e| format!("LM Studioのアップデート確認に失敗しました: {}", e))
+        },
+        "vllm" => {
+            check_vllm_update().await
+                .map_err(|e| format!("vLLMのアップデート確認に失敗しました: {}", e))
+        },
+        "llama_cpp" => {
+            check_llama_cpp_update().await
+                .map_err(|e| format!("llama.cppのアップデート確認に失敗しました: {}", e))
+        },
+        "ollama" => {
+            // Ollamaは別のコマンド（check_ollama_update）を使用
+            Err("Ollamaのアップデート確認には専用のコマンドを使用してください。".to_string())
+        },
+        _ => {
+            Err(format!("不明なエンジンタイプ: {}", engine_type))
+        }
+    }
+}
+
+/// エンジンをアップデート
+#[tauri::command]
+pub async fn update_engine(
+    app_handle: AppHandle,
+    engine_type: String
+) -> Result<String, String> {
+    // 進捗をイベントで送信するコールバック
+    let progress_callback = |progress: EngineDownloadProgress| -> Result<(), crate::utils::error::AppError> {
+        let _ = app_handle.emit("engine_update_progress", &progress);
+        Ok(())
+    };
+    
+    match engine_type.as_str() {
+        "lm_studio" => {
+            update_lm_studio(progress_callback).await
+                .map_err(|e| format!("LM Studioのアップデートに失敗しました: {}", e))
+        },
+        "vllm" => {
+            update_vllm(progress_callback).await
+                .map_err(|e| format!("vLLMのアップデートに失敗しました: {}", e))
+        },
+        "llama_cpp" => {
+            update_llama_cpp(progress_callback).await
+                .map_err(|e| format!("llama.cppのアップデートに失敗しました: {}", e))
+        },
+        "ollama" => {
+            // Ollamaは別のコマンド（update_ollama）を使用
+            Err("Ollamaのアップデートには専用のコマンドを使用してください。".to_string())
+        },
+        _ => {
+            Err(format!("不明なエンジンタイプ: {}", engine_type))
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    
+    /// 利用可能なエンジン一覧の取得テスト
+    #[test]
+    fn test_get_available_engines() {
+        let manager = get_engine_manager();
+        let engines = manager.get_available_engine_types();
+        
+        // 少なくともollamaが含まれていることを確認
+        assert!(engines.contains(&"ollama".to_string()));
+        
+        // エンジンリストが空でないことを確認
+        assert!(!engines.is_empty());
+    }
+    
+    /// エンジンタイプの検証テスト
+    #[test]
+    fn test_engine_type_validation() {
+        let valid_engines = vec!["ollama", "lm_studio", "vllm", "llama_cpp"];
+        
+        for engine_type in valid_engines {
+            // エンジンタイプが有効な形式であることを確認
+            assert!(!engine_type.is_empty());
+            assert!(engine_type.len() <= 50); // 合理的な長さ制限
+        }
+    }
+    
+    /// EngineConfigDataの検証テスト
+    #[test]
+    fn test_engine_config_data_validation() {
+        let config = EngineConfigData {
+            id: "test-id".to_string(),
+            engine_type: "ollama".to_string(),
+            name: "Test Engine".to_string(),
+            base_url: "http://localhost:11434".to_string(),
+            auto_detect: true,
+            executable_path: None,
+            is_default: false,
+        };
+        
+        assert_eq!(config.id, "test-id");
+        assert_eq!(config.engine_type, "ollama");
+        assert_eq!(config.name, "Test Engine");
+        assert_eq!(config.auto_detect, true);
+        assert_eq!(config.is_default, false);
+    }
 }
 

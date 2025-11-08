@@ -1,11 +1,14 @@
 // OAuthSettings - OAuth認証設定ページ
 // OAuth 2.0認証の設定と管理
 
-import React, { useState } from 'react';
+import React, { useState, useTransition, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { useNotifications } from '../contexts/NotificationContext';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { Breadcrumb, BreadcrumbItem } from '../components/common/Breadcrumb';
+import { SkeletonLoader } from '../components/common/SkeletonLoader';
+import { useI18n } from '../contexts/I18nContext';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import './OAuthSettings.css';
 
@@ -26,6 +29,7 @@ interface OAuthConfig {
  */
 export const OAuthSettings: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const { showSuccess, showError } = useNotifications();
   const [config, setConfig] = useState<OAuthConfig>({
     client_id: '',
@@ -40,6 +44,7 @@ export const OAuthSettings: React.FC = () => {
   const [authUrl, setAuthUrl] = useState<string | null>(null);
   const [authCode, setAuthCode] = useState('');
   const [authState, setAuthState] = useState('');
+  const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
   const [savedToken, setSavedToken] = useState<{
     access_token: string;
     refresh_token?: string;
@@ -48,6 +53,13 @@ export const OAuthSettings: React.FC = () => {
 
   // グローバルキーボードショートカットを有効化
   useGlobalKeyboardShortcuts();
+
+  // パンくずリストの項目
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
+    { label: t('header.home') || 'ホーム', path: '/' },
+    { label: t('header.settings') || '設定', path: '/settings' },
+    { label: 'OAuth認証設定' },
+  ], [t]);
 
   /**
    * OAuth認証フローを開始
@@ -61,8 +73,8 @@ export const OAuthSettings: React.FC = () => {
     try {
       setSaving(true);
       setError(null);
-      
-      const url = await safeInvoke<string>('start_oauth_flow', {
+
+      const url = await safeInvoke<string>('start_oauth_flow_command', {
         config: {
           client_id: config.client_id,
           client_secret: config.client_secret,
@@ -75,11 +87,15 @@ export const OAuthSettings: React.FC = () => {
 
       setAuthUrl(url);
       showSuccess('認証URLを生成しました。ブラウザで開きます');
-      
+
       // ブラウザで認証URLを開く
       window.open(url, '_blank');
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'OAuth認証フローの開始に失敗しました');
+      showError(
+        err instanceof Error
+          ? err.message
+          : 'OAuth認証フローの開始に失敗しました'
+      );
     } finally {
       setSaving(false);
     }
@@ -97,7 +113,7 @@ export const OAuthSettings: React.FC = () => {
     try {
       setSaving(true);
       setError(null);
-      
+
       const token = await safeInvoke<{
         access_token: string;
         refresh_token?: string;
@@ -121,7 +137,9 @@ export const OAuthSettings: React.FC = () => {
       setAuthState('');
       setAuthUrl(null);
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'トークン交換に失敗しました');
+      showError(
+        err instanceof Error ? err.message : 'トークン交換に失敗しました'
+      );
     } finally {
       setSaving(false);
     }
@@ -153,6 +171,7 @@ export const OAuthSettings: React.FC = () => {
   return (
     <div className="oauth-settings-page">
       <div className="oauth-settings-container">
+        <Breadcrumb items={breadcrumbItems} />
         <header className="oauth-settings-header">
           <button className="back-button" onClick={() => navigate('/settings')}>
             ← 戻る
@@ -172,7 +191,8 @@ export const OAuthSettings: React.FC = () => {
           <div className="oauth-info-banner">
             <h2>OAuth 2.0認証機能</h2>
             <p>
-              OAuth 2.0を使用して外部サービスと連携できます。認証フローを開始し、アクセストークンを取得・管理できます。
+              OAuth
+              2.0を使用して外部サービスと連携できます。認証フローを開始し、アクセストークンを取得・管理できます。
             </p>
             <ul className="oauth-features-list">
               <li>OAuth 2.0認証フローのサポート</li>
@@ -184,7 +204,7 @@ export const OAuthSettings: React.FC = () => {
 
           <div className="oauth-config-section">
             <h2>OAuth設定</h2>
-            
+
             <div className="form-group">
               <label className="form-label" htmlFor="client-id">
                 Client ID <span className="required">*</span>
@@ -194,7 +214,9 @@ export const OAuthSettings: React.FC = () => {
                 type="text"
                 className="form-input"
                 value={config.client_id}
-                onChange={(e) => setConfig({ ...config, client_id: e.target.value })}
+                onChange={e =>
+                  setConfig({ ...config, client_id: e.target.value })
+                }
                 placeholder="OAuth Client IDを入力"
                 disabled={saving}
               />
@@ -209,7 +231,9 @@ export const OAuthSettings: React.FC = () => {
                 type="password"
                 className="form-input"
                 value={config.client_secret}
-                onChange={(e) => setConfig({ ...config, client_secret: e.target.value })}
+                onChange={e =>
+                  setConfig({ ...config, client_secret: e.target.value })
+                }
                 placeholder="OAuth Client Secretを入力"
                 disabled={saving}
               />
@@ -224,7 +248,12 @@ export const OAuthSettings: React.FC = () => {
                 type="url"
                 className="form-input"
                 value={config.authorization_endpoint}
-                onChange={(e) => setConfig({ ...config, authorization_endpoint: e.target.value })}
+                onChange={e =>
+                  setConfig({
+                    ...config,
+                    authorization_endpoint: e.target.value,
+                  })
+                }
                 placeholder="https://example.com/oauth/authorize"
                 disabled={saving}
               />
@@ -239,7 +268,9 @@ export const OAuthSettings: React.FC = () => {
                 type="url"
                 className="form-input"
                 value={config.token_endpoint}
-                onChange={(e) => setConfig({ ...config, token_endpoint: e.target.value })}
+                onChange={e =>
+                  setConfig({ ...config, token_endpoint: e.target.value })
+                }
                 placeholder="https://example.com/oauth/token"
                 disabled={saving}
               />
@@ -254,14 +285,18 @@ export const OAuthSettings: React.FC = () => {
                 type="url"
                 className="form-input"
                 value={config.redirect_uri}
-                onChange={(e) => setConfig({ ...config, redirect_uri: e.target.value })}
+                onChange={e =>
+                  setConfig({ ...config, redirect_uri: e.target.value })
+                }
                 placeholder="http://localhost:3000/callback"
                 disabled={saving}
               />
             </div>
 
             <div className="form-group">
-              <label className="form-label">スコープ</label>
+              <label className="form-label" htmlFor="oauth-scope">
+                スコープ
+              </label>
               <div className="scope-list">
                 {config.scope.map((scope, index) => (
                   <div key={index} className="scope-item">
@@ -269,8 +304,12 @@ export const OAuthSettings: React.FC = () => {
                     <button
                       type="button"
                       className="button-danger-small"
-                      onClick={() => handleRemoveScope(index)}
-                      disabled={saving}
+                      onClick={() => {
+                        startTransition(() => {
+                          handleRemoveScope(index);
+                        });
+                      }}
+                      disabled={saving || isPending}
                     >
                       削除
                     </button>
@@ -292,7 +331,9 @@ export const OAuthSettings: React.FC = () => {
                 type="button"
                 className="button-primary"
                 onClick={handleStartOAuthFlow}
-                disabled={saving || !config.client_id || !config.authorization_endpoint}
+                disabled={
+                  saving || !config.client_id || !config.authorization_endpoint
+                }
               >
                 {saving ? '処理中...' : 'OAuth認証を開始'}
               </button>
@@ -334,7 +375,7 @@ export const OAuthSettings: React.FC = () => {
                     type="text"
                     className="form-input"
                     value={authCode}
-                    onChange={(e) => setAuthCode(e.target.value)}
+                    onChange={e => setAuthCode(e.target.value)}
                     placeholder="認証後に取得したコードを入力"
                     disabled={saving}
                   />
@@ -349,7 +390,7 @@ export const OAuthSettings: React.FC = () => {
                     type="text"
                     className="form-input"
                     value={authState}
-                    onChange={(e) => setAuthState(e.target.value)}
+                    onChange={e => setAuthState(e.target.value)}
                     placeholder="認証フローで取得したステートを入力"
                     disabled={saving}
                   />
@@ -373,19 +414,27 @@ export const OAuthSettings: React.FC = () => {
                 <h3>保存されたトークン</h3>
                 <div className="token-info">
                   <div className="token-field">
-                    <label>アクセストークン:</label>
-                    <code className="token-value">{savedToken.access_token.substring(0, 20)}...</code>
+                    <span className="token-label">アクセストークン:</span>
+                    <code className="token-value">
+                      {savedToken.access_token.substring(0, 20)}...
+                    </code>
                   </div>
                   {savedToken.refresh_token && (
                     <div className="token-field">
-                      <label>リフレッシュトークン:</label>
-                      <code className="token-value">{savedToken.refresh_token.substring(0, 20)}...</code>
+                      <span className="token-label">リフレッシュトークン:</span>
+                      <code className="token-value">
+                        {savedToken.refresh_token.substring(0, 20)}...
+                      </code>
                     </div>
                   )}
                   {savedToken.expires_at && (
                     <div className="token-field">
-                      <label>有効期限:</label>
-                      <span>{new Date(savedToken.expires_at).toLocaleString('ja-JP')}</span>
+                      <span className="token-label">有効期限:</span>
+                      <span>
+                        {new Date(savedToken.expires_at).toLocaleString(
+                          'ja-JP'
+                        )}
+                      </span>
                     </div>
                   )}
                 </div>
@@ -396,9 +445,11 @@ export const OAuthSettings: React.FC = () => {
                       className="button-secondary"
                       onClick={async () => {
                         try {
-                          setSaving(true);
-                          setError(null);
-                          
+                          startTransition(() => {
+                            setSaving(true);
+                            setError(null);
+                          });
+
                           const token = await safeInvoke<{
                             access_token: string;
                             refresh_token?: string;
@@ -407,7 +458,8 @@ export const OAuthSettings: React.FC = () => {
                             config: {
                               client_id: config.client_id,
                               client_secret: config.client_secret,
-                              authorization_endpoint: config.authorization_endpoint,
+                              authorization_endpoint:
+                                config.authorization_endpoint,
                               token_endpoint: config.token_endpoint,
                               redirect_uri: config.redirect_uri,
                               scope: config.scope,
@@ -415,17 +467,25 @@ export const OAuthSettings: React.FC = () => {
                             refresh_token: savedToken.refresh_token!,
                           });
 
-                          setSavedToken(token);
+                          startTransition(() => {
+                            setSavedToken(token);
+                          });
                           showSuccess('トークンをリフレッシュしました');
                         } catch (err) {
-                          showError(err instanceof Error ? err.message : 'トークンリフレッシュに失敗しました');
+                          showError(
+                            err instanceof Error
+                              ? err.message
+                              : 'トークンリフレッシュに失敗しました'
+                          );
                         } finally {
-                          setSaving(false);
+                          startTransition(() => {
+                            setSaving(false);
+                          });
                         }
                       }}
-                      disabled={saving || !savedToken.refresh_token}
+                      disabled={saving || !savedToken.refresh_token || isPending}
                     >
-                      {saving ? '処理中...' : '🔄 トークンをリフレッシュ'}
+                      {saving ? '処理中...' : 'トークンをリフレッシュ'}
                     </button>
                   </div>
                 )}
@@ -437,4 +497,3 @@ export const OAuthSettings: React.FC = () => {
     </div>
   );
 };
-

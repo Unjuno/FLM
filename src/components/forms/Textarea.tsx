@@ -6,7 +6,8 @@ import './Textarea.css';
 /**
  * Textareaコンポーネントのプロパティ
  */
-export interface TextareaProps extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'size'> {
+export interface TextareaProps
+  extends Omit<React.TextareaHTMLAttributes<HTMLTextAreaElement>, 'size'> {
   /** ラベル */
   label?: string;
   /** エラーメッセージ */
@@ -96,7 +97,11 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
         {label && (
           <label htmlFor={textareaId} className="form-textarea-label">
             {label}
-            {required && <span className="form-textarea-required" aria-label="必須">*</span>}
+            {required && (
+              <span className="form-textarea-required" aria-label="必須">
+                *
+              </span>
+            )}
           </label>
         )}
         <textarea
@@ -105,13 +110,17 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
           className={textareaClassName}
           disabled={disabled}
           readOnly={readOnly}
-            {...(error && { 'aria-invalid': 'true' })}
-            aria-describedby={error ? errorId : helpText ? helpId : undefined}
-            {...(required && { 'aria-required': 'true' })}
+          {...(error && { 'aria-invalid': 'true' })}
+          aria-describedby={error ? errorId : helpText ? helpId : undefined}
+          {...(required && { 'aria-required': 'true' })}
           {...props}
         />
         {error && (
-          <div id={errorId} className="form-textarea-error-message" role="alert">
+          <div
+            id={errorId}
+            className="form-textarea-error-message"
+            role="alert"
+          >
             {error}
           </div>
         )}
@@ -126,4 +135,3 @@ export const Textarea = forwardRef<HTMLTextAreaElement, TextareaProps>(
 );
 
 Textarea.displayName = 'Textarea';
-

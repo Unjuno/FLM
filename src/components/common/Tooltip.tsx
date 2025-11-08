@@ -31,7 +31,7 @@ interface TooltipProps {
 /**
  * ツールチップコンポーネント
  * 任意の要素にホバー時にツールチップを表示します
- * 
+ *
  * @example
  * <Tooltip content="このボタンをクリックしてAPIを作成します">
  *   <button>作成</button>
@@ -47,7 +47,8 @@ export const Tooltip: React.FC<TooltipProps> = ({
   disabled = false,
 }) => {
   const [isVisible, setIsVisible] = useState(false);
-  const [tooltipPosition, setTooltipPosition] = useState<TooltipPosition>(position);
+  const [tooltipPosition, setTooltipPosition] =
+    useState<TooltipPosition>(position);
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const tooltipRef = useRef<HTMLDivElement | null>(null);
   const containerRef = useRef<HTMLDivElement | null>(null);
@@ -62,17 +63,23 @@ export const Tooltip: React.FC<TooltipProps> = ({
     const container = containerRef.current;
     const rect = container.getBoundingClientRect();
     const tooltipRect = tooltip.getBoundingClientRect();
-    
+
     let newPosition: TooltipPosition = position;
 
     // 画面外に出る場合は位置を調整
     if (position === 'top' && rect.top - tooltipRect.height < 0) {
       newPosition = 'bottom';
-    } else if (position === 'bottom' && rect.bottom + tooltipRect.height > window.innerHeight) {
+    } else if (
+      position === 'bottom' &&
+      rect.bottom + tooltipRect.height > window.innerHeight
+    ) {
       newPosition = 'top';
     } else if (position === 'left' && rect.left - tooltipRect.width < 0) {
       newPosition = 'right';
-    } else if (position === 'right' && rect.right + tooltipRect.width > window.innerWidth) {
+    } else if (
+      position === 'right' &&
+      rect.right + tooltipRect.width > window.innerWidth
+    ) {
       newPosition = 'left';
     }
 
@@ -82,13 +89,16 @@ export const Tooltip: React.FC<TooltipProps> = ({
   // ツールチップの最大幅をCSS変数として設定
   useEffect(() => {
     if (tooltipRef.current) {
-      tooltipRef.current.style.setProperty('--tooltip-max-width', `${maxWidth}px`);
+      tooltipRef.current.style.setProperty(
+        '--tooltip-max-width',
+        `${maxWidth}px`
+      );
     }
   }, [maxWidth, isVisible]);
 
   const handleMouseEnter = () => {
     if (disabled) return;
-    
+
     timeoutRef.current = setTimeout(() => {
       setIsVisible(true);
     }, delay);
@@ -168,4 +178,3 @@ export const Tooltip: React.FC<TooltipProps> = ({
     </div>
   );
 };
-

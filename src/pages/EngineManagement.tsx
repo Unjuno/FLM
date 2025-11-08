@@ -1,12 +1,18 @@
 // EngineManagement - エンジン管理ページ
 // LLMエンジンの検出・起動・停止・設定管理
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useTransition } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { useNotifications } from '../contexts/NotificationContext';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { SkeletonLoader } from '../components/common/SkeletonLoader';
+import { Breadcrumb, BreadcrumbItem } from '../components/common/Breadcrumb';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useI18n } from '../contexts/I18nContext';
+import { logger } from '../utils/logger';
+import { extractErrorMessage } from '../utils/errorHandler';
+import { listen } from '@tauri-apps/api/event';
 import './EngineManagement.css';
 
 /**
@@ -14,12 +20,12 @@ import './EngineManagement.css';
  */
 interface EngineDetectionResult {
   engine_type: string;
-  detected: boolean;
   installed: boolean;
-  version?: string;
-  executable_path?: string;
-  base_url?: string;
-  status?: 'running' | 'stopped' | 'unknown';
+  running: boolean;
+  version?: string | null;
+  path?: string | null;
+  message?: string | null;
+  portable?: boolean | null;
 }
 
 /**
@@ -50,6 +56,7 @@ const ENGINE_NAMES: { [key: string]: string } = {
  */
 export const EngineManagement: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const { showSuccess, showError } = useNotifications();
   const [engines, setEngines] = useState<EngineDetectionResult[]>([]);
   const [engineConfigs, setEngineConfigs] = useState<EngineConfig[]>([]);
@@ -58,10 +65,18 @@ export const EngineManagement: React.FC = () => {
   const [starting, setStarting] = useState<string | null>(null);
   const [stopping, setStopping] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
   // const [selectedEngine, setSelectedEngine] = useState<string | null>(null);
 
   // グローバルキーボードショートカットを有効化
   useGlobalKeyboardShortcuts();
+
+  // パンくずリストの項目
+  const breadcrumbItems: BreadcrumbItem[] = React.useMemo(() => [
+    { label: t('header.home') || 'ホーム', path: '/' },
+    { label: t('header.settings') || '設定', path: '/settings' },
+    { label: 'エンジン管理' },
+  ], [t]);
 
   useEffect(() => {
     loadEngines();
@@ -75,11 +90,18 @@ export const EngineManagement: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const detectedEngines = await safeInvoke<EngineDetectionResult[]>('detect_all_engines', {});
+
+      const detectedEngines = await safeInvoke<EngineDetectionResult[]>(
+        'detect_all_engines',
+        {}
+      );
       setEngines(detectedEngines);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'エンジン一覧の読み込みに失敗しました');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'エンジン一覧の読み込みに失敗しました'
+      );
     } finally {
       setLoading(false);
     }
@@ -90,14 +112,13 @@ export const EngineManagement: React.FC = () => {
    */
   const loadEngineConfigs = async () => {
     try {
-      const configs = await safeInvoke<EngineConfig[]>('get_engine_configs', { engine_type: null });
+      const configs = await safeInvoke<EngineConfig[]>('get_engine_configs', {
+        engine_type: null,
+      });
       setEngineConfigs(configs);
     } catch (err) {
       // エラーは静かに処理（設定がない場合もある）
-      if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-        console.error('エンジン設定の読み込みに失敗しました:', err);
-      }
+      logger.warn('エンジン設定の読み込みに失敗しました', extractErrorMessage(err), 'EngineManagement');
     }
   };
 
@@ -108,11 +129,13 @@ export const EngineManagement: React.FC = () => {
     try {
       setDetecting(true);
       setError(null);
-      
+
       await loadEngines();
       showSuccess('エンジンの検出が完了しました');
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'エンジンの検出に失敗しました');
+      showError(
+        extractErrorMessage(err, 'エンジンの検出に失敗しました')
+      );
     } finally {
       setDetecting(false);
     }
@@ -125,12 +148,17 @@ export const EngineManagement: React.FC = () => {
     try {
       setStarting(engineType);
       setError(null);
-      
-      await safeInvoke('start_engine', { engine_type: engineType, config: null });
+
+      await safeInvoke('start_engine', {
+        engine_type: engineType,
+        config: null,
+      });
       showSuccess(`${ENGINE_NAMES[engineType] || engineType}を起動しました`);
       await loadEngines(); // 状態を更新
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'エンジンの起動に失敗しました');
+      showError(
+        extractErrorMessage(err, 'エンジンの起動に失敗しました')
+      );
     } finally {
       setStarting(null);
     }
@@ -143,12 +171,14 @@ export const EngineManagement: React.FC = () => {
     try {
       setStopping(engineType);
       setError(null);
-      
+
       await safeInvoke('stop_engine', { engine_type: engineType });
       showSuccess(`${ENGINE_NAMES[engineType] || engineType}を停止しました`);
       await loadEngines(); // 状態を更新
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'エンジンの停止に失敗しました');
+      showError(
+        extractErrorMessage(err, 'エンジンの停止に失敗しました')
+      );
     } finally {
       setStopping(null);
     }
@@ -161,12 +191,51 @@ export const EngineManagement: React.FC = () => {
     try {
       setStarting(engineType);
       setError(null);
-      
-      await safeInvoke('install_engine', { engine_type: engineType });
-      showSuccess(`${ENGINE_NAMES[engineType] || engineType}のインストールを開始しました`);
-      await loadEngines(); // 状態を更新
+
+      // 進捗イベントをリッスン
+      const unlisten = await listen<{
+        status: string;
+        progress: number;
+        downloaded_bytes: number;
+        total_bytes: number;
+        speed_bytes_per_sec: number;
+        message?: string | null;
+      }>('engine_install_progress', event => {
+        if (event.payload) {
+          const { progress, message } = event.payload;
+          logger.info(
+            `インストール進捗: ${progress.toFixed(1)}%`,
+            message || '',
+            'EngineManagement'
+          );
+        }
+      });
+
+      try {
+        // インストール実行
+        await safeInvoke('install_engine', { engine_type: engineType });
+
+        // イベントリスナーを解除
+        unlisten();
+
+        showSuccess(
+          `${ENGINE_NAMES[engineType] || engineType}のインストールが完了しました`
+        );
+
+        // インストール後に再度検出して状態を更新
+        await loadEngines();
+      } catch (installErr) {
+        // イベントリスナーを解除
+        unlisten();
+        throw installErr;
+      }
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'エンジンのインストールに失敗しました');
+      const errorMessage =
+        err instanceof Error
+          ? err.message
+          : 'エンジンのインストールに失敗しました';
+      showError(errorMessage);
+      logger.error('エンジンインストールエラー', err, 'EngineManagement');
     } finally {
       setStarting(null);
     }
@@ -176,9 +245,19 @@ export const EngineManagement: React.FC = () => {
     return (
       <div className="engine-management-page">
         <div className="engine-management-container">
-          <div className="loading-container">
-            <div className="loading-spinner"></div>
-            <p>エンジンを読み込んでいます...</p>
+          <Breadcrumb items={breadcrumbItems} />
+          <header className="engine-management-header">
+            <button className="back-button" onClick={() => navigate('/settings')}>
+              ← 戻る
+            </button>
+            <h1>エンジン管理</h1>
+          </header>
+          <div className="engine-management-content">
+            <SkeletonLoader type="title" width="200px" />
+            <SkeletonLoader type="paragraph" count={2} />
+            <div className="margin-top-xl">
+              <SkeletonLoader type="card" count={3} />
+            </div>
           </div>
         </div>
       </div>
@@ -188,6 +267,7 @@ export const EngineManagement: React.FC = () => {
   return (
     <div className="engine-management-page">
       <div className="engine-management-container">
+        <Breadcrumb items={breadcrumbItems} />
         <header className="engine-management-header">
           <button className="back-button" onClick={() => navigate('/settings')}>
             ← 戻る
@@ -217,15 +297,19 @@ export const EngineManagement: React.FC = () => {
               <button
                 type="button"
                 className="button-secondary"
-                onClick={handleDetectEngines}
+                onClick={() => {
+                  startTransition(() => {
+                    handleDetectEngines();
+                  });
+                }}
                 disabled={detecting}
               >
-                {detecting ? '検出中...' : '🔄 再検出'}
+                {detecting ? '検出中...' : '再検出'}
               </button>
             </div>
 
             <div className="engines-list">
-              {engines.map((engine) => (
+              {engines.map(engine => (
                 <div key={engine.engine_type} className="engine-card">
                   <div className="engine-header">
                     <div className="engine-title-section">
@@ -233,78 +317,96 @@ export const EngineManagement: React.FC = () => {
                         {ENGINE_NAMES[engine.engine_type] || engine.engine_type}
                       </h3>
                       {engine.version && (
-                        <span className="engine-version">v{engine.version}</span>
+                        <span className="engine-version">
+                          v{engine.version}
+                        </span>
                       )}
                     </div>
                     <div className="engine-status-badge">
-                      {engine.detected ? (
-                        engine.status === 'running' ? (
-                          <span className="status-running">🟢 実行中</span>
+                      {engine.installed ? (
+                        engine.running ? (
+                          <span className="status-running">実行中</span>
                         ) : (
-                          <span className="status-stopped">⚪ 停止中</span>
+                          <span className="status-stopped">停止中</span>
                         )
                       ) : (
-                        <span className="status-not-detected">❌ 未検出</span>
+                        <span className="status-not-detected">未検出</span>
                       )}
                     </div>
                   </div>
 
                   <div className="engine-body">
+                    {engine.message && (
+                      <div className="engine-message">
+                        <p>{engine.message}</p>
+                      </div>
+                    )}
                     <div className="engine-info">
-                      {engine.executable_path && (
+                      {engine.path && (
                         <div className="engine-info-item">
-                          <span className="info-label">実行ファイル:</span>
-                          <span className="info-value">{engine.executable_path}</span>
-                        </div>
-                      )}
-                      {engine.base_url && (
-                        <div className="engine-info-item">
-                          <span className="info-label">ベースURL:</span>
-                          <span className="info-value">{engine.base_url}</span>
+                          <span className="info-label">パス:</span>
+                          <span className="info-value">{engine.path}</span>
                         </div>
                       )}
                     </div>
 
                     <div className="engine-actions">
-                      {!engine.detected && (
+                      {!engine.installed && (
                         <button
                           type="button"
                           className="button-primary"
-                          onClick={() => handleInstallEngine(engine.engine_type)}
-                          disabled={starting === engine.engine_type}
+                          onClick={() => {
+                            startTransition(() => {
+                              handleInstallEngine(engine.engine_type);
+                            });
+                          }}
+                          disabled={starting === engine.engine_type || isPending}
                         >
-                          {starting === engine.engine_type ? 'インストール中...' : '📥 インストール'}
+                          {starting === engine.engine_type
+                            ? 'インストール中...'
+                            : 'インストール'}
                         </button>
                       )}
-                      {engine.detected && engine.status !== 'running' && (
+                      {engine.installed && !engine.running && (
                         <button
                           type="button"
                           className="button-primary"
-                          onClick={() => handleStartEngine(engine.engine_type)}
-                          disabled={starting === engine.engine_type}
+                          onClick={() => {
+                            startTransition(() => {
+                              handleStartEngine(engine.engine_type);
+                            });
+                          }}
+                          disabled={starting === engine.engine_type || isPending}
                         >
-                          {starting === engine.engine_type ? '起動中...' : '▶️ 起動'}
+                          {starting === engine.engine_type
+                            ? '起動中...'
+                            : '起動'}
                         </button>
                       )}
-                      {engine.detected && engine.status === 'running' && (
+                      {engine.installed && engine.running && (
                         <button
                           type="button"
                           className="button-danger"
-                          onClick={() => handleStopEngine(engine.engine_type)}
-                          disabled={stopping === engine.engine_type}
+                          onClick={() => {
+                            startTransition(() => {
+                              handleStopEngine(engine.engine_type);
+                            });
+                          }}
+                          disabled={stopping === engine.engine_type || isPending}
                         >
-                          {stopping === engine.engine_type ? '停止中...' : '⏹️ 停止'}
+                          {stopping === engine.engine_type
+                            ? '停止中...'
+                            : '停止'}
                         </button>
                       )}
                       <button
                         type="button"
                         className="button-secondary"
                         onClick={() => {
-                          // TODO: エンジン設定画面への遷移を実装
-                          console.log('設定ボタンがクリックされました:', engine.engine_type);
+                          navigate(`/engines/settings/${engine.engine_type}`);
                         }}
                       >
-                        ⚙️ 設定
+                        設定
                       </button>
                     </div>
                   </div>
@@ -317,7 +419,7 @@ export const EngineManagement: React.FC = () => {
             <div className="engine-configs-section">
               <h2>保存されたエンジン設定</h2>
               <div className="engine-configs-list">
-                {engineConfigs.map((config) => (
+                {engineConfigs.map(config => (
                   <div key={config.id} className="engine-config-card">
                     <div className="config-header">
                       <h3>{config.name}</h3>
@@ -326,10 +428,15 @@ export const EngineManagement: React.FC = () => {
                       )}
                     </div>
                     <div className="config-body">
-                      <p className="config-type">タイプ: {ENGINE_NAMES[config.engine_type] || config.engine_type}</p>
+                      <p className="config-type">
+                        タイプ:{' '}
+                        {ENGINE_NAMES[config.engine_type] || config.engine_type}
+                      </p>
                       <p className="config-url">ベースURL: {config.base_url}</p>
                       {config.executable_path && (
-                        <p className="config-path">実行ファイル: {config.executable_path}</p>
+                        <p className="config-path">
+                          実行ファイル: {config.executable_path}
+                        </p>
                       )}
                     </div>
                   </div>
@@ -342,4 +449,3 @@ export const EngineManagement: React.FC = () => {
     </div>
   );
 };
-

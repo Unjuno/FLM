@@ -55,7 +55,8 @@ export const SystemCheck: React.FC<SystemCheckProps> = ({
   showRecommendations = true,
 }) => {
   const [resources, setResources] = useState<SystemResources | null>(null);
-  const [recommendation, setRecommendation] = useState<ModelRecommendation | null>(null);
+  const [recommendation, setRecommendation] =
+    useState<ModelRecommendation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -67,16 +68,23 @@ export const SystemCheck: React.FC<SystemCheckProps> = ({
         setError(null);
 
         // システムリソースを取得
-        const resourcesData = await safeInvoke<SystemResources>('get_system_resources');
+        const resourcesData = await safeInvoke<SystemResources>(
+          'get_system_resources'
+        );
         setResources(resourcesData);
 
         // モデル提案を取得
         if (showRecommendations) {
-          const recommendationData = await safeInvoke<ModelRecommendation>('get_model_recommendation');
+          const recommendationData = await safeInvoke<ModelRecommendation>(
+            'get_model_recommendation'
+          );
           setRecommendation(recommendationData);
         }
       } catch (err) {
-        const errorMessage = err instanceof Error ? err.message : 'システム情報の取得に失敗しました';
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : 'システム情報の取得に失敗しました';
         logger.error('システム情報の取得に失敗しました', err, 'SystemCheck');
         setError(errorMessage);
       } finally {
@@ -183,7 +191,9 @@ export const SystemCheck: React.FC<SystemCheckProps> = ({
             <div className="resource-value">
               {resources.cpu_cores} コア
               <span className="resource-detail">
-                （使用率: {resources.cpu_usage.toFixed(FORMATTING.DECIMAL_PLACES_SHORT)}%）
+                （使用率:{' '}
+                {resources.cpu_usage.toFixed(FORMATTING.DECIMAL_PLACES_SHORT)}
+                %）
               </span>
             </div>
           </div>
@@ -207,12 +217,18 @@ export const SystemCheck: React.FC<SystemCheckProps> = ({
         <div className="model-recommendations">
           <h4>📊 推奨モデル</h4>
           <div className="recommended-model">
-            <div className="recommended-model-name">{recommendation.recommended_model}</div>
-            <div className="recommended-model-reason">{recommendation.reason}</div>
+            <div className="recommended-model-name">
+              {recommendation.recommended_model}
+            </div>
+            <div className="recommended-model-reason">
+              {recommendation.reason}
+            </div>
             {onModelSelected && (
               <button
                 className="use-recommended-button"
-                onClick={() => onModelSelected(recommendation.recommended_model)}
+                onClick={() =>
+                  onModelSelected(recommendation.recommended_model)
+                }
               >
                 このモデルを使用
               </button>
@@ -225,7 +241,9 @@ export const SystemCheck: React.FC<SystemCheckProps> = ({
               <div className="use-case-grid">
                 {recommendation.use_case_recommendations.map((uc, index) => (
                   <div key={index} className="use-case-item">
-                    <div className="use-case-label">{getUseCaseLabel(uc.use_case)}</div>
+                    <div className="use-case-label">
+                      {getUseCaseLabel(uc.use_case)}
+                    </div>
                     <div className="use-case-model">{uc.model}</div>
                     <div className="use-case-reason">{uc.reason}</div>
                     {onModelSelected && (
@@ -251,6 +269,15 @@ export const SystemCheck: React.FC<SystemCheckProps> = ({
                     key={index}
                     className={`alternative-badge ${onModelSelected ? 'clickable' : 'not-clickable'}`}
                     onClick={() => onModelSelected?.(alt)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        onModelSelected?.(alt);
+                      }
+                    }}
+                    role="button"
+                    tabIndex={onModelSelected ? 0 : -1}
+                    aria-label={`代替モデル ${alt} を選択`}
                   >
                     {alt}
                   </span>
@@ -263,4 +290,3 @@ export const SystemCheck: React.FC<SystemCheckProps> = ({
     </div>
   );
 };
-

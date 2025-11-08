@@ -8,7 +8,8 @@ import './Navigation.css';
 /**
  * ナビゲーション項目の型定義
  */
-export interface NavigationItem extends Omit<NavItemProps, 'active' | 'children'> {
+export interface NavigationItem
+  extends Omit<NavItemProps, 'active' | 'children'> {
   /** 子項目（ネストされたメニュー） */
   children?: NavigationItem[];
 }
@@ -52,7 +53,7 @@ export const Navigation: React.FC<NavigationProps> = ({
 
   // 項目を展開/折りたたみ
   const toggleExpanded = useCallback((path: string) => {
-    setExpandedItems((prev) => {
+    setExpandedItems(prev => {
       const newSet = new Set(prev);
       if (newSet.has(path)) {
         newSet.delete(path);
@@ -65,107 +66,119 @@ export const Navigation: React.FC<NavigationProps> = ({
 
   // モバイルメニューのトグル
   const toggleMobileMenu = useCallback(() => {
-    setMobileMenuOpen((prev) => !prev);
+    setMobileMenuOpen(prev => !prev);
   }, []);
 
   // キーボードナビゲーション（矢印キー）
-  const handleKeyDown = useCallback((e: React.KeyboardEvent<HTMLElement>) => {
-    if (!navRef.current) return;
+  const handleKeyDown = useCallback(
+    (e: React.KeyboardEvent<HTMLElement>) => {
+      if (!navRef.current) return;
 
-    const items = navRef.current.querySelectorAll<HTMLLIElement>('.nav-item-wrapper');
-    const itemCount = items.length;
-    if (itemCount === 0) return;
+      const items =
+        navRef.current.querySelectorAll<HTMLLIElement>('.nav-item-wrapper');
+      const itemCount = items.length;
+      if (itemCount === 0) return;
 
-    // 現在フォーカスされているアイテムのインデックスを取得
-    const getFocusedIndex = (): number => {
-      return Array.from(items).findIndex((item) => 
-        item.querySelector('button') === document.activeElement
-      );
-    };
+      // 現在フォーカスされているアイテムのインデックスを取得
+      const getFocusedIndex = (): number => {
+        return Array.from(items).findIndex(
+          item => item.querySelector('button') === document.activeElement
+        );
+      };
 
-    // 次のアイテムにフォーカスを移動
-    const focusItem = (index: number): void => {
-      items[index]?.querySelector('button')?.focus();
-    };
+      // 次のアイテムにフォーカスを移動
+      const focusItem = (index: number): void => {
+        items[index]?.querySelector('button')?.focus();
+      };
 
-    // 次のアイテムに移動（前/後）
-    const moveToNext = (direction: 1 | -1): void => {
-      e.preventDefault();
-      const focused = getFocusedIndex();
-      const next = direction === 1
-        ? (focused === -1 ? 0 : Math.min(focused + 1, itemCount - 1))
-        : (focused === -1 ? itemCount - 1 : Math.max(focused - 1, 0));
-      focusItem(next);
-    };
+      // 次のアイテムに移動（前/後）
+      const moveToNext = (direction: 1 | -1): void => {
+        e.preventDefault();
+        const focused = getFocusedIndex();
+        const next =
+          direction === 1
+            ? focused === -1
+              ? 0
+              : Math.min(focused + 1, itemCount - 1)
+            : focused === -1
+              ? itemCount - 1
+              : Math.max(focused - 1, 0);
+        focusItem(next);
+      };
 
-    switch (e.key) {
-      case 'ArrowDown':
-        moveToNext(1);
-        break;
-      case 'ArrowUp':
-        moveToNext(-1);
-        break;
-      case 'ArrowRight':
-        if (orientation === 'horizontal') {
+      switch (e.key) {
+        case 'ArrowDown':
           moveToNext(1);
-        }
-        break;
-      case 'ArrowLeft':
-        if (orientation === 'horizontal') {
+          break;
+        case 'ArrowUp':
           moveToNext(-1);
-        }
-        break;
-      case 'Home':
-        e.preventDefault();
-        focusItem(0);
-        break;
-      case 'End':
-        e.preventDefault();
-        focusItem(itemCount - 1);
-        break;
-      case 'Escape':
-        e.preventDefault();
-        setMobileMenuOpen(false);
-        navRef.current?.querySelector('button')?.blur();
-        break;
-    }
-  }, [orientation]);
+          break;
+        case 'ArrowRight':
+          if (orientation === 'horizontal') {
+            moveToNext(1);
+          }
+          break;
+        case 'ArrowLeft':
+          if (orientation === 'horizontal') {
+            moveToNext(-1);
+          }
+          break;
+        case 'Home':
+          e.preventDefault();
+          focusItem(0);
+          break;
+        case 'End':
+          e.preventDefault();
+          focusItem(itemCount - 1);
+          break;
+        case 'Escape':
+          e.preventDefault();
+          setMobileMenuOpen(false);
+          navRef.current?.querySelector('button')?.blur();
+          break;
+      }
+    },
+    [orientation]
+  );
 
   // ナビゲーション項目をレンダリング（再帰的）
-  const renderNavItems = useCallback((navItems: NavigationItem[], level: number = 0): React.ReactNode => {
-    return (
-      <>
-        {navItems.map((item) => {
-          const hasChildren = Boolean(item.children?.length);
-          const isExpanded = expandedItems.has(item.path);
-          const isActive = currentActivePath === item.path;
+  const renderNavItems = useCallback(
+    (navItems: NavigationItem[], level: number = 0): React.ReactNode => {
+      return (
+        <>
+          {navItems.map(item => {
+            const hasChildren = Boolean(item.children?.length);
+            const isExpanded = expandedItems.has(item.path);
+            const isActive = currentActivePath === item.path;
 
-          // クリックハンドラを最適化
-          const handleItemClick = () => {
-            if (hasChildren) {
-              toggleExpanded(item.path);
-            }
-            item.onClick?.();
-          };
+            // クリックハンドラを最適化
+            const handleItemClick = () => {
+              if (hasChildren) {
+                toggleExpanded(item.path);
+              }
+              item.onClick?.();
+            };
 
-          return (
-            <NavItem
-              key={item.path}
-              {...item}
-              active={isActive}
-              onClick={handleItemClick}
-            >
-              {hasChildren && isExpanded && (
-                <ul className={`nav-submenu level-${level}`} role="menu">
-                  {renderNavItems(item.children || [], level + 1)}
-                </ul>
-              )}
-            </NavItem>
-          );
-        })}
-      </>
-    );
-  }, [expandedItems, currentActivePath, toggleExpanded]);
+            return (
+              <NavItem
+                key={item.path}
+                {...item}
+                active={isActive}
+                onClick={handleItemClick}
+              >
+                {hasChildren && isExpanded && (
+                  <ul className={`nav-submenu level-${level}`} role="menu">
+                    {renderNavItems(item.children || [], level + 1)}
+                  </ul>
+                )}
+              </NavItem>
+            );
+          })}
+        </>
+      );
+    },
+    [expandedItems, currentActivePath, toggleExpanded]
+  );
 
   // className を安全に結合
   const navClassName = useMemo(() => {
@@ -209,6 +222,7 @@ export const Navigation: React.FC<NavigationProps> = ({
     <>
       {mobileMenuButton}
       {mobileOverlay}
+      {/* eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions */}
       <nav
         ref={navRef}
         className={navClassName}
@@ -216,8 +230,8 @@ export const Navigation: React.FC<NavigationProps> = ({
         aria-label="メインナビゲーション"
         onKeyDown={handleKeyDown}
       >
-        <ul 
-          className="nav-list" 
+        <ul
+          className="nav-list"
           role="menubar"
           {...(orientation && { 'aria-orientation': orientation })}
         >
@@ -227,4 +241,3 @@ export const Navigation: React.FC<NavigationProps> = ({
     </>
   );
 };
-

@@ -282,6 +282,46 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         [],
     )?;
     
+    // Error Logs テーブル（エラーログ永続化）
+    conn.execute(
+        r#"
+        CREATE TABLE IF NOT EXISTS error_logs (
+            id TEXT PRIMARY KEY,
+            error_category TEXT NOT NULL,
+            error_message TEXT NOT NULL,
+            error_stack TEXT,
+            context TEXT,
+            source TEXT,
+            api_id TEXT,
+            user_agent TEXT,
+            created_at TEXT NOT NULL,
+            FOREIGN KEY (api_id) REFERENCES apis(id) ON DELETE SET NULL
+        )
+        "#,
+        [],
+    )?;
+    
+    // Error Logs テーブルのインデックス
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_error_logs_category ON error_logs(error_category)",
+        [],
+    )?;
+    
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_error_logs_created_at ON error_logs(created_at)",
+        [],
+    )?;
+    
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_error_logs_api_id ON error_logs(api_id)",
+        [],
+    )?;
+    
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_error_logs_category_created ON error_logs(error_category, created_at)",
+        [],
+    )?;
+    
     // API Security Settings テーブル（セキュリティ強化機能）
     conn.execute(
         r#"
@@ -376,44 +416,6 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         [],
     )?;
 
-    // Model Reviews テーブル（v2.0: モデルレビュー機能）
-    conn.execute(
-        r#"
-        CREATE TABLE IF NOT EXISTS model_reviews (
-            id TEXT PRIMARY KEY,
-            model_name TEXT NOT NULL,
-            user_id TEXT NOT NULL,
-            rating INTEGER NOT NULL CHECK (rating >= 1 AND rating <= 5),
-            review_text TEXT,
-            tags TEXT,  -- JSON配列形式: ["fast", "accurate", "memory-efficient"]
-            created_at TEXT NOT NULL,
-            updated_at TEXT NOT NULL,
-            CHECK (rating >= 1 AND rating <= 5)
-        )
-        "#,
-        [],
-    )?;
-
-    // Model Reviews テーブルのインデックス
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_model_reviews_model_name ON model_reviews(model_name)",
-        [],
-    )?;
-
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_model_reviews_user_id ON model_reviews(user_id)",
-        [],
-    )?;
-
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_model_reviews_rating ON model_reviews(rating)",
-        [],
-    )?;
-
-    conn.execute(
-        "CREATE INDEX IF NOT EXISTS idx_model_reviews_created_at ON model_reviews(created_at)",
-        [],
-    )?;
 
     // Audit Logs テーブル（v2.0: 監査ログ機能）
     conn.execute(
@@ -473,6 +475,8 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
             description TEXT,
             enabled INTEGER NOT NULL DEFAULT 1,
             plugin_type TEXT NOT NULL,
+            library_path TEXT,  -- 動的ライブラリのパス（.dylib, .so, .dll）
+            permissions TEXT,  -- JSON形式でプラグインの権限を保存
             created_at TEXT NOT NULL,
             updated_at TEXT NOT NULL,
             CHECK (plugin_type IN ('engine', 'model', 'auth', 'logging', 'custom'))
@@ -480,6 +484,12 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "#,
         [],
     )?;
+    
+    // 既存のテーブルにpermissionsカラムを追加（マイグレーション）
+    let _ = conn.execute(
+        "ALTER TABLE plugins ADD COLUMN permissions TEXT",
+        [],
+    );
 
     // Plugins テーブルのインデックス
     conn.execute(
@@ -489,6 +499,115 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
 
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_plugins_type ON plugins(plugin_type)",
+        [],
+    )?;
+
+    // Shared Models テーブル（モデル共有機能）
+    conn.execute(
+        r#"
+        CREATE TABLE IF NOT EXISTS shared_models (
+            id TEXT PRIMARY KEY,
+            name TEXT NOT NULL,
+            author TEXT NOT NULL,
+            description TEXT,
+            tags TEXT,  -- JSON形式で保存
+            download_count INTEGER NOT NULL DEFAULT 0,
+            rating REAL,
+            model_path TEXT,
+            platform TEXT,  -- 'local', 'huggingface', 'ollama'
+            platform_model_id TEXT,  -- プラットフォーム固有のモデルID
+            license TEXT,
+            is_public INTEGER NOT NULL DEFAULT 1,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        "#,
+        [],
+    )?;
+
+    // Shared Models テーブルのインデックス
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_shared_models_platform ON shared_models(platform)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_shared_models_author ON shared_models(author)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_shared_models_created_at ON shared_models(created_at)",
+        [],
+    )?;
+
+
+    // Comments テーブル
+    conn.execute(
+        r#"
+        CREATE TABLE IF NOT EXISTS comments (
+            id TEXT PRIMARY KEY,
+            api_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            content TEXT NOT NULL,
+            parent_comment_id TEXT,  -- 返信の場合、親コメントのID
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (api_id) REFERENCES apis(id) ON DELETE CASCADE,
+            FOREIGN KEY (parent_comment_id) REFERENCES comments(id) ON DELETE CASCADE
+        )
+        "#,
+        [],
+    )?;
+
+    // Comments テーブルのインデックス
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_comments_api_id ON comments(api_id)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_comments_user_id ON comments(user_id)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_comments_parent_id ON comments(parent_comment_id)",
+        [],
+    )?;
+
+    // Annotations テーブル
+    conn.execute(
+        r#"
+        CREATE TABLE IF NOT EXISTS annotations (
+            id TEXT PRIMARY KEY,
+            api_id TEXT NOT NULL,
+            user_id TEXT NOT NULL,
+            annotation_type TEXT NOT NULL,
+            content TEXT NOT NULL,
+            position TEXT,  -- JSON形式で位置情報を保存
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL,
+            FOREIGN KEY (api_id) REFERENCES apis(id) ON DELETE CASCADE,
+            CHECK (annotation_type IN ('note', 'warning', 'suggestion', 'bug'))
+        )
+        "#,
+        [],
+    )?;
+
+    // Annotations テーブルのインデックス
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_annotations_api_id ON annotations(api_id)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_annotations_user_id ON annotations(user_id)",
+        [],
+    )?;
+
+    conn.execute(
+        "CREATE INDEX IF NOT EXISTS idx_annotations_type ON annotations(annotation_type)",
         [],
     )?;
 

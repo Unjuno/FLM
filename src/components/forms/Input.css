@@ -3,7 +3,7 @@
 .form-input-wrapper {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: var(--spacing-xs, 0.25rem);
 }
 
 .form-input-wrapper-full-width {
@@ -13,15 +13,19 @@
 .form-input-label {
   font-size: 0.875rem;
   font-weight: 500;
-  color: #333;
+  color: var(--color-text-primary, #1a202c);
   display: flex;
   align-items: center;
-  gap: 0.25rem;
+  gap: var(--spacing-xs, 0.25rem);
+}
+
+[data-theme="dark"] .form-input-label {
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .form-input-required {
-  color: #f56565;
-  font-weight: bold;
+  color: var(--color-error, #f56565);
+  font-weight: 600;
 }
 
 .form-input-container {
@@ -32,49 +36,64 @@
 
 .form-input {
   width: 100%;
-  padding: 0.75rem 1rem;
+  padding: var(--spacing-md, 0.75rem) var(--spacing-md, 1rem);
   font-size: 0.9rem;
   line-height: 1.5;
-  color: #333;
-  background: #fff;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  transition: all 0.2s;
+  color: var(--color-text-primary, #1a202c);
+  background: var(--color-bg-primary, #ffffff);
+  border: 1px solid var(--color-border, #cbd5e0);
+  border-radius: var(--radius-lg, 0.75rem);
+  transition: all var(--transition-base, 200ms ease);
   outline: none;
 }
 
+[data-theme="dark"] .form-input {
+  background: var(--color-bg-primary, #2d3748);
+  color: var(--color-text-primary, #f7fafc);
+  border-color: var(--color-border, #4a5568);
+}
+
 .form-input:focus {
-  border-color: #667eea;
-  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+  border-color: var(--color-primary, #667eea);
+  box-shadow: 0 0 0 3px var(--color-primary-light, rgba(102, 126, 234, 0.1));
 }
 
 .form-input-error {
-  border-color: #f56565;
+  border-color: var(--color-error, #f56565);
 }
 
 .form-input-error:focus {
-  border-color: #f56565;
-  box-shadow: 0 0 0 3px rgba(245, 101, 101, 0.1);
+  border-color: var(--color-error, #f56565);
+  box-shadow: 0 0 0 3px var(--color-error-light, rgba(245, 101, 101, 0.1));
 }
 
 .form-input-success {
-  border-color: #48bb78;
+  border-color: var(--color-success, #48bb78);
 }
 
 .form-input-success:focus {
-  border-color: #48bb78;
-  box-shadow: 0 0 0 3px rgba(72, 187, 120, 0.1);
+  border-color: var(--color-success, #48bb78);
+  box-shadow: 0 0 0 3px var(--color-success-light, rgba(72, 187, 120, 0.1));
 }
 
 .form-input-disabled {
-  background: #f5f5f5;
-  color: #999;
+  background: var(--color-bg-tertiary, #edf2f7);
+  color: var(--color-text-secondary, #718096);
   cursor: not-allowed;
 }
 
+[data-theme="dark"] .form-input-disabled {
+  background: var(--color-bg-tertiary, #1a202c);
+  color: var(--color-text-secondary, #718096);
+}
+
 .form-input-readonly {
-  background: #f9f9f9;
+  background: var(--color-bg-secondary, #f7fafc);
   cursor: default;
+}
+
+[data-theme="dark"] .form-input-readonly {
+  background: var(--color-bg-secondary, #2d3748);
 }
 
 .form-input-icon {
@@ -82,17 +101,21 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #666;
+  color: var(--color-text-secondary, #4a5568);
   pointer-events: none;
   z-index: 1;
 }
 
+[data-theme="dark"] .form-input-icon {
+  color: var(--color-text-secondary, #cbd5e0);
+}
+
 .form-input-icon-left {
-  left: 0.75rem;
+  left: var(--spacing-md, 0.75rem);
 }
 
 .form-input-icon-right {
-  right: 0.75rem;
+  right: var(--spacing-md, 0.75rem);
 }
 
 .form-input-has-left-icon {
@@ -104,70 +127,27 @@
 }
 
 .form-input-small {
-  padding: 0.5rem 0.75rem;
+  padding: var(--spacing-sm, 0.5rem) var(--spacing-md, 0.75rem);
   font-size: 0.875rem;
 }
 
 .form-input-large {
-  padding: 1rem 1.25rem;
+  padding: var(--spacing-md, 1rem) var(--spacing-lg, 1.25rem);
   font-size: 1rem;
 }
 
 .form-input-error-message {
   font-size: 0.875rem;
-  color: #f56565;
-  margin-top: 0.25rem;
+  color: var(--color-error, #f56565);
+  margin-top: var(--spacing-xs, 0.25rem);
 }
 
 .form-input-help-text {
   font-size: 0.875rem;
-  color: #666;
-  margin-top: 0.25rem;
+  color: var(--color-text-secondary, #4a5568);
+  margin-top: var(--spacing-xs, 0.25rem);
 }
 
-/* ダークモード対応 */
-@media (prefers-color-scheme: dark) {
-  .form-input-label {
-    color: #e0e0e0;
-  }
-
-  .form-input {
-    background: #2d3748;
-    color: #e0e0e0;
-    border-color: #4a5568;
-  }
-
-  .form-input:focus {
-    border-color: #667eea;
-  }
-
-  .form-input-disabled {
-    background: #1a202c;
-    color: #718096;
-  }
-
-  .form-input-readonly {
-    background: #2d3748;
-  }
-
-  .form-input-icon {
-    color: #a0aec0;
-  }
-
-  .form-input-help-text {
-    color: #a0aec0;
-  }
+[data-theme="dark"] .form-input-help-text {
+  color: var(--color-text-secondary, #cbd5e0);
 }
-
-[data-theme="dark"] {
-  --form-input-label-color: #e0e0e0;
-  --form-input-bg: #2d3748;
-  --form-input-text: #e0e0e0;
-  --form-input-border: #4a5568;
-  --form-input-disabled-bg: #1a202c;
-  --form-input-disabled-text: #718096;
-  --form-input-readonly-bg: #2d3748;
-  --form-input-icon-color: #a0aec0;
-  --form-input-help-text-color: #a0aec0;
-}
-

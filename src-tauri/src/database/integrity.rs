@@ -159,9 +159,9 @@ fn check_model_integrity(conn: &Connection) -> Result<IntegrityCheckResult, Data
         if !catalog_model_names.contains(&installed_model.name) {
             // カタログに存在しないが、インストール済みとして記録されている
             // これは必ずしも問題ではない（Ollamaから直接インストールされた可能性）
-            // 警告のみ
+            // 警告のみ（正常な動作の可能性が高い）
             issues.push(format!(
-                "インストール済みモデル '{}' がカタログに存在しません（警告）",
+                "インストール済みモデル '{}' がカタログに存在しません（警告: Ollamaから直接インストールされたモデルの可能性があります。これは正常な動作です）",
                 installed_model.name
             ));
         }
@@ -239,7 +239,7 @@ fn check_schema_integrity(conn: &Connection) -> Result<IntegrityCheckResult, Dat
         ("apis", vec!["id", "name", "model", "port", "enable_auth", "status", "created_at", "updated_at"]),
         ("api_keys", vec!["id", "api_id", "key_hash", "encrypted_key", "created_at", "updated_at"]),
         ("models_catalog", vec!["name", "description", "size", "parameters", "created_at", "updated_at"]),
-        ("installed_models", vec!["name", "size", "parameters", "created_at", "updated_at"]),
+        ("installed_models", vec!["name", "size", "parameters", "installed_at", "last_used_at", "usage_count"]),
     ];
     
     for (table_name, required_columns) in &table_columns {
@@ -318,3 +318,4 @@ pub fn fix_integrity_issues() -> Result<IntegrityCheckSummary, DatabaseError> {
     
     Ok(summary)
 }
+

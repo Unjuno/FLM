@@ -1,4 +1,31 @@
 {
+  "modelSelection": {
+    "loading": "Loading model list..."
+  },
+  "modelSelect": {
+    "title": "Select Model to Use",
+    "description": "Select the Ollama model to use for the API you are creating",
+    "loading": "Fetching model list...",
+    "loadingAria": "Loading model list",
+    "retry": "Retry",
+    "retryAria": "Retry fetching model list",
+    "empty": "No models installed",
+    "emptySubmessage": "Please download models from the model management page",
+    "goToModelManagement": "Go to Model Management",
+    "goToModelManagementAria": "Go to model management page"
+  },
+  "apiConfigForm": {
+    "engineNotInstalled": " is not installed.",
+    "autoInstallStarting": " Automatic installation will start.",
+    "manualInstallRequired": " Please install manually before creating the API.",
+    "engineNotRunning": " is not running.",
+    "engineStarting": " is starting...",
+    "autoStartAttempt": " Will attempt to start automatically when creating the API. If startup fails, please start Ollama manually and try again.",
+    "manualStartRequired": " Please start the engine before creating the API."
+  },
+  "apiCreate": {
+    "initializing": "Initializing..."
+  },
   "modelDownloadProgress": {
     "title": "Downloading Model",
     "downloaded": "Downloaded:",
@@ -11,14 +38,14 @@
     },
     "status": {
       "verifying": "Verifying...",
-      "complete": "✓ Download Complete",
-      "error": "⚠️ An error occurred",
-      "paused": "⏸️ Paused"
+      "complete": "Download Complete",
+      "error": "An error occurred",
+      "paused": "Paused"
     },
     "actions": {
-      "resume": "▶️ Resume",
-      "pause": "⏸️ Pause",
-      "cancel": "❌ Cancel",
+      "resume": "Resume",
+      "pause": "Pause",
+      "cancel": "Cancel",
       "close": "Close"
     },
     "aria": {
@@ -47,7 +74,12 @@
       "label": "Display Language",
       "hint": "Application display language",
       "japanese": "Japanese",
-      "english": "English"
+      "english": "English",
+      "chinese": "中文",
+      "korean": "한국어",
+      "spanish": "Español",
+      "french": "Français",
+      "german": "Deutsch"
     },
     "autoRefresh": {
       "title": "Auto Refresh",
@@ -96,7 +128,9 @@
     "notifications": "Notifications",
     "userMenu": "User menu",
     "openMenu": "Open menu",
-    "closeMenu": "Close menu"
+    "closeMenu": "Close menu",
+    "back": "Back",
+    "backToHome": "Back to Home"
   },
   "languageSwitcher": {
     "label": "Select language",
@@ -108,8 +142,8 @@
     "title": "Performance Dashboard",
     "loading": "Loading performance dashboard...",
     "backToHome": "← Back to Home",
-    "refresh": "🔄 Refresh",
-    "print": "🖨️ Print",
+    "refresh": "Refresh",
+    "print": "Print",
     "selectApi": "API to Monitor:",
     "selectApiHint": "Select the API to monitor. Performance metrics for the selected API will be displayed.",
     "selectApiPlaceholder": "Please select an API",
@@ -232,6 +266,634 @@
       "legendNameCpu": "CPU Usage",
       "legendNameMemory": "Memory Usage",
       "tooltipTime": "Time: {{time}}"
+    }
+  },
+  "help": {
+    "title": "Help & Support",
+    "subtitle": "FLM application usage, frequently asked questions, and troubleshooting",
+    "nav": {
+      "faq": "FAQ",
+      "guide": "How to Use Guide",
+      "trouble": "Troubleshooting",
+      "shortcuts": "Keyboard Shortcuts"
+    },
+    "faq": {
+      "title": "Frequently Asked Questions (FAQ)",
+      "items": {
+        "faq1": {
+          "question": "What is FLM?",
+          "answer": "FLM (Local LLM API Management Tool) is a desktop application that allows you to create and use local LLM APIs without technical knowledge or writing code."
+        },
+        "faq2": {
+          "question": "Is FLM free?",
+          "answer": "Yes, FLM is free to use. It is an open source project."
+        },
+        "faq3": {
+          "question": "Which OS does it run on?",
+          "answer": "Currently, it mainly supports Windows. Support for macOS and Linux is planned for the future."
+        },
+        "faq4": {
+          "question": "What are the system requirements?",
+          "answer": "OS: Windows 10 or higher (recommended: Windows 11), Memory: 8GB or more (recommended: 16GB or more), Storage: 10GB or more free space (additional space may be required depending on the model), CPU: 64-bit processor"
+        },
+        "faq5": {
+          "question": "What is Ollama?",
+          "answer": "Ollama is a tool for running LLMs (Large Language Models) locally. FLM uses Ollama to provide LLM APIs."
+        },
+        "faq6": {
+          "question": "Do I need to install Ollama?",
+          "answer": "No, it's not necessary. FLM will automatically download and install Ollama. If it's already installed, FLM will use that."
+        },
+        "faq7": {
+          "question": "Which model should I choose?",
+          "answer": "For beginners, please select the recommended model (highlighted on screen). For chat: llama3:8b, mistral:7b, etc. For code generation: codellama:7b, deepseek-coder:6.7b, etc. For lightweight models: tinyllama:1.1b, phi:2.7b, etc. are recommended."
+        },
+        "faq8": {
+          "question": "What port number should I choose?",
+          "answer": "The default 8080 is fine. If another application is using it, please select a different port number such as 8081, 8082, etc."
+        },
+        "faq9": {
+          "question": "Do I need to enable authentication?",
+          "answer": "If you're only using it in a local environment, you can disable authentication. If you're using it from external applications, we recommend enabling authentication."
+        },
+        "faq10": {
+          "question": "Where can I check the API key?",
+          "answer": "It is displayed on the success screen when creating the API. You can also check it from the \"Details\" button on the API details screen. You can also regenerate the API key on the settings change screen."
+        }
+      }
+    },
+    "guide": {
+      "title": "How to Use Guide",
+      "sections": {
+        "guide1": {
+          "title": "First Launch",
+          "content0": "1. When you launch the FLM application, it first checks the status of Ollama",
+          "content1": "2. If Ollama is not installed, it will automatically download it (recommended)",
+          "content2": "3. You can also use an already installed Ollama",
+          "content3": "4. Click the \"Download Ollama\" button to check the download progress"
+        },
+        "guide2": {
+          "title": "Creating an API",
+          "content0": "Step 1: Click the \"Create New API\" button on the home screen",
+          "content1": "Step 2: Select the model you want to use (recommended models are highlighted)",
+          "content2": "Step 3: Enter API settings (API name, port number, authentication settings)",
+          "content3": "Step 4: Click the \"Create\" button to start the API creation process",
+          "content4": "Step 5: Check the API endpoint and API key (if authentication is enabled) on the success screen",
+          "content5": "Important: The API key is only displayed at creation time. Please save it in a safe place"
+        },
+        "guide3": {
+          "title": "Using the API",
+          "content0": "1. Select \"API List\" from the home screen or menu",
+          "content1": "2. A list of created APIs will be displayed",
+          "content2": "3. Click the \"Start\" button to start the API",
+          "content3": "4. Use the API endpoint and API key to use the API in OpenAI-compatible format",
+          "content4": "5. You can test the API directly from the \"Test\" button",
+          "content5": "6. You can check request logs on the \"Logs\" screen"
+        },
+        "guide4": {
+          "title": "Model Management",
+          "content0": "1. Select \"Model Management\" from the home screen",
+          "content1": "2. Search and download available models",
+          "content2": "3. You can delete models from the installed models list",
+          "content3": "4. Download time varies depending on model size (small: a few minutes, medium: 10-30 minutes, large: 1 hour or more)"
+        },
+        "guide5": {
+          "title": "Performance Monitoring",
+          "content0": "1. Select \"Performance Monitoring\" from the home screen",
+          "content1": "2. Select the API you want to monitor from the API selection dropdown",
+          "content2": "3. Select period (1 hour, 24 hours, 7 days)",
+          "content3": "4. Check graphs for response time, request count, CPU/memory usage, error rate, etc.",
+          "content4": "5. Check current status with statistics summary cards"
+        }
+      }
+    },
+    "trouble": {
+      "title": "Troubleshooting",
+      "symptoms": "Symptoms:",
+      "solutions": "Solutions:",
+      "items": {
+        "trouble1": {
+          "title": "Ollama won't start",
+          "symptom0": "Error message \"Ollama is not running\"",
+          "symptom1": "Failure when creating API",
+          "solution0": "Restart the application and check Ollama status",
+          "solution1": "Start Ollama manually (run `ollama serve` from command line)",
+          "solution2": "Check if port 11434 is being used by another application",
+          "solution3": "Retry automatic Ollama download"
+        },
+        "trouble2": {
+          "title": "API won't start",
+          "symptom0": "Doesn't start even when clicking the \"Start\" button",
+          "symptom1": "Status remains \"Stopped\"",
+          "solution0": "Check if Ollama is running",
+          "solution1": "Check if the port number is in use (check for port conflicts with other applications)",
+          "solution2": "Check the error message content",
+          "solution3": "Restart the application and try again"
+        },
+        "trouble3": {
+          "title": "Model download fails",
+          "symptom0": "Download progress doesn't advance",
+          "symptom1": "Download fails partway through",
+          "solution0": "Check internet connection",
+          "solution1": "Check if there's sufficient storage space (minimum 10GB)",
+          "solution2": "Retry download",
+          "solution3": "If it fails after several attempts, manually download the Ollama model"
+        },
+        "trouble4": {
+          "title": "Forgot API key",
+          "symptom0": "API key is not displayed",
+          "symptom1": "Cannot connect to API",
+          "solution0": "Check API key from the \"Details\" button on the API details screen",
+          "solution1": "Click the \"Regenerate API Key\" button on the settings change screen",
+          "solution2": "Note: The old API key will become invalid"
+        },
+        "trouble5": {
+          "title": "Don't understand error message",
+          "symptom0": "Error message is displayed",
+          "symptom1": "Problem is not resolved",
+          "solution0": "Follow the error message content",
+          "solution1": "Check the troubleshooting section of this help page",
+          "solution2": "Restart the application and try again",
+          "solution3": "If the problem persists, report it on GitHub Issues"
+        },
+        "trouble6": {
+          "title": "Poor performance",
+          "symptom0": "API response is slow",
+          "symptom1": "High CPU usage",
+          "symptom2": "High memory usage",
+          "solution0": "This is normal behavior. LLM inference processing uses a lot of CPU and memory",
+          "solution1": "We recommend using lightweight models",
+          "solution2": "If multiple APIs are running simultaneously, stop unnecessary APIs",
+          "solution3": "Close other applications to free up resources"
+        }
+      }
+    },
+    "shortcuts": {
+      "title": "Keyboard Shortcuts",
+      "intro": "Use the following keyboard shortcuts to operate quickly.",
+      "shortcuts": {
+        "createApi": "Create new API",
+        "showLogs": "Show API logs",
+        "showPerformance": "Show performance dashboard",
+        "showModels": "Show model management",
+        "showHelp": "Show help",
+        "goHome": "Go to home screen",
+        "closeModal": "Close modal"
+      }
+    },
+    "footer": {
+      "moreQuestions": "Still have questions?",
+      "reportOn": "Report on",
+      "githubIssues": "GitHub Issues",
+      "githubUrl": "https://github.com/Unjuno/FLM/issues",
+      "showOnboarding": "Show onboarding again",
+      "showTutorial": "Show API creation tutorial again"
+    }
+  },
+  "errors": {
+    "general": {
+      "unexpected": "An unexpected error occurred",
+      "unexpectedWithDetails": "An unexpected error occurred."
+    },
+    "ollama": {
+      "notFound": "Ollama was not found. Please go to the home screen and run \"Ollama Setup\" to download Ollama.",
+      "connectionFailed": "Failed to connect to Ollama. Please check if Ollama is running.",
+      "startFailed": "Failed to start Ollama. Please check if Ollama is installed correctly.",
+      "general": "An error occurred with Ollama. Please check Ollama settings.",
+      "suggestion": "Please check if Ollama is installed correctly and running."
+    },
+    "api": {
+      "portInUse": "This port number is already in use. An alternative port will be automatically detected, but you can also manually specify a different port number.",
+      "portInvalid": "Please enter a port number between {{min}} and {{max}}.",
+      "portNotFound": "No available port numbers were found. Another application may be using many ports. Please close unnecessary applications and try again.",
+      "authProxyStartFailedPort": "Failed to start authentication proxy. The port number may already be in use. Please try a different port number.",
+      "authProxyStartFailed": "Failed to start authentication proxy. Please restart the application and try again.",
+      "general": "An error occurred with the API. Please check the settings.",
+      "suggestion": "Please check if the port number is already in use and verify the settings."
+    },
+    "model": {
+      "notFound": "Model was not found. Please download the model and try again.",
+      "downloadFailed": "Model download failed. Please check your internet connection.",
+      "general": "An error occurred with the model. Please check the model settings.",
+      "suggestion": "Please check if the model is downloaded correctly."
+    },
+    "database": {
+      "locked": "Database is in use. Please wait a moment and try again.",
+      "connectionFailed": "Failed to connect to the database. Please restart the application.",
+      "general": "An error occurred with the database. Please restart the application.",
+      "suggestion": "Please try restarting the application."
+    },
+    "network": {
+      "general": "There is a problem with the network connection. Please check your internet connection.",
+      "suggestion": "Please check your internet connection."
+    },
+    "permission": {
+      "general": "Required permissions are missing. Please check permission settings.",
+      "suggestion": "Please check if you have the required permissions."
+    },
+    "validation": {
+      "general": "There is an error in the input. Please check the input.",
+      "required": "This field is required.",
+      "minLength": "Please enter at least {{min}} characters.",
+      "maxLength": "Please enter no more than {{max}} characters.",
+      "min": "The minimum value is {{min}}.",
+      "max": "The maximum value is {{max}}.",
+      "pattern": "Please enter in the correct format.",
+      "emailRequired": "Please enter an email address.",
+      "emailInvalid": "Please enter a valid email address format.",
+      "urlRequired": "Please enter a URL.",
+      "urlInvalid": "Please enter a valid URL format.",
+      "numberRequired": "Please enter a number.",
+      "integerRequired": "Please enter an integer.",
+      "positiveRequired": "Please enter a positive number.",
+      "passwordMinLength": "Password must be at least 8 characters long.",
+      "passwordUppercase": "Password must contain uppercase letters.",
+      "passwordLowercase": "Password must contain lowercase letters.",
+      "passwordNumber": "Password must contain numbers.",
+      "dateRequired": "Please enter a date.",
+      "dateInvalid": "Please enter a valid date format.",
+      "suggestion": "Please check the input."
+    },
+    "suggestion": {
+      "general": "If the problem persists, please try restarting the application."
+    }
+  },
+  "engine": {
+    "detectionFailed": "Engine detection failed",
+    "ollama": {
+      "detectionFailed": "Failed to detect Ollama: {{errorMessage}}. Please run \"Ollama Setup\" from the home screen or install from the official Ollama website (https://ollama.com).",
+      "notInstalled": "Ollama is not installed",
+      "installMessage": "Please run \"Ollama Setup\" from the home screen or install from the official Ollama website (https://ollama.com)."
+    },
+    "lmStudio": {
+      "notInstalled": "LM Studio is not installed",
+      "installMessage": "Please install from the LM Studio official website (https://lmstudio.ai)."
+    },
+    "vllm": {
+      "notInstalled": "vLLM is not installed",
+      "installMessage": "Please install vLLM as a Python package (pip install vllm) or as a Docker container."
+    },
+    "llamaCpp": {
+      "notInstalled": "llama.cpp is not installed",
+      "installMessage": "Please install llama.cpp in your system PATH."
+    },
+    "general": {
+      "notInstalled": "{{engineName}} is not installed",
+      "installMessage": "Please install {{engineName}} before selecting a model."
+    },
+    "starting": {
+      "message": "Starting {{engineName}}...",
+      "waitMessage": "Please wait while the engine starts. This may take a while.",
+      "ollamaStarting": "Starting Ollama..."
+    }
+  },
+  "home": {
+    "sections": {
+      "basicFeatures": "Basic Features",
+      "monitoring": "Monitoring & Logs",
+      "settings": "Settings & Management",
+      "advanced": "Advanced Settings",
+      "other": "Other"
+    },
+    "features": {
+      "quickCreate": {
+        "label": "Create with Recommended Settings",
+        "description": "Auto-create with optimal settings for your system",
+        "tooltip": "Checks system resources and automatically selects the optimal model to create an API. API creation is completed with a single click.",
+        "ariaLabel": "Quick create. Create an API with optimal settings for your system."
+      },
+      "webService": {
+        "label": "Web Service",
+        "description": "Automatically create the optimal API from requirements",
+        "tooltip": "Enter your website requirements (category, purpose, resources) and the optimal model will be automatically selected to create an API.",
+        "ariaLabel": "Web service setup"
+      },
+      "createApi": {
+        "label": "Create New API",
+        "description": "Create API by selecting from multiple LLM engines",
+        "tooltip": "Create a new API endpoint from LLM engines such as Ollama, LM Studio, vLLM, llama.cpp. After creation, it can be used in OpenAI-compatible format.",
+        "ariaLabel": "Create new API. Create an API by selecting from multiple LLM engines."
+      },
+      "apiList": {
+        "label": "API List",
+        "description": "View and manage created APIs",
+        "tooltip": "Display a list of created APIs and perform operations such as start, stop, and delete.",
+        "ariaLabel": "View API list. View and manage created APIs."
+      },
+      "modelManagement": {
+        "label": "Model Management",
+        "description": "Manage models from multiple LLM engines",
+        "tooltip": "Search and download available LLM models. You can manage models according to the selected engine (Ollama, LM Studio, vLLM, llama.cpp). Please select an appropriate model according to model size and purpose.",
+        "ariaLabel": "Model management. Search and download models from multiple LLM engines."
+      },
+      "apiKeys": {
+        "label": "API Key Management",
+        "description": "View and manage API keys",
+        "tooltip": "You can manage API keys such as listing, regenerating, and deleting. For security, please store API keys safely.",
+        "ariaLabel": "API key management. View and manage API keys."
+      },
+      "llmTest": {
+        "label": "LLM Test",
+        "description": "Test LLM models with created APIs",
+        "tooltip": "You can test LLM models with created APIs. You can test interactively in chat format.",
+        "ariaLabel": "LLM test. Test LLM models with created APIs."
+      },
+      "apiLogs": {
+        "label": "API Logs",
+        "description": "View and search request logs",
+        "tooltip": "You can view and search API request logs. You can filter by date range, status code, path, etc.",
+        "ariaLabel": "View API logs. View and search request logs."
+      },
+      "performance": {
+        "label": "Performance Monitoring",
+        "description": "Monitor API performance metrics",
+        "tooltip": "You can monitor API performance metrics (response time, request count, error rate, etc.).",
+        "ariaLabel": "Performance monitoring. Monitor API performance metrics."
+      },
+      "alertHistory": {
+        "label": "Alert History",
+        "description": "View alert history",
+        "tooltip": "You can view alert history.",
+        "ariaLabel": "View alert history. View alert history."
+      },
+      "auditLogs": {
+        "label": "Audit Logs",
+        "description": "View system operation history",
+        "tooltip": "You can view system operation history.",
+        "ariaLabel": "View audit logs. View system operation history."
+      },
+      "settings": {
+        "label": "Basic Settings",
+        "description": "Change application basic settings",
+        "tooltip": "You can change application basic settings.",
+        "ariaLabel": "Open basic settings. Change application basic settings."
+      },
+      "engineManagement": {
+        "label": "Engine Management",
+        "description": "Manage LLM engines",
+        "tooltip": "You can manage LLM engines.",
+        "ariaLabel": "Open engine management. Manage LLM engines."
+      },
+      "alertSettings": {
+        "label": "Alert Settings",
+        "description": "Change alert settings",
+        "tooltip": "You can change alert settings.",
+        "ariaLabel": "Open alert settings. Change alert settings."
+      },
+      "backupRestore": {
+        "label": "Backup & Restore",
+        "description": "Backup and restore data",
+        "tooltip": "You can backup and restore data.",
+        "ariaLabel": "Open backup & restore. Backup and restore data."
+      },
+      "scheduler": {
+        "label": "Scheduler Settings",
+        "description": "Change scheduler settings",
+        "tooltip": "You can change scheduler settings.",
+        "ariaLabel": "Open scheduler settings. Change scheduler settings."
+      },
+      "certificates": {
+        "label": "Certificate Management",
+        "description": "Manage certificates",
+        "tooltip": "You can manage certificates.",
+        "ariaLabel": "Open certificate management. Manage certificates."
+      },
+      "oauth": {
+        "label": "OAuth Settings",
+        "description": "Change OAuth authentication settings",
+        "tooltip": "You can change OAuth authentication settings.",
+        "ariaLabel": "Open OAuth settings. Change OAuth authentication settings."
+      },
+      "plugins": {
+        "label": "Plugin Management",
+        "description": "Manage plugins",
+        "tooltip": "You can manage plugins.",
+        "ariaLabel": "Open plugin management. Manage plugins."
+      },
+      "modelCatalog": {
+        "label": "Model Catalog Management",
+        "description": "Manage model catalog",
+        "tooltip": "You can manage model catalog.",
+        "ariaLabel": "Open model catalog management. Manage model catalog."
+      },
+      "diagnostics": {
+        "label": "Diagnostics Tool",
+        "description": "Diagnose system/API status and port conflicts",
+        "tooltip": "You can diagnose system/API status and port conflicts.",
+        "ariaLabel": "Open diagnostics tool. Diagnose system/API status and port conflicts."
+      },
+      "ollamaSetup": {
+        "label": "Ollama Setup",
+        "description": "Ollama setup",
+        "tooltip": "You can set up Ollama.",
+        "ariaLabel": "Open Ollama setup. Set up Ollama."
+      },
+      "help": {
+        "label": "Help",
+        "description": "Show help",
+        "tooltip": "You can show help.",
+        "ariaLabel": "Show help. Show help."
+      },
+      "about": {
+        "label": "About FLM",
+        "description": "Information about the application",
+        "tooltip": "You can view information about the application.",
+        "ariaLabel": "Show about FLM. View information about the application."
+      }
+    },
+    "search": {
+      "placeholder": "Search features... (e.g., API creation, settings, logs)"
+    },
+    "systemCheck": {
+      "hide": "Hide System Information",
+      "show": "Show System Information"
+    },
+    "usage": {
+      "title": "How to Use",
+      "step1": "Click \"Create New API\"",
+      "step2": "Select the LLM engine to use (Ollama, LM Studio, vLLM, llama.cpp)",
+      "step3": "Select the model to use",
+      "step4": "Enter settings (API name, port number, engine settings, etc.)",
+      "step5": "After API creation is complete, get the endpoint URL and API key",
+      "step6": "Use the API with the obtained information"
+    }
+  },
+  "alertHistory": {
+    "title": "Alert History",
+    "subtitle": "You can view alerts that were detected in the past",
+    "backToHome": "← Back to Home",
+    "loading": "Loading...",
+    "filterByApi": "Filter by API:",
+    "allApis": "All APIs",
+    "showUnresolvedOnly": "Show unresolved alerts only",
+    "resolveMultiple": "Resolve {{count}} items",
+    "refresh": "Refresh",
+    "empty": "No alert history",
+    "alertType": {
+      "responseTime": "Response Time",
+      "errorRate": "Error Rate",
+      "cpuUsage": "CPU Usage",
+      "memoryUsage": "Memory Usage"
+    },
+    "status": {
+      "resolved": "Resolved",
+      "unresolved": "Unresolved"
+    },
+    "actions": {
+      "resolve": "Resolve",
+      "resolveTitle": "Mark as resolved",
+      "selectAlert": "Select alert {{id}}",
+      "selectAlertAria": "Select alert"
+    },
+    "details": {
+      "api": "API:",
+      "currentValue": "Current Value:",
+      "threshold": "Threshold:",
+      "detectedAt": "Detected At:",
+      "resolvedAt": "Resolved At:"
+    },
+    "messages": {
+      "loadError": "Failed to load alert history",
+      "resolveSuccess": "Alert marked as resolved",
+      "resolveError": "Failed to resolve alert",
+      "resolveMultipleConfirm": "Mark {{count}} alerts as resolved?",
+      "resolveMultipleSuccess": "Bulk resolve alerts completed",
+      "resolveMultipleSuccessMessage": "Marked {{count}} alerts as resolved",
+      "resolveMultipleError": "Failed to resolve alerts in bulk",
+      "apiListError": "API list retrieval error",
+      "apiListErrorMessage": "Failed to retrieve API list"
+    }
+  },
+  "apiList": {
+    "title": "API List",
+    "backToHome": "← Back to Home",
+    "backToHomeTooltip": "Return to home screen",
+    "createApi": "+ Create New API",
+    "createApiTooltip": "Create a new API endpoint. You can select an Ollama model and configure the API.",
+    "refresh": "Refresh",
+    "refreshTooltip": "Refresh the API list to the latest state. Start/stop status will also be updated.",
+    "loading": "Loading API list...",
+    "empty": {
+      "title": "No APIs created yet",
+      "message": "Create a new API to use local LLM APIs.",
+      "createTooltip": "Create a new API endpoint using Ollama models. After creation, it can be used in OpenAI-compatible format."
+    },
+    "selectAll": "Select All ({{count}} selected)",
+    "selectAllAria": "Select all APIs",
+    "selectApiAria": "Select {{name}}",
+    "status": {
+      "running": "Running",
+      "stopped": "Stopped",
+      "error": "Error",
+      "unknown": "Unknown"
+    },
+    "info": {
+      "model": "Model:",
+      "port": "Port:",
+      "endpoint": "Endpoint:",
+      "createdAt": "Created At:",
+      "updatedAt": "Updated At:"
+    },
+    "actions": {
+      "start": "Start",
+      "stop": "Stop",
+      "startTooltip": "Start the API. After starting, it will accept requests.",
+      "stopTooltip": "Stop the API. After stopping, it will no longer accept requests.",
+      "test": "Test",
+      "testTooltip": "You can test this API. Check the API behavior in chat format.",
+      "details": "Details",
+      "detailsTooltip": "Display API detailed information. You can check endpoint, API key, model information, etc.",
+      "settings": "Settings",
+      "settingsTooltip": "View and change API settings. You can change port number, authentication settings, etc.",
+      "edit": "Edit Settings",
+      "editTooltip": "Change API settings. A restart may be required after changes.",
+      "delete": "Delete",
+      "deleteTooltip": "Delete this API. Related processes will also be stopped, and this operation cannot be undone.",
+      "viewLogs": "View Logs"
+    },
+    "messages": {
+      "loadError": "Failed to load API list",
+      "statusChangeError": "Failed to change API status",
+      "deleteConfirm": "Delete API \"{{name}}\"?\n\nThis operation cannot be undone. Related processes will also be stopped.",
+      "deleteModelConfirm": "\n\nAlso delete the model \"{{modelName}}\" used by this API?\n(Will only be deleted if not used by other APIs)",
+      "deleteModelQuestion": "Also delete the model \"{{modelName}}\"?\n(Will only be deleted if not used by other APIs)",
+      "deleteError": "Failed to delete API",
+      "importComplete": "Import complete: {{imported}} added, {{skipped}} skipped, {{renamed}} renamed"
+    }
+  },
+  "apiLogs": {
+    "title": "API Logs",
+    "backToHome": "← Back to Home",
+    "backToHomeTooltip": "Return to home screen",
+    "loading": "Loading log list...",
+    "autoRefresh": {
+      "on": "Auto Refresh: ON",
+      "off": "Auto Refresh: OFF",
+      "enableTooltip": "Automatically refresh logs every 30 seconds. You can always see the latest logs.",
+      "disableTooltip": "Stop auto refresh. Logs need to be updated manually."
+    },
+    "refresh": "Refresh",
+    "refreshTooltip": "Refresh the log list to the latest state. Filter conditions will be maintained.",
+    "print": "Print",
+    "printTooltip": "Print the current log list.",
+    "printTitle": "API Log List",
+    "selectApi": "Select API:",
+    "selectApiTooltip": "Select the API to display. When you select a specific API, only logs for that API will be displayed.",
+    "allApis": "All APIs",
+    "selectedApi": "Selected:",
+    "empty": {
+      "title": "No logs yet",
+      "message": "When you use the API, request logs will be displayed here."
+    },
+    "table": {
+      "id": "ID",
+      "method": "Method",
+      "path": "Path",
+      "status": "Status",
+      "responseTime": "Response Time",
+      "error": "Error",
+      "datetime": "Date & Time",
+      "actions": "Actions"
+    },
+    "info": {
+      "total": "{{total}} total",
+      "matched": "{{count}} match filter conditions",
+      "filtered": "(Showing {{filtered}} of {{total}})"
+    },
+    "messages": {
+      "loadError": "Failed to load API list",
+      "exportComplete": "Exported {{count}} logs",
+      "deleteComplete": "Deleted {{count}} logs"
+    }
+  },
+  "apiTestSelector": {
+    "title": "LLM Test",
+    "description": "Select from created APIs and test LLM models. Check API behavior interactively in chat format.",
+    "loading": "Loading API list...",
+    "searchPlaceholder": "Search by API name, model name, endpoint...",
+    "clearSearch": "Clear search",
+    "status": {
+      "running": "Running",
+      "stopped": "Stopped",
+      "error": "Error",
+      "unknown": "Unknown"
+    },
+    "empty": {
+      "title": "No APIs created yet",
+      "message": "Create a new API first, then you can test LLM models.",
+      "noApis": {
+        "title": "No APIs registered",
+        "message": "Please create an API first, then run tests.",
+        "createButton": "Create API"
+      },
+      "noSearchResults": {
+        "title": "No search results found",
+        "message": "Please change your search criteria and try again.",
+        "clearButton": "Clear Search"
+      }
+    },
+    "messages": {
+      "loadError": "Failed to load API list"
     }
   }
 }

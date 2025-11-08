@@ -9,11 +9,16 @@ describe('API Creation Flow E2E Tests', () => {
   beforeAll(() => {
     // Tauriアプリが起動していない場合はスキップ
     if (!process.env.TAURI_APP_AVAILABLE) {
-      console.warn('Tauriアプリが起動していないため、このテストスイートをスキップします');
+      console.warn(
+        'Tauriアプリが起動していないため、このテストスイートをスキップします'
+      );
       return;
     }
-    
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('API作成フローE2Eテストを開始します');
     }
   });
@@ -28,12 +33,18 @@ describe('API Creation Flow E2E Tests', () => {
         }
         await invoke('delete_api', { apiId: createdApiId });
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('テスト後のクリーンアップでエラー:', error);
         }
       }
     }
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('API作成フローE2Eテストを完了しました');
     }
   });
@@ -45,16 +56,20 @@ describe('API Creation Flow E2E Tests', () => {
     it('should retrieve available models from Ollama', async () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
       try {
-        const models = await invoke<Array<{
-          name: string;
-          size: number | null;
-          modified_at: string;
-          parameter_size: string | null;
-        }>>('get_models_list');
+        const models = await invoke<
+          Array<{
+            name: string;
+            size: number | null;
+            modified_at: string;
+            parameter_size: string | null;
+          }>
+        >('get_models_list');
 
         expect(models).toBeDefined();
         expect(Array.isArray(models)).toBe(true);
@@ -67,7 +82,10 @@ describe('API Creation Flow E2E Tests', () => {
         }
       } catch (error) {
         // Ollamaが起動していない場合はスキップ
-        console.warn('モデル一覧取得テストをスキップ（Ollamaが起動していない可能性）:', error);
+        console.warn(
+          'モデル一覧取得テストをスキップ（Ollamaが起動していない可能性）:',
+          error
+        );
         expect(true).toBe(true);
       }
     });
@@ -80,7 +98,9 @@ describe('API Creation Flow E2E Tests', () => {
     it('should create API with valid configuration', async () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
       const config = {
@@ -120,8 +140,9 @@ describe('API Creation Flow E2E Tests', () => {
 
         createdApiId = result.id;
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
+
         // モデルが存在しない場合などはスキップ
         if (
           errorMessage.includes('モデル') ||
@@ -193,17 +214,17 @@ describe('API Creation Flow E2E Tests', () => {
 
         expect(details).toBeDefined();
         expect(details.endpoint).toMatch(/^http:\/\/localhost:\d+$/);
-        
+
         if (details.enable_auth) {
           // APIキーを取得
-          const apiKey = await invoke<string | null>('get_api_key', { 
-            api_id: createdApiId 
+          const apiKey = await invoke<string | null>('get_api_key', {
+            api_id: createdApiId,
           });
 
           expect(apiKey).toBeDefined();
           if (apiKey) {
             expect(apiKey.length).toBeGreaterThan(0);
-            
+
             // エンドポイントとAPIキーが利用可能であることを確認
             expect(details.endpoint).toBeDefined();
             expect(apiKey).toBeDefined();

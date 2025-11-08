@@ -4,23 +4,32 @@
   width: 100%;
   max-width: 800px;
   margin: 0 auto;
-  padding: 2rem;
+  padding: var(--spacing-xl, 2rem);
 }
 
 .model-select-header {
-  margin-bottom: 2rem;
+  margin-bottom: var(--spacing-xl, 2rem);
 }
 
 .model-select-header h2 {
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 var(--spacing-xs, 0.5rem) 0;
   font-size: 1.5rem;
-  color: #333;
+  color: var(--color-text-primary, #1a202c);
+  font-weight: 600;
+}
+
+[data-theme="dark"] .model-select-header h2 {
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .model-select-description {
   margin: 0;
-  color: #666;
+  color: var(--color-text-secondary, #4a5568);
   font-size: 0.9rem;
+}
+
+[data-theme="dark"] .model-select-description {
+  color: var(--color-text-secondary, #cbd5e0);
 }
 
 /* ローディング状態 */
@@ -29,18 +38,22 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4rem 2rem;
+  padding: var(--spacing-3xl, 4rem) var(--spacing-xl, 2rem);
   text-align: center;
 }
 
 .model-select-loading .spinner {
   width: 40px;
   height: 40px;
-  border: 4px solid #f3f3f3;
-  border-top: 4px solid #3498db;
-  border-radius: 50%;
+  border: 4px solid var(--color-bg-tertiary, #edf2f7);
+  border-top: 4px solid var(--color-primary, #667eea);
+  border-radius: var(--radius-full, 50%);
   animation: spin 1s linear infinite;
-  margin-bottom: 1rem;
+  margin-bottom: var(--spacing-md, 1rem);
+}
+
+[data-theme="dark"] .model-select-loading .spinner {
+  border-color: var(--color-bg-tertiary, #4a5568);
 }
 
 @keyframes spin {
@@ -54,18 +67,19 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4rem 2rem;
+  padding: var(--spacing-3xl, 4rem) var(--spacing-xl, 2rem);
   text-align: center;
 }
 
 .model-select-error .error-icon {
   font-size: 3rem;
-  margin-bottom: 1rem;
+  margin-bottom: var(--spacing-md, 1rem);
+  color: var(--color-error, #f56565);
 }
 
 .model-select-error .error-message {
-  margin-bottom: 1.5rem;
-  color: #e74c3c;
+  margin-bottom: var(--spacing-lg, 1.5rem);
+  color: var(--color-error, #f56565);
 }
 
 /* 空の状態 */
@@ -74,142 +88,194 @@
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 4rem 2rem;
+  padding: var(--spacing-3xl, 4rem) var(--spacing-xl, 2rem);
   text-align: center;
 }
 
 .model-select-empty .empty-icon {
   font-size: 3rem;
-  margin-bottom: 1rem;
+  margin-bottom: var(--spacing-md, 1rem);
+  color: var(--color-text-secondary, #718096);
+}
+
+[data-theme="dark"] .model-select-empty .empty-icon {
+  color: var(--color-text-secondary, #a0aec0);
 }
 
 .model-select-empty p {
-  margin: 0.5rem 0;
-  color: #666;
+  margin: var(--spacing-xs, 0.5rem) 0;
+  color: var(--color-text-secondary, #4a5568);
+}
+
+[data-theme="dark"] .model-select-empty p {
+  color: var(--color-text-secondary, #cbd5e0);
 }
 
 .empty-submessage {
   font-size: 0.9rem;
-  color: #999;
+  color: var(--color-text-secondary, #718096);
+}
+
+[data-theme="dark"] .empty-submessage {
+  color: var(--color-text-secondary, #a0aec0);
 }
 
 /* モデルリスト */
 .model-select-content {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: var(--spacing-lg, 1.5rem);
 }
 
 .model-list {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
-  gap: 1rem;
+  gap: var(--spacing-md, 1rem);
 }
 
 .model-card {
-  border: 2px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 1.5rem;
+  border: 2px solid var(--color-border-light, #e2e8f0);
+  border-radius: var(--radius-lg, 0.75rem);
+  padding: var(--spacing-lg, 1.5rem);
   cursor: pointer;
-  transition: all 0.2s ease;
-  background-color: #fff;
+  transition: all var(--transition-base, 200ms ease);
+  background-color: var(--color-bg-primary, #ffffff);
+}
+
+[data-theme="dark"] .model-card {
+  background-color: var(--color-bg-primary, #1a202c);
+  border-color: var(--color-border-light, #4a5568);
 }
 
 .model-card:hover {
-  border-color: #3498db;
-  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+  border-color: var(--color-primary, #667eea);
+  box-shadow: var(--shadow-md, 0 2px 8px rgba(102, 126, 234, 0.2));
   transform: translateY(-2px);
 }
 
 .model-card.selected {
-  border-color: #3498db;
-  background-color: #ebf5fb;
-  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.3);
+  border-color: var(--color-primary, #667eea);
+  background-color: var(--color-primary-light, rgba(102, 126, 234, 0.1));
+  box-shadow: var(--shadow-md, 0 2px 8px rgba(102, 126, 234, 0.3));
+}
+
+[data-theme="dark"] .model-card.selected {
+  background-color: var(--color-primary-light, rgba(102, 126, 234, 0.2));
 }
 
 .model-card:focus-visible {
-  outline: 3px solid #0066cc;
+  outline: 3px solid var(--color-primary, #667eea);
   outline-offset: 2px;
-  border-color: #3498db;
-  box-shadow: 0 2px 8px rgba(52, 152, 219, 0.2);
+  border-color: var(--color-primary, #667eea);
+  box-shadow: var(--shadow-md, 0 2px 8px rgba(102, 126, 234, 0.2));
 }
 
 .model-card-header {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 0.5rem;
+  margin-bottom: var(--spacing-xs, 0.5rem);
 }
 
 .model-name {
   margin: 0;
   font-size: 1.1rem;
   font-weight: 600;
-  color: #333;
+  color: var(--color-text-primary, #1a202c);
+}
+
+[data-theme="dark"] .model-name {
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .model-size {
   font-size: 0.85rem;
-  color: #666;
-  background-color: #f0f0f0;
-  padding: 0.25rem 0.5rem;
-  border-radius: 4px;
+  color: var(--color-text-secondary, #4a5568);
+  background-color: var(--color-bg-tertiary, #edf2f7);
+  padding: var(--spacing-xs, 0.25rem) var(--spacing-sm, 0.5rem);
+  border-radius: var(--radius-md, 0.5rem);
+}
+
+[data-theme="dark"] .model-size {
+  color: var(--color-text-secondary, #cbd5e0);
+  background-color: var(--color-bg-tertiary, #4a5568);
 }
 
 .model-card-footer {
-  margin-top: 0.5rem;
-  padding-top: 0.5rem;
-  border-top: 1px solid #e0e0e0;
+  margin-top: var(--spacing-xs, 0.5rem);
+  padding-top: var(--spacing-xs, 0.5rem);
+  border-top: 1px solid var(--color-border-light, #e2e8f0);
+}
+
+[data-theme="dark"] .model-card-footer {
+  border-top-color: var(--color-border-light, #4a5568);
 }
 
 .model-modified {
   font-size: 0.8rem;
-  color: #999;
+  color: var(--color-text-secondary, #718096);
+}
+
+[data-theme="dark"] .model-modified {
+  color: var(--color-text-secondary, #a0aec0);
 }
 
 /* アクションボタン */
 .model-select-actions {
   display: flex;
   justify-content: flex-end;
-  gap: 1rem;
-  margin-top: 2rem;
+  gap: var(--spacing-md, 1rem);
+  margin-top: var(--spacing-xl, 2rem);
 }
 
 .button {
-  padding: 0.75rem 1.5rem;
+  padding: var(--spacing-md, 0.75rem) var(--spacing-lg, 1.5rem);
   border: none;
-  border-radius: 6px;
+  border-radius: var(--radius-md, 0.5rem);
   font-size: 1rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all var(--transition-base, 200ms ease);
 }
 
 .button.secondary {
-  background-color: #f0f0f0;
-  color: #333;
+  background-color: var(--color-bg-tertiary, #edf2f7);
+  color: var(--color-text-primary, #1a202c);
+  border: 1px solid var(--color-border-light, #e2e8f0);
+}
+
+[data-theme="dark"] .button.secondary {
+  background-color: var(--color-bg-tertiary, #4a5568);
+  color: var(--color-text-primary, #f7fafc);
+  border-color: var(--color-border-light, #4a5568);
 }
 
 .button.secondary:hover {
-  background-color: #e0e0e0;
+  background-color: var(--color-bg-tertiary, #cbd5e0);
+  border-color: var(--color-border, #a0aec0);
+}
+
+[data-theme="dark"] .button.secondary:hover {
+  background-color: var(--color-bg-tertiary, #718096);
 }
 
 .button.secondary:focus-visible {
-  outline: 2px solid #0066cc;
+  outline: 2px solid var(--color-primary, #667eea);
   outline-offset: 2px;
-  background-color: #e0e0e0;
 }
 
 .button.primary {
-  background-color: #3498db;
-  color: white;
+  background: linear-gradient(135deg, var(--color-primary, #667eea) 0%, var(--color-secondary, #764ba2) 100%);
+  color: var(--color-text-inverse, #ffffff);
 }
 
 .button.primary:hover {
-  background-color: #2980b9;
+  background: linear-gradient(135deg, var(--color-primary-hover, #5568d3) 0%, var(--color-secondary-hover, #6a3f8f) 100%);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md, 0 4px 6px -1px rgba(0, 0, 0, 0.1));
 }
 
 .button.primary:focus-visible {
-  outline: 2px solid #ffffff;
+  outline: 2px solid var(--color-text-inverse, #ffffff);
   outline-offset: 2px;
 }

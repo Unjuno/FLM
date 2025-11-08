@@ -55,12 +55,14 @@ export const ApiSettings: React.FC<ApiSettingsProps> = ({
             type="text"
             className={`form-input ${validation.errors.name ? 'error' : ''}`}
             value={config.name}
-            onChange={(e) => setConfig({ ...config, name: e.target.value })}
+            onChange={e => setConfig({ ...config, name: e.target.value })}
             placeholder="LocalAI API"
             maxLength={API_NAME.MAX_LENGTH}
             required
           />
-          {validation.errors.name && <span className="form-error">{validation.errors.name}</span>}
+          {validation.errors.name && (
+            <span className="form-error">{validation.errors.name}</span>
+          )}
           <p className="form-help">
             このAPIを識別するための名前です。後で変更できます。
           </p>
@@ -75,12 +77,19 @@ export const ApiSettings: React.FC<ApiSettingsProps> = ({
             type="number"
             className={`form-input ${validation.errors.port ? 'error' : ''}`}
             value={config.port}
-            onChange={(e) => setConfig({ ...config, port: parseInt(e.target.value) || PORT_RANGE.DEFAULT })}
+            onChange={e =>
+              setConfig({
+                ...config,
+                port: parseInt(e.target.value) || PORT_RANGE.DEFAULT,
+              })
+            }
             min={PORT_RANGE.MIN}
             max={PORT_RANGE.MAX}
             required
           />
-          {validation.errors.port && <span className="form-error">{validation.errors.port}</span>}
+          {validation.errors.port && (
+            <span className="form-error">{validation.errors.port}</span>
+          )}
           <p className="form-help">
             APIがリッスンするポート番号です。他のアプリケーションで使用されていないポートを選択してください。
           </p>
@@ -92,11 +101,11 @@ export const ApiSettings: React.FC<ApiSettingsProps> = ({
               type="checkbox"
               className="form-checkbox"
               checked={config.enableAuth}
-              onChange={(e) => setConfig({ ...config, enableAuth: e.target.checked })}
+              onChange={e =>
+                setConfig({ ...config, enableAuth: e.target.checked })
+              }
             />
-            <span className="form-checkbox-text">
-              認証を有効にする
-            </span>
+            <span className="form-checkbox-text">認証を有効にする</span>
           </label>
           <p className="form-help">
             認証を有効にすると、APIキーが必要になります。セキュリティのため推奨されます。

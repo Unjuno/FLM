@@ -74,9 +74,7 @@ describe('アクセシビリティテスト', () => {
 
   describe('Checkboxコンポーネント', () => {
     it('should have no accessibility violations', async () => {
-      const { container } = render(
-        <Checkbox label="テストチェックボックス" />
-      );
+      const { container } = render(<Checkbox label="テストチェックボックス" />);
       const results = await axe(container);
       expect(results).toHaveNoViolations();
     });
@@ -171,4 +169,3 @@ describe('アクセシビリティテスト', () => {
     });
   });
 });
-

@@ -2,35 +2,21 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
+import { cleanupTestApis, createTestApi, handleTauriAppNotRunningError } from '../setup/test-helpers';
+import { debugLog, debugWarn } from '../setup/debug';
 describe('API Integration Tests', () => {
   let createdApiId: string | null = null;
 
   beforeAll(() => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-      console.log('API統合テストを開始します');
-    }
+    debugLog('API統合テストを開始します');
   });
 
   afterAll(async () => {
     // テスト後のクリーンアップ処理
     if (createdApiId) {
-      try {
-        // 実行中の場合は停止
-        try {
-          await invoke('stop_api', { api_id: createdApiId });
-        } catch {
-          // 既に停止している可能性がある
-        }
-        await invoke('delete_api', { api_id: createdApiId });
-      } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('テスト後のクリーンアップでエラー:', error);
-        }
-      }
+      await cleanupTestApis([createdApiId]);
     }
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-      console.log('API統合テストを完了しました');
-    }
+    debugLog('API統合テストを完了しました');
   });
 
   /**
@@ -65,17 +51,10 @@ describe('API Integration Tests', () => {
 
         createdApiId = result.id;
       } catch (error) {
-        // Tauriアプリが起動していない場合、エラーメッセージが適切であることを確認
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
+        if (handleTauriAppNotRunningError(error)) {
           return;
         }
-        // Ollamaが起動していない場合などはスキップ
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('API作成テストをスキップ:', error);
-        }
+        debugWarn('API作成テストをスキップ:', error);
         // テスト環境によってはスキップされることを想定
         expect(error).toBeDefined();
       }
@@ -83,17 +62,19 @@ describe('API Integration Tests', () => {
 
     it('should list created APIs', async () => {
       try {
-        const apis = await invoke<Array<{
-          id: string;
-          name: string;
-          endpoint: string;
-          model_name: string;
-          port: number;
-          enable_auth: boolean;
-          status: string;
-          created_at: string;
-          updated_at: string;
-        }>>('list_apis');
+        const apis = await invoke<
+          Array<{
+            id: string;
+            name: string;
+            endpoint: string;
+            model_name: string;
+            port: number;
+            enable_auth: boolean;
+            status: string;
+            created_at: string;
+            updated_at: string;
+          }>
+        >('list_apis');
 
         expect(apis).toBeDefined();
         expect(Array.isArray(apis)).toBe(true);
@@ -103,7 +84,10 @@ describe('API Integration Tests', () => {
           expect(createdApi).toBeDefined();
         }
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('API一覧取得テストをスキップ:', error);
         }
         // テスト環境によってはスキップされることを想定
@@ -113,7 +97,10 @@ describe('API Integration Tests', () => {
 
     it('should get API details', async () => {
       if (!createdApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('API作成がスキップされたため、詳細取得テストをスキップ');
         }
         expect(true).toBe(true);
@@ -139,7 +126,10 @@ describe('API Integration Tests', () => {
         expect(details.name).toBeDefined();
         expect(details.endpoint).toMatch(/^http:\/\/localhost:\d+$/);
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('API詳細取得テストをスキップ:', error);
         }
         // テスト環境によってはスキップされることを想定
@@ -154,7 +144,10 @@ describe('API Integration Tests', () => {
   describe('Authentication proxy integration', () => {
     it('should handle API key generation and retrieval', async () => {
       if (!createdApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('API作成がスキップされたため、APIキーテストをスキップ');
         }
         expect(true).toBe(true);
@@ -162,18 +155,21 @@ describe('API Integration Tests', () => {
       }
 
       try {
-        const apiKey = await invoke<string | null>('get_api_key', { 
-          api_id: createdApiId 
+        const apiKey = await invoke<string | null>('get_api_key', {
+          api_id: createdApiId,
         });
 
         // 認証が有効な場合、APIキーが返される
         expect(apiKey === null || typeof apiKey === 'string').toBe(true);
-        
+
         if (apiKey) {
           expect(apiKey.length).toBeGreaterThan(0);
         }
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('APIキー取得テストをスキップ:', error);
         }
         // テスト環境によってはスキップされることを想定
@@ -183,16 +179,21 @@ describe('API Integration Tests', () => {
 
     it('should regenerate API key', async () => {
       if (!createdApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('API作成がスキップされたため、APIキー再生成テストをスキップ');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          console.warn(
+            'API作成がスキップされたため、APIキー再生成テストをスキップ'
+          );
         }
         expect(true).toBe(true);
         return;
       }
 
       try {
-        const newKey = await invoke<string>('regenerate_api_key', { 
-          api_id: createdApiId 
+        const newKey = await invoke<string>('regenerate_api_key', {
+          api_id: createdApiId,
         });
 
         expect(newKey).toBeDefined();
@@ -215,7 +216,8 @@ describe('API Integration Tests', () => {
         // エラーが発生することを期待
         expect(true).toBe(false); // 到達しないはず
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         expect(errorMessage).toBeDefined();
         expect(typeof errorMessage).toBe('string');
         // 非開発者向けのエラーメッセージか確認
@@ -235,13 +237,17 @@ describe('API Integration Tests', () => {
         await invoke('create_api', { config: invalidConfig });
         expect(true).toBe(false); // エラーが発生することを期待
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         expect(errorMessage).toBeDefined();
         // エラーメッセージにモデル名が含まれているか確認、またはTauriアプリ未起動エラー
-        const isModelError = errorMessage.includes('モデル') || 
+        const isModelError =
+          errorMessage.includes('モデル') ||
           errorMessage.includes('model') ||
           errorMessage.includes('見つかりません');
-        const isTauriNotRunning = errorMessage.includes('Tauriアプリケーションが起動していません');
+        const isTauriNotRunning = errorMessage.includes(
+          'Tauriアプリケーションが起動していません'
+        );
         expect(isModelError || isTauriNotRunning).toBe(true);
       }
     });
@@ -261,19 +267,24 @@ describe('API Integration Tests', () => {
       try {
         // APIを削除してから再取得を試みる（存在しないことを確認）
         await invoke('delete_api', { apiId: createdApiId });
-        
+
         const apis = await invoke<Array<{ id: string }>>('list_apis');
         const deletedApi = apis.find(api => api.id === createdApiId);
-        
+
         expect(deletedApi).toBeUndefined();
-        
+
         // 削除済みとしてマーク
         createdApiId = null;
       } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : String(error);
+        const errorMessage =
+          error instanceof Error ? error.message : String(error);
         if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-          console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-          expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
+          console.warn(
+            'Tauriアプリが起動していないため、このテストをスキップします'
+          );
+          expect(errorMessage).toContain(
+            'Tauriアプリケーションが起動していません'
+          );
         } else {
           console.warn('データベース永続化テストをスキップ:', error);
           expect(true).toBe(true);
@@ -282,4 +293,3 @@ describe('API Integration Tests', () => {
     });
   });
 });
-

@@ -17,7 +17,10 @@ export const LanguageSwitcher: React.FC = () => {
   // クリックアウトサイドで閉じる
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
@@ -31,7 +34,7 @@ export const LanguageSwitcher: React.FC = () => {
     };
   }, [isOpen]);
 
-  const handleLanguageChange = async (newLocale: 'ja' | 'en') => {
+  const handleLanguageChange = async (newLocale: 'ja' | 'en' | 'zh' | 'ko' | 'es' | 'fr' | 'de') => {
     if (newLocale !== locale) {
       await setLocale(newLocale);
     }
@@ -41,16 +44,22 @@ export const LanguageSwitcher: React.FC = () => {
   const languages = [
     { code: 'ja' as const, label: '日本語', flag: '🇯🇵' },
     { code: 'en' as const, label: 'English', flag: '🇺🇸' },
+    { code: 'zh' as const, label: '中文', flag: '🇨🇳' },
+    { code: 'ko' as const, label: '한국어', flag: '🇰🇷' },
+    { code: 'es' as const, label: 'Español', flag: '🇪🇸' },
+    { code: 'fr' as const, label: 'Français', flag: '🇫🇷' },
+    { code: 'de' as const, label: 'Deutsch', flag: '🇩🇪' },
   ];
 
-  const currentLanguage = languages.find(lang => lang.code === locale) || languages[0];
+  const currentLanguage =
+    languages.find(lang => lang.code === locale) || languages[0];
 
   const buttonProps: React.ButtonHTMLAttributes<HTMLButtonElement> = {
-    className: "language-switcher-button",
+    className: 'language-switcher-button',
     onClick: () => setIsOpen(!isOpen),
-    "aria-label": `${currentLanguage.label} - 言語を変更`,
-    "aria-expanded": isOpen,
-    "aria-haspopup": "true"
+    'aria-label': `${currentLanguage.label} - 言語を変更`,
+    'aria-expanded': isOpen,
+    'aria-haspopup': 'true',
   };
 
   return (
@@ -58,14 +67,16 @@ export const LanguageSwitcher: React.FC = () => {
       <Tooltip content={currentLanguage.label}>
         <button {...buttonProps}>
           <span className="language-flag">{currentLanguage.flag}</span>
-          <span className="language-code">{currentLanguage.code.toUpperCase()}</span>
+          <span className="language-code">
+            {currentLanguage.code.toUpperCase()}
+          </span>
           <span className="language-arrow">{isOpen ? '▲' : '▼'}</span>
         </button>
       </Tooltip>
 
       {isOpen && (
         <div className="language-dropdown" role="menu">
-          {languages.map((language) => (
+          {languages.map(language => (
             <button
               key={language.code}
               className={`language-option ${locale === language.code ? 'active' : ''}`}
@@ -85,4 +96,3 @@ export const LanguageSwitcher: React.FC = () => {
     </div>
   );
 };
-

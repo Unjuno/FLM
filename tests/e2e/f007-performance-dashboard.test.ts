@@ -1,9 +1,9 @@
 /**
  * FLM - F007: パフォーマンス監視機能 E2Eテスト
- * 
+ *
  * QAエージェント (QA) 実装
  * パフォーマンスダッシュボードUIのE2Eテスト
- * 
+ *
  * 注意: TauriアプリケーションのE2Eテストは、実際のUI操作ではなく、
  * フロントエンドからバックエンドへの完全なフローのテストとして実装します
  */
@@ -52,7 +52,7 @@ interface PerformanceSummary {
 
 /**
  * F007: パフォーマンス監視機能E2Eテストスイート
- * 
+ *
  * テスト項目:
  * - ダッシュボード表示フロー（API選択、期間選択）
  * - 統計サマリー表示フロー
@@ -65,13 +65,18 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
   beforeAll(async () => {
     // Tauriアプリが起動していない場合はスキップ
     if (!process.env.TAURI_APP_AVAILABLE) {
-      console.warn('Tauriアプリが起動していないため、このテストスイートをスキップします');
+      console.warn(
+        'Tauriアプリが起動していないため、このテストスイートをスキップします'
+      );
       return;
     }
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('F007 パフォーマンス監視機能E2Eテストを開始します');
     }
-    
+
     try {
       const result = await invoke<ApiInfo>('create_api', {
         config: {
@@ -81,9 +86,12 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
           enable_auth: false,
         },
       });
-      
+
       testApiId = result.id;
-      if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      if (
+        process.env.NODE_ENV === 'development' ||
+        process.env.JEST_DEBUG === '1'
+      ) {
         console.log(`テスト用APIを作成しました: ${testApiId}`);
       }
 
@@ -97,7 +105,7 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
         { metric_type: 'avg_response_time', value: 200, minutesAgo: 15 },
         { metric_type: 'avg_response_time', value: 160, minutesAgo: 10 },
         { metric_type: 'avg_response_time', value: 140, minutesAgo: 5 },
-        
+
         // リクエスト数メトリクス（過去30分）
         { metric_type: 'request_count', value: 10, minutesAgo: 30 },
         { metric_type: 'request_count', value: 15, minutesAgo: 25 },
@@ -105,17 +113,17 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
         { metric_type: 'request_count', value: 18, minutesAgo: 15 },
         { metric_type: 'request_count', value: 14, minutesAgo: 10 },
         { metric_type: 'request_count', value: 16, minutesAgo: 5 },
-        
+
         // CPU使用率メトリクス
         { metric_type: 'cpu_usage', value: 45.5, minutesAgo: 30 },
         { metric_type: 'cpu_usage', value: 52.3, minutesAgo: 25 },
         { metric_type: 'cpu_usage', value: 48.1, minutesAgo: 20 },
-        
+
         // メモリ使用量メトリクス
         { metric_type: 'memory_usage', value: 512.5, minutesAgo: 30 },
         { metric_type: 'memory_usage', value: 525.8, minutesAgo: 25 },
         { metric_type: 'memory_usage', value: 518.2, minutesAgo: 20 },
-        
+
         // エラー率メトリクス
         { metric_type: 'error_rate', value: 2.5, minutesAgo: 30 },
         { metric_type: 'error_rate', value: 1.8, minutesAgo: 25 },
@@ -124,7 +132,9 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
 
       // メトリクスを記録
       for (const metric of metricsToCreate) {
-        const timestamp = new Date(now.getTime() - metric.minutesAgo * 60 * 1000);
+        const timestamp = new Date(
+          now.getTime() - metric.minutesAgo * 60 * 1000
+        );
         await invoke('record_performance_metric', {
           request: {
             api_id: testApiId,
@@ -132,16 +142,24 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
             value: metric.value,
           },
         });
-        
+
         // タイムスタンプを設定するため、少し待つ
         await new Promise(resolve => setTimeout(resolve, 100));
       }
 
-      if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-        console.log(`テスト用メトリクスを${metricsToCreate.length}件作成しました`);
+      if (
+        process.env.NODE_ENV === 'development' ||
+        process.env.JEST_DEBUG === '1'
+      ) {
+        console.log(
+          `テスト用メトリクスを${metricsToCreate.length}件作成しました`
+        );
       }
     } catch (error) {
-      if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+      if (
+        process.env.NODE_ENV === 'development' ||
+        process.env.JEST_DEBUG === '1'
+      ) {
         console.warn('テスト用APIの作成に失敗しました:', error);
       }
     }
@@ -151,11 +169,17 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
     if (testApiId) {
       try {
         await invoke('delete_api', { api_id: testApiId });
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.log(`テスト用APIを削除しました: ${testApiId}`);
         }
       } catch (error) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('テスト用APIの削除に失敗しました:', error);
         }
       }
@@ -166,14 +190,16 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
     it('API一覧を取得できる', async () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
-      
+
       const apis = await invoke<ApiInfo[]>('list_apis');
       expect(apis).toBeInstanceOf(Array);
       expect(apis.length).toBeGreaterThan(0);
-      
+
       // テスト用APIが含まれていることを確認
       const testApi = apis.find(api => api.id === testApiId);
       expect(testApi).toBeDefined();
@@ -185,12 +211,17 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
     it('API選択時にAPI情報が取得できる', async () => {
       // Tauriアプリが起動していない場合はスキップ
       if (!process.env.TAURI_APP_AVAILABLE) {
-        console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+        console.warn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
-      
+
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('テスト用APIが作成されていません。スキップします。');
         }
         return;
@@ -199,7 +230,7 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
       const apiDetails = await invoke<ApiInfo>('get_api_details', {
         api_id: testApiId,
       });
-      
+
       expect(apiDetails).toBeDefined();
       expect(apiDetails.id).toBe(testApiId);
       expect(apiDetails.name).toBe('Test API for Performance Dashboard E2E');
@@ -207,7 +238,10 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
 
     it('期間選択に応じた日時範囲を計算できる', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('テスト用APIが作成されていません。スキップします。');
         }
         return;
@@ -222,18 +256,26 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
 
       for (const { period } of periods) {
         const endDate = now.toISOString();
-        const startDate = new Date(now.getTime() - (period === '1h' ? 60 : period === '24h' ? 24 * 60 : 7 * 24 * 60) * 60 * 1000).toISOString();
-        
+        const startDate = new Date(
+          now.getTime() -
+            (period === '1h' ? 60 : period === '24h' ? 24 * 60 : 7 * 24 * 60) *
+              60 *
+              1000
+        ).toISOString();
+
         // 期間に応じたメトリクス取得をテスト
-        const metrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-          request: {
-            api_id: testApiId,
-            metric_type: null,
-            start_date: startDate,
-            end_date: endDate,
-          },
-        });
-        
+        const metrics = await invoke<PerformanceMetricInfo[]>(
+          'get_performance_metrics',
+          {
+            request: {
+              api_id: testApiId,
+              metric_type: null,
+              start_date: startDate,
+              end_date: endDate,
+            },
+          }
+        );
+
         expect(metrics).toBeInstanceOf(Array);
         // 期間内のメトリクスが取得できることを確認
       }
@@ -243,19 +285,25 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
   describe('統計サマリー表示フロー', () => {
     it('パフォーマンスサマリーを取得できる（1時間）', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('テスト用APIが作成されていません。スキップします。');
         }
         return;
       }
 
-      const summary = await invoke<PerformanceSummary>('get_performance_summary', {
-        request: {
-          api_id: testApiId,
-          period: '1h',
-        },
-      });
-      
+      const summary = await invoke<PerformanceSummary>(
+        'get_performance_summary',
+        {
+          request: {
+            api_id: testApiId,
+            period: '1h',
+          },
+        }
+      );
+
       expect(summary).toBeDefined();
       // サマリーの各フィールドを確認（すべて必須フィールド）
       expect(typeof summary.avg_response_time).toBe('number');
@@ -271,57 +319,75 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
 
     it('パフォーマンスサマリーを取得できる（24時間）', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('テスト用APIが作成されていません。スキップします。');
         }
         return;
       }
 
-      const summary = await invoke<PerformanceSummary>('get_performance_summary', {
-        request: {
-          api_id: testApiId,
-          period: '24h',
-        },
-      });
-      
+      const summary = await invoke<PerformanceSummary>(
+        'get_performance_summary',
+        {
+          request: {
+            api_id: testApiId,
+            period: '24h',
+          },
+        }
+      );
+
       expect(summary).toBeDefined();
       expect(summary).toHaveProperty('request_count');
     });
 
     it('パフォーマンスサマリーを取得できる（7日間）', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('テスト用APIが作成されていません。スキップします。');
         }
         return;
       }
 
-      const summary = await invoke<PerformanceSummary>('get_performance_summary', {
-        request: {
-          api_id: testApiId,
-          period: '7d',
-        },
-      });
-      
+      const summary = await invoke<PerformanceSummary>(
+        'get_performance_summary',
+        {
+          request: {
+            api_id: testApiId,
+            period: '7d',
+          },
+        }
+      );
+
       expect(summary).toBeDefined();
       expect(summary).toHaveProperty('request_count');
     });
 
     it('リアルタイム更新でサマリーが更新される', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('テスト用APIが作成されていません。スキップします。');
         }
         return;
       }
 
       // 最初のサマリー取得
-      const summary1 = await invoke<PerformanceSummary>('get_performance_summary', {
-        request: {
-          api_id: testApiId,
-          period: '1h',
-        },
-      });
+      const summary1 = await invoke<PerformanceSummary>(
+        'get_performance_summary',
+        {
+          request: {
+            api_id: testApiId,
+            period: '1h',
+          },
+        }
+      );
 
       // 新しいメトリクスを追加
       await invoke('record_performance_metric', {
@@ -336,24 +402,32 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
       await new Promise(resolve => setTimeout(resolve, 500));
 
       // 2回目のサマリー取得
-      const summary2 = await invoke<PerformanceSummary>('get_performance_summary', {
-        request: {
-          api_id: testApiId,
-          period: '1h',
-        },
-      });
+      const summary2 = await invoke<PerformanceSummary>(
+        'get_performance_summary',
+        {
+          request: {
+            api_id: testApiId,
+            period: '1h',
+          },
+        }
+      );
 
       expect(summary1).toBeDefined();
       expect(summary2).toBeDefined();
       // リクエスト数が更新されている可能性がある（すべて必須フィールドなのでオプショナルチェック不要）
-      expect(summary2.request_count).toBeGreaterThanOrEqual(summary1.request_count);
+      expect(summary2.request_count).toBeGreaterThanOrEqual(
+        summary1.request_count
+      );
     });
   });
 
   describe('グラフデータ取得フロー', () => {
     it('レスポンス時間グラフデータを取得できる', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('テスト用APIが作成されていません。スキップします。');
         }
         return;
@@ -363,18 +437,21 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
       const endDate = now.toISOString();
       const startDate = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
 
-      const metrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-        request: {
-          api_id: testApiId,
-          metric_type: 'avg_response_time',
-          start_date: startDate,
-          end_date: endDate,
-        },
-      });
+      const metrics = await invoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        {
+          request: {
+            api_id: testApiId,
+            metric_type: 'avg_response_time',
+            start_date: startDate,
+            end_date: endDate,
+          },
+        }
+      );
 
       expect(metrics).toBeInstanceOf(Array);
       expect(metrics.length).toBeGreaterThan(0);
-      
+
       // レスポンス時間メトリクスのみが取得されていることを確認
       for (const metric of metrics) {
         expect(metric.api_id).toBe(testApiId);
@@ -386,7 +463,10 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
 
     it('リクエスト数グラフデータを取得できる', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('テスト用APIが作成されていません。スキップします。');
         }
         return;
@@ -396,17 +476,20 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
       const endDate = now.toISOString();
       const startDate = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
 
-      const metrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-        request: {
-          api_id: testApiId,
-          metric_type: 'request_count',
-          start_date: startDate,
-          end_date: endDate,
-        },
-      });
+      const metrics = await invoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        {
+          request: {
+            api_id: testApiId,
+            metric_type: 'request_count',
+            start_date: startDate,
+            end_date: endDate,
+          },
+        }
+      );
 
       expect(metrics).toBeInstanceOf(Array);
-      
+
       // リクエスト数メトリクスのみが取得されていることを確認
       for (const metric of metrics) {
         expect(metric.api_id).toBe(testApiId);
@@ -418,7 +501,10 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
 
     it('CPU/メモリ使用量グラフデータを取得できる', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('テスト用APIが作成されていません。スキップします。');
         }
         return;
@@ -429,24 +515,30 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
       const startDate = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
 
       // CPU使用率メトリクス
-      const cpuMetrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-        request: {
-          api_id: testApiId,
-          metric_type: 'cpu_usage',
-          start_date: startDate,
-          end_date: endDate,
-        },
-      });
+      const cpuMetrics = await invoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        {
+          request: {
+            api_id: testApiId,
+            metric_type: 'cpu_usage',
+            start_date: startDate,
+            end_date: endDate,
+          },
+        }
+      );
 
       // メモリ使用量メトリクス
-      const memoryMetrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-        request: {
-          api_id: testApiId,
-          metric_type: 'memory_usage',
-          start_date: startDate,
-          end_date: endDate,
-        },
-      });
+      const memoryMetrics = await invoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        {
+          request: {
+            api_id: testApiId,
+            metric_type: 'memory_usage',
+            start_date: startDate,
+            end_date: endDate,
+          },
+        }
+      );
 
       expect(cpuMetrics).toBeInstanceOf(Array);
       expect(memoryMetrics).toBeInstanceOf(Array);
@@ -469,7 +561,10 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
 
     it('エラー率グラフデータを取得できる', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('テスト用APIが作成されていません。スキップします。');
         }
         return;
@@ -479,14 +574,17 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
       const endDate = now.toISOString();
       const startDate = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
 
-      const metrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-        request: {
-          api_id: testApiId,
-          metric_type: 'error_rate',
-          start_date: startDate,
-          end_date: endDate,
-        },
-      });
+      const metrics = await invoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        {
+          request: {
+            api_id: testApiId,
+            metric_type: 'error_rate',
+            start_date: startDate,
+            end_date: endDate,
+          },
+        }
+      );
 
       expect(metrics).toBeInstanceOf(Array);
 
@@ -502,7 +600,10 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
 
     it('日時範囲フィルタが正しく機能する', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('テスト用APIが作成されていません。スキップします。');
         }
         return;
@@ -512,14 +613,17 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
       const endDate = new Date(now.getTime() - 10 * 60 * 1000).toISOString(); // 10分前
       const startDate = new Date(now.getTime() - 20 * 60 * 1000).toISOString(); // 20分前
 
-      const metrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-        request: {
-          api_id: testApiId,
-          metric_type: undefined,
-          start_date: startDate,
-          end_date: endDate,
-        },
-      });
+      const metrics = await invoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        {
+          request: {
+            api_id: testApiId,
+            metric_type: undefined,
+            start_date: startDate,
+            end_date: endDate,
+          },
+        }
+      );
 
       expect(metrics).toBeInstanceOf(Array);
 
@@ -528,7 +632,7 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
         const metricDate = new Date(metric.timestamp);
         const start = new Date(startDate);
         const end = new Date(endDate);
-        
+
         expect(metricDate.getTime()).toBeGreaterThanOrEqual(start.getTime());
         expect(metricDate.getTime()).toBeLessThanOrEqual(end.getTime());
       }
@@ -538,7 +642,10 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
   describe('完全なフロー', () => {
     it('ダッシュボード→統計サマリー→グラフの完全なフローが動作する', async () => {
       if (!testApiId) {
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
           console.warn('テスト用APIが作成されていません。スキップします。');
         }
         return;
@@ -553,12 +660,15 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
       expect(selectedApi).toBeDefined();
 
       // 3. 統計サマリー取得
-      const summary = await invoke<PerformanceSummary>('get_performance_summary', {
-        request: {
-          api_id: testApiId!,
-          period: '1h',
-        },
-      });
+      const summary = await invoke<PerformanceSummary>(
+        'get_performance_summary',
+        {
+          request: {
+            api_id: testApiId!,
+            period: '1h',
+          },
+        }
+      );
       expect(summary).toBeDefined();
 
       // 4. レスポンス時間グラフデータ取得
@@ -566,57 +676,72 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
       const endDate = now.toISOString();
       const startDate = new Date(now.getTime() - 60 * 60 * 1000).toISOString();
 
-      const responseTimeMetrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-        request: {
-          api_id: testApiId!,
-          metric_type: 'avg_response_time',
-          start_date: startDate,
-          end_date: endDate,
-        },
-      });
+      const responseTimeMetrics = await invoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        {
+          request: {
+            api_id: testApiId!,
+            metric_type: 'avg_response_time',
+            start_date: startDate,
+            end_date: endDate,
+          },
+        }
+      );
       expect(responseTimeMetrics).toBeInstanceOf(Array);
 
       // 5. リクエスト数グラフデータ取得
-      const requestCountMetrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-        request: {
-          api_id: testApiId!,
-          metric_type: 'request_count',
-          start_date: startDate,
-          end_date: endDate,
-        },
-      });
+      const requestCountMetrics = await invoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        {
+          request: {
+            api_id: testApiId!,
+            metric_type: 'request_count',
+            start_date: startDate,
+            end_date: endDate,
+          },
+        }
+      );
       expect(requestCountMetrics).toBeInstanceOf(Array);
 
       // 6. CPU/メモリグラフデータ取得
-      const cpuMetrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-        request: {
-          api_id: testApiId!,
-          metric_type: 'cpu_usage',
-          start_date: startDate,
-          end_date: endDate,
-        },
-      });
+      const cpuMetrics = await invoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        {
+          request: {
+            api_id: testApiId!,
+            metric_type: 'cpu_usage',
+            start_date: startDate,
+            end_date: endDate,
+          },
+        }
+      );
       expect(cpuMetrics).toBeInstanceOf(Array);
 
-      const memoryMetrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-        request: {
-          api_id: testApiId!,
-          metric_type: 'memory_usage',
-          start_date: startDate,
-          end_date: endDate,
-        },
-      });
+      const memoryMetrics = await invoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        {
+          request: {
+            api_id: testApiId!,
+            metric_type: 'memory_usage',
+            start_date: startDate,
+            end_date: endDate,
+          },
+        }
+      );
       expect(memoryMetrics).toBeInstanceOf(Array);
 
       // 7. エラー率グラフデータ取得
-      const errorRateMetrics = await invoke<PerformanceMetricInfo[]>('get_performance_metrics', {
-        request: {
-          api_id: testApiId!,
-          metric_type: 'error_rate',
-          start_date: startDate,
-          end_date: endDate,
-        },
-      });
+      const errorRateMetrics = await invoke<PerformanceMetricInfo[]>(
+        'get_performance_metrics',
+        {
+          request: {
+            api_id: testApiId!,
+            metric_type: 'error_rate',
+            start_date: startDate,
+            end_date: endDate,
+          },
+        }
+      );
       expect(errorRateMetrics).toBeInstanceOf(Array);
 
       // すべてのデータが正常に取得できることを確認
@@ -629,4 +754,3 @@ describe('F007: パフォーマンス監視機能 E2Eテスト', () => {
     });
   });
 });
-

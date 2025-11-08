@@ -12,6 +12,7 @@ pub struct EngineDetectionResult {
     pub version: Option<String>,
     pub path: Option<String>,
     pub message: Option<String>,
+    pub portable: Option<bool>, // ポータブル版かどうか（Ollamaなどで使用）
 }
 
 /// エンジン設定
@@ -56,4 +57,5 @@ pub struct EngineConfigData {
     pub executable_path: Option<String>,
     pub is_default: bool,
 }
+
 

@@ -1,12 +1,15 @@
 // ModelCatalogManagement - モデルカタログ管理ページ
 // モデルカタログの更新・管理
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useTransition } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { useNotifications } from '../contexts/NotificationContext';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { SkeletonLoader } from '../components/common/SkeletonLoader';
+import { Breadcrumb, BreadcrumbItem } from '../components/common/Breadcrumb';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
+import { useI18n } from '../contexts/I18nContext';
 import './ModelCatalogManagement.css';
 
 /**
@@ -29,6 +32,7 @@ interface ModelCatalogInfo {
  */
 export const ModelCatalogManagement: React.FC = () => {
   const navigate = useNavigate();
+  const { t } = useI18n();
   const { showSuccess, showError } = useNotifications();
   const [models, setModels] = useState<ModelCatalogInfo[]>([]);
   const [loading, setLoading] = useState(true);
@@ -36,9 +40,17 @@ export const ModelCatalogManagement: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
 
   // グローバルキーボードショートカットを有効化
   useGlobalKeyboardShortcuts();
+
+  // パンくずリストの項目
+  const breadcrumbItems: BreadcrumbItem[] = React.useMemo(() => [
+    { label: t('header.home') || 'ホーム', path: '/' },
+    { label: 'モデル管理', path: '/models' },
+    { label: 'モデルカタログ管理' },
+  ], [t]);
 
   useEffect(() => {
     loadModelCatalog();
@@ -51,11 +63,18 @@ export const ModelCatalogManagement: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      const catalog = await safeInvoke<ModelCatalogInfo[]>('get_model_catalog', {});
+
+      const catalog = await safeInvoke<ModelCatalogInfo[]>(
+        'get_model_catalog',
+        {}
+      );
       setModels(catalog);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'モデルカタログの読み込みに失敗しました');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'モデルカタログの読み込みに失敗しました'
+      );
     } finally {
       setLoading(false);
     }
@@ -68,12 +87,16 @@ export const ModelCatalogManagement: React.FC = () => {
     try {
       setUpdating(true);
       setError(null);
-      
+
       const updatedCount = await safeInvoke<number>('update_model_catalog', {});
       showSuccess(`モデルカタログを更新しました（${updatedCount}件のモデル）`);
       await loadModelCatalog(); // 更新後に再読み込み
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'モデルカタログの更新に失敗しました');
+      showError(
+        err instanceof Error
+          ? err.message
+          : 'モデルカタログの更新に失敗しました'
+      );
     } finally {
       setUpdating(false);
     }
@@ -82,17 +105,20 @@ export const ModelCatalogManagement: React.FC = () => {
   /**
    * フィルタリングされたモデル一覧を取得
    */
-  const filteredModels = models.filter((model) => {
-    const matchesSearch = model.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      (model.description && model.description.toLowerCase().includes(searchQuery.toLowerCase()));
-    const matchesCategory = selectedCategory === 'all' || model.category === selectedCategory;
+  const filteredModels = models.filter(model => {
+    const matchesSearch =
+      model.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (model.description &&
+        model.description.toLowerCase().includes(searchQuery.toLowerCase()));
+    const matchesCategory =
+      selectedCategory === 'all' || model.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
   /**
    * カテゴリ一覧を取得
    */
-  const categories = Array.from(new Set(models.map((m) => m.category))).sort();
+  const categories = Array.from(new Set(models.map(m => m.category))).sort();
 
   /**
    * サイズをフォーマット
@@ -100,7 +126,8 @@ export const ModelCatalogManagement: React.FC = () => {
   const formatSize = (bytes: number): string => {
     if (bytes < 1024) return `${bytes} B`;
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+    if (bytes < 1024 * 1024 * 1024)
+      return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
     return `${(bytes / (1024 * 1024 * 1024)).toFixed(1)} GB`;
   };
 
@@ -121,9 +148,22 @@ export const ModelCatalogManagement: React.FC = () => {
     return (
       <div className="model-catalog-management-page">
         <div className="model-catalog-management-container">
-          <div className="loading-container">
-            <div className="loading-spinner"></div>
-            <p>モデルカタログを読み込んでいます...</p>
+          <Breadcrumb items={breadcrumbItems} />
+          <header className="model-catalog-management-header">
+            <button className="back-button" onClick={() => navigate('/models')}>
+              ← 戻る
+            </button>
+            <h1>モデルカタログ管理</h1>
+          </header>
+          <div className="model-catalog-management-content">
+            <SkeletonLoader type="title" width="250px" />
+            <SkeletonLoader type="paragraph" count={2} />
+            <div className="margin-top-md">
+              <SkeletonLoader type="button" width="150px" />
+            </div>
+            <div className="margin-top-xl">
+              <SkeletonLoader type="card" count={6} />
+            </div>
           </div>
         </div>
       </div>
@@ -133,6 +173,7 @@ export const ModelCatalogManagement: React.FC = () => {
   return (
     <div className="model-catalog-management-page">
       <div className="model-catalog-management-container">
+        <Breadcrumb items={breadcrumbItems} />
         <header className="model-catalog-management-header">
           <button className="back-button" onClick={() => navigate('/models')}>
             ← 戻る
@@ -161,10 +202,14 @@ export const ModelCatalogManagement: React.FC = () => {
               <button
                 type="button"
                 className="button-primary"
-                onClick={handleUpdateCatalog}
-                disabled={updating}
+                onClick={() => {
+                  startTransition(() => {
+                    handleUpdateCatalog();
+                  });
+                }}
+                disabled={updating || isPending}
               >
-                {updating ? '更新中...' : '🔄 カタログを更新'}
+                {updating ? '更新中...' : 'カタログを更新'}
               </button>
               <span className="catalog-count">
                 {models.length}件のモデルが登録されています
@@ -177,15 +222,16 @@ export const ModelCatalogManagement: React.FC = () => {
                 className="filter-input"
                 placeholder="モデル名または説明で検索..."
                 value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
+                onChange={e => setSearchQuery(e.target.value)}
               />
               <select
                 className="filter-select"
                 value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
+                onChange={e => setSelectedCategory(e.target.value)}
+                aria-label="カテゴリを選択"
               >
                 <option value="all">すべてのカテゴリ</option>
-                {categories.map((category) => (
+                {categories.map(category => (
                   <option key={category} value={category}>
                     {category}
                   </option>
@@ -197,12 +243,12 @@ export const ModelCatalogManagement: React.FC = () => {
           <div className="catalog-models-section">
             <h2>モデル一覧 ({filteredModels.length}件)</h2>
             <div className="models-grid">
-              {filteredModels.map((model) => (
+              {filteredModels.map(model => (
                 <div key={model.name} className="model-card">
                   <div className="model-header">
                     <h3 className="model-name">{model.name}</h3>
                     {model.recommended && (
-                      <span className="recommended-badge">⭐ 推奨</span>
+                      <span className="recommended-badge">推奨</span>
                     )}
                   </div>
                   <div className="model-body">
@@ -212,11 +258,15 @@ export const ModelCatalogManagement: React.FC = () => {
                     <div className="model-meta">
                       <div className="model-meta-item">
                         <span className="meta-label">サイズ:</span>
-                        <span className="meta-value">{formatSize(model.size)}</span>
+                        <span className="meta-value">
+                          {formatSize(model.size)}
+                        </span>
                       </div>
                       <div className="model-meta-item">
                         <span className="meta-label">パラメータ:</span>
-                        <span className="meta-value">{formatParameters(model.parameters)}</span>
+                        <span className="meta-value">
+                          {formatParameters(model.parameters)}
+                        </span>
                       </div>
                       <div className="model-meta-item">
                         <span className="meta-label">カテゴリ:</span>
@@ -237,7 +287,10 @@ export const ModelCatalogManagement: React.FC = () => {
                     </div>
                     {model.modified_at && (
                       <p className="model-updated">
-                        最終更新: {new Date(model.modified_at).toLocaleDateString('ja-JP')}
+                        最終更新:{' '}
+                        {new Date(model.modified_at).toLocaleDateString(
+                          'ja-JP'
+                        )}
                       </p>
                     )}
                   </div>
@@ -255,4 +308,3 @@ export const ModelCatalogManagement: React.FC = () => {
     </div>
   );
 };
-

@@ -73,6 +73,62 @@ pub struct ModelCatalog {
     pub updated_at: DateTime<Utc>,
 }
 
+/// モデルカタログアイテム（リポジトリ用）
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct ModelCatalogItem {
+    pub name: String,
+    pub description: Option<String>,
+    pub size: Option<i64>,
+    pub parameter_count: Option<i64>,
+    pub category: ModelCategory,
+    pub recommended: bool,
+    pub author: Option<String>,
+    pub license: Option<String>,
+    pub tags: Option<Vec<String>>, // タグのベクター
+    pub updated_at: DateTime<Utc>,
+}
+
+/// モデルカテゴリ
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ModelCategory {
+    Chat,
+    Code,
+    Translation,
+    Summarization,
+    Qa,
+    Other,
+}
+
+impl ModelCategory {
+    pub fn as_str(&self) -> &str {
+        match self {
+            ModelCategory::Chat => "chat",
+            ModelCategory::Code => "code",
+            ModelCategory::Translation => "translation",
+            ModelCategory::Summarization => "summarization",
+            ModelCategory::Qa => "qa",
+            ModelCategory::Other => "other",
+        }
+    }
+    
+    pub fn from(s: &str) -> Self {
+        match s {
+            "chat" => ModelCategory::Chat,
+            "code" => ModelCategory::Code,
+            "translation" => ModelCategory::Translation,
+            "summarization" => ModelCategory::Summarization,
+            "qa" => ModelCategory::Qa,
+            _ => ModelCategory::Other,
+        }
+    }
+}
+
+impl From<ModelCategory> for String {
+    fn from(category: ModelCategory) -> Self {
+        category.as_str().to_string()
+    }
+}
+
 /// インストール済みモデル情報
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct InstalledModel {
@@ -137,6 +193,21 @@ pub struct AlertHistory {
     pub message: String,
     pub timestamp: DateTime<Utc>,
     pub resolved_at: Option<DateTime<Utc>>,
+}
+
+/// OAuthトークン情報
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OAuthToken {
+    pub id: String,
+    pub api_id: String,
+    pub access_token: String, // 暗号化して保存
+    pub refresh_token: Option<String>, // 暗号化して保存
+    pub token_type: String,
+    pub expires_at: Option<String>,
+    pub scope: Option<String>, // JSON配列形式
+    pub client_id: Option<String>,
+    pub created_at: DateTime<Utc>,
+    pub updated_at: DateTime<Utc>,
 }
 
 /// APIセキュリティ設定情報

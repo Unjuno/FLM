@@ -55,13 +55,12 @@ fn encode_url(s: &str) -> String {
     }).collect()
 }
 
-/// OAuth 2.0認証コードをトークンに交換
+/// 認証コードをトークンに交換
 pub async fn exchange_code_for_token(
     config: &OAuthConfig,
     code: &str,
-    state: &str,
 ) -> Result<OAuthToken, AppError> {
-    let client = reqwest::Client::new();
+    let client = crate::utils::http_client::create_http_client()?;
     
     let params = [
         ("grant_type", "authorization_code"),
@@ -77,14 +76,18 @@ pub async fn exchange_code_for_token(
         .send()
         .await
         .map_err(|e| AppError::ApiError {
-            message: format!("OAuth トークン取得エラー: {}", e),
-            code: "OAUTH_ERROR".to_string(),
+            message: format!("トークン交換リクエストエラー: {}", e),
+            code: "TOKEN_EXCHANGE_ERROR".to_string(),
+            source_detail: None,
         })?;
     
-    if !response.status().is_success() {
+    let status = response.status();
+    if !status.is_success() {
+        let error_text = response.text().await.unwrap_or_default();
         return Err(AppError::ApiError {
-            message: format!("OAuth トークン取得エラー: HTTP {}", response.status()),
-            code: response.status().as_str().to_string(),
+            message: format!("トークン交換エラー: HTTP {} - {}", status, error_text),
+            code: status.as_str().to_string(),
+            source_detail: None,
         });
     }
     
@@ -92,40 +95,42 @@ pub async fn exchange_code_for_token(
         .map_err(|e| AppError::ApiError {
             message: format!("JSON解析エラー: {}", e),
             code: "JSON_ERROR".to_string(),
+            source_detail: None,
         })?;
     
     let expires_in = token_data["expires_in"].as_u64();
-    let expires_at = expires_in.map(|seconds| {
-        chrono::Utc::now() + chrono::Duration::seconds(seconds as i64)
-    }).map(|dt| dt.to_rfc3339());
+    let expires_at = if let Some(expires_in_sec) = expires_in {
+        use chrono::{Utc, Duration};
+        Some((Utc::now() + Duration::seconds(expires_in_sec as i64)).to_rfc3339())
+    } else {
+        None
+    };
     
     Ok(OAuthToken {
         access_token: token_data["access_token"]
             .as_str()
             .ok_or_else(|| AppError::ApiError {
                 message: "access_tokenが見つかりません".to_string(),
-                code: "MISSING_TOKEN".to_string(),
+                code: "MISSING_ACCESS_TOKEN".to_string(),
+                source_detail: None,
             })?
             .to_string(),
         refresh_token: token_data["refresh_token"].as_str().map(|s| s.to_string()),
-        token_type: token_data["token_type"]
-            .as_str()
-            .unwrap_or("Bearer")
-            .to_string(),
+        token_type: token_data["token_type"].as_str().unwrap_or("Bearer").to_string(),
         expires_in,
         expires_at,
-        scope: token_data["scope"]
-            .as_str()
-            .map(|s| s.split(' ').map(|s| s.to_string()).collect()),
+        scope: token_data["scope"].as_str().map(|s| {
+            s.split(' ').map(|s| s.to_string()).collect()
+        }),
     })
 }
 
-/// リフレッシュトークンでアクセストークンを更新
+/// リフレッシュトークンを使用してアクセストークンを更新
 pub async fn refresh_access_token(
     config: &OAuthConfig,
     refresh_token: &str,
 ) -> Result<OAuthToken, AppError> {
-    let client = reqwest::Client::new();
+    let client = crate::utils::http_client::create_http_client()?;
     
     let params = [
         ("grant_type", "refresh_token"),
@@ -140,14 +145,18 @@ pub async fn refresh_access_token(
         .send()
         .await
         .map_err(|e| AppError::ApiError {
-            message: format!("トークンリフレッシュエラー: {}", e),
-            code: "REFRESH_ERROR".to_string(),
+            message: format!("トークン更新リクエストエラー: {}", e),
+            code: "TOKEN_REFRESH_ERROR".to_string(),
+            source_detail: None,
         })?;
     
-    if !response.status().is_success() {
+    let status = response.status();
+    if !status.is_success() {
+        let error_text = response.text().await.unwrap_or_default();
         return Err(AppError::ApiError {
-            message: format!("トークンリフレッシュエラー: HTTP {}", response.status()),
-            code: response.status().as_str().to_string(),
+            message: format!("トークン更新エラー: HTTP {} - {}", status, error_text),
+            code: status.as_str().to_string(),
+            source_detail: None,
         });
     }
     
@@ -155,31 +164,35 @@ pub async fn refresh_access_token(
         .map_err(|e| AppError::ApiError {
             message: format!("JSON解析エラー: {}", e),
             code: "JSON_ERROR".to_string(),
+            source_detail: None,
         })?;
     
     let expires_in = token_data["expires_in"].as_u64();
-    let expires_at = expires_in.map(|seconds| {
-        chrono::Utc::now() + chrono::Duration::seconds(seconds as i64)
-    }).map(|dt| dt.to_rfc3339());
+    let expires_at = if let Some(expires_in_sec) = expires_in {
+        use chrono::{Utc, Duration};
+        Some((Utc::now() + Duration::seconds(expires_in_sec as i64)).to_rfc3339())
+    } else {
+        None
+    };
     
     Ok(OAuthToken {
         access_token: token_data["access_token"]
             .as_str()
             .ok_or_else(|| AppError::ApiError {
                 message: "access_tokenが見つかりません".to_string(),
-                code: "MISSING_TOKEN".to_string(),
+                code: "MISSING_ACCESS_TOKEN".to_string(),
+                source_detail: None,
             })?
             .to_string(),
         refresh_token: token_data["refresh_token"].as_str().map(|s| s.to_string()),
-        token_type: token_data["token_type"]
-            .as_str()
-            .unwrap_or("Bearer")
-            .to_string(),
+        token_type: token_data["token_type"].as_str().unwrap_or("Bearer").to_string(),
         expires_in,
         expires_at,
-        scope: token_data["scope"]
-            .as_str()
-            .map(|s| s.split(' ').map(|s| s.to_string()).collect()),
+        scope: token_data["scope"].as_str().map(|s| {
+            s.split(' ').map(|s| s.to_string()).collect()
+        }),
     })
 }
+
+
 

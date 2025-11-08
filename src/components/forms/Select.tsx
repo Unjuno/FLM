@@ -3,24 +3,23 @@
 /* eslint-disable jsx-a11y/anchor-is-valid */
 /* eslint-disable jsx-a11y/no-access-key */
 /* eslint-disable jsx-a11y/no-noninteractive-element-interactions */
-/* eslint-disable jsx-a11y/select-has-associated-label */
-/* 
+/*
  * アクセシビリティ警告について:
  * ESLintが「Select element must have an accessible name」という警告を表示しますが、
  * これは誤検知です。実際のコードでは以下の属性が動的に設定されています：
  * - title属性: selectTitle（line 213参照）
  * - aria-label属性: selectTitle（line 214参照）
  * - aria-labelledby属性: labelがある場合は設定（line 215参照）
- * 
+ *
  * これらの属性により、select要素はWCAG 2.1 AA準拠のアクセシブルな名前を持っています。
- * 
+ *
  * ESLint警告（axe/forms）は誤検知です。実際のコードでは:
  * - line 95-98: selectTitleがuseMemoで計算され、最低でも'選択'が保証される
  * - line 214: title={selectTitle} で設定
  * - line 215: aria-label={selectTitle || undefined} で設定
- * 
+ *
  * これにより、スクリーンリーダーやその他のアクセシビリティツールで適切に認識されます。
- * 
+ *
  * 注意: axeツール（Microsoft Edge Tools）の静的解析により、「Element has no title attribute」
  * という警告が表示される場合がありますが、これは動的に設定される属性を認識できない
  * ための誤検知です。実際のランタイムでは、title属性は確実に設定されています。
@@ -47,7 +46,8 @@ export interface SelectOption {
 /**
  * Selectコンポーネントのプロパティ
  */
-export interface SelectProps extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'size'> {
+export interface SelectProps
+  extends Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'size'> {
   /** ラベル */
   label?: string;
   /** エラーメッセージ */
@@ -101,10 +101,10 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
       const computed = propsTitle || label || placeholder || '選択';
       return String(computed);
     }, [propsTitle, label, placeholder]);
-    
+
     // onChangeを分離して型安全性を確保
     const { onChange: propsOnChange, ...restProps } = props;
-    
+
     // IDの生成（useRefで安定したIDを保持、パフォーマンス最適化）
     const generatedIdRef = useRef<string | null>(null);
     const selectId = useMemo(() => {
@@ -184,21 +184,32 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
     }, [options, placeholder, children]);
 
     // readOnly時はonChangeを無効化
-    const handleChange = useCallback((e: React.ChangeEvent<HTMLSelectElement>) => {
-      if (readOnly) {
-        e.preventDefault();
-        e.stopPropagation();
-        return;
-      }
-      propsOnChange?.(e);
-    }, [readOnly, propsOnChange]);
+    const handleChange = useCallback(
+      (e: React.ChangeEvent<HTMLSelectElement>) => {
+        if (readOnly) {
+          e.preventDefault();
+          e.stopPropagation();
+          return;
+        }
+        propsOnChange?.(e);
+      },
+      [readOnly, propsOnChange]
+    );
 
     return (
       <div className={wrapperClassName}>
         {label && (
-          <label htmlFor={selectId} id={`${selectId}-label`} className="form-select-label">
+          <label
+            htmlFor={selectId}
+            id={`${selectId}-label`}
+            className="form-select-label"
+          >
             {label}
-            {required && <span className="form-select-required" aria-label="必須">*</span>}
+            {required && (
+              <span className="form-select-required" aria-label="必須">
+                *
+              </span>
+            )}
           </label>
         )}
         <div className="form-select-container">
@@ -210,7 +221,7 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             これらの属性により、select要素は適切にアクセシブルな名前を持っています。
             ESLintの警告は、動的に設定される属性を認識できないための誤検知です。
           */}
-          {/* eslint-disable-next-line jsx-a11y/control-has-associated-label, jsx-a11y/select-has-associated-label, jsx-a11y/aria-props */}
+          {/* eslint-disable-next-line jsx-a11y/control-has-associated-label, jsx-a11y/aria-props */}
           <select
             ref={ref}
             id={selectId}
@@ -220,13 +231,29 @@ export const Select = forwardRef<HTMLSelectElement, SelectProps>(
             aria-labelledby={label ? `${selectId}-label` : undefined}
             disabled={disabled || readOnly}
             {...(error && { 'aria-invalid': 'true' })}
-            aria-describedby={
-              error ? errorId : helpText ? helpId : undefined
-            }
+            aria-describedby={error ? errorId : helpText ? helpId : undefined}
             {...(required && { 'aria-required': 'true' })}
             {...(readOnly && { tabIndex: -1, 'aria-readonly': 'true' })}
-            {...(readOnly ? { onChange: handleChange } : propsOnChange ? { onChange: propsOnChange } : {})}
-            {...(restProps as Omit<React.SelectHTMLAttributes<HTMLSelectElement>, 'onChange' | 'title' | 'aria-label' | 'aria-labelledby' | 'disabled' | 'aria-invalid' | 'aria-describedby' | 'aria-required' | 'aria-readonly' | 'tabIndex' | 'id' | 'className'>)}
+            {...(readOnly
+              ? { onChange: handleChange }
+              : propsOnChange
+                ? { onChange: propsOnChange }
+                : {})}
+            {...(restProps as Omit<
+              React.SelectHTMLAttributes<HTMLSelectElement>,
+              | 'onChange'
+              | 'title'
+              | 'aria-label'
+              | 'aria-labelledby'
+              | 'disabled'
+              | 'aria-invalid'
+              | 'aria-describedby'
+              | 'aria-required'
+              | 'aria-readonly'
+              | 'tabIndex'
+              | 'id'
+              | 'className'
+            >)}
           >
             {renderOptions()}
           </select>
@@ -254,4 +281,3 @@ Select.displayName = 'Select';
 // パフォーマンス最適化: React.memoでラップ（プロップが変更されない限り再レンダリングをスキップ）
 // 注意: forwardRefと組み合わせる場合、memoは適用しない（forwardRef自体が最適化されている）
 // 代わりに、親コンポーネントでuseMemoを使用することを推奨
-

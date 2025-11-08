@@ -39,7 +39,7 @@ const ResourceUsageChartComponent: React.FC<ResourceUsageChartProps> = ({
   refreshInterval = 30000,
 }) => {
   const { t } = useI18n();
-  
+
   // 共通フックを使用してデータを取得
   const { data, loading, error, loadData, isEmpty } = useResourceUsageMetrics({
     apiId,
@@ -79,7 +79,12 @@ const ResourceUsageChartComponent: React.FC<ResourceUsageChartProps> = ({
 
   if (loading && data.length === 0) {
     return (
-      <div className="resource-usage-chart" role="status" aria-live="polite" aria-busy="true">
+      <div
+        className="resource-usage-chart"
+        role="status"
+        aria-live="polite"
+        aria-busy="true"
+      >
         <div className="loading-container">
           <div className="loading-spinner" aria-hidden="true"></div>
           <p>{t('charts.resourceUsage.loading')}</p>
@@ -92,9 +97,11 @@ const ResourceUsageChartComponent: React.FC<ResourceUsageChartProps> = ({
     return (
       <div className="resource-usage-chart" role="alert" aria-live="assertive">
         <div className="error-container">
-          <p className="error-message" role="alert">⚠️ {error}</p>
-          <button 
-            className="retry-button" 
+          <p className="error-message" role="alert">
+            ⚠️ {error}
+          </p>
+          <button
+            className="retry-button"
             onClick={loadData}
             aria-label={t('charts.resourceUsage.retry')}
             type="button"
@@ -117,67 +124,98 @@ const ResourceUsageChartComponent: React.FC<ResourceUsageChartProps> = ({
   }
 
   return (
-    <div className="resource-usage-chart" role="region" aria-labelledby="resource-usage-chart-title">
-      <h3 className="chart-title" id="resource-usage-chart-title">{t('charts.resourceUsage.title')}</h3>
+    <div
+      className="resource-usage-chart"
+      role="region"
+      aria-labelledby="resource-usage-chart-title"
+    >
+      <h3 className="chart-title" id="resource-usage-chart-title">
+        {t('charts.resourceUsage.title')}
+      </h3>
       <ResponsiveContainer width="100%" height={CHART_CONFIG.HEIGHT}>
-        <LineChart 
-          data={data} 
-          margin={{ top: CHART_CONFIG.MARGIN.TOP, right: CHART_CONFIG.MARGIN.RIGHT, left: CHART_CONFIG.MARGIN.LEFT, bottom: CHART_CONFIG.MARGIN.BOTTOM }}
+        <LineChart
+          data={data}
+          margin={{
+            top: CHART_CONFIG.MARGIN.TOP,
+            right: CHART_CONFIG.MARGIN.RIGHT,
+            left: CHART_CONFIG.MARGIN.LEFT,
+            bottom: CHART_CONFIG.MARGIN.BOTTOM,
+          }}
           aria-label={t('charts.resourceUsage.ariaLabel')}
         >
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis 
-            dataKey="time" 
+          <XAxis
+            dataKey="time"
             angle={-45}
             textAnchor="end"
             height={CHART_CONFIG.X_AXIS_HEIGHT}
             aria-label={t('charts.resourceUsage.xAxisLabel')}
           />
-          <YAxis 
+          <YAxis
             yAxisId="cpu"
             orientation="left"
-            label={{ value: t('charts.resourceUsage.yAxisLabelCpu'), angle: -90, position: 'insideLeft' }}
+            label={{
+              value: t('charts.resourceUsage.yAxisLabelCpu'),
+              angle: -90,
+              position: 'insideLeft',
+            }}
             aria-label={t('charts.resourceUsage.yAxisLabelCpu')}
           />
-          <YAxis 
+          <YAxis
             yAxisId="memory"
             orientation="right"
-            label={{ value: t('charts.resourceUsage.yAxisLabelMemory'), angle: 90, position: 'insideRight' }}
+            label={{
+              value: t('charts.resourceUsage.yAxisLabelMemory'),
+              angle: 90,
+              position: 'insideRight',
+            }}
             aria-label={t('charts.resourceUsage.yAxisLabelMemory')}
           />
-          <Tooltip 
+          <Tooltip
             formatter={(value: number | string | number[], name: string) => {
               // Rechartsのformatterは配列を返すことがあるため、最初の値を取得
-              const numValue = Array.isArray(value) ? (value.length > 0 ? value[0] : 0) : value;
+              const numValue = Array.isArray(value)
+                ? value.length > 0
+                  ? value[0]
+                  : 0
+                : value;
               if (typeof numValue !== 'number' || isNaN(numValue)) {
                 return '0%';
               }
-              if (name === 'cpu' || name === t('charts.resourceUsage.legendNameCpu')) {
+              if (
+                name === 'cpu' ||
+                name === t('charts.resourceUsage.legendNameCpu')
+              ) {
                 return formatCpu(numValue);
               }
-              if (name === 'memory' || name === t('charts.resourceUsage.legendNameMemory')) {
+              if (
+                name === 'memory' ||
+                name === t('charts.resourceUsage.legendNameMemory')
+              ) {
                 return formatMemory(numValue);
               }
               return String(numValue);
             }}
-            labelFormatter={(label) => t('charts.resourceUsage.tooltipTime', { time: label })}
+            labelFormatter={label =>
+              t('charts.resourceUsage.tooltipTime', { time: label })
+            }
           />
           <Legend />
-          <Line 
+          <Line
             yAxisId="cpu"
-            type="monotone" 
-            dataKey="cpu" 
-            stroke={CHART_COLORS.ORANGE} 
+            type="monotone"
+            dataKey="cpu"
+            stroke={CHART_COLORS.ORANGE}
             strokeWidth={CHART_CONFIG.STROKE_WIDTH}
             dot={{ r: CHART_CONFIG.DOT_RADIUS }}
             name={t('charts.resourceUsage.legendNameCpu')}
             aria-label={t('charts.resourceUsage.legendNameCpu')}
           />
-          <Line 
+          <Line
             yAxisId="memory"
-            type="monotone" 
-            dataKey="memory" 
-            stroke={CHART_COLORS.BLUE} 
+            type="monotone"
+            dataKey="memory"
+            stroke={CHART_COLORS.BLUE}
             strokeWidth={CHART_CONFIG.STROKE_WIDTH}
             dot={{ r: CHART_CONFIG.DOT_RADIUS }}
             name={t('charts.resourceUsage.legendNameMemory')}

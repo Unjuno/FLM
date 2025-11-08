@@ -42,6 +42,54 @@ impl VLLMEngine {
         None
     }
     
+    /// PythonパッケージからvLLMのバージョンを取得
+    async fn get_version_from_python() -> Result<String, AppError> {
+        let output = Command::new("python")
+            .arg("-c")
+            .arg("import vllm; print(vllm.__version__)")
+            .output()
+            .map_err(|e| AppError::ProcessError {
+                message: format!("vLLMバージョン取得エラー:  {}", e),
+                source_detail: None,
+            })?;
+        
+        if output.status.success() {
+            let version = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            return Ok(version);
+        }
+        
+        Err(AppError::ApiError {
+            message: "vLLMのバージョン取得に失敗しました".to_string(),
+            code: "VERSION_ERROR".to_string(),
+            source_detail: None,
+        })
+    }
+    
+    /// vLLM APIからバージョンを取得
+    async fn get_version_from_api() -> Result<String, AppError> {
+        let client = crate::utils::http_client::create_http_client_short_timeout()?;
+        let response = client
+            .get("http://localhost:8000/v1/models")
+            .send()
+            .await
+            .map_err(|e| AppError::ApiError {
+                message: format!("vLLM API接続エラー: {}", e),
+                code: "CONNECTION_ERROR".to_string(),
+                source_detail: None,
+            })?;
+        
+        if !response.status().is_success() {
+            return Err(AppError::ApiError {
+                message: format!("vLLM APIエラー: HTTP {}", response.status()),
+                code: response.status().as_str().to_string(),
+                source_detail: None,
+            });
+        }
+        
+        // バージョン情報はレスポンスから取得できないため、デフォルト値を返す
+        Ok("unknown".to_string())
+    }
+    
     /// Dockerコンテナとして実行中かチェック
     async fn check_docker_container() -> bool {
         let output = match Command::new("docker")
@@ -79,8 +127,14 @@ impl LLMEngine for VLLMEngine {
         let docker_running = Self::check_docker_container().await;
         let running = self.is_running().await.unwrap_or(false);
         
-        // バージョン取得は未実装（将来実装予定）
-        let version = None;
+        // バージョン取得: Pythonパッケージから取得を試みる
+        let version = if python_installed {
+            Self::get_version_from_python().await.ok()
+        } else if running {
+            Self::get_version_from_api().await.ok()
+        } else {
+            None
+        };
         
         Ok(EngineDetectionResult {
             engine_type: "vllm".to_string(),
@@ -95,6 +149,7 @@ impl LLMEngine for VLLMEngine {
             } else {
                 None
             },
+            portable: None,
         })
     }
     
@@ -108,12 +163,14 @@ impl LLMEngine for VLLMEngine {
             return Err(AppError::ApiError {
                 message: "vLLMは手動で起動してください。例: python -m vllm.entrypoints.openai.api_server --model <model_name>".to_string(),
                 code: "MANUAL_START_REQUIRED".to_string(),
+                source_detail: None,
             });
         }
         
         Err(AppError::ApiError {
             message: "vLLMが見つかりません。先にインストールしてください。".to_string(),
             code: "NOT_INSTALLED".to_string(),
+            source_detail: None,
         })
     }
     
@@ -122,15 +179,15 @@ impl LLMEngine for VLLMEngine {
         Err(AppError::ApiError {
             message: "vLLMは手動で停止してください。".to_string(),
             code: "MANUAL_STOP_REQUIRED".to_string(),
+            source_detail: None,
         })
     }
     
     async fn is_running(&self) -> Result<bool, AppError> {
         // vLLMのAPIサーバーが起動しているかチェック
-        let client = reqwest::Client::new();
+        let client = crate::utils::http_client::create_http_client_short_timeout()?;
         let response = client
-            .get(format!("{}/v1/models", self.get_base_url()))
-            .timeout(std::time::Duration::from_secs(2))
+            .get("http://localhost:8000/v1/models")
             .send()
             .await;
         
@@ -141,22 +198,22 @@ impl LLMEngine for VLLMEngine {
     }
     
     async fn get_models(&self) -> Result<Vec<ModelInfo>, AppError> {
-        // vLLM APIからモデル一覧を取得
-        let client = reqwest::Client::new();
+        let client = crate::utils::http_client::create_http_client()?;
         let response = client
-            .get(format!("{}/v1/models", self.get_base_url()))
-            .timeout(std::time::Duration::from_secs(10))
+            .get("http://localhost:8000/v1/models")
             .send()
             .await
             .map_err(|e| AppError::ApiError {
-                message: format!("vLLM API接続エラー: {}", e),
-                code: "CONNECTION_ERROR".to_string(),
+                message: format!("vLLM APIリクエストエラー: {}", e),
+                code: "API_ERROR".to_string(),
+                source_detail: None,
             })?;
         
         if !response.status().is_success() {
             return Err(AppError::ApiError {
-                message: format!("vLLM APIエラー: HTTP {}", response.status()),
+                message: format!("vLLM APIエラー: {}", response.status()),
                 code: response.status().as_str().to_string(),
+                source_detail: None,
             });
         }
         
@@ -164,27 +221,28 @@ impl LLMEngine for VLLMEngine {
             .map_err(|e| AppError::ApiError {
                 message: format!("JSON解析エラー: {}", e),
                 code: "JSON_ERROR".to_string(),
+                source_detail: None,
             })?;
         
         let models = json["data"]
             .as_array()
             .ok_or_else(|| AppError::ModelError {
                 message: "モデル一覧の形式が不正です".to_string(),
+                source_detail: None,
             })?
             .iter()
-            .map(|m| {
+            .filter_map(|m| {
                 let name = m["id"].as_str()
-                    .or_else(|| m["name"].as_str())
-                    .unwrap_or("")
+                    .or_else(|| m["name"].as_str())?
                     .to_string();
                 let parameter_size = extract_parameter_size(&name);
                 
-                ModelInfo {
+                Some(ModelInfo {
                     name,
                     size: None,
                     modified_at: None,
                     parameter_size,
-                }
+                })
             })
             .collect();
         
@@ -214,4 +272,5 @@ fn extract_parameter_size(model_name: &str) -> Option<String> {
     }
     None
 }
+
 

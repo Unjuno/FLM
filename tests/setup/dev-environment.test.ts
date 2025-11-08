@@ -65,19 +65,26 @@ describe('Development Environment Verification', () => {
       // タイムアウトを30秒に延長
       jest.setTimeout(30000);
       try {
-        const { stdout } = await exec('npm list -g @tauri-apps/cli', { timeout: 20000 });
+        const { stdout } = await exec('npm list -g @tauri-apps/cli', {
+          timeout: 20000,
+        });
         // CLIがインストールされているか確認（ローカルまたはグローバル）
         expect(stdout).toBeDefined();
       } catch (error) {
         // グローバルにインストールされていない場合は、ローカルのpackage.jsonを確認
         // これは警告として扱う
-        console.warn('Tauri CLI might not be installed globally. Checking local installation...');
+        console.warn(
+          'Tauri CLI might not be installed globally. Checking local installation...'
+        );
         // ローカルインストールを確認
         const packageJsonPath = path.join(process.cwd(), 'package.json');
         if (fs.existsSync(packageJsonPath)) {
-          const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, 'utf-8'));
-          const hasTauriCLI = packageJson.devDependencies?.['@tauri-apps/cli'] || 
-                             packageJson.dependencies?.['@tauri-apps/cli'];
+          const packageJson = JSON.parse(
+            fs.readFileSync(packageJsonPath, 'utf-8')
+          );
+          const hasTauriCLI =
+            packageJson.devDependencies?.['@tauri-apps/cli'] ||
+            packageJson.dependencies?.['@tauri-apps/cli'];
           if (hasTauriCLI) {
             // ローカルにインストールされている場合は成功とする
             expect(true).toBe(true);
@@ -104,7 +111,10 @@ describe('Development Environment Verification', () => {
     });
 
     it('should have installed Tauri dependencies', () => {
-      const tauriApiPath = path.join(process.cwd(), 'node_modules/@tauri-apps/api');
+      const tauriApiPath = path.join(
+        process.cwd(),
+        'node_modules/@tauri-apps/api'
+      );
       expect(fs.existsSync(tauriApiPath)).toBe(true);
     });
   });
@@ -116,23 +126,30 @@ describe('Development Environment Verification', () => {
     it('should be able to build TypeScript', async () => {
       // ビルドテストは環境によっては失敗する可能性があるため、スキップ可能にする
       if (process.env.SKIP_BUILD_TEST === 'true') {
-        console.warn('ビルドテストがスキップされました（SKIP_BUILD_TEST=true）');
+        console.warn(
+          'ビルドテストがスキップされました（SKIP_BUILD_TEST=true）'
+        );
         expect(true).toBe(true);
         return;
       }
-      
+
       // タイムアウトを90秒に延長（ビルドには時間がかかる）
       jest.setTimeout(90000);
       try {
-        const { stdout } = await exec('npm run build', { 
+        const { stdout } = await exec('npm run build', {
           cwd: process.cwd(),
-          timeout: 90000 // 90秒タイムアウト
+          timeout: 90000, // 90秒タイムアウト
         });
         expect(stdout).toBeDefined();
       } catch (error) {
         // ビルドエラーは警告として扱う（依存関係が不足している可能性）
-        if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
-          console.warn('TypeScript build failed. This might be expected in test environment.');
+        if (
+          process.env.NODE_ENV === 'development' ||
+          process.env.JEST_DEBUG === '1'
+        ) {
+          console.warn(
+            'TypeScript build failed. This might be expected in test environment.'
+          );
         }
         // テスト環境ではビルドが失敗してもテスト自体はスキップする
         // タイムアウトエラーの場合も含めてスキップ
@@ -141,4 +158,3 @@ describe('Development Environment Verification', () => {
     }, 90000);
   });
 });
-

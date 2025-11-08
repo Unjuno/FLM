@@ -3,13 +3,19 @@
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 describe('Auth Proxy Security Integration Tests', () => {
   beforeAll(() => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('認証プロキシセキュリティテストを開始します');
     }
   });
 
   afterAll(() => {
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('認証プロキシセキュリティテストを完了しました');
     }
   });
@@ -89,8 +95,9 @@ describe('Auth Proxy Security Integration Tests', () => {
         },
       };
 
-      const isValid = requestWithEmptyAuth.headers.authorization.startsWith('Bearer ') &&
-                      requestWithEmptyAuth.headers.authorization.length > 7;
+      const isValid =
+        requestWithEmptyAuth.headers.authorization.startsWith('Bearer ') &&
+        requestWithEmptyAuth.headers.authorization.length > 7;
       expect(isValid).toBe(false);
     });
 
@@ -139,10 +146,7 @@ describe('Auth Proxy Security Integration Tests', () => {
     });
 
     it('should validate API key length in token', () => {
-      const tokensWithInvalidLength = [
-        'Bearer short',
-        'Bearer too-short-key',
-      ];
+      const tokensWithInvalidLength = ['Bearer short', 'Bearer too-short-key'];
 
       tokensWithInvalidLength.forEach(token => {
         const key = token.replace('Bearer ', '');
@@ -165,7 +169,8 @@ describe('Auth Proxy Security Integration Tests', () => {
       maliciousKeys.forEach(key => {
         // SQLインジェクション攻撃パターンが含まれていることを検証
         // SQLキーワードまたはSQLインジェクションの典型的なパターン（OR、'など）を含む
-        const containsSqlKeywords = /(DROP|DELETE|UPDATE|INSERT|SELECT|UNION|OR|'|--)/i.test(key);
+        const containsSqlKeywords =
+          /(DROP|DELETE|UPDATE|INSERT|SELECT|UNION|OR|'|--)/i.test(key);
         // すべての悪意のあるキーにSQLキーワードまたはパターンが含まれていることを確認
         expect(containsSqlKeywords).toBe(true);
         // 実際の実装では、パラメータ化クエリを使用して防御されている
@@ -237,4 +242,3 @@ describe('Auth Proxy Security Integration Tests', () => {
     });
   });
 });
-

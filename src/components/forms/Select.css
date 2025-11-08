@@ -58,7 +58,7 @@
 
 .form-select {
   width: 100%;
-  padding: 0.75rem 2.5rem 0.75rem 1rem;
+  padding: var(--spacing-md, 0.75rem) 2.5rem var(--spacing-md, 0.75rem) var(--spacing-md, 1rem);
   font-size: 0.9rem;
   line-height: 1.5;
   color: var(--form-select-text);
@@ -119,12 +119,12 @@
 }
 
 .form-select-small {
-  padding: 0.5rem 2rem 0.5rem 0.75rem;
+  padding: var(--spacing-sm, 0.5rem) 2rem var(--spacing-sm, 0.5rem) var(--spacing-md, 0.75rem);
   font-size: 0.875rem;
 }
 
 .form-select-large {
-  padding: 1rem 3rem 1rem 1.25rem;
+  padding: var(--spacing-md, 1rem) 3rem var(--spacing-md, 1rem) var(--spacing-lg, 1.25rem);
   font-size: 1rem;
 }
 

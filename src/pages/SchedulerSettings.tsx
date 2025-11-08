@@ -1,11 +1,13 @@
 // SchedulerSettings - スケジューラ設定ページ
 // 定期タスクの設定（モデルカタログ更新、自動バックアップ、証明書更新等）
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useTransition, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { useNotifications } from '../contexts/NotificationContext';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { Breadcrumb, BreadcrumbItem } from '../components/common/Breadcrumb';
+import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import './SchedulerSettings.css';
 
@@ -31,6 +33,7 @@ export const SchedulerSettings: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
 
   // グローバルキーボードショートカットを有効化
   useGlobalKeyboardShortcuts();
@@ -46,39 +49,83 @@ export const SchedulerSettings: React.FC = () => {
     try {
       setLoading(true);
       setError(null);
-      
-      // デフォルトタスクを設定
-      const defaultTasks: ScheduleTask[] = [
-        {
-          task_type: 'UpdateModelCatalog',
-          interval_seconds: 86400, // 24時間
-          enabled: false,
-        },
-        {
-          task_type: 'AutoBackup',
-          interval_seconds: 604800, // 7日
-          enabled: false,
-        },
-        {
-          task_type: 'SyncSettings',
-          interval_seconds: 3600, // 1時間
-          enabled: false,
-        },
-        {
-          task_type: 'CleanupLogs',
-          interval_seconds: 86400, // 24時間
-          enabled: false,
-        },
-        {
-          task_type: 'CertificateRenewal',
-          interval_seconds: 2592000, // 30日
-          enabled: false,
-        },
-      ];
 
-      setTasks(defaultTasks);
+      // スケジュールタスク一覧を取得
+      try {
+        const tasksData = await safeInvoke<ScheduleTask[]>(
+          'get_schedule_tasks',
+          {}
+        );
+        if (tasksData && tasksData.length > 0) {
+          setTasks(tasksData);
+        } else {
+          // デフォルトタスクを設定（タスクが存在しない場合）
+          const defaultTasks: ScheduleTask[] = [
+            {
+              task_type: 'UpdateModelCatalog',
+              interval_seconds: 86400, // 24時間
+              enabled: false,
+            },
+            {
+              task_type: 'AutoBackup',
+              interval_seconds: 604800, // 7日
+              enabled: false,
+            },
+            {
+              task_type: 'SyncSettings',
+              interval_seconds: 3600, // 1時間
+              enabled: false,
+            },
+            {
+              task_type: 'CleanupLogs',
+              interval_seconds: 86400, // 24時間
+              enabled: false,
+            },
+            {
+              task_type: 'CertificateRenewal',
+              interval_seconds: 2592000, // 30日
+              enabled: false,
+            },
+          ];
+
+          setTasks(defaultTasks);
+        }
+      } catch (invokeErr) {
+        // エラーが発生した場合はデフォルトタスクを使用
+        const defaultTasks: ScheduleTask[] = [
+          {
+            task_type: 'UpdateModelCatalog',
+            interval_seconds: 86400, // 24時間
+            enabled: false,
+          },
+          {
+            task_type: 'AutoBackup',
+            interval_seconds: 604800, // 7日
+            enabled: false,
+          },
+          {
+            task_type: 'SyncSettings',
+            interval_seconds: 3600, // 1時間
+            enabled: false,
+          },
+          {
+            task_type: 'CleanupLogs',
+            interval_seconds: 86400, // 24時間
+            enabled: false,
+          },
+          {
+            task_type: 'CertificateRenewal',
+            interval_seconds: 2592000, // 30日
+            enabled: false,
+          },
+        ];
+
+        setTasks(defaultTasks);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'タスクの読み込みに失敗しました');
+      setError(
+        err instanceof Error ? err.message : 'タスクの読み込みに失敗しました'
+      );
     } finally {
       setLoading(false);
     }
@@ -90,17 +137,20 @@ export const SchedulerSettings: React.FC = () => {
   const handleSaveTask = async (task: ScheduleTask) => {
     try {
       setSaving(true);
-      
+
       await safeInvoke('add_schedule_task', {
+        task_id: task.id || `task-${Date.now()}`,
         task_type: task.task_type,
+        api_id: 'default',
         interval_seconds: task.interval_seconds,
-        enabled: task.enabled,
       });
 
       showSuccess('タスクを保存しました');
       loadTasks();
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'タスクの保存に失敗しました');
+      showError(
+        err instanceof Error ? err.message : 'タスクの保存に失敗しました'
+      );
     } finally {
       setSaving(false);
     }
@@ -112,13 +162,15 @@ export const SchedulerSettings: React.FC = () => {
   const handleStartTask = async (taskType: string) => {
     try {
       setSaving(true);
-      
+
       await safeInvoke('start_schedule_task', { task_type: taskType });
-      
+
       showSuccess('タスクを開始しました');
       loadTasks();
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'タスクの開始に失敗しました');
+      showError(
+        err instanceof Error ? err.message : 'タスクの開始に失敗しました'
+      );
     } finally {
       setSaving(false);
     }
@@ -153,13 +205,25 @@ export const SchedulerSettings: React.FC = () => {
     }
   };
 
+  // パンくずリストの項目
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
+    { label: 'ホーム', path: '/' },
+    { label: '設定', path: '/settings' },
+    { label: 'スケジューラ設定' },
+  ], []);
+
   if (loading) {
     return (
       <div className="scheduler-settings-page">
         <div className="scheduler-settings-container">
-          <div className="loading-container">
-            <div className="loading-spinner"></div>
-            <p>タスクを読み込んでいます...</p>
+          <Breadcrumb items={breadcrumbItems} />
+          <header className="scheduler-settings-header">
+            <SkeletonLoader type="button" width="100px" />
+            <SkeletonLoader type="title" width="200px" />
+          </header>
+          <div className="scheduler-settings-content">
+            <SkeletonLoader type="paragraph" count={1} />
+            <SkeletonLoader type="card" count={5} />
           </div>
         </div>
       </div>
@@ -169,6 +233,7 @@ export const SchedulerSettings: React.FC = () => {
   return (
     <div className="scheduler-settings-page">
       <div className="scheduler-settings-container">
+        <Breadcrumb items={breadcrumbItems} />
         <header className="scheduler-settings-header">
           <button className="back-button" onClick={() => navigate('/settings')}>
             ← 戻る
@@ -193,12 +258,14 @@ export const SchedulerSettings: React.FC = () => {
             {tasks.map((task, index) => (
               <div key={index} className="schedule-task-item">
                 <div className="schedule-task-header">
-                  <h3 className="schedule-task-title">{getTaskTypeName(task.task_type)}</h3>
+                  <h3 className="schedule-task-title">
+                    {getTaskTypeName(task.task_type)}
+                  </h3>
                   <label className="schedule-task-toggle">
                     <input
                       type="checkbox"
                       checked={task.enabled}
-                      onChange={(e) => {
+                      onChange={e => {
                         const updatedTasks = [...tasks];
                         updatedTasks[index].enabled = e.target.checked;
                         setTasks(updatedTasks);
@@ -212,17 +279,27 @@ export const SchedulerSettings: React.FC = () => {
 
                 <div className="schedule-task-body">
                   <div className="schedule-task-field">
-                    <label className="schedule-task-label">実行間隔</label>
+                    <label
+                      htmlFor={`task-interval-${index}`}
+                      className="schedule-task-label"
+                    >
+                      実行間隔
+                    </label>
                     <div className="schedule-task-interval-input">
                       <input
+                        id={`task-interval-${index}`}
                         type="number"
                         className="form-input"
                         min="60"
                         max="31536000"
                         value={task.interval_seconds}
-                        onChange={(e) => {
+                        aria-label="実行間隔（秒）"
+                        title="実行間隔（秒）"
+                        placeholder="3600"
+                        onChange={e => {
                           const updatedTasks = [...tasks];
-                          updatedTasks[index].interval_seconds = parseInt(e.target.value) || 3600;
+                          updatedTasks[index].interval_seconds =
+                            parseInt(e.target.value) || 3600;
                           setTasks(updatedTasks);
                         }}
                         disabled={saving}
@@ -231,20 +308,30 @@ export const SchedulerSettings: React.FC = () => {
                         ({formatInterval(task.interval_seconds)})
                       </span>
                     </div>
-                    <small className="form-hint">タスクの実行間隔を秒単位で設定します</small>
+                    <small className="form-hint">
+                      タスクの実行間隔を秒単位で設定します
+                    </small>
                   </div>
 
                   {task.last_run && (
                     <div className="schedule-task-info">
-                      <span className="schedule-task-info-label">最終実行:</span>
-                      <span className="schedule-task-info-value">{task.last_run}</span>
+                      <span className="schedule-task-info-label">
+                        最終実行:
+                      </span>
+                      <span className="schedule-task-info-value">
+                        {task.last_run}
+                      </span>
                     </div>
                   )}
 
                   {task.next_run && (
                     <div className="schedule-task-info">
-                      <span className="schedule-task-info-label">次回実行:</span>
-                      <span className="schedule-task-info-value">{task.next_run}</span>
+                      <span className="schedule-task-info-label">
+                        次回実行:
+                      </span>
+                      <span className="schedule-task-info-value">
+                        {task.next_run}
+                      </span>
                     </div>
                   )}
 
@@ -252,16 +339,24 @@ export const SchedulerSettings: React.FC = () => {
                     <button
                       type="button"
                       className="button-secondary"
-                      onClick={() => handleStartTask(task.task_type)}
-                      disabled={saving || !task.enabled}
+                      onClick={() => {
+                        startTransition(() => {
+                          handleStartTask(task.task_type);
+                        });
+                      }}
+                      disabled={saving || !task.enabled || isPending}
                     >
                       今すぐ実行
                     </button>
                     <button
                       type="button"
                       className="button-primary"
-                      onClick={() => handleSaveTask(task)}
-                      disabled={saving}
+                      onClick={() => {
+                        startTransition(() => {
+                          handleSaveTask(task);
+                        });
+                      }}
+                      disabled={saving || isPending}
                     >
                       保存
                     </button>
@@ -275,4 +370,3 @@ export const SchedulerSettings: React.FC = () => {
     </div>
   );
 };
-

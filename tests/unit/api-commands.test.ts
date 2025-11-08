@@ -4,7 +4,7 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 
 /**
  * APIコマンドテストスイート
- * 
+ *
  * テスト項目:
  * - API作成コマンドの動作確認
  * - API一覧取得コマンドの動作確認
@@ -14,14 +14,20 @@ import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 describe('API Commands Unit Tests', () => {
   beforeAll(() => {
     // テスト前の初期化処理
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('APIコマンドテストを開始します');
     }
   });
 
   afterAll(() => {
     // テスト後のクリーンアップ処理
-    if (process.env.NODE_ENV === 'development' || process.env.JEST_DEBUG === '1') {
+    if (
+      process.env.NODE_ENV === 'development' ||
+      process.env.JEST_DEBUG === '1'
+    ) {
       console.log('APIコマンドテストを完了しました');
     }
   });
@@ -104,7 +110,8 @@ describe('API Commands Unit Tests', () => {
     it('should validate API ID format', () => {
       // UUID形式の検証
       const validUuid = '123e4567-e89b-12d3-a456-426614174000';
-      const uuidPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      const uuidPattern =
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
       expect(uuidPattern.test(validUuid)).toBe(true);
     });
@@ -135,21 +142,18 @@ describe('API Commands Unit Tests', () => {
         expect(typeof message).toBe('string');
         // 非開発者向けのメッセージ（専門用語が少ない）
         // エラーメッセージに「エラー」が含まれているか、または適切な説明が含まれているかを確認
-        const hasUserFriendlyMessage = message.includes('エラー') || 
-                                       message.includes('問題') || 
-                                       message.includes('失敗') ||
-                                       message.includes('見つかりません') ||
-                                       message.length > 0; // 空でなければOK
+        const hasUserFriendlyMessage =
+          message.includes('エラー') ||
+          message.includes('問題') ||
+          message.includes('失敗') ||
+          message.includes('見つかりません') ||
+          message.length > 0; // 空でなければOK
         expect(hasUserFriendlyMessage).toBe(true);
       });
     });
 
     it('should handle network errors gracefully', () => {
-      const networkErrors = [
-        'ECONNREFUSED',
-        'ETIMEDOUT',
-        'ENOTFOUND',
-      ];
+      const networkErrors = ['ECONNREFUSED', 'ETIMEDOUT', 'ENOTFOUND'];
 
       networkErrors.forEach(error => {
         // エラーコードの検証
@@ -158,4 +162,3 @@ describe('API Commands Unit Tests', () => {
     });
   });
 });
-

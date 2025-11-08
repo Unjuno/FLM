@@ -4,6 +4,8 @@
 use crate::utils::error::AppError;
 use serde::{Deserialize, Serialize};
 use chrono::Utc;
+use sha2::{Sha256, Digest};
+use hex;
 
 /// 監査ログエントリ
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -37,6 +39,41 @@ pub enum AuditAction {
     Custom(String), // カスタムアクション
 }
 
+/// IPアドレスをハッシュ化（プライバシー保護）
+fn hash_ip_address(ip: &str) -> String {
+    let mut hasher = Sha256::new();
+    hasher.update(ip.as_bytes());
+    let hash = hasher.finalize();
+    format!("ip_{}", hex::encode(&hash[..8])) // 最初の8バイトのみ使用（16文字）
+}
+
+/// ユーザーエージェントを簡略化（プライバシー保護）
+fn simplify_user_agent(ua: &str) -> String {
+    // ブラウザ名のみを抽出（バージョン情報は除外）
+    // 例: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    // -> "Chrome"
+    
+    let ua_lower = ua.to_lowercase();
+    
+    // 主要なブラウザ名を検出
+    if ua_lower.contains("chrome") && !ua_lower.contains("edg") {
+        "Chrome".to_string()
+    } else if ua_lower.contains("firefox") {
+        "Firefox".to_string()
+    } else if ua_lower.contains("safari") && !ua_lower.contains("chrome") {
+        "Safari".to_string()
+    } else if ua_lower.contains("edg") {
+        "Edge".to_string()
+    } else if ua_lower.contains("opera") {
+        "Opera".to_string()
+    } else if ua_lower.contains("msie") || ua_lower.contains("trident") {
+        "Internet Explorer".to_string()
+    } else {
+        // ブラウザ名が特定できない場合は、最初の50文字に制限
+        ua.chars().take(50).collect()
+    }
+}
+
 /// 監査ログを記録
 pub async fn log_audit_event(
     api_id: &str,
@@ -50,7 +87,28 @@ pub async fn log_audit_event(
     success: bool,
 ) -> Result<AuditLogEntry, AppError> {
     use crate::database::connection::get_connection;
-    use rusqlite::params;
+    use crate::database::repository::UserSettingRepository;
+    
+    // 設定を確認してIPアドレスを含めるかどうかを決定
+    let conn = get_connection().map_err(|e| AppError::DatabaseError {
+        message: format!("データベース接続エラー: {}", e),
+        source_detail: None,
+    })?;
+    
+    let settings_repo = UserSettingRepository::new(&conn);
+    let include_ip = settings_repo.get("include_ip_address_in_audit_log")
+        .ok()
+        .flatten()
+        .and_then(|v| v.parse::<bool>().ok())
+        .unwrap_or(true); // デフォルト: 有効
+    
+    // IPアドレスとユーザーエージェントをプライバシー保護処理
+    let processed_ip = if include_ip {
+        ip_address.map(|ip| hash_ip_address(ip))
+    } else {
+        None // IPアドレスを含めない設定の場合はNone
+    };
+    let processed_ua = user_agent.map(|ua| simplify_user_agent(ua));
     
     let entry = AuditLogEntry {
         id: uuid::Uuid::new_v4().to_string(),
@@ -60,8 +118,8 @@ pub async fn log_audit_event(
         resource_type: resource_type.to_string(),
         resource_id: resource_id.map(|s| s.to_string()),
         details: details.map(|s| s.to_string()),
-        ip_address: ip_address.map(|s| s.to_string()),
-        user_agent: user_agent.map(|s| s.to_string()),
+        ip_address: processed_ip,
+        user_agent: processed_ua,
         timestamp: Utc::now().to_rfc3339(),
         success,
     };
@@ -81,15 +139,10 @@ pub async fn log_audit_event(
         AuditAction::Custom(s) => s.as_str(),
     };
     
-    let conn = get_connection().map_err(|e| AppError::DatabaseError {
-        message: format!("データベース接続エラー: {}", e),
-    })?;
-    
+    use rusqlite::params;
     conn.execute(
-        r#"
-        INSERT INTO audit_logs (id, api_id, user_id, action, resource_type, resource_id, details, ip_address, user_agent, timestamp, success)
-        VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
-        "#,
+        "INSERT INTO audit_logs (id, api_id, user_id, action, resource_type, resource_id, details, ip_address, user_agent, timestamp, success)
+         VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)",
         params![
             entry.id,
             entry.api_id,
@@ -101,10 +154,11 @@ pub async fn log_audit_event(
             entry.ip_address,
             entry.user_agent,
             entry.timestamp,
-            if entry.success { 1 } else { 0 }
+            if entry.success { 1 } else { 0 },
         ],
     ).map_err(|e| AppError::DatabaseError {
-        message: format!("監査ログ保存エラー: {}", e),
+        message: format!("監査ログ記録エラー: {}", e),
+        source_detail: None,
     })?;
     
     Ok(entry)
@@ -120,38 +174,78 @@ pub async fn search_audit_logs(
     limit: Option<u32>,
 ) -> Result<Vec<AuditLogEntry>, AppError> {
     use crate::database::connection::get_connection;
-    use rusqlite::params;
     
     let conn = get_connection().map_err(|e| AppError::DatabaseError {
         message: format!("データベース接続エラー: {}", e),
+        source_detail: None,
     })?;
     
-    let limit = limit.unwrap_or(100);
+    // SQLクエリを構築
+    let mut sql = String::from(
+        "SELECT id, api_id, user_id, action, resource_type, resource_id, details, ip_address, user_agent, timestamp, success FROM audit_logs WHERE 1=1"
+    );
+    let mut param_values: Vec<Box<dyn rusqlite::ToSql>> = Vec::new();
     
-    // 簡易実装: 条件ごとに別々のクエリを準備
-    // より洗練された実装では、動的SQLビルダーを使用することを推奨
-    let query = "SELECT id, api_id, user_id, action, resource_type, resource_id, details, ip_address, user_agent, timestamp, success FROM audit_logs WHERE (?1 IS NULL OR api_id = ?1) AND (?2 IS NULL OR action = ?2) AND (?3 IS NULL OR resource_type = ?3) AND (?4 IS NULL OR timestamp >= ?4) AND (?5 IS NULL OR timestamp <= ?5) ORDER BY timestamp DESC LIMIT ?6";
+    if let Some(id) = api_id {
+        sql.push_str(" AND api_id = ?");
+        param_values.push(Box::new(id));
+    }
     
-    let action_str = action.as_ref().map(|a| match a {
-        AuditAction::Create => "Create",
-        AuditAction::Read => "Read",
-        AuditAction::Update => "Update",
-        AuditAction::Delete => "Delete",
-        AuditAction::Start => "Start",
-        AuditAction::Stop => "Stop",
-        AuditAction::Login => "Login",
-        AuditAction::Logout => "Logout",
-        AuditAction::Share => "Share",
-        AuditAction::Unshare => "Unshare",
-        AuditAction::Custom(s) => s.as_str(),
-    });
+    if let Some(act) = action {
+        sql.push_str(" AND action = ?");
+        let action_str = match act {
+            AuditAction::Create => "Create",
+            AuditAction::Read => "Read",
+            AuditAction::Update => "Update",
+            AuditAction::Delete => "Delete",
+            AuditAction::Start => "Start",
+            AuditAction::Stop => "Stop",
+            AuditAction::Login => "Login",
+            AuditAction::Logout => "Logout",
+            AuditAction::Share => "Share",
+            AuditAction::Unshare => "Unshare",
+            AuditAction::Custom(s) => return Err(AppError::ApiError {
+                message: format!("カスタムアクションでの検索はサポートされていません: {}", s),
+                code: "CUSTOM_ACTION_SEARCH_NOT_SUPPORTED".to_string(),
+                source_detail: None,
+            }),
+        };
+        param_values.push(Box::new(action_str));
+    }
     
-    let mut stmt = conn.prepare(query).map_err(|e| AppError::DatabaseError {
+    if let Some(r_type) = resource_type {
+        sql.push_str(" AND resource_type = ?");
+        param_values.push(Box::new(r_type));
+    }
+    
+    if let Some(s_date) = start_date {
+        sql.push_str(" AND timestamp >= ?");
+        param_values.push(Box::new(s_date));
+    }
+    
+    if let Some(e_date) = end_date {
+        sql.push_str(" AND timestamp <= ?");
+        param_values.push(Box::new(e_date));
+    }
+    
+    sql.push_str(" ORDER BY timestamp DESC");
+    
+    if let Some(l) = limit {
+        sql.push_str(&format!(" LIMIT {}", l));
+    }
+    
+    // パラメータを参照のスライスに変換
+    let param_refs: Vec<&dyn rusqlite::ToSql> = param_values.iter()
+        .map(|p| p.as_ref() as &dyn rusqlite::ToSql)
+        .collect();
+    
+    let mut stmt = conn.prepare(&sql).map_err(|e| AppError::DatabaseError {
         message: format!("SQL準備エラー: {}", e),
+        source_detail: None,
     })?;
     
     let rows = stmt.query_map(
-        params![api_id, action_str, resource_type, start_date, end_date, limit],
+        rusqlite::params_from_iter(param_refs),
         |row| {
             let action_str: String = row.get(3)?;
             let action = match action_str.as_str() {
@@ -184,35 +278,45 @@ pub async fn search_audit_logs(
         },
     ).map_err(|e| AppError::DatabaseError {
         message: format!("監査ログ検索エラー: {}", e),
+        source_detail: None,
     })?;
     
-    let mut entries = Vec::new();
-    for row_result in rows {
-        entries.push(row_result?);
-    }
-    
-    Ok(entries)
+    let logs: Result<Vec<_>, _> = rows.collect();
+    logs.map_err(|e| AppError::DatabaseError {
+        message: format!("監査ログ読み込みエラー: {}", e),
+        source_detail: None,
+    })
+}
+
+/// エクスポート形式
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+pub enum ExportFormat {
+    Json,
+    Csv,
+    Txt,
 }
 
 /// 監査ログをエクスポート
 pub async fn export_audit_logs(
+    format: ExportFormat,
     api_id: Option<&str>,
+    action: Option<AuditAction>,
+    resource_type: Option<&str>,
     start_date: Option<&str>,
     end_date: Option<&str>,
-    format: ExportFormat,
+    exclude_ip_and_user_agent: bool,
 ) -> Result<String, AppError> {
-    // まずログを検索
-    let logs = search_audit_logs(api_id, None, None, start_date, end_date, None).await?;
+    let logs = search_audit_logs(api_id, action, resource_type, start_date, end_date, None).await?;
     
     match format {
-        ExportFormat::Json => {
-            serde_json::to_string(&logs).map_err(|e| AppError::ApiError {
-                message: format!("JSONエクスポートエラー: {}", e),
-                code: "JSON_ERROR".to_string(),
-            })
-        },
         ExportFormat::Csv => {
-            let mut csv = String::from("id,api_id,user_id,action,resource_type,resource_id,details,ip_address,user_agent,timestamp,success\n");
+            // IPアドレスとユーザーエージェントを除外する場合はヘッダーを変更
+            let header = if exclude_ip_and_user_agent {
+                "id,api_id,user_id,action,resource_type,resource_id,details,timestamp,success\n"
+            } else {
+                "id,api_id,user_id,action,resource_type,resource_id,details,ip_address,user_agent,timestamp,success\n"
+            };
+            let mut csv = String::from(header);
             for log in &logs {
                 let action_str = match &log.action {
                     AuditAction::Create => "Create",
@@ -227,20 +331,35 @@ pub async fn export_audit_logs(
                     AuditAction::Unshare => "Unshare",
                     AuditAction::Custom(s) => s.as_str(),
                 };
-                csv.push_str(&format!(
-                    "{},{},{},{},{},{},{},{},{},{},{}\n",
-                    log.id,
-                    log.api_id,
-                    log.user_id.as_ref().unwrap_or(&"".to_string()),
-                    action_str,
-                    log.resource_type,
-                    log.resource_id.as_ref().unwrap_or(&"".to_string()),
-                    log.details.as_ref().unwrap_or(&"".to_string()).replace(',', ";"),
-                    log.ip_address.as_ref().unwrap_or(&"".to_string()),
-                    log.user_agent.as_ref().unwrap_or(&"".to_string()).replace(',', ";"),
-                    log.timestamp,
-                    if log.success { "true" } else { "false" }
-                ));
+                if exclude_ip_and_user_agent {
+                    csv.push_str(&format!(
+                        "{},{},{},{},{},{},{},{},{}\n",
+                        log.id,
+                        log.api_id,
+                        log.user_id.as_ref().unwrap_or(&"".to_string()),
+                        action_str,
+                        log.resource_type,
+                        log.resource_id.as_ref().unwrap_or(&"".to_string()),
+                        log.details.as_ref().unwrap_or(&"".to_string()).replace(',', ";"),
+                        log.timestamp,
+                        if log.success { "true" } else { "false" }
+                    ));
+                } else {
+                    csv.push_str(&format!(
+                        "{},{},{},{},{},{},{},{},{},{},{}\n",
+                        log.id,
+                        log.api_id,
+                        log.user_id.as_ref().unwrap_or(&"".to_string()),
+                        action_str,
+                        log.resource_type,
+                        log.resource_id.as_ref().unwrap_or(&"".to_string()),
+                        log.details.as_ref().unwrap_or(&"".to_string()).replace(',', ";"),
+                        log.ip_address.as_ref().unwrap_or(&"".to_string()),
+                        log.user_agent.as_ref().unwrap_or(&"".to_string()).replace(',', ";"),
+                        log.timestamp,
+                        if log.success { "true" } else { "false" }
+                    ));
+                }
             }
             Ok(csv)
         },
@@ -260,26 +379,99 @@ pub async fn export_audit_logs(
                     AuditAction::Unshare => "Unshare",
                     AuditAction::Custom(s) => s.as_str(),
                 };
-                txt.push_str(&format!(
-                    "[{}] {} - {} - {} - {} - {}\n",
-                    log.timestamp,
-                    action_str,
-                    log.api_id,
-                    log.resource_type,
-                    log.resource_id.as_ref().unwrap_or(&"N/A".to_string()),
-                    if log.success { "SUCCESS" } else { "FAILED" }
-                ));
+                if exclude_ip_and_user_agent {
+                    txt.push_str(&format!(
+                        "[{}] {} - {} - {} - {} - {}\n",
+                        log.timestamp,
+                        action_str,
+                        log.api_id,
+                        log.resource_type,
+                        log.resource_id.as_ref().unwrap_or(&"N/A".to_string()),
+                        if log.success { "SUCCESS" } else { "FAILED" }
+                    ));
+                } else {
+                    let ip_info = log.ip_address.as_ref().map(|ip| format!(" IP:{}", ip)).unwrap_or_default();
+                    let ua_info = log.user_agent.as_ref().map(|ua| format!(" UA:{}", ua)).unwrap_or_default();
+                    txt.push_str(&format!(
+                        "[{}] {} - {} - {} - {} - {}{}{}\n",
+                        log.timestamp,
+                        action_str,
+                        log.api_id,
+                        log.resource_type,
+                        log.resource_id.as_ref().unwrap_or(&"N/A".to_string()),
+                        if log.success { "SUCCESS" } else { "FAILED" },
+                        ip_info,
+                        ua_info
+                    ));
+                }
             }
             Ok(txt)
         },
+        ExportFormat::Json => {
+            // IPアドレスとユーザーエージェントを除外する場合は、フィールドを削除したログを作成
+            let logs_to_export: Vec<serde_json::Value> = if exclude_ip_and_user_agent {
+                logs.iter().map(|log| {
+                    let log_json = serde_json::json!({
+                        "id": log.id,
+                        "api_id": log.api_id,
+                        "user_id": log.user_id,
+                        "action": match &log.action {
+                            AuditAction::Create => "Create",
+                            AuditAction::Read => "Read",
+                            AuditAction::Update => "Update",
+                            AuditAction::Delete => "Delete",
+                            AuditAction::Start => "Start",
+                            AuditAction::Stop => "Stop",
+                            AuditAction::Login => "Login",
+                            AuditAction::Logout => "Logout",
+                            AuditAction::Share => "Share",
+                            AuditAction::Unshare => "Unshare",
+                            AuditAction::Custom(s) => s.as_str(),
+                        },
+                        "resource_type": log.resource_type,
+                        "resource_id": log.resource_id,
+                        "details": log.details,
+                        "timestamp": log.timestamp,
+                        "success": log.success,
+                    });
+                    log_json
+                }).collect()
+            } else {
+                logs.iter().map(|log| {
+                    serde_json::json!({
+                        "id": log.id,
+                        "api_id": log.api_id,
+                        "user_id": log.user_id,
+                        "action": match &log.action {
+                            AuditAction::Create => "Create",
+                            AuditAction::Read => "Read",
+                            AuditAction::Update => "Update",
+                            AuditAction::Delete => "Delete",
+                            AuditAction::Start => "Start",
+                            AuditAction::Stop => "Stop",
+                            AuditAction::Login => "Login",
+                            AuditAction::Logout => "Logout",
+                            AuditAction::Share => "Share",
+                            AuditAction::Unshare => "Unshare",
+                            AuditAction::Custom(s) => s.as_str(),
+                        },
+                        "resource_type": log.resource_type,
+                        "resource_id": log.resource_id,
+                        "details": log.details,
+                        "ip_address": log.ip_address,
+                        "user_agent": log.user_agent,
+                        "timestamp": log.timestamp,
+                        "success": log.success,
+                    })
+                }).collect()
+            };
+            
+            serde_json::to_string(&logs_to_export).map_err(|e| AppError::ApiError {
+                message: format!("JSONシリアライズエラー: {}", e),
+                code: "JSON_ERROR".to_string(),
+                source_detail: None,
+            })
+        },
     }
-}
-
-/// エクスポート形式
-#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
-pub enum ExportFormat {
-    Json,
-    Csv,
-    Txt,
 }
 

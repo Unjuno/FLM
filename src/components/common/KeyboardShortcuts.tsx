@@ -1,7 +1,10 @@
 // KeyboardShortcuts - キーボードショートカット一覧コンポーネント
 
 import React from 'react';
-import { getShortcutDisplay, KeyboardShortcut } from '../../hooks/useKeyboardShortcuts';
+import {
+  getShortcutDisplay,
+  KeyboardShortcut,
+} from '../../hooks/useKeyboardShortcuts';
 import './KeyboardShortcuts.css';
 
 /**
@@ -40,11 +43,13 @@ export const KeyboardShortcuts: React.FC<KeyboardShortcutsProps> = ({
           {filteredShortcuts.map((shortcut, index) => (
             <div key={index} className="keyboard-shortcuts-item">
               <div className="keyboard-shortcuts-keys">
-                {getShortcutDisplay(shortcut).split('+').map((key, keyIndex) => (
-                  <kbd key={keyIndex} className="keyboard-key">
-                    {key}
-                  </kbd>
-                ))}
+                {getShortcutDisplay(shortcut)
+                  .split('+')
+                  .map((key, keyIndex) => (
+                    <kbd key={keyIndex} className="keyboard-key">
+                      {key}
+                    </kbd>
+                  ))}
               </div>
               <div className="keyboard-shortcuts-description">
                 {shortcut.description}
@@ -62,11 +67,13 @@ export const KeyboardShortcuts: React.FC<KeyboardShortcutsProps> = ({
         {filteredShortcuts.map((shortcut, index) => (
           <div key={index} className="keyboard-shortcuts-item">
             <div className="keyboard-shortcuts-keys">
-              {getShortcutDisplay(shortcut).split('+').map((key, keyIndex) => (
-                <kbd key={keyIndex} className="keyboard-key">
-                  {key}
-                </kbd>
-              ))}
+              {getShortcutDisplay(shortcut)
+                .split('+')
+                .map((key, keyIndex) => (
+                  <kbd key={keyIndex} className="keyboard-key">
+                    {key}
+                  </kbd>
+                ))}
             </div>
             <div className="keyboard-shortcuts-description">
               {shortcut.description}
@@ -77,4 +84,3 @@ export const KeyboardShortcuts: React.FC<KeyboardShortcutsProps> = ({
     </div>
   );
 };
-

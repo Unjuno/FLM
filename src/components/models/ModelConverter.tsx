@@ -1,11 +1,13 @@
 // ModelConverter - モデル変換コンポーネント
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useTransition, useEffect } from 'react';
 import { safeInvoke } from '../../utils/tauri';
 import { listen } from '@tauri-apps/api/event';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { ErrorMessage } from '../common/ErrorMessage';
 import { InfoBanner } from '../common/InfoBanner';
+import { extractErrorMessage } from '../../utils/errorHandler';
+import { logger } from '../../utils/logger';
 import './ModelConverter.css';
 
 /**
@@ -30,6 +32,35 @@ export const ModelConverter: React.FC = () => {
   const [progress, setProgress] = useState<ConversionProgress | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [outputPath, setOutputPath] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
+  // 確認ダイアログの状態
+  const [confirmDialog, setConfirmDialog] = useState<{
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+    onCancel: () => void;
+  }>({
+    isOpen: false,
+    message: '',
+    onConfirm: () => {},
+    onCancel: () => {},
+  });
+
+  // ESCキーで確認ダイアログを閉じる
+  useEffect(() => {
+    if (!confirmDialog.isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+      }
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+    };
+  }, [confirmDialog.isOpen]);
 
   /**
    * モデル変換を開始
@@ -40,44 +71,61 @@ export const ModelConverter: React.FC = () => {
       return;
     }
 
-    if (!confirm('モデル変換を開始しますか？この処理には時間がかかる場合があります。')) {
-      return;
-    }
+    setConfirmDialog({
+      isOpen: true,
+      message: 'モデル変換を開始しますか？この処理には時間がかかる場合があります。',
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        try {
+          setConverting(true);
+          setError(null);
+          setProgress(null);
+          setOutputPath(null);
 
-    try {
-      setConverting(true);
-      setError(null);
-      setProgress(null);
-      setOutputPath(null);
+          // 進捗イベントをリッスン
+          const unlisten = await listen<ConversionProgress>(
+            'model_conversion_progress',
+            event => {
+              setProgress(event.payload);
+            }
+          );
 
-      // 進捗イベントをリッスン
-      const unlisten = await listen<ConversionProgress>('model_conversion_progress', (event) => {
-        setProgress(event.payload);
-      });
+          // 変換実行
+          const path = await safeInvoke<string>('convert_model', {
+            config: {
+              source_path: sourcePath,
+              target_name: targetName,
+              quantization: quantization || null,
+              output_format: outputFormat,
+            },
+          });
 
-      // 変換実行
-      const path = await safeInvoke<string>('convert_model', {
-        config: {
-          source_path: sourcePath,
-          target_name: targetName,
-          quantization: quantization || null,
-          output_format: outputFormat,
-        },
-      });
+          // イベントリスナーを解除
+          unlisten();
 
-      // イベントリスナーを解除
-      unlisten();
-
-      setOutputPath(path);
-      showSuccess('モデル変換が完了しました');
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'モデル変換に失敗しました');
-      showError(err instanceof Error ? err.message : 'モデル変換に失敗しました');
-    } finally {
-      setConverting(false);
-      setProgress(null);
-    }
-  }, [sourcePath, targetName, quantization, outputFormat, showSuccess, showError]);
+          setOutputPath(path);
+          showSuccess('モデル変換が完了しました');
+        } catch (err) {
+          const errorMessage = extractErrorMessage(err, 'モデル変換に失敗しました');
+          setError(errorMessage);
+          showError(errorMessage);
+        } finally {
+          setConverting(false);
+          setProgress(null);
+        }
+      },
+      onCancel: () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+      },
+    });
+  }, [
+    sourcePath,
+    targetName,
+    quantization,
+    outputFormat,
+    showSuccess,
+    showError,
+  ]);
 
   /**
    * ファイル選択ダイアログを開く
@@ -89,11 +137,20 @@ export const ModelConverter: React.FC = () => {
         filters: [
           {
             name: 'モデルファイル',
-            extensions: ['gguf', 'ggml', 'bin', 'pt', 'onnx', 'safetensors', 'pth', 'ckpt'],
+            extensions: [
+              'gguf',
+              'ggml',
+              'bin',
+              'pt',
+              'onnx',
+              'safetensors',
+              'pth',
+              'ckpt',
+            ],
           },
         ],
       });
-      
+
       if (selectedPath) {
         setSourcePath(selectedPath);
         showSuccess('ファイルを選択しました');
@@ -101,11 +158,10 @@ export const ModelConverter: React.FC = () => {
     } catch (err) {
       // エラーは静かに処理（手動入力にフォールバック）
       // eslint-disable-next-line no-console
-      if (process.env.NODE_ENV === 'development') {
-        // eslint-disable-next-line no-console
-        console.warn('ファイル選択ダイアログが利用できません:', err);
-      }
-      showError('ファイル選択ダイアログが利用できません。手動でパスを入力してください。');
+      logger.warn('ファイル選択ダイアログが利用できません', err, 'ModelConverter');
+      showError(
+        'ファイル選択ダイアログが利用できません。手動でパスを入力してください。'
+      );
     }
   };
 
@@ -129,14 +185,18 @@ export const ModelConverter: React.FC = () => {
               type="text"
               className="form-input"
               value={sourcePath}
-              onChange={(e) => setSourcePath(e.target.value)}
+              onChange={e => setSourcePath(e.target.value)}
               placeholder="例: /path/to/model.safetensors"
               disabled={converting}
             />
             <button
               className="button secondary"
-              onClick={handleSelectFile}
-              disabled={converting}
+              onClick={() => {
+                startTransition(() => {
+                  handleSelectFile();
+                });
+              }}
+              disabled={converting || isPending}
             >
               ファイル選択
             </button>
@@ -155,7 +215,7 @@ export const ModelConverter: React.FC = () => {
             type="text"
             className="form-input"
             value={targetName}
-            onChange={(e) => setTargetName(e.target.value)}
+            onChange={e => setTargetName(e.target.value)}
             placeholder="例: my-model-gguf"
             disabled={converting}
           />
@@ -168,7 +228,7 @@ export const ModelConverter: React.FC = () => {
             id="quantization"
             className="form-select"
             value={quantization}
-            onChange={(e) => setQuantization(e.target.value)}
+            onChange={e => setQuantization(e.target.value)}
             disabled={converting}
           >
             <option value="Q4_K_M">Q4_K_M（推奨・バランス型）</option>
@@ -188,7 +248,7 @@ export const ModelConverter: React.FC = () => {
             id="output-format"
             className="form-select"
             value={outputFormat}
-            onChange={(e) => setOutputFormat(e.target.value)}
+            onChange={e => setOutputFormat(e.target.value)}
             disabled={converting}
           >
             <option value="gguf">GGUF（Ollama推奨）</option>
@@ -198,10 +258,14 @@ export const ModelConverter: React.FC = () => {
         <div className="form-actions">
           <button
             className="button primary"
-            onClick={handleConvert}
-            disabled={converting || !sourcePath || !targetName}
+            onClick={() => {
+              startTransition(() => {
+                handleConvert();
+              });
+            }}
+            disabled={converting || !sourcePath || !targetName || isPending}
           >
-            {converting ? '変換中...' : '🔄 変換開始'}
+            {converting ? '変換中...' : '変換開始'}
           </button>
         </div>
       </div>
@@ -223,11 +287,17 @@ export const ModelConverter: React.FC = () => {
           <div className="progress-bar">
             <div
               className="progress-fill"
-              style={{ width: `${progress.progress}%` }}
+              ref={(el) => {
+                if (el) {
+                  el.style.setProperty('--progress-width', `${progress.progress}%`);
+                }
+              }}
             />
           </div>
           <div className="progress-info">
-            <span className="progress-percentage">{progress.progress.toFixed(1)}%</span>
+            <span className="progress-percentage">
+              {progress.progress.toFixed(1)}%
+            </span>
             {progress.message && (
               <span className="progress-message">{progress.message}</span>
             )}
@@ -241,7 +311,40 @@ export const ModelConverter: React.FC = () => {
           message={`モデル変換が完了しました: ${outputPath}`}
         />
       )}
+
+      {/* 確認ダイアログ */}
+      {confirmDialog.isOpen && (
+        <div
+          className="confirm-dialog-overlay"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-dialog-title"
+        >
+          <div
+            className="confirm-dialog"
+            role="document"
+          >
+            <h3 id="confirm-dialog-title">確認</h3>
+            <p>{confirmDialog.message}</p>
+            <div className="confirm-dialog-actions">
+              <button
+                className="confirm-button cancel"
+                onClick={confirmDialog.onCancel}
+                type="button"
+              >
+                キャンセル
+              </button>
+              <button
+                className="confirm-button confirm"
+                onClick={confirmDialog.onConfirm}
+                type="button"
+              >
+                確認
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
-

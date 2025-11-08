@@ -27,9 +27,15 @@
 
 .main-content {
   flex: 1;
-  padding: 2rem;
+  padding: var(--spacing-md);
   overflow-y: auto;
-  transition: margin-left 0.3s ease;
+  overflow-x: hidden;
+  transition: margin-left var(--transition-slow, 300ms ease);
+  background-color: var(--color-bg-secondary, #f7fafc);
+}
+
+[data-theme="dark"] .main-content {
+  background-color: var(--color-bg-secondary, #2d3748);
 }
 
 .main-content.with-sidebar {
@@ -51,7 +57,7 @@
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
   .main-content {
-    padding: 1rem;
+    padding: var(--spacing-md, 1rem);
   }
 
   .main-content.with-sidebar {
@@ -61,6 +67,12 @@
   .app-layout.sidebar-collapsed .main-content.with-sidebar,
   .app-layout:not(.sidebar-collapsed) .main-content.with-sidebar {
     margin-left: 0;
+  }
+}
+
+@media (max-width: 480px) {
+  .main-content {
+    padding: var(--spacing-sm, 0.5rem);
   }
 }
 

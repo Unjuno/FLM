@@ -1,6 +1,6 @@
 // ModelfileEditor - Modelfile作成・編集コンポーネント
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useTransition } from 'react';
 import { safeInvoke } from '../../utils/tauri';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { ErrorMessage } from '../common/ErrorMessage';
@@ -38,6 +38,7 @@ export const ModelfileEditor: React.FC = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [savedPath, setSavedPath] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
 
   /**
    * Modelfileを生成
@@ -50,7 +51,7 @@ export const ModelfileEditor: React.FC = () => {
 
     try {
       setError(null);
-      
+
       const modelfile = await safeInvoke<string>('generate_modelfile', {
         model_name: config.model_name,
         base_model: config.base_model || null,
@@ -64,7 +65,9 @@ export const ModelfileEditor: React.FC = () => {
       setGeneratedModelfile(modelfile);
       showSuccess('Modelfileを生成しました');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Modelfile生成に失敗しました');
+      setError(
+        err instanceof Error ? err.message : 'Modelfile生成に失敗しました'
+      );
     }
   }, [config, showSuccess]);
 
@@ -85,7 +88,7 @@ export const ModelfileEditor: React.FC = () => {
     try {
       setSaving(true);
       setError(null);
-      
+
       const path = await safeInvoke<string>('save_modelfile', {
         modelName: config.model_name,
         modelfileContent: generatedModelfile,
@@ -94,7 +97,9 @@ export const ModelfileEditor: React.FC = () => {
       setSavedPath(path);
       showSuccess('Modelfileを保存しました');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Modelfile保存に失敗しました');
+      setError(
+        err instanceof Error ? err.message : 'Modelfile保存に失敗しました'
+      );
     } finally {
       setSaving(false);
     }
@@ -111,7 +116,7 @@ export const ModelfileEditor: React.FC = () => {
 
     try {
       setError(null);
-      
+
       const modelfile = await safeInvoke<string>('load_modelfile', {
         modelName: config.model_name,
       });
@@ -119,7 +124,9 @@ export const ModelfileEditor: React.FC = () => {
       setGeneratedModelfile(modelfile);
       showSuccess('Modelfileを読み込みました');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Modelfile読み込みに失敗しました');
+      setError(
+        err instanceof Error ? err.message : 'Modelfile読み込みに失敗しました'
+      );
     }
   }, [config.model_name, showSuccess]);
 
@@ -135,7 +142,7 @@ export const ModelfileEditor: React.FC = () => {
     try {
       setSaving(true);
       setError(null);
-      
+
       await safeInvoke('create_custom_model', {
         modelName: config.model_name,
         modelfilePath: savedPath,
@@ -143,7 +150,9 @@ export const ModelfileEditor: React.FC = () => {
 
       showSuccess(`カスタムモデル "${config.model_name}" を作成しました`);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'カスタムモデル作成に失敗しました');
+      setError(
+        err instanceof Error ? err.message : 'カスタムモデル作成に失敗しました'
+      );
     } finally {
       setSaving(false);
     }
@@ -169,7 +178,9 @@ export const ModelfileEditor: React.FC = () => {
               type="text"
               className="form-input"
               value={config.model_name}
-              onChange={(e) => setConfig({ ...config, model_name: e.target.value })}
+              onChange={e =>
+                setConfig({ ...config, model_name: e.target.value })
+              }
               placeholder="例: my-custom-model"
             />
           </div>
@@ -181,7 +192,9 @@ export const ModelfileEditor: React.FC = () => {
               type="text"
               className="form-input"
               value={config.base_model || ''}
-              onChange={(e) => setConfig({ ...config, base_model: e.target.value })}
+              onChange={e =>
+                setConfig({ ...config, base_model: e.target.value })
+              }
               placeholder="例: llama3:8b"
             />
             <small className="form-hint">FROM句で使用するベースモデル</small>
@@ -194,7 +207,9 @@ export const ModelfileEditor: React.FC = () => {
               className="form-textarea"
               rows={4}
               value={config.system_prompt || ''}
-              onChange={(e) => setConfig({ ...config, system_prompt: e.target.value })}
+              onChange={e =>
+                setConfig({ ...config, system_prompt: e.target.value })
+              }
               placeholder="モデルの基本的な動作を定義するプロンプト"
             />
           </div>
@@ -206,7 +221,7 @@ export const ModelfileEditor: React.FC = () => {
               className="form-textarea"
               rows={4}
               value={config.template || ''}
-              onChange={(e) => setConfig({ ...config, template: e.target.value })}
+              onChange={e => setConfig({ ...config, template: e.target.value })}
               placeholder="会話テンプレート（{{ .Prompt }}等を使用）"
             />
           </div>
@@ -218,10 +233,14 @@ export const ModelfileEditor: React.FC = () => {
               type="text"
               className="form-input"
               value={config.parameters || ''}
-              onChange={(e) => setConfig({ ...config, parameters: e.target.value })}
+              onChange={e =>
+                setConfig({ ...config, parameters: e.target.value })
+              }
               placeholder="例: temperature 0.7, top_p 0.9"
             />
-            <small className="form-hint">カンマ区切りで複数のパラメータを指定</small>
+            <small className="form-hint">
+              カンマ区切りで複数のパラメータを指定
+            </small>
           </div>
 
           <div className="form-group">
@@ -231,7 +250,9 @@ export const ModelfileEditor: React.FC = () => {
               type="text"
               className="form-input"
               value={config.adapter_path || ''}
-              onChange={(e) => setConfig({ ...config, adapter_path: e.target.value })}
+              onChange={e =>
+                setConfig({ ...config, adapter_path: e.target.value })
+              }
               placeholder="例: /path/to/adapter.bin"
             />
           </div>
@@ -243,7 +264,7 @@ export const ModelfileEditor: React.FC = () => {
               className="form-textarea"
               rows={3}
               value={config.license || ''}
-              onChange={(e) => setConfig({ ...config, license: e.target.value })}
+              onChange={e => setConfig({ ...config, license: e.target.value })}
               placeholder="ライセンス情報"
             />
           </div>
@@ -251,17 +272,25 @@ export const ModelfileEditor: React.FC = () => {
           <div className="form-actions">
             <button
               className="button primary"
-              onClick={handleGenerate}
-              disabled={!config.model_name}
+              onClick={() => {
+                startTransition(() => {
+                  handleGenerate();
+                });
+              }}
+              disabled={!config.model_name || isPending}
             >
-              📝 Modelfile生成
+              Modelfile生成
             </button>
             <button
               className="button secondary"
-              onClick={handleLoad}
-              disabled={!config.model_name}
+              onClick={() => {
+                startTransition(() => {
+                  handleLoad();
+                });
+              }}
+              disabled={!config.model_name || isPending}
             >
-              📂 読み込む
+              読み込む
             </button>
           </div>
         </div>
@@ -272,18 +301,26 @@ export const ModelfileEditor: React.FC = () => {
             <div className="preview-actions">
               <button
                 className="button secondary"
-                onClick={handleSave}
-                disabled={!generatedModelfile || saving}
+                onClick={() => {
+                  startTransition(() => {
+                    handleSave();
+                  });
+                }}
+                disabled={!generatedModelfile || saving || isPending}
               >
-                {saving ? '保存中...' : '💾 保存'}
+                {saving ? '保存中...' : '保存'}
               </button>
               {savedPath && (
                 <button
                   className="button primary"
-                  onClick={handleCreateModel}
-                  disabled={saving}
+                  onClick={() => {
+                    startTransition(() => {
+                      handleCreateModel();
+                    });
+                  }}
+                  disabled={saving || isPending}
                 >
-                  {saving ? '作成中...' : '🚀 モデル作成'}
+                  {saving ? '作成中...' : 'モデル作成'}
                 </button>
               )}
             </div>
@@ -316,4 +353,3 @@ export const ModelfileEditor: React.FC = () => {
     </div>
   );
 };
-

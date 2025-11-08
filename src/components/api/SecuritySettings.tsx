@@ -1,7 +1,7 @@
 // SecuritySettings - セキュリティ設定コンポーネント
 // IPホワイトリスト、レート制限、APIキーローテーション設定
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useTransition } from 'react';
 import { safeInvoke } from '../../utils/tauri';
 import { useNotifications } from '../../contexts/NotificationContext';
 import './SecuritySettings.css';
@@ -25,7 +25,9 @@ interface SecuritySettingsSectionProps {
   apiId: string;
 }
 
-export const SecuritySettingsSection: React.FC<SecuritySettingsSectionProps> = ({ apiId }) => {
+export const SecuritySettingsSection: React.FC<
+  SecuritySettingsSectionProps
+> = ({ apiId }) => {
   const { showSuccess, showError } = useNotifications();
   const [settings, setSettings] = useState<SecuritySettings>({
     ip_whitelist: [],
@@ -38,6 +40,7 @@ export const SecuritySettingsSection: React.FC<SecuritySettingsSectionProps> = (
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [newIpAddress, setNewIpAddress] = useState('');
+  const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
 
   useEffect(() => {
     if (apiId) {
@@ -86,9 +89,11 @@ export const SecuritySettingsSection: React.FC<SecuritySettingsSectionProps> = (
     // IPアドレスの簡易検証
     const ipRegex = /^(\d{1,3}\.){3}\d{1,3}(\/\d{1,2})?$/;
     const cidrRegex = /^(\d{1,3}\.){3}\d{1,3}\/\d{1,2}$/;
-    
+
     if (!ipRegex.test(newIpAddress) && !cidrRegex.test(newIpAddress)) {
-      showError('有効なIPアドレスまたはCIDR表記を入力してください（例: 192.168.1.1 または 192.168.1.0/24）');
+      showError(
+        '有効なIPアドレスまたはCIDR表記を入力してください（例: 192.168.1.1 または 192.168.1.0/24）'
+      );
       return;
     }
 
@@ -111,7 +116,7 @@ export const SecuritySettingsSection: React.FC<SecuritySettingsSectionProps> = (
   const handleRemoveIpAddress = (ip: string) => {
     setSettings({
       ...settings,
-      ip_whitelist: settings.ip_whitelist.filter((addr) => addr !== ip),
+      ip_whitelist: settings.ip_whitelist.filter(addr => addr !== ip),
     });
   };
 
@@ -129,7 +134,11 @@ export const SecuritySettingsSection: React.FC<SecuritySettingsSectionProps> = (
       });
       showSuccess('IPホワイトリストを保存しました');
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'IPホワイトリストの保存に失敗しました');
+      showError(
+        err instanceof Error
+          ? err.message
+          : 'IPホワイトリストの保存に失敗しました'
+      );
     } finally {
       setSaving(false);
     }
@@ -153,7 +162,11 @@ export const SecuritySettingsSection: React.FC<SecuritySettingsSectionProps> = (
       });
       showSuccess('レート制限設定を保存しました');
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'レート制限設定の保存に失敗しました');
+      showError(
+        err instanceof Error
+          ? err.message
+          : 'レート制限設定の保存に失敗しました'
+      );
     } finally {
       setSaving(false);
     }
@@ -173,11 +186,15 @@ export const SecuritySettingsSection: React.FC<SecuritySettingsSectionProps> = (
         interval_days: settings.key_rotation_interval_days,
       });
       showSuccess('APIキーローテーション設定を保存しました');
-      
+
       // 設定を再読み込み
       await loadSecuritySettings();
     } catch (err) {
-      showError(err instanceof Error ? err.message : 'APIキーローテーション設定の保存に失敗しました');
+      showError(
+        err instanceof Error
+          ? err.message
+          : 'APIキーローテーション設定の保存に失敗しました'
+      );
     } finally {
       setSaving(false);
     }
@@ -206,8 +223,8 @@ export const SecuritySettingsSection: React.FC<SecuritySettingsSectionProps> = (
             className="form-input"
             placeholder="例: 192.168.1.1 または 192.168.1.0/24"
             value={newIpAddress}
-            onChange={(e) => setNewIpAddress(e.target.value)}
-            onKeyPress={(e) => {
+            onChange={e => setNewIpAddress(e.target.value)}
+            onKeyPress={e => {
               if (e.key === 'Enter') {
                 e.preventDefault();
                 handleAddIpAddress();
@@ -248,8 +265,12 @@ export const SecuritySettingsSection: React.FC<SecuritySettingsSectionProps> = (
         <button
           type="button"
           className="button-primary"
-          onClick={handleSaveIpWhitelist}
-          disabled={saving}
+          onClick={() => {
+            startTransition(() => {
+              handleSaveIpWhitelist();
+            });
+          }}
+          disabled={saving || isPending}
         >
           {saving ? '保存中...' : 'IPホワイトリストを保存'}
         </button>
@@ -269,8 +290,11 @@ export const SecuritySettingsSection: React.FC<SecuritySettingsSectionProps> = (
               type="checkbox"
               className="form-checkbox"
               checked={settings.rate_limit_enabled}
-              onChange={(e) =>
-                setSettings({ ...settings, rate_limit_enabled: e.target.checked })
+              onChange={e =>
+                setSettings({
+                  ...settings,
+                  rate_limit_enabled: e.target.checked,
+                })
               }
             />
             <span className="form-checkbox-text">レート制限を有効にする</span>
@@ -290,7 +314,7 @@ export const SecuritySettingsSection: React.FC<SecuritySettingsSectionProps> = (
                 min="1"
                 max="10000"
                 value={settings.rate_limit_requests}
-                onChange={(e) =>
+                onChange={e =>
                   setSettings({
                     ...settings,
                     rate_limit_requests: parseInt(e.target.value) || 100,
@@ -314,7 +338,7 @@ export const SecuritySettingsSection: React.FC<SecuritySettingsSectionProps> = (
                 min="1"
                 max="3600"
                 value={settings.rate_limit_window_seconds}
-                onChange={(e) =>
+                onChange={e =>
                   setSettings({
                     ...settings,
                     rate_limit_window_seconds: parseInt(e.target.value) || 60,
@@ -332,8 +356,12 @@ export const SecuritySettingsSection: React.FC<SecuritySettingsSectionProps> = (
         <button
           type="button"
           className="button-primary"
-          onClick={handleSaveRateLimit}
-          disabled={saving}
+          onClick={() => {
+            startTransition(() => {
+              handleSaveRateLimit();
+            });
+          }}
+          disabled={saving || isPending}
         >
           {saving ? '保存中...' : 'レート制限設定を保存'}
         </button>
@@ -353,8 +381,11 @@ export const SecuritySettingsSection: React.FC<SecuritySettingsSectionProps> = (
               type="checkbox"
               className="form-checkbox"
               checked={settings.key_rotation_enabled}
-              onChange={(e) =>
-                setSettings({ ...settings, key_rotation_enabled: e.target.checked })
+              onChange={e =>
+                setSettings({
+                  ...settings,
+                  key_rotation_enabled: e.target.checked,
+                })
               }
               disabled={saving}
               aria-label="APIキーの自動ローテーションを有効にする"
@@ -378,7 +409,7 @@ export const SecuritySettingsSection: React.FC<SecuritySettingsSectionProps> = (
                 min="1"
                 max="365"
                 value={settings.key_rotation_interval_days}
-                onChange={(e) =>
+                onChange={e =>
                   setSettings({
                     ...settings,
                     key_rotation_interval_days: parseInt(e.target.value) || 30,
@@ -397,8 +428,12 @@ export const SecuritySettingsSection: React.FC<SecuritySettingsSectionProps> = (
         <button
           type="button"
           className="button-secondary"
-          onClick={handleSaveKeyRotation}
-          disabled={saving}
+          onClick={() => {
+            startTransition(() => {
+              handleSaveKeyRotation();
+            });
+          }}
+          disabled={saving || isPending}
         >
           {saving ? '保存中...' : 'ローテーション設定を保存'}
         </button>
@@ -406,4 +441,3 @@ export const SecuritySettingsSection: React.FC<SecuritySettingsSectionProps> = (
     </div>
   );
 };
-

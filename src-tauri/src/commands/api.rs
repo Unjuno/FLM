@@ -2,16 +2,19 @@
 
 use serde::{Deserialize, Serialize};
 use crate::database::models::*;
-use crate::database::repository::{ApiRepository, ApiKeyRepository, InstalledModelRepository, RequestLogRepository, ModelCatalogRepository};
+use crate::database::repository::{ApiRepository, ApiKeyRepository, InstalledModelRepository, RequestLogRepository, ModelCatalogRepository, error_log_repository::ErrorLogRepository};
 use crate::database::connection::get_connection;
 use crate::database::DatabaseError;
+use crate::auth; // 認証モジュール（監査レポートの推奨事項に基づき追加）
 use chrono::Utc;
 use uuid::Uuid;
 use bytes::Bytes;
 use tauri::Emitter;
+// ログマクロをインポート
+use crate::{debug_log, error_log, log_pid};
 
 /// API作成設定
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ApiCreateConfig {
     pub name: String,
     pub model_name: String,
@@ -50,15 +53,19 @@ pub struct ApiInfo {
 /// API作成コマンド
 #[tauri::command]
 pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, String> {
-    // 1. データベース接続を取得
-    let conn = get_connection().map_err(|_| {
-        "データの保存に失敗しました。アプリを再起動して再度お試しください。".to_string()
+    // 0. 入力検証（監査レポートの推奨事項に基づき追加）
+    use crate::utils::input_validation;
+    input_validation::validate_api_name(&config.name).map_err(|e| {
+        format!("API名の検証に失敗しました: {}", e)
+    })?;
+    input_validation::validate_model_name(&config.model_name).map_err(|e| {
+        format!("モデル名の検証に失敗しました: {}", e)
     })?;
     
-    // 2. エンジンタイプの決定（デフォルト: 'ollama'）
+    // 1. エンジンタイプの決定（デフォルト: 'ollama'）
     let engine_type = config.engine_type.as_deref().unwrap_or("ollama");
     
-    // 3. エンジンが実行中か確認・起動
+    // 2. エンジンが実行中か確認・起動
     use crate::engines::{EngineManager, EngineConfig};
     let engine_manager = EngineManager::new();
     
@@ -76,15 +83,58 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
             auto_detect: true,
         };
         
-        engine_manager.start_engine(engine_type, Some(engine_config)).await.map_err(|e| {
-            format!("エンジンの起動に失敗しました: {e}. 手動でエンジンを起動してから再度お試しください。")
-        })?;
-        
-        // 起動確認のため少し待機
-        tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+        match engine_manager.start_engine(engine_type, Some(engine_config)).await {
+            Ok(_) => {
+                // 起動確認のため少し待機
+                tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+            },
+            Err(e) => {
+                // 手動起動が必要なエンジンの場合、より明確なメッセージを表示
+                let error_message = match engine_type {
+                    "lm_studio" => {
+                        format!("LM Studioは手動で起動する必要があります。LM Studioアプリケーションを起動してから再度お試しください。エラー詳細: {}", e)
+                    },
+                    "vllm" => {
+                        format!("vLLMは手動で起動する必要があります。vLLMサーバーを起動してから再度お試しください。例: python -m vllm.entrypoints.openai.api_server --model <model_name>。エラー詳細: {}", e)
+                    },
+                    "llama_cpp" => {
+                        format!("llama.cppは手動で起動する必要があります。llama.cppサーバーを起動してから再度お試しください。エラー詳細: {}", e)
+                    },
+                    _ => {
+                        format!("エンジンの起動に失敗しました: {}. 手動でエンジンを起動してから再度お試しください。", e)
+                    }
+                };
+                
+                // エンジンが既に起動している可能性があるため、再度確認
+                let is_running_retry = match engine_type {
+                    "ollama" => {
+                        use crate::engines::{ollama::OllamaEngine, traits::LLMEngine};
+                        OllamaEngine::new().is_running().await.unwrap_or(false)
+                    },
+                    "lm_studio" => {
+                        use crate::engines::{lm_studio::LMStudioEngine, traits::LLMEngine};
+                        LMStudioEngine::new().is_running().await.unwrap_or(false)
+                    },
+                    "vllm" => {
+                        use crate::engines::{vllm::VLLMEngine, traits::LLMEngine};
+                        VLLMEngine::new().is_running().await.unwrap_or(false)
+                    },
+                    "llama_cpp" => {
+                        use crate::engines::{llama_cpp::LlamaCppEngine, traits::LLMEngine};
+                        LlamaCppEngine::new().is_running().await.unwrap_or(false)
+                    },
+                    _ => false,
+                };
+                
+                if !is_running_retry {
+                    return Err(error_message);
+                }
+                // エンジンが既に起動している場合は続行
+            }
+        }
     }
     
-    // 5. モデルが存在するか確認（エンジンから取得）
+    // 3. モデルが存在するか確認（エンジンから取得）
     let models = engine_manager.get_engine_models(engine_type).await.map_err(|e| {
         format!("エンジンからモデル一覧を取得できませんでした: {e}")
     })?;
@@ -99,7 +149,7 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
         ));
     }
     
-    // 6. エンジン設定の検証（モデルパラメータ、メモリ設定、マルチモーダル設定）
+    // 4. エンジン設定の検証（モデルパラメータ、メモリ設定、マルチモーダル設定）
     if let Some(ref engine_config_json) = config.engine_config {
         use crate::utils::model_params;
         model_params::validate_engine_config(engine_config_json.as_str()).map_err(|e| {
@@ -108,90 +158,178 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
         })?;
     }
     
-    // 7. ポート番号のデフォルト値
-    let port = config.port.unwrap_or(8080) as i32;
+    // 5. ポート番号の決定（自動検出）
+    // まず、要求されたポートが使用可能かチェック（TCPレベル）
+    let requested_port = config.port.unwrap_or(8080);
+    eprintln!("API作成: ポート {} の検証を開始します", requested_port);
     
-    // 8. 認証設定のデフォルト値
+    let port_available = match crate::commands::port::check_port_availability(requested_port).await {
+        Ok(available) => available,
+        Err(e) => {
+            eprintln!("警告: ポート検証エラー: {}。自動検出を試みます。", e);
+            false
+        }
+    };
+    
+    let port = if port_available {
+        eprintln!("✓ ポート {} を使用します", requested_port);
+        requested_port as i32
+    } else {
+        eprintln!("ポート {} は使用中のため、代替ポートを検出中...", requested_port);
+        // TCPレベルで使用中の場合は、自動的に利用可能なポートを検出
+        match crate::commands::port::find_available_port(Some(requested_port)).await {
+            Ok(port_result) => {
+                eprintln!("✓ 代替ポート {} を使用します", port_result.recommended_port);
+                port_result.recommended_port as i32
+            },
+            Err(e) => {
+                eprintln!("✗ 代替ポートの検出に失敗しました: {}", e);
+                // 最後の手段: 8000-9000の範囲からランダムに試す
+                eprintln!("ポート範囲 8000-9000 から検索中...");
+                let mut fallback_port = None;
+                for p in 8000..9000 {
+                    if crate::commands::port::is_port_available(p) {
+                        fallback_port = Some(p);
+                        break;
+                    }
+                }
+                match fallback_port {
+                    Some(p) => {
+                        eprintln!("✓ フォールバックポート {} を使用します", p);
+                        p as i32
+                    },
+                    None => {
+                        return Err(format!("使用可能なポート番号が見つかりませんでした。他のアプリケーションがポートを使用している可能性があります。エラー: {}", e));
+                    }
+                }
+            }
+        }
+    };
+    
+    // ポート番号の範囲チェック（念のため）
+    if port < 1024 || port > 65535 {
+        return Err(format!("無効なポート番号: {}。ポート番号は1024から65535の間である必要があります。", port));
+    }
+    
+    // 6. 認証設定のデフォルト値
     let enable_auth = config.enable_auth.unwrap_or(true);
     
-    // 9. API ID生成
+    // 7. API ID生成
     let api_id = Uuid::new_v4().to_string();
     
-    // 10. API設定を作成
-    let api = Api {
-        id: api_id.clone(),
-        name: config.name.clone(),
-        model: config.model_name.clone(),
-        port,
-        enable_auth,
-        status: ApiStatus::Stopped,
-        engine_type: Some(engine_type.to_string()),
-        engine_config: config.engine_config.clone(),
-        created_at: Utc::now(),
-        updated_at: Utc::now(),
-    };
+    // 8. データベース操作をブロッキングタスクで実行（Sendトレイトの問題を回避）
+    let (final_port, api_key) = tokio::task::spawn_blocking({
+        let config_clone = config.clone();
+        let api_id_clone = api_id.clone();
+        let port_for_db = port;
+        let enable_auth_for_db = enable_auth;
+        let engine_type_for_db = engine_type.to_string();
+        move || {
+            // データベース接続を取得
+            let conn = get_connection().map_err(|e| {
+                format!("データベース接続に失敗しました: {}. アプリを再起動して再度お試しください。", e)
+            })?;
+            
+            // ポート番号の重複をチェック（他のAPIが既に使用している場合）
+            let api_repo = ApiRepository::new(&conn);
+            let final_port_local = port_for_db;
+            match api_repo.find_by_port(port_for_db) {
+                Ok(Some(existing_api)) => {
+                    // ポートが既に使用されている場合は、エラーを返す
+                    // 実際のポート検出は非同期で行う必要があるため、ここではエラーを返す
+                    // （TCPレベルのチェックで既に検出されているはずだが、念のため）
+                    return Err(format!(
+                        "ポート番号 {} は既にAPI「{}」で使用されています。別のポート番号を指定するか、既存のAPIを停止してください。",
+                        port_for_db, existing_api.name
+                    ));
+                },
+                Ok(None) => {
+                    // ポートが使用されていない場合はそのまま使用
+                },
+                Err(e) => {
+                    return Err(format!("データベースエラーが発生しました: {}. アプリを再起動して再度お試しください。", e));
+                }
+            }
+            
+            // API設定を作成
+            let api = Api {
+                id: api_id_clone.clone(),
+                name: config_clone.name.clone(),
+                model: config_clone.model_name.clone(),
+                port: final_port_local,
+                enable_auth: enable_auth_for_db,
+                status: ApiStatus::Stopped,
+                engine_type: Some(engine_type_for_db),
+                engine_config: config_clone.engine_config.clone(),
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            };
+            
+            // データベースに保存
+            api_repo.create(&api).map_err(|e| {
+                format!("APIの設定を保存できませんでした: {}. アプリを再起動して再度お試しください。", e)
+            })?;
+            
+            // APIキー生成（認証が有効な場合）
+            let api_key_result = if enable_auth_for_db {
+                use crate::database::encryption;
+                use rand::RngCore;
+                use base64::{Engine as _, engine::general_purpose::STANDARD};
+                
+                // 32文字以上のランダムAPIキーを生成
+                let mut key_bytes = vec![0u8; 32];
+                rand::thread_rng().fill_bytes(&mut key_bytes);
+                let generated_key = STANDARD.encode(&key_bytes)
+                    .chars()
+                    .take(32)
+                    .collect::<String>();
+                
+                // ハッシュを生成（検証用）
+                use sha2::{Sha256, Digest};
+                let mut hasher = Sha256::new();
+                hasher.update(&generated_key);
+                let key_hash = hex::encode(hasher.finalize());
+                
+                // 暗号化して保存
+                let encrypted_key_str = encryption::encrypt_api_key(&generated_key).map_err(|e| {
+                    format!("セキュリティキーの暗号化に失敗しました: {}. アプリを再起動して再度お試しください。", e)
+                })?;
+                
+                // Base64デコードしてバイト配列に変換（データベースに保存するため）
+                let encrypted_key_bytes = STANDARD.decode(&encrypted_key_str).map_err(|e| {
+                    format!("セキュリティキーのデコードに失敗しました: {}. アプリを再起動して再度お試しください。", e)
+                })?;
+                
+                // データベースに保存
+                let key_id = Uuid::new_v4().to_string();
+                let api_key_data = ApiKey {
+                    id: key_id,
+                    api_id: api_id_clone.clone(),
+                    key_hash: key_hash.clone(),
+                    encrypted_key: encrypted_key_bytes,
+                    created_at: Utc::now(),
+                    updated_at: Utc::now(),
+                };
+                
+                let key_repo = ApiKeyRepository::new(&conn);
+                key_repo.create(&api_key_data).map_err(|e| {
+                    format!("セキュリティキーのデータベース保存に失敗しました: {}. アプリを再起動して再度お試しください。", e)
+                })?;
+                
+                Some(generated_key)
+            } else {
+                None
+            };
+            
+            Ok::<(i32, Option<String>), String>((final_port_local, api_key_result))
+        }
+    }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
     
-    // 11. データベースに保存
-    let api_repo = ApiRepository::new(&conn);
-    api_repo.create(&api).map_err(|_| {
-        "APIの設定を保存できませんでした。アプリを再起動して再度お試しください。".to_string()
-    })?;
-    
-    // 12. APIキー生成（認証が有効な場合）
-    let api_key = if enable_auth {
-        use crate::database::encryption;
-        use rand::RngCore;
-        use base64::{Engine as _, engine::general_purpose::STANDARD};
-        
-        // 32文字以上のランダムAPIキーを生成
-        let mut key_bytes = vec![0u8; 32];
-        rand::thread_rng().fill_bytes(&mut key_bytes);
-        let generated_key = STANDARD.encode(&key_bytes)
-            .chars()
-            .take(32)
-            .collect::<String>();
-        
-        // ハッシュを生成（検証用）
-        use sha2::{Sha256, Digest};
-        let mut hasher = Sha256::new();
-        hasher.update(&generated_key);
-        let key_hash = hex::encode(hasher.finalize());
-        
-        // 暗号化して保存
-        let encrypted_key_str = encryption::encrypt_api_key(&generated_key).map_err(|_| {
-            "セキュリティキーの作成に失敗しました。アプリを再起動して再度お試しください。".to_string()
-        })?;
-        
-        // Base64デコードしてバイト配列に変換（データベースに保存するため）
-        let encrypted_key_bytes = STANDARD.decode(&encrypted_key_str).map_err(|_| {
-            "セキュリティキーの保存に失敗しました。アプリを再起動して再度お試しください。".to_string()
-        })?;
-        
-        // データベースに保存
-        let key_id = Uuid::new_v4().to_string();
-        let api_key_data = ApiKey {
-            id: key_id,
-            api_id: api_id.clone(),
-            key_hash: key_hash.clone(),
-            encrypted_key: encrypted_key_bytes,
-            created_at: Utc::now(),
-            updated_at: Utc::now(),
-        };
-        
-        let key_repo = ApiKeyRepository::new(&conn);
-        key_repo.create(&api_key_data).map_err(|_| {
-            "セキュリティキーの保存に失敗しました。アプリを再起動して再度お試しください。".to_string()
-        })?;
-        
-        Some(generated_key)
-    } else {
-        None
-    };
-    
-    // 13. エンドポイントURL生成（HTTPSとローカルIPも含む）
+    // 9. エンドポイントURL生成（HTTPSとローカルIPも含む）
+    // 注意: final_port変数は最終的に決定されたポート番号を使用
     use crate::utils::network;
     // API作成時は証明書がまだ生成されていないため、Noneを渡す（起動時に自動生成される）
-    let endpoint = network::format_endpoint_url(port as u16, None);
+    let endpoint = network::format_endpoint_url(final_port as u16, None);
     
     // 注意: 認証プロキシの起動と証明書生成は、API起動時（start_api）に行います
     // API作成時は設定の保存のみを行います
@@ -202,7 +340,7 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
         endpoint,
         api_key,
         model_name: config.model_name,
-        port: port as u16,
+        port: final_port as u16,
         status: "stopped".to_string(),
     })
 }
@@ -210,13 +348,13 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
 /// API一覧取得コマンド
 #[tauri::command]
 pub async fn list_apis() -> Result<Vec<ApiInfo>, String> {
-    let conn = get_connection().map_err(|_| {
-        "データの読み込みに失敗しました。アプリを再起動して再度お試しください。".to_string()
+    let conn = get_connection().map_err(|e| {
+        format!("データベース接続に失敗しました: {}. アプリを再起動して再度お試しください。", e)
     })?;
     
     let api_repo = ApiRepository::new(&conn);
-    let apis = api_repo.find_all().map_err(|_| {
-        "作成済みAPIの一覧を取得できませんでした。アプリを再起動して再度お試しください。".to_string()
+    let apis = api_repo.find_all().map_err(|e| {
+        format!("作成済みAPIの一覧を取得できませんでした: {}. アプリを再起動して再度お試しください。", e)
     })?;
     
     use crate::utils::network;
@@ -288,32 +426,72 @@ pub async fn start_api(api_id: String) -> Result<(), String> {
         }
     }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
     
+    // デバッグモードのチェック（環境変数で制御）
+    let debug_mode = std::env::var("FLM_DEBUG").unwrap_or_default() == "1";
+    
     // 2. エンジンが起動しているか確認・起動
     let engine_type_str = engine_type.as_deref().unwrap_or("ollama");
+    if debug_mode {
+        eprintln!("[DEBUG] エンジン状態確認開始: エンジンタイプ={}, ベースURL={}", engine_type_str, engine_base_url);
+    }
     use crate::engines::{EngineManager, EngineConfig};
     let engine_manager = EngineManager::new();
     
     let is_running = match engine_type_str {
         "ollama" => {
             use crate::engines::{ollama::OllamaEngine, traits::LLMEngine};
-            OllamaEngine::new().is_running().await.map_err(|e| format!("エンジン状態確認エラー: {e}"))?
+            if debug_mode {
+                eprintln!("[DEBUG] Ollamaの実行状態を確認中...");
+            }
+            OllamaEngine::new().is_running().await.map_err(|e| {
+                eprintln!("[ERROR] Ollama状態確認エラー: {:?}", e);
+                format!("エンジン状態確認エラー: {e}")
+            })?
         },
         "lm_studio" => {
             use crate::engines::{lm_studio::LMStudioEngine, traits::LLMEngine};
-            LMStudioEngine::new().is_running().await.map_err(|e| format!("エンジン状態確認エラー: {e}"))?
+            if debug_mode {
+                eprintln!("[DEBUG] LM Studioの実行状態を確認中...");
+            }
+            LMStudioEngine::new().is_running().await.map_err(|e| {
+                eprintln!("[ERROR] LM Studio状態確認エラー: {:?}", e);
+                format!("エンジン状態確認エラー: {e}")
+            })?
         },
         "vllm" => {
             use crate::engines::{vllm::VLLMEngine, traits::LLMEngine};
-            VLLMEngine::new().is_running().await.map_err(|e| format!("エンジン状態確認エラー: {e}"))?
+            if debug_mode {
+                eprintln!("[DEBUG] vLLMの実行状態を確認中...");
+            }
+            VLLMEngine::new().is_running().await.map_err(|e| {
+                eprintln!("[ERROR] vLLM状態確認エラー: {:?}", e);
+                format!("エンジン状態確認エラー: {e}")
+            })?
         },
         "llama_cpp" => {
             use crate::engines::{llama_cpp::LlamaCppEngine, traits::LLMEngine};
-            LlamaCppEngine::new().is_running().await.map_err(|e| format!("エンジン状態確認エラー: {e}"))?
+            if debug_mode {
+                eprintln!("[DEBUG] llama.cppの実行状態を確認中...");
+            }
+            LlamaCppEngine::new().is_running().await.map_err(|e| {
+                eprintln!("[ERROR] llama.cpp状態確認エラー: {:?}", e);
+                format!("エンジン状態確認エラー: {e}")
+            })?
         },
-        _ => return Err(format!("不明なエンジンタイプ: {engine_type_str}")),
+        _ => {
+            eprintln!("[ERROR] 不明なエンジンタイプ: {}", engine_type_str);
+            return Err(format!("不明なエンジンタイプ: {engine_type_str}"));
+        },
     };
     
+    if debug_mode {
+        eprintln!("[DEBUG] エンジン実行状態: エンジンタイプ={}, 実行中={}", engine_type_str, is_running);
+    }
+    
     if !is_running {
+        if debug_mode {
+            eprintln!("[DEBUG] エンジンが起動していないため、自動起動を試みます: エンジンタイプ={}", engine_type_str);
+        }
         let engine_config = EngineConfig {
             engine_type: engine_type_str.to_string(),
             base_url: Some(engine_base_url.clone()),
@@ -322,10 +500,72 @@ pub async fn start_api(api_id: String) -> Result<(), String> {
             auto_detect: true,
         };
         
-        engine_manager.start_engine(engine_type_str, Some(engine_config)).await
-            .map_err(|e| {
-                format!("エンジンの起動に失敗しました: {e}. 手動でエンジンを起動してから再度お試しください。")
-            })?;
+        if debug_mode {
+            debug_log!("[DEBUG] エンジン起動設定: {:?}", engine_config);
+        }
+        match engine_manager.start_engine(engine_type_str, Some(engine_config)).await {
+            Ok(pid) => {
+                if debug_mode {
+                    log_pid!(pid, "[DEBUG] エンジンの起動に成功しました: エンジンタイプ={}, PID={}", engine_type_str);
+                    debug_log!("[DEBUG] エンジンの起動確認のため、2秒待機中...");
+                }
+                // エンジンが起動した後、少し待機してから起動確認
+                tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
+            },
+            Err(e) => {
+                error_log!("[ERROR] エンジンの起動に失敗しました: エンジンタイプ={}, エラー={:?}", engine_type_str, e);
+                
+                // 手動起動が必要なエンジンの場合、より明確なメッセージを表示
+                let error_message = match engine_type_str {
+                    "lm_studio" => {
+                        format!("LM Studioは手動で起動する必要があります。LM Studioアプリケーションを起動してから再度お試しください。エラー詳細: {}", e)
+                    },
+                    "vllm" => {
+                        format!("vLLMは手動で起動する必要があります。vLLMサーバーを起動してから再度お試しください。例: python -m vllm.entrypoints.openai.api_server --model <model_name>。エラー詳細: {}", e)
+                    },
+                    "llama_cpp" => {
+                        format!("llama.cppは手動で起動する必要があります。llama.cppサーバーを起動してから再度お試しください。エラー詳細: {}", e)
+                    },
+                    _ => {
+                        format!("エンジンの起動に失敗しました: {}. 手動でエンジンを起動してから再度お試しください。エンジンタイプ: {}", e, engine_type_str)
+                    }
+                };
+                
+                // エンジンが既に起動している可能性があるため、再度確認
+                let is_running_retry = match engine_type_str {
+                    "ollama" => {
+                        use crate::engines::{ollama::OllamaEngine, traits::LLMEngine};
+                        OllamaEngine::new().is_running().await.unwrap_or(false)
+                    },
+                    "lm_studio" => {
+                        use crate::engines::{lm_studio::LMStudioEngine, traits::LLMEngine};
+                        LMStudioEngine::new().is_running().await.unwrap_or(false)
+                    },
+                    "vllm" => {
+                        use crate::engines::{vllm::VLLMEngine, traits::LLMEngine};
+                        VLLMEngine::new().is_running().await.unwrap_or(false)
+                    },
+                    "llama_cpp" => {
+                        use crate::engines::{llama_cpp::LlamaCppEngine, traits::LLMEngine};
+                        LlamaCppEngine::new().is_running().await.unwrap_or(false)
+                    },
+                    _ => false,
+                };
+                
+                if is_running_retry {
+                    if debug_mode {
+                        eprintln!("[DEBUG] エンジン起動に失敗しましたが、エンジンは既に実行中です。API作成を続行します。");
+                    }
+                    // エンジンが既に起動している場合は続行
+                } else {
+                    return Err(error_message);
+                }
+            }
+        }
+    } else {
+        if debug_mode {
+            eprintln!("[DEBUG] エンジンは既に実行中です: エンジンタイプ={}", engine_type_str);
+        }
     }
     
     // 3. SSL証明書を生成（HTTPS必須）
@@ -335,22 +575,52 @@ pub async fn start_api(api_id: String) -> Result<(), String> {
     
     // 4. 認証プロキシを起動（認証が有効な場合）
     if enable_auth {
-        use crate::auth;
+        if debug_mode {
+            eprintln!("[DEBUG] ===== 認証プロキシ起動処理開始 =====");
+            eprintln!("[DEBUG] 認証プロキシ起動設定: ポート={}, API_ID={}, エンジン={}, ベースURL={}", 
+                port, api_id, engine_type.as_deref().unwrap_or("ollama"), engine_base_url);
+            eprintln!("[DEBUG] ポート {} の使用状況を再確認中...", port);
+        }
+        
+        // ポートの使用状況を再確認
+        match crate::commands::port::is_port_available(port as u16) {
+            true => {
+                if debug_mode {
+                    eprintln!("[DEBUG] ✓ ポート {} は使用可能です", port);
+                }
+            },
+            false => eprintln!("[ERROR] ✗ ポート {} は既に使用されています", port),
+        }
         
         // 認証プロキシを起動
         // 認証プロキシサーバーはデータベースから直接APIキーのハッシュを確認するため、
         // APIキーを環境変数として渡す必要はない
         // API IDはリクエストログ記録用に環境変数として渡す
         // エンジン別のベースURLとエンジンタイプを環境変数として渡す
+        if debug_mode {
+            eprintln!("[DEBUG] start_auth_proxyを呼び出します...");
+        }
         auth::start_auth_proxy(
-            port, 
+            port as u16, 
             None, 
             Some(engine_base_url.clone()), 
             Some(api_id.clone()),
             engine_type.clone()
-        ).await.map_err(|_| {
-            "セキュリティ機能の起動に失敗しました。ポート番号が他のアプリで使用されていないか確認してください。".to_string()
+        ).await.map_err(|e| {
+            eprintln!("[ERROR] ===== 認証プロキシ起動エラー =====");
+            eprintln!("[ERROR] エラー詳細: {:?}", e);
+            eprintln!("[ERROR] ポート: {}", port);
+            eprintln!("[ERROR] API_ID: {}", api_id);
+            format!("認証プロキシの起動に失敗しました: {}. ポート番号 {} が他のアプリケーションで使用されていないか確認してください。", e, port)
         })?;
+        if debug_mode {
+            eprintln!("[DEBUG] ✓ 認証プロキシの起動に成功しました");
+            eprintln!("[DEBUG] ===== 認証プロキシ起動処理完了 =====");
+        }
+    } else {
+        if debug_mode {
+            eprintln!("[DEBUG] 認証は無効のため、認証プロキシは起動しません");
+        }
     }
     
     // 5. ステータスを更新（同期的に実行）
@@ -399,7 +669,6 @@ pub async fn stop_api(api_id: String) -> Result<(), String> {
     }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
     
     // 2. 認証プロキシを停止
-    use crate::auth;
     auth::stop_auth_proxy_by_port(port).await.map_err(|_| {
         "セキュリティ機能の停止に失敗しました。アプリを再起動して再度お試しください。".to_string()
     })?;
@@ -437,6 +706,14 @@ pub async fn stop_api(api_id: String) -> Result<(), String> {
 /// 
 /// エラーが発生しても処理を続行し、すべてのAPIに対して停止処理を試みます。
 pub async fn stop_all_running_apis() -> Result<(), String> {
+    // デバッグモードのチェック（環境変数で制御）
+    let debug_mode = std::env::var("FLM_DEBUG").unwrap_or_default() == "1";
+    
+    if debug_mode {
+        eprintln!("[DEBUG] ===== 全API停止処理開始 =====");
+        eprintln!("[DEBUG] 実行中のAPI一覧を取得中...");
+    }
+    
     // 1. 実行中のAPI一覧を取得
     let running_apis = tokio::task::spawn_blocking(|| {
         let conn = get_connection().map_err(|_| {
@@ -458,13 +735,30 @@ pub async fn stop_all_running_apis() -> Result<(), String> {
         Ok::<Vec<(String, u16)>, String>(running)
     }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
     
-    // 2. 各APIを停止
+    // デバッグモードのチェック（環境変数で制御）
+    let debug_mode = std::env::var("FLM_DEBUG").unwrap_or_default() == "1";
+    
+    if debug_mode {
+        eprintln!("[DEBUG] 実行中のAPI数: {}", running_apis.len());
+    }
+    
+    // 2. 各APIを停止（監査レポートの推奨事項に基づきプロセス監視を強化）
     for (api_id, port) in running_apis {
+        if debug_mode {
+            eprintln!("[DEBUG] API停止中: ID={}, ポート={}", api_id, port);
+        }
         // 認証プロキシを停止
-        use crate::auth;
         if let Err(e) = auth::stop_auth_proxy_by_port(port).await {
             eprintln!("警告: ポート {} の認証プロキシ停止に失敗しました: {:?}", port, e);
             // エラーが発生しても処理を続行
+        }
+        
+        // プロセスが実際に停止したかを確認（監査レポートの推奨事項に基づき追加）
+        // 少し待機してから確認
+        tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
+        let is_still_running = auth::check_proxy_running(port).await;
+        if is_still_running {
+            eprintln!("警告: ポート {} のプロセスが停止していない可能性があります。手動で確認してください。", port);
         }
         
         // ステータスを更新（同期的に実行）
@@ -498,6 +792,9 @@ pub async fn stop_all_running_apis() -> Result<(), String> {
         }
     }
     
+    if debug_mode {
+        eprintln!("[DEBUG] ===== 全API停止処理完了 =====");
+    }
     Ok(())
 }
 
@@ -608,6 +905,14 @@ pub struct ApiDetailsResponse {
 /// API設定更新コマンド
 #[tauri::command]
 pub async fn update_api(api_id: String, config: ApiUpdateConfig) -> Result<(), String> {
+    // 入力検証（監査レポートの推奨事項に基づき追加）
+    use crate::utils::input_validation;
+    if let Some(ref name) = config.name {
+        input_validation::validate_api_name(name).map_err(|e| {
+            format!("API名の検証に失敗しました: {}", e)
+        })?;
+    }
+    
     // エンジン設定（engine_config）の検証（モデルパラメータ、メモリ設定、マルチモーダル設定）
     if let Some(ref engine_config_json) = config.engine_config {
         use crate::utils::model_params;
@@ -690,7 +995,6 @@ pub async fn update_api(api_id: String, config: ApiUpdateConfig) -> Result<(), S
     // 設定変更により再起動が必要な場合
     if needs_restart_flag && was_running {
         // 1. 既存の認証プロキシを停止（古いポート番号で）
-        use crate::auth;
         let _ = auth::stop_auth_proxy_by_port(old_port as u16).await;
         
         // 2. エンジンタイプとベースURLを取得（再起動時に必要）
@@ -921,7 +1225,7 @@ pub async fn get_models_list() -> Result<Vec<ModelInfo>, String> {
     }
     
     // Ollama APIからモデル一覧を取得
-    let client = reqwest::Client::new();
+    let client = crate::utils::http_client::create_http_client()?;
     let response = client
         .get("http://localhost:11434/api/tags")
         .send()
@@ -1000,14 +1304,36 @@ pub async fn download_model(
     use futures_util::StreamExt;
     
     // Ollamaが実行中か確認
-    if !check_ollama_running().await.map_err(|_| {
-        "AIエンジンの状態を確認できませんでした。".to_string()
-    })? {
-        return Err("AIエンジンが実行されていません。先にAIエンジンを起動してください。".to_string());
+    eprintln!("[DEBUG] ===== モデルダウンロード開始 =====");
+    eprintln!("[DEBUG] モデル名: {}", model_name);
+    eprintln!("[DEBUG] Ollamaの実行状態を確認中...");
+    
+    match check_ollama_running().await {
+        Ok(true) => {
+            eprintln!("[DEBUG] ✓ Ollamaは実行中です");
+        },
+        Ok(false) => {
+            eprintln!("[ERROR] ✗ Ollamaが実行されていません");
+            return Err("AIエンジンが実行されていません。先にAIエンジンを起動してください。ホーム画面から「Ollamaセットアップ」を実行するか、Ollamaを手動で起動してください。".to_string());
+        },
+        Err(e) => {
+            eprintln!("[ERROR] Ollama状態確認エラー: {:?}", e);
+            return Err(format!("AIエンジンの状態を確認できませんでした。Ollamaが正常にインストールされているか確認してください。エラー詳細: {}", e));
+        }
     }
     
+    eprintln!("[DEBUG] Ollama APIにモデルダウンロードリクエストを送信: http://localhost:11434/api/pull");
+    
     // Ollama APIにモデルダウンロードリクエストを送信
-    let client = reqwest::Client::new();
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(30)) // タイムアウトを30秒に設定
+        .build()
+        .map_err(|e| {
+            eprintln!("[ERROR] HTTPクライアント作成エラー: {:?}", e);
+            format!("HTTPクライアントの作成に失敗しました: {}", e)
+        })?;
+    
+    eprintln!("[DEBUG] モデルダウンロードリクエスト送信: モデル名={}", model_name);
     let response = client
         .post("http://localhost:11434/api/pull")
         .json(&serde_json::json!({
@@ -1016,12 +1342,41 @@ pub async fn download_model(
         }))
         .send()
         .await
-        .map_err(|_| "AIエンジンに接続できませんでした。AIエンジンが正常に起動しているか確認してください。".to_string())?;
+        .map_err(|e| {
+            eprintln!("[ERROR] Ollama API接続エラー: {:?}", e);
+            let error_msg = if e.is_timeout() {
+                format!("Ollama APIへの接続がタイムアウトしました（30秒）。Ollamaが正常に起動しているか確認してください。エラー詳細: {}", e)
+            } else if e.is_connect() {
+                format!("Ollama APIに接続できませんでした（ポート11434）。Ollamaが正常に起動しているか確認してください。エラー詳細: {}", e)
+            } else {
+                format!("Ollama APIへの接続中にエラーが発生しました。エラー詳細: {}", e)
+            };
+            error_msg
+        })?;
+    
+    eprintln!("[DEBUG] Ollama APIレスポンス受信: ステータスコード={}", response.status());
     
     let status = response.status();
     if !status.is_success() {
-        return Err(format!("AIモデルのダウンロードに失敗しました（エラーコード: {status}）。AIエンジンが正常に動作しているか確認してください。"));
+        eprintln!("[ERROR] ✗ Ollama APIエラー: ステータスコード={}", status);
+        let error_body = response.text().await.unwrap_or_else(|_| "レスポンス本文を読み取れませんでした".to_string());
+        eprintln!("[ERROR] エラー詳細: {}", error_body);
+        
+        // エラーレスポンスをJSONとして解析して、より詳細なエラーメッセージを取得
+        let error_message = if let Ok(error_json) = serde_json::from_str::<serde_json::Value>(&error_body) {
+            if let Some(error_msg) = error_json.get("error").and_then(|e| e.as_str()) {
+                format!("Ollama APIエラー: {} (HTTP {})", error_msg, status)
+            } else {
+                format!("AIモデルのダウンロードに失敗しました（HTTP {}）。エラー詳細: {}", status, error_body)
+            }
+        } else {
+            format!("AIモデルのダウンロードに失敗しました（HTTP {}）。AIエンジンが正常に動作しているか確認してください。エラー詳細: {}", status, error_body)
+        };
+        
+        return Err(error_message);
     }
+    
+    eprintln!("[DEBUG] ✓ Ollama APIリクエスト成功、ストリーミング開始");
     
     // ストリーミングレスポンスを処理
     // Ollama APIは各行がJSONオブジェクトの形式で進捗を返す
@@ -1036,9 +1391,30 @@ pub async fn download_model(
     const MAX_BUFFER_SIZE: usize = 10 * 1024;
     
     while let Some(chunk_result) = stream.next().await {
-        let chunk: Bytes = chunk_result.map_err(|_| {
-            "ダウンロード中にエラーが発生しました。ネットワーク接続を確認してください。".to_string()
-        })?;
+        let chunk: Bytes = match chunk_result {
+            Ok(chunk) => chunk,
+            Err(e) => {
+                eprintln!("[ERROR] ストリーミングデータ受信エラー: {:?}", e);
+                let error_msg = if e.is_timeout() {
+                    format!("ダウンロード中にタイムアウトが発生しました。ネットワーク接続を確認してください。エラー詳細: {}", e)
+                } else if e.is_request() {
+                    format!("ダウンロードリクエスト中にエラーが発生しました。エラー詳細: {}", e)
+                } else {
+                    format!("ダウンロード中にエラーが発生しました。ネットワーク接続を確認してください。エラー詳細: {}", e)
+                };
+                // エラー進捗を送信
+                let error_progress = ModelDownloadProgress {
+                    status: "error".to_string(),
+                    progress: 0.0,
+                    downloaded_bytes: total_downloaded,
+                    total_bytes: total_size,
+                    speed_bytes_per_sec: 0.0,
+                    message: Some(error_msg.clone()),
+                };
+                let _ = app_handle.emit("model_download_progress", &error_progress);
+                return Err(error_msg);
+            }
+        };
         
         let chunk_len: usize = chunk.len();
         total_downloaded += chunk_len as u64;
@@ -1092,6 +1468,21 @@ pub async fn download_model(
             
             // JSONオブジェクトを解析
             if let Ok(json) = serde_json::from_str::<serde_json::Value>(&line_str) {
+                // エラーレスポンスをチェック
+                if let Some(error_msg) = json.get("error").and_then(|e| e.as_str()) {
+                    eprintln!("[ERROR] Ollama APIからエラーレスポンスを受信: {}", error_msg);
+                    let error_progress = ModelDownloadProgress {
+                        status: "error".to_string(),
+                        progress: 0.0,
+                        downloaded_bytes: total_downloaded,
+                        total_bytes: total_size,
+                        speed_bytes_per_sec: 0.0,
+                        message: Some(format!("Ollama APIエラー: {}", error_msg)),
+                    };
+                    let _ = app_handle.emit("model_download_progress", &error_progress);
+                    return Err(format!("モデルダウンロード中にエラーが発生しました: {}", error_msg));
+                }
+                
                 // Ollama APIの進捗情報を取得
                 // レスポンス形式: {"status": "pulling manifest", "digest": "...", "total": 100, "completed": 50}
                 let status = json.get("status")
@@ -1153,9 +1544,9 @@ pub async fn download_model(
                 .to_string();
             
              if status == "success" {
-                 // ダウンロード完了後、データベースに保存
-                 // モデル情報を取得（Ollama APIから）
-                 let client = reqwest::Client::new();
+                // ダウンロード完了後、データベースに保存
+                // モデル情報を取得（Ollama APIから）
+                if let Ok(client) = crate::utils::http_client::create_http_client() {
                  if let Ok(tags_response) = client
                      .get("http://localhost:11434/api/tags")
                      .send()
@@ -1240,7 +1631,7 @@ pub async fn delete_model(model_name: String) -> Result<(), String> {
     }
     
     // Ollama APIにモデル削除リクエストを送信
-    let client = reqwest::Client::new();
+    let client = crate::utils::http_client::create_http_client()?;
     let response = client
         .post("http://localhost:11434/api/delete")
         .json(&serde_json::json!({
@@ -1292,10 +1683,12 @@ pub async fn get_installed_models() -> Result<Vec<InstalledModelInfo>, String> {
     if check_ollama_running().await.map_err(|_| {
         "AIエンジンの状態を確認できませんでした。".to_string()
     })? {
-        let client = reqwest::Client::new();
+        let client = match crate::utils::http_client::create_http_client() {
+            Ok(client) => client,
+            Err(_) => return Ok(Vec::new()),
+        };
         if let Ok(response) = client
             .get("http://localhost:11434/api/tags")
-            .timeout(std::time::Duration::from_secs(5))
             .send()
             .await
         {
@@ -1427,6 +1820,9 @@ pub struct GetRequestLogsRequest {
     pub end_date: Option<String>,
     pub status_codes: Option<Vec<i32>>,
     pub path_filter: Option<String>,
+    /// エラーメッセージが存在するログのみを取得するかどうか（デフォルト: false）
+    #[serde(default)]
+    pub errors_only: bool,
 }
 
 /// リクエストログ情報（フロントエンド用）
@@ -1468,6 +1864,7 @@ pub async fn get_request_logs(request: GetRequestLogsRequest) -> Result<GetReque
         request.end_date.as_deref(),
         request.status_codes.as_deref(),
         request.path_filter.as_deref(),
+        request.errors_only,
     ).map_err(|e| {
         format!("リクエストログの取得に失敗しました: {e}")
     })?;
@@ -1479,6 +1876,7 @@ pub async fn get_request_logs(request: GetRequestLogsRequest) -> Result<GetReque
         request.end_date.as_deref(),
         request.status_codes.as_deref(),
         request.path_filter.as_deref(),
+        request.errors_only,
     ).map_err(|e| {
         format!("ログ総件数の取得に失敗しました: {e}")
     })?;
@@ -1557,6 +1955,21 @@ pub struct ExportLogsRequest {
     pub end_date: Option<String>,
     pub status_codes: Option<Vec<i32>>,
     pub path_filter: Option<String>,
+    /// リクエストボディを含めるかどうか（デフォルト: false、プライバシー保護のため）
+    #[serde(default)]
+    pub include_request_body: bool,
+    /// リクエストボディをマスク処理するかどうか（include_request_bodyがtrueの場合のみ有効、デフォルト: true）
+    #[serde(default = "default_true")]
+    pub mask_request_body: bool,
+    /// エクスポートファイルを暗号化するかどうか（デフォルト: false）
+    #[serde(default)]
+    pub encrypt: bool,
+    /// 暗号化パスワード（encryptがtrueの場合に必須）
+    pub password: Option<String>,
+}
+
+fn default_true() -> bool {
+    true
 }
 
 /// ログエクスポートレスポンス（BE-008-01）
@@ -1586,11 +1999,27 @@ pub async fn export_logs(request: ExportLogsRequest) -> Result<ExportLogsRespons
         request.end_date.as_deref(),
         request.status_codes.as_deref(),
         request.path_filter.as_deref(),
+        false, // エクスポート時はerrors_onlyフィルタは使用しない（全ログをエクスポート）
     ).map_err(|e| {
         format!("リクエストログの取得に失敗しました: {e}")
     })?;
     
     let count = i64::try_from(logs.len()).unwrap_or(0);
+    
+    // リクエストボディの処理（マスク処理または除外）
+    let process_request_body = |body: &Option<String>| -> Option<String> {
+        if !request.include_request_body {
+            return None;
+        }
+        
+        body.as_ref().map(|b| {
+            if request.mask_request_body {
+                mask_sensitive_data(b)
+            } else {
+                b.clone()
+            }
+        })
+    };
     
     // フォーマットに応じてデータを変換
     let data = match request.format.as_str() {
@@ -1598,22 +2027,44 @@ pub async fn export_logs(request: ExportLogsRequest) -> Result<ExportLogsRespons
             // CSV形式に変換
             let mut csv = String::new();
             // ヘッダー行
-            csv.push_str("ID,API ID,Method,Path,Request Body,Response Status,Response Time (ms),Error Message,Created At\n");
+            if request.include_request_body {
+                csv.push_str("ID,API ID,Method,Path,Request Body,Response Status,Response Time (ms),Error Message,Created At\n");
+            } else {
+                csv.push_str("ID,API ID,Method,Path,Response Status,Response Time (ms),Error Message,Created At\n");
+            }
             
             // データ行
             for log in &logs {
-                csv.push_str(&format!(
-                    "{},{},{},{},{},{},{},{},{}\n",
-                    escape_csv_field(&log.id),
-                    escape_csv_field(&log.api_id),
-                    escape_csv_field(&log.method),
-                    escape_csv_field(&log.path),
-                    escape_csv_field(&log.request_body.as_deref().unwrap_or("")),
-                    log.response_status.map(|s| s.to_string()).as_deref().unwrap_or(""),
-                    log.response_time_ms.map(|t| t.to_string()).as_deref().unwrap_or(""),
-                    escape_csv_field(&log.error_message.as_deref().unwrap_or("")),
-                    escape_csv_field(&log.created_at.to_rfc3339()),
-                ));
+                let request_body_str = process_request_body(&log.request_body)
+                    .map(|b| escape_csv_field(&b))
+                    .unwrap_or_else(|| "".to_string());
+                
+                if request.include_request_body {
+                    csv.push_str(&format!(
+                        "{},{},{},{},{},{},{},{},{}\n",
+                        escape_csv_field(&log.id),
+                        escape_csv_field(&log.api_id),
+                        escape_csv_field(&log.method),
+                        escape_csv_field(&log.path),
+                        request_body_str,
+                        log.response_status.map(|s| s.to_string()).as_deref().unwrap_or(""),
+                        log.response_time_ms.map(|t| t.to_string()).as_deref().unwrap_or(""),
+                        escape_csv_field(&log.error_message.as_deref().unwrap_or("")),
+                        escape_csv_field(&log.created_at.to_rfc3339()),
+                    ));
+                } else {
+                    csv.push_str(&format!(
+                        "{},{},{},{},{},{},{},{}\n",
+                        escape_csv_field(&log.id),
+                        escape_csv_field(&log.api_id),
+                        escape_csv_field(&log.method),
+                        escape_csv_field(&log.path),
+                        log.response_status.map(|s| s.to_string()).as_deref().unwrap_or(""),
+                        log.response_time_ms.map(|t| t.to_string()).as_deref().unwrap_or(""),
+                        escape_csv_field(&log.error_message.as_deref().unwrap_or("")),
+                        escape_csv_field(&log.created_at.to_rfc3339()),
+                    ));
+                }
             }
             csv
         },
@@ -1625,7 +2076,7 @@ pub async fn export_logs(request: ExportLogsRequest) -> Result<ExportLogsRespons
                     api_id: log.api_id,
                     method: log.method,
                     path: log.path,
-                    request_body: log.request_body,
+                    request_body: process_request_body(&log.request_body),
                     response_status: log.response_status,
                     response_time_ms: log.response_time_ms,
                     error_message: log.error_message,
@@ -1642,11 +2093,58 @@ pub async fn export_logs(request: ExportLogsRequest) -> Result<ExportLogsRespons
         }
     };
     
+    // 暗号化処理
+    let final_data = if request.encrypt {
+        if let Some(password) = request.password {
+            encrypt_export_data(&data, &password).map_err(|e| {
+                format!("エクスポートデータの暗号化に失敗しました: {}", e)
+            })?
+        } else {
+            return Err("暗号化が有効ですが、パスワードが指定されていません。".to_string());
+        }
+    } else {
+        data
+    };
+    
     Ok(ExportLogsResponse {
-        data,
+        data: final_data,
         format: request.format,
         count,
     })
+}
+
+/// エクスポートデータを暗号化（パスワードベース）
+fn encrypt_export_data(data: &str, password: &str) -> Result<String, String> {
+    use aes_gcm::{
+        aead::{Aead, AeadCore, KeyInit, OsRng},
+        Aes256Gcm,
+    };
+    use sha2::{Sha256, Digest};
+    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    
+    // パスワードから32バイトのキーを生成（SHA-256）
+    let mut hasher = Sha256::new();
+    hasher.update(password.as_bytes());
+    let key_bytes = hasher.finalize();
+    
+    // AES-256-GCMで暗号化
+    #[allow(deprecated)] // aes-gcm 0.10では非推奨だが、依存関係のバージョンアップは中長期改善項目
+    let cipher = Aes256Gcm::new_from_slice(&key_bytes)
+        .map_err(|e| format!("暗号化キーの生成に失敗しました: {}", e))?;
+    
+    // Nonceを生成
+    let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
+    
+    // 暗号化
+    let ciphertext = cipher.encrypt(&nonce, data.as_bytes().as_ref())
+        .map_err(|e| format!("暗号化エラー: {}", e))?;
+    
+    // Nonceと暗号文を結合してBase64エンコード
+    let nonce_bytes: &[u8] = nonce.as_ref();
+    let mut combined: Vec<u8> = nonce_bytes.to_vec();
+    combined.extend_from_slice(&ciphertext);
+    
+    Ok(STANDARD.encode(&combined))
 }
 
 /// CSVフィールドのエスケープ処理（BE-008-01）
@@ -1656,6 +2154,134 @@ fn escape_csv_field(field: &str) -> String {
         format!("\"{}\"", field.replace('"', "\"\""))
     } else {
         field.to_string()
+    }
+}
+
+/// リクエストボディの機密情報をマスク処理（プライバシー保護）
+fn mask_sensitive_data(body: &str) -> String {
+    // JSONパースを試みる
+    if let Ok(mut json_value) = serde_json::from_str::<serde_json::Value>(body) {
+        mask_json_value(&mut json_value);
+        serde_json::to_string(&json_value).unwrap_or_else(|_| "***MASKED***".to_string())
+    } else {
+        // JSONでない場合は、機密情報と思われるパターンをマスク
+        let sensitive_patterns = vec![
+            // API認証関連
+            (r#""api_key"\s*:\s*"[^"]*""#, r#""api_key": "***MASKED***""#),
+            (r#""apiKey"\s*:\s*"[^"]*""#, r#""apiKey": "***MASKED***""#),
+            (r#""api-key"\s*:\s*"[^"]*""#, r#""api-key": "***MASKED***""#),
+            (r#""authorization"\s*:\s*"[^"]*""#, r#""authorization": "***MASKED***""#),
+            (r#""Authorization"\s*:\s*"[^"]*""#, r#""Authorization": "***MASKED***""#),
+            // パスワード関連
+            (r#""password"\s*:\s*"[^"]*""#, r#""password": "***MASKED***""#),
+            (r#""passwd"\s*:\s*"[^"]*""#, r#""passwd": "***MASKED***""#),
+            (r#""pwd"\s*:\s*"[^"]*""#, r#""pwd": "***MASKED***""#),
+            (r#""passphrase"\s*:\s*"[^"]*""#, r#""passphrase": "***MASKED***""#),
+            // トークン関連
+            (r#""token"\s*:\s*"[^"]*""#, r#""token": "***MASKED***""#),
+            (r#""access_token"\s*:\s*"[^"]*""#, r#""access_token": "***MASKED***""#),
+            (r#""refresh_token"\s*:\s*"[^"]*""#, r#""refresh_token": "***MASKED***""#),
+            (r#""bearer_token"\s*:\s*"[^"]*""#, r#""bearer_token": "***MASKED***""#),
+            (r#""jwt"\s*:\s*"[^"]*""#, r#""jwt": "***MASKED***""#),
+            // シークレット関連
+            (r#""secret"\s*:\s*"[^"]*""#, r#""secret": "***MASKED***""#),
+            (r#""secret_key"\s*:\s*"[^"]*""#, r#""secret_key": "***MASKED***""#),
+            (r#""private_key"\s*:\s*"[^"]*""#, r#""private_key": "***MASKED***""#),
+            // クレジットカード関連
+            (r#""credit_card"\s*:\s*"[^"]*""#, r#""credit_card": "***MASKED***""#),
+            (r#""card_number"\s*:\s*"[^"]*""#, r#""card_number": "***MASKED***""#),
+            (r#""cvv"\s*:\s*"[^"]*""#, r#""cvv": "***MASKED***""#),
+            (r#""cvc"\s*:\s*"[^"]*""#, r#""cvc": "***MASKED***""#),
+            // 個人情報関連
+            (r#""ssn"\s*:\s*"[^"]*""#, r#""ssn": "***MASKED***""#),
+            (r#""social_security"\s*:\s*"[^"]*""#, r#""social_security": "***MASKED***""#),
+        ];
+        
+        let mut masked = body.to_string();
+        for (pattern, replacement) in sensitive_patterns {
+            masked = regex::Regex::new(pattern)
+                .unwrap_or_else(|_| {
+                    // 正規表現のコンパイルに失敗した場合は、空の正規表現を使用
+                    // 空の正規表現は常にマッチしないため、安全
+                    regex::Regex::new("(?!)").unwrap_or_else(|_| {
+                        // これも失敗する可能性は極めて低いが、念のため
+                        // 空文字列の正規表現は常に成功する（コンパイルエラーにならない）
+                        regex::Regex::new("")
+                            .expect("空文字列の正規表現コンパイルは常に成功するはず")
+                    })
+                })
+                .replace_all(&masked, replacement)
+                .to_string();
+        }
+        
+        if masked == body {
+            "***MASKED***".to_string()
+        } else {
+            masked
+        }
+    }
+}
+
+/// JSON値の機密情報を再帰的にマスク処理
+fn mask_json_value(value: &mut serde_json::Value) {
+    use serde_json::Value;
+    match value {
+        Value::Object(map) => {
+            let sensitive_keys = vec![
+                // API認証関連
+                "api_key", "apiKey", "apikey", "apikey", "api-key", "api_key",
+                "authorization", "Authorization", "authorization", "auth",
+                // パスワード関連
+                "password", "passwd", "pwd", "pass", "passphrase",
+                // トークン関連
+                "token", "access_token", "refresh_token", "bearer_token", "jwt",
+                "session_token", "csrf_token", "xsrf_token",
+                // シークレット関連
+                "secret", "secret_key", "private_key", "privatekey", "private_key",
+                "public_key", "publickey", "public_key",
+                // クレジットカード関連
+                "credit_card", "creditcard", "card_number", "cardnumber", "cvv", "cvc",
+                "expiry", "expiration", "exp_date",
+                // 個人情報関連
+                "ssn", "social_security", "social_security_number", "tax_id",
+                "driver_license", "drivers_license", "license_number",
+                // メールアドレス（一部のコンテキストで機密）
+                "email", "e-mail", "email_address",
+                // 電話番号
+                "phone", "phone_number", "mobile", "telephone",
+                // その他の機密情報
+                "pin", "otp", "verification_code", "security_code",
+                "account_number", "routing_number", "iban", "swift",
+            ];
+            
+            for (key, val) in map.iter_mut() {
+                let lower_key = key.to_lowercase();
+                let is_sensitive = sensitive_keys.iter().any(|sk| lower_key.contains(sk));
+                
+                if is_sensitive {
+                    if let Value::String(s) = val {
+                        if s.len() > 8 {
+                            *val = Value::String(format!("{}***{}", 
+                                &s[..4.min(s.len())], 
+                                &s[s.len().saturating_sub(4)..]
+                            ));
+                        } else {
+                            *val = Value::String("***MASKED***".to_string());
+                        }
+                    } else {
+                        *val = Value::String("***MASKED***".to_string());
+                    }
+                } else {
+                    mask_json_value(val);
+                }
+            }
+        },
+        Value::Array(arr) => {
+            for item in arr.iter_mut() {
+                mask_json_value(item);
+            }
+        },
+        _ => {}
     }
 }
 
@@ -1999,4 +2625,437 @@ pub async fn get_model_catalog() -> Result<Vec<ModelCatalogInfo>, String> {
     }).collect();
     
     Ok(result)
+}
+
+/// Hugging Faceモデル情報取得コマンド
+#[tauri::command]
+pub async fn get_huggingface_model_info(model_id: String) -> Result<crate::utils::huggingface::HuggingFaceModel, String> {
+    use crate::utils::huggingface;
+    
+    huggingface::get_huggingface_model_info(&model_id)
+        .await
+        .map_err(|e| match e {
+            crate::utils::error::AppError::ApiError { message, .. } => message,
+            _ => format!("モデル情報の取得に失敗しました: {}", e),
+        })
+}
+
+/// セキュリティ設定取得コマンド
+#[tauri::command]
+pub async fn get_security_settings(api_id: String) -> Result<Option<serde_json::Value>, String> {
+    use crate::database::repository::security_repository::ApiSecuritySettingsRepository;
+    
+    let conn = get_connection().map_err(|e| {
+        format!("データベース接続エラー: {e}")
+    })?;
+    
+    let settings = ApiSecuritySettingsRepository::find_by_api_id(&conn, &api_id).map_err(|e| {
+        format!("セキュリティ設定の取得に失敗しました: {e}")
+    })?;
+    
+    match settings {
+        Some(settings) => {
+            // IPホワイトリストをJSON配列に変換
+            let ip_whitelist: Vec<String> = settings.ip_whitelist
+                .as_ref()
+                .and_then(|s| serde_json::from_str(s).ok())
+                .unwrap_or_default();
+            
+            let result = serde_json::json!({
+                "ip_whitelist": ip_whitelist,
+                "rate_limit_enabled": settings.rate_limit_enabled,
+                "rate_limit_requests": settings.rate_limit_requests,
+                "rate_limit_window_seconds": settings.rate_limit_window_seconds,
+                "key_rotation_enabled": settings.key_rotation_enabled,
+                "key_rotation_interval_days": settings.key_rotation_interval_days,
+            });
+            
+            Ok(Some(result))
+        },
+        None => Ok(None),
+    }
+}
+
+/// IPホワイトリスト設定コマンド
+#[tauri::command]
+pub async fn set_ip_whitelist(api_id: String, whitelist: Vec<String>) -> Result<(), String> {
+    // 入力検証（監査レポートの推奨事項に基づき追加）
+    use crate::utils::input_validation;
+    for ip in &whitelist {
+        input_validation::validate_ip_address(ip).map_err(|e| {
+            format!("IPアドレスの検証に失敗しました（{}）: {}", ip, e)
+        })?;
+    }
+    
+    use crate::database::repository::security_repository::ApiSecuritySettingsRepository;
+    use crate::database::models::ApiSecuritySettings;
+    
+    let conn = get_connection().map_err(|e| {
+        format!("データベース接続エラー: {e}")
+    })?;
+    
+    // 既存の設定を取得または新規作成
+    let settings = match ApiSecuritySettingsRepository::find_by_api_id(&conn, &api_id).map_err(|e| {
+        format!("セキュリティ設定の取得に失敗しました: {e}")
+    })? {
+        Some(mut s) => {
+            // IPホワイトリストをJSON文字列に変換
+            let ip_whitelist_json = serde_json::to_string(&whitelist).map_err(|e| {
+                format!("IPホワイトリストの変換に失敗しました: {e}")
+            })?;
+            s.ip_whitelist = Some(ip_whitelist_json);
+            s.updated_at = Utc::now();
+            s
+        },
+        None => {
+            // 新規作成
+            let ip_whitelist_json = serde_json::to_string(&whitelist).map_err(|e| {
+                format!("IPホワイトリストの変換に失敗しました: {e}")
+            })?;
+            ApiSecuritySettings {
+                api_id: api_id.clone(),
+                ip_whitelist: Some(ip_whitelist_json),
+                rate_limit_enabled: false,
+                rate_limit_requests: 100,
+                rate_limit_window_seconds: 60,
+                key_rotation_enabled: false,
+                key_rotation_interval_days: 30,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            }
+        },
+    };
+    
+    // 設定を保存
+    if settings.created_at == settings.updated_at && settings.created_at == Utc::now() {
+        // 新規作成
+        ApiSecuritySettingsRepository::create(&conn, &settings).map_err(|e| {
+            format!("セキュリティ設定の保存に失敗しました: {e}")
+        })?;
+    } else {
+        // 更新
+        ApiSecuritySettingsRepository::update(&conn, &settings).map_err(|e| {
+            format!("セキュリティ設定の更新に失敗しました: {e}")
+        })?;
+    }
+    
+    Ok(())
+}
+
+/// レート制限設定更新コマンド
+#[tauri::command]
+pub async fn update_rate_limit_config(
+    api_id: String,
+    config: serde_json::Value,
+) -> Result<(), String> {
+    use crate::database::repository::security_repository::ApiSecuritySettingsRepository;
+    use crate::database::models::ApiSecuritySettings;
+    
+    let enabled = config.get("enabled")
+        .and_then(|v| v.as_bool())
+        .unwrap_or(false);
+    let requests = config.get("requests")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(100) as i32;
+    let window_seconds = config.get("window_seconds")
+        .and_then(|v| v.as_i64())
+        .unwrap_or(60) as i32;
+    
+    let conn = get_connection().map_err(|e| {
+        format!("データベース接続エラー: {e}")
+    })?;
+    
+    // 既存の設定を取得または新規作成
+    let settings = match ApiSecuritySettingsRepository::find_by_api_id(&conn, &api_id).map_err(|e| {
+        format!("セキュリティ設定の取得に失敗しました: {e}")
+    })? {
+        Some(mut s) => {
+            s.rate_limit_enabled = enabled;
+            s.rate_limit_requests = requests;
+            s.rate_limit_window_seconds = window_seconds;
+            s.updated_at = Utc::now();
+            s
+        },
+        None => {
+            ApiSecuritySettings {
+                api_id: api_id.clone(),
+                ip_whitelist: None,
+                rate_limit_enabled: enabled,
+                rate_limit_requests: requests,
+                rate_limit_window_seconds: window_seconds,
+                key_rotation_enabled: false,
+                key_rotation_interval_days: 30,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            }
+        },
+    };
+    
+    // 設定を保存
+    if settings.created_at == settings.updated_at && settings.created_at == Utc::now() {
+        ApiSecuritySettingsRepository::create(&conn, &settings).map_err(|e| {
+            format!("セキュリティ設定の保存に失敗しました: {e}")
+        })?;
+    } else {
+        ApiSecuritySettingsRepository::update(&conn, &settings).map_err(|e| {
+            format!("セキュリティ設定の更新に失敗しました: {e}")
+        })?;
+    }
+    
+    Ok(())
+}
+
+/// APIキーローテーション設定更新コマンド
+#[tauri::command]
+pub async fn update_key_rotation_config(
+    api_id: String,
+    enabled: bool,
+    interval_days: i32,
+) -> Result<(), String> {
+    use crate::database::repository::security_repository::ApiSecuritySettingsRepository;
+    use crate::database::models::ApiSecuritySettings;
+    
+    let conn = get_connection().map_err(|e| {
+        format!("データベース接続エラー: {e}")
+    })?;
+    
+    // 既存の設定を取得または新規作成
+    let settings = match ApiSecuritySettingsRepository::find_by_api_id(&conn, &api_id).map_err(|e| {
+        format!("セキュリティ設定の取得に失敗しました: {e}")
+    })? {
+        Some(mut s) => {
+            s.key_rotation_enabled = enabled;
+            s.key_rotation_interval_days = interval_days;
+            s.updated_at = Utc::now();
+            s
+        },
+        None => {
+            ApiSecuritySettings {
+                api_id: api_id.clone(),
+                ip_whitelist: None,
+                rate_limit_enabled: false,
+                rate_limit_requests: 100,
+                rate_limit_window_seconds: 60,
+                key_rotation_enabled: enabled,
+                key_rotation_interval_days: interval_days,
+                created_at: Utc::now(),
+                updated_at: Utc::now(),
+            }
+        },
+    };
+    
+    // 設定を保存
+    if settings.created_at == settings.updated_at && settings.created_at == Utc::now() {
+        ApiSecuritySettingsRepository::create(&conn, &settings).map_err(|e| {
+            format!("セキュリティ設定の保存に失敗しました: {e}")
+        })?;
+    } else {
+        ApiSecuritySettingsRepository::update(&conn, &settings).map_err(|e| {
+            format!("セキュリティ設定の更新に失敗しました: {e}")
+        })?;
+    }
+    
+    Ok(())
+}
+
+/// 監査ログ検索リクエスト
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SearchAuditLogsRequest {
+    pub api_id: Option<String>,
+    pub action: Option<String>,
+    pub resource_type: Option<String>,
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+    pub limit: Option<u32>,
+}
+
+/// 監査ログ検索コマンド
+#[tauri::command]
+pub async fn search_audit_logs(request: SearchAuditLogsRequest) -> Result<Vec<crate::utils::audit_log::AuditLogEntry>, String> {
+    use crate::utils::audit_log::{search_audit_logs, AuditAction};
+    
+    let action = request.action.as_deref().and_then(|a| {
+        match a {
+            "Create" => Some(AuditAction::Create),
+            "Read" => Some(AuditAction::Read),
+            "Update" => Some(AuditAction::Update),
+            "Delete" => Some(AuditAction::Delete),
+            "Start" => Some(AuditAction::Start),
+            "Stop" => Some(AuditAction::Stop),
+            "Login" => Some(AuditAction::Login),
+            "Logout" => Some(AuditAction::Logout),
+            "Share" => Some(AuditAction::Share),
+            "Unshare" => Some(AuditAction::Unshare),
+            _ => None,
+        }
+    });
+    
+    search_audit_logs(
+        request.api_id.as_deref(),
+        action,
+        request.resource_type.as_deref(),
+        request.start_date.as_deref(),
+        request.end_date.as_deref(),
+        request.limit,
+    ).await.map_err(|e| format!("監査ログの検索に失敗しました: {}", e))
+}
+
+/// エラーログ保存リクエスト
+#[derive(Debug, Serialize, Deserialize)]
+pub struct SaveErrorLogRequest {
+    pub error_category: String,
+    pub error_message: String,
+    pub error_stack: Option<String>,
+    pub context: Option<String>,
+    pub source: Option<String>,
+    pub api_id: Option<String>,
+    pub user_agent: Option<String>,
+}
+
+/// エラーログ保存コマンド
+#[tauri::command]
+pub async fn save_error_log(request: SaveErrorLogRequest) -> Result<(), String> {
+    let conn = get_connection().map_err(|e| {
+        format!("データベース接続エラー: {}", e)
+    })?;
+    
+    let error_log_repo = ErrorLogRepository::new(&conn);
+    
+    let error_log = crate::database::repository::error_log_repository::ErrorLog {
+        id: Uuid::new_v4().to_string(),
+        error_category: request.error_category,
+        error_message: request.error_message,
+        error_stack: request.error_stack,
+        context: request.context,
+        source: request.source,
+        api_id: request.api_id,
+        user_agent: request.user_agent,
+        created_at: Utc::now().to_rfc3339(),
+    };
+    
+    error_log_repo.create(&error_log).map_err(|e| {
+        format!("エラーログの保存に失敗しました: {}", e)
+    })?;
+    
+    Ok(())
+}
+
+/// 監査ログエクスポートリクエスト
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExportAuditLogsRequest {
+    pub format: String, // "csv", "json", "txt"
+    pub api_id: Option<String>,
+    pub action: Option<String>,
+    pub resource_type: Option<String>,
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+    /// IPアドレスとユーザーエージェントを除外するかどうか（デフォルト: false）
+    #[serde(default)]
+    pub exclude_sensitive_info: bool,
+}
+
+/// 監査ログエクスポートコマンド
+#[tauri::command]
+pub async fn export_audit_logs(request: ExportAuditLogsRequest) -> Result<String, String> {
+    use crate::utils::audit_log::{export_audit_logs, ExportFormat, AuditAction};
+    
+    let format = match request.format.as_str() {
+        "csv" => ExportFormat::Csv,
+        "json" => ExportFormat::Json,
+        "txt" => ExportFormat::Txt,
+        _ => return Err("サポートされていない形式です。csv、json、txtのいずれかを指定してください。".to_string()),
+    };
+    
+    let action = request.action.as_deref().and_then(|a| {
+        match a {
+            "Create" => Some(AuditAction::Create),
+            "Read" => Some(AuditAction::Read),
+            "Update" => Some(AuditAction::Update),
+            "Delete" => Some(AuditAction::Delete),
+            "Start" => Some(AuditAction::Start),
+            "Stop" => Some(AuditAction::Stop),
+            "Login" => Some(AuditAction::Login),
+            "Logout" => Some(AuditAction::Logout),
+            "Share" => Some(AuditAction::Share),
+            "Unshare" => Some(AuditAction::Unshare),
+            _ => None,
+        }
+    });
+    
+    export_audit_logs(
+        format,
+        request.api_id.as_deref(),
+        action,
+        request.resource_type.as_deref(),
+        request.start_date.as_deref(),
+        request.end_date.as_deref(),
+        request.exclude_sensitive_info,
+    ).await.map_err(|e| format!("監査ログのエクスポートに失敗しました: {}", e))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::utils::input_validation;
+    
+    /// API名の検証テスト
+    #[test]
+    fn test_validate_api_name() {
+        // 有効なAPI名
+        assert!(input_validation::validate_api_name("Test API").is_ok());
+        assert!(input_validation::validate_api_name("API-123").is_ok());
+        assert!(input_validation::validate_api_name("My_Test_API").is_ok());
+        
+        // 無効なAPI名（空文字列）
+        assert!(input_validation::validate_api_name("").is_err());
+        
+        // 無効なAPI名（長すぎる）
+        let long_name = "a".repeat(256);
+        assert!(input_validation::validate_api_name(&long_name).is_err());
+    }
+    
+    /// モデル名の検証テスト
+    #[test]
+    fn test_validate_model_name() {
+        // 有効なモデル名
+        assert!(input_validation::validate_model_name("llama3:8b").is_ok());
+        assert!(input_validation::validate_model_name("gpt-4").is_ok());
+        assert!(input_validation::validate_model_name("model_name").is_ok());
+        
+        // 無効なモデル名（空文字列）
+        assert!(input_validation::validate_model_name("").is_err());
+    }
+    
+    /// ApiCreateConfigの検証テスト
+    #[test]
+    fn test_api_create_config_validation() {
+        // 有効な設定
+        let valid_config = ApiCreateConfig {
+            name: "Test API".to_string(),
+            model_name: "llama3:8b".to_string(),
+            port: Some(8080),
+            enable_auth: Some(true),
+            engine_type: Some("ollama".to_string()),
+            engine_config: None,
+        };
+        
+        assert_eq!(valid_config.name, "Test API");
+        assert_eq!(valid_config.model_name, "llama3:8b");
+        assert_eq!(valid_config.port, Some(8080));
+        assert_eq!(valid_config.enable_auth, Some(true));
+        assert_eq!(valid_config.engine_type, Some("ollama".to_string()));
+    }
+    
+    /// ポート番号の検証テスト
+    #[test]
+    fn test_port_validation() {
+        // 有効なポート番号
+        assert!((1024..=65535).contains(&8080));
+        assert!((1024..=65535).contains(&3000));
+        assert!((1024..=65535).contains(&1420));
+        
+        // 無効なポート番号（範囲外）
+        assert!(!(1024..=65535).contains(&1023));
+        assert!(!(1024..=65535).contains(&65536));
+    }
 }

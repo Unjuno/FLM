@@ -23,12 +23,12 @@
 
 .onboarding-highlight {
   position: absolute;
-  border: 3px solid #667eea;
-  border-radius: 12px;
+  border: 3px solid var(--color-primary, #667eea);
+  border-radius: var(--radius-xl, 1rem);
   box-shadow: 0 0 0 9999px rgba(0, 0, 0, 0.7), 0 0 20px rgba(102, 126, 234, 0.5);
   pointer-events: none;
   z-index: 10001;
-  transition: all 0.3s ease-out;
+  transition: all var(--transition-base, 300ms ease-out);
   animation: highlightPulse 2s ease-in-out infinite;
 }
 
@@ -52,14 +52,18 @@
 
 .onboarding-card {
   position: absolute;
-  background: white;
-  border-radius: 16px;
-  padding: 2rem;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  background: var(--color-bg-primary, #ffffff);
+  border-radius: var(--radius-2xl, 1.5rem);
+  padding: var(--spacing-xl, 2rem);
+  box-shadow: var(--shadow-lg, 0 20px 60px rgba(0, 0, 0, 0.5));
   max-width: 400px;
   z-index: 10002;
   pointer-events: all;
   animation: slideIn 0.3s ease-out;
+}
+
+[data-theme="dark"] .onboarding-card {
+  background: var(--color-bg-primary, #1a202c);
 }
 
 @keyframes slideIn {
@@ -107,57 +111,75 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-bottom: 1.5rem;
+  margin-bottom: var(--spacing-lg, 1.5rem);
 }
 
 .onboarding-icon {
   font-size: 3rem;
   line-height: 1;
+  color: var(--color-primary, #667eea);
 }
 
 .onboarding-close {
   background: transparent;
   border: none;
   font-size: 1.5rem;
-  color: #666;
+  color: var(--color-text-secondary, #4a5568);
   cursor: pointer;
-  padding: 0.25rem;
+  padding: var(--spacing-xs, 0.25rem);
   line-height: 1;
-  transition: color 0.2s;
+  transition: all var(--transition-base, 200ms ease);
   width: 32px;
   height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  border-radius: 4px;
+  border-radius: var(--radius-md, 0.5rem);
+}
+
+[data-theme="dark"] .onboarding-close {
+  color: var(--color-text-secondary, #cbd5e0);
 }
 
 .onboarding-close:hover {
-  color: #333;
-  background-color: #f0f0f0;
+  color: var(--color-text-primary, #1a202c);
+  background-color: var(--color-bg-tertiary, #edf2f7);
+}
+
+[data-theme="dark"] .onboarding-close:hover {
+  color: var(--color-text-primary, #f7fafc);
+  background-color: var(--color-bg-tertiary, #4a5568);
 }
 
 .onboarding-content {
-  margin-bottom: 2rem;
+  margin-bottom: var(--spacing-xl, 2rem);
 }
 
 .onboarding-title {
   font-size: 1.5rem;
-  margin: 0 0 1rem 0;
-  color: #333;
+  margin: 0 0 var(--spacing-md, 1rem) 0;
+  color: var(--color-text-primary, #1a202c);
   font-weight: 600;
+}
+
+[data-theme="dark"] .onboarding-title {
+  color: var(--color-text-primary, #f7fafc);
 }
 
 .onboarding-description {
   font-size: 1rem;
   line-height: 1.6;
-  color: #666;
-  margin: 0 0 1.5rem 0;
+  color: var(--color-text-secondary, #4a5568);
+  margin: 0 0 var(--spacing-lg, 1.5rem) 0;
+}
+
+[data-theme="dark"] .onboarding-description {
+  color: var(--color-text-secondary, #cbd5e0);
 }
 
 .onboarding-progress {
   display: flex;
-  gap: 0.5rem;
+  gap: var(--spacing-xs, 0.5rem);
   justify-content: center;
   align-items: center;
 }
@@ -165,68 +187,83 @@
 .onboarding-progress-dot {
   width: 8px;
   height: 8px;
-  border-radius: 50%;
-  background-color: #e0e0e0;
-  transition: all 0.3s;
+  border-radius: var(--radius-full, 50%);
+  background-color: var(--color-border-light, #e2e8f0);
+  transition: all var(--transition-base, 300ms ease);
+}
+
+[data-theme="dark"] .onboarding-progress-dot {
+  background-color: var(--color-border-light, #4a5568);
 }
 
 .onboarding-progress-dot.active {
   width: 24px;
-  background-color: #667eea;
-  border-radius: 4px;
+  background-color: var(--color-primary, #667eea);
+  border-radius: var(--radius-md, 0.5rem);
 }
 
 .onboarding-progress-dot.completed {
-  background-color: #4caf50;
+  background-color: var(--color-success, #48bb78);
 }
 
 .onboarding-actions {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 1rem;
+  gap: var(--spacing-md, 1rem);
 }
 
 .onboarding-nav-buttons {
   display: flex;
-  gap: 0.75rem;
+  gap: var(--spacing-md, 0.75rem);
 }
 
 .onboarding-button {
-  padding: 0.75rem 1.5rem;
+  padding: var(--spacing-md, 0.75rem) var(--spacing-lg, 1.5rem);
   border: none;
-  border-radius: 8px;
+  border-radius: var(--radius-lg, 0.75rem);
   font-size: 1rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all var(--transition-base, 200ms ease);
 }
 
 .onboarding-button.primary {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  color: white;
+  background: linear-gradient(135deg, var(--color-primary, #667eea) 0%, var(--color-secondary, #764ba2) 100%);
+  color: var(--color-text-inverse, #ffffff);
 }
 
 .onboarding-button.primary:hover {
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+  box-shadow: var(--shadow-md, 0 4px 12px rgba(102, 126, 234, 0.4));
 }
 
 .onboarding-button.secondary {
-  background: #f5f5f5;
-  color: #333;
-  border: 2px solid #e0e0e0;
+  background: var(--color-bg-tertiary, #edf2f7);
+  color: var(--color-text-primary, #1a202c);
+  border: 2px solid var(--color-border-light, #e2e8f0);
+}
+
+[data-theme="dark"] .onboarding-button.secondary {
+  background: var(--color-bg-tertiary, #4a5568);
+  color: var(--color-text-primary, #f7fafc);
+  border-color: var(--color-border-light, #4a5568);
 }
 
 .onboarding-button.secondary:hover {
-  background: #e0e0e0;
+  background: var(--color-bg-tertiary, #cbd5e0);
+  border-color: var(--color-border, #a0aec0);
+}
+
+[data-theme="dark"] .onboarding-button.secondary:hover {
+  background: var(--color-bg-tertiary, #718096);
 }
 
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
   .onboarding-card {
     max-width: 90%;
-    padding: 1.5rem;
+    padding: var(--spacing-lg, 1.5rem);
   }
 
   .onboarding-card.onboarding-left,
@@ -245,8 +282,7 @@
   }
 
   .onboarding-button {
-    padding: 0.625rem 1.25rem;
+    padding: var(--spacing-sm, 0.625rem) var(--spacing-md, 1.25rem);
     font-size: 0.9rem;
   }
 }
-
