@@ -14,12 +14,15 @@ import './ApiCreationSuccess.css';
 interface ApiCreationSuccessProps {
   result: ApiCreationResult;
   onGoHome: () => void;
+  onStartApi?: () => Promise<void>;
 }
 
 export const ApiCreationSuccess: React.FC<ApiCreationSuccessProps> = ({
   result,
   onGoHome,
+  onStartApi,
 }) => {
+  const [starting, setStarting] = useState(false);
   const [apiKeyVisible, setApiKeyVisible] = useState(false);
   const [copied, setCopied] = useState<'endpoint' | 'apiKey' | 'code' | null>(
     null
@@ -160,6 +163,26 @@ export const ApiCreationSuccess: React.FC<ApiCreationSuccessProps> = ({
       </div>
 
       <div className="success-actions">
+        {onStartApi && (
+          <button
+            className="button-secondary"
+            onClick={async () => {
+              if (onStartApi) {
+                setStarting(true);
+                try {
+                  await onStartApi();
+                } catch (err) {
+                  // エラーは親コンポーネントで処理される
+                } finally {
+                  setStarting(false);
+                }
+              }
+            }}
+            disabled={starting}
+          >
+            {starting ? '起動中...' : 'APIを起動'}
+          </button>
+        )}
         <button className="button-primary" onClick={onGoHome}>
           ホームに戻る
         </button>

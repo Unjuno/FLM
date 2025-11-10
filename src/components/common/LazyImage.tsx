@@ -25,9 +25,9 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   const [imageSrc, setImageSrc] = useState<string>(placeholder || '');
   const [isLoaded, setIsLoaded] = useState(false);
   const [hasError, setHasError] = useState(false);
-  const imgRef = useRef<HTMLImageElement>(null);
+  const imgRef = useRef<HTMLImageElement | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
-  const styleRef = useRef<HTMLImageElement>(null);
+  const styleRef = useRef<HTMLImageElement | null>(null);
 
   useEffect(() => {
     // Intersection Observerが利用可能かチェック
@@ -88,12 +88,15 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     }
   }, [isLoaded]);
 
+  // refコールバックで両方のrefを設定
+  const setRefs = (el: HTMLImageElement | null) => {
+    imgRef.current = el;
+    styleRef.current = el;
+  };
+
   return (
     <img
-      ref={(el) => {
-        imgRef.current = el;
-        styleRef.current = el;
-      }}
+      ref={setRefs}
       src={imageSrc}
       alt={alt}
       onLoad={handleLoad}

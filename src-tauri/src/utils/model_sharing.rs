@@ -72,10 +72,8 @@ pub async fn share_model_extended(config: ModelSharingConfigExtended) -> Result<
         return Err(AppError::ApiError {
             message: "モデルファイルが見つかりません".to_string(),
             code: "FILE_NOT_FOUND".to_string(),
-        
-            
             source_detail: None,
-});
+        });
     }
     
     // プラットフォームが指定されている場合、そのプラットフォームにアップロード
@@ -106,10 +104,8 @@ async fn upload_to_huggingface_hub(config: &ModelSharingConfigExtended) -> Resul
     let token = config.platform_token.as_ref().ok_or_else(|| AppError::ApiError {
         message: "Hugging Face Hubの認証トークンが必要です".to_string(),
         code: "TOKEN_REQUIRED".to_string(),
-    
-            
-            source_detail: None,
-})?;
+        source_detail: None,
+    })?;
     
     // リポジトリIDを取得（指定されていない場合はモデル名から生成）
     let repo_id = config.repo_id.as_ref().map(|s| s.as_str()).unwrap_or(&config.model_name);
@@ -133,28 +129,38 @@ async fn upload_to_huggingface_hub(config: &ModelSharingConfigExtended) -> Resul
             source_detail: None,
         })?;
     
-    if !create_response.status().is_success() {
+    let status = create_response.status();
+    if !status.is_success() {
+        let error_text = create_response.text().await.unwrap_or_else(|e| {
+            eprintln!("[WARN] エラーレスポンスの本文を読み取れませんでした: {}", e);
+            format!("レスポンス本文を読み取れませんでした: {}", e)
+        });
         return Err(AppError::ApiError {
-            message: format!("Hugging Face Hub APIエラー: {}", create_response.status()),
-            code: create_response.status().as_str().to_string(),
+            message: format!("Hugging Face Hub APIエラー: {} - {}", status, error_text),
+            code: status.as_str().to_string(),
             source_detail: None,
         });
     }
     
-    // モデルファイルをアップロード（将来実装予定）
-    // 注意: Hugging Face Hubのファイルアップロードは複雑なプロセスです
-    // 実際の実装では、Hugging Face Hub APIの詳細な仕様に基づいて実装する必要があります
-    // 現在は、リポジトリ作成のみを実装しています
-    // 
-    // 実装予定の機能:
-    // 1. LFS（Large File Storage）を使用した大容量ファイルのアップロード
-    // 2. アップロード進捗の表示
-    // 3. リトライ機能
-    // 4. エラーハンドリングの強化
-    // 
-    // 参考: https://huggingface.co/docs/hub/upload
+    // モデルファイルをアップロード
+    let model_path = PathBuf::from(&config.model_path);
+    if !model_path.exists() {
+        return Err(AppError::ApiError {
+            message: format!("モデルファイルが見つかりません: {}", config.model_path),
+            code: "FILE_NOT_FOUND".to_string(),
+            source_detail: None,
+        });
+    }
     
-    // モデル情報を取得
+    // ファイルをアップロード
+    upload_model_file_to_huggingface(&client, token, repo_id, &model_path).await?;
+    
+    // メタデータファイル（README、ライセンス等）をアップロード（オプション）
+    if let Some(description) = &config.description {
+        upload_readme_to_huggingface(&client, token, repo_id, description, &config.tags, &config.license).await?;
+    }
+    
+    // モデル情報を取得して返す
     let model_info = crate::utils::huggingface::get_huggingface_model_info(repo_id).await
         .map_err(|e| AppError::ApiError {
             message: format!("モデル情報取得エラー: {}", e),
@@ -168,19 +174,154 @@ async fn upload_to_huggingface_hub(config: &ModelSharingConfigExtended) -> Resul
         author: model_info.author,
         description: config.description.clone(),
         tags: config.tags.clone(),
-        download_count: model_info.downloads as i64,
-        rating: if model_info.likes > 0 {
-            Some(model_info.likes as f64 / (model_info.downloads as f64 + 1.0))
-        } else {
-            None
-        },
-        model_path: None,
+        download_count: model_info.downloads,
+        rating: None,
+        model_path: Some(config.model_path.clone()),
         platform: Some("huggingface".to_string()),
         license: config.license.clone(),
         is_public: config.is_public,
         created_at: chrono::Utc::now().to_rfc3339(),
         updated_at: chrono::Utc::now().to_rfc3339(),
     })
+}
+
+/// Hugging Face Hubにモデルファイルをアップロード
+async fn upload_model_file_to_huggingface(
+    client: &reqwest::Client,
+    token: &str,
+    repo_id: &str,
+    model_path: &PathBuf,
+) -> Result<(), AppError> {
+    use std::fs::File;
+    use std::io::Read;
+    
+    // ファイルを読み込む
+    let mut file = File::open(model_path).map_err(|e| AppError::IoError {
+        message: format!("ファイル読み込みエラー: {}", e),
+        source_detail: None,
+    })?;
+    
+    let mut file_data = Vec::new();
+    file.read_to_end(&mut file_data).map_err(|e| AppError::IoError {
+        message: format!("ファイル読み込みエラー: {}", e),
+        source_detail: None,
+    })?;
+    
+    // ファイル名を取得
+    let file_name = model_path.file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("model.bin");
+    
+    // Hugging Face Hub APIにアップロード
+    // 注意: Hugging Face HubのアップロードAPIは複雑で、LFS（Large File Storage）を使用する必要があります
+    // 簡易実装として、直接アップロードを試みます
+    let upload_url = format!("https://huggingface.co/api/models/{}/upload", repo_id);
+    
+    // multipart/form-dataでアップロード
+    let form = reqwest::multipart::Form::new()
+        .text("path", file_name.to_string())
+        .part("file", reqwest::multipart::Part::bytes(file_data)
+            .file_name(file_name.to_string())
+            .mime_str("application/octet-stream")
+            .map_err(|e| AppError::ApiError {
+                message: format!("multipart作成エラー: {}", e),
+                code: "MULTIPART_ERROR".to_string(),
+                source_detail: None,
+            })?);
+    
+    let response = client
+        .post(&upload_url)
+        .header("Authorization", &format!("Bearer {}", token))
+        .multipart(form)
+        .send()
+        .await
+        .map_err(|e| AppError::ApiError {
+            message: format!("アップロードリクエストエラー: {}", e),
+            code: "UPLOAD_ERROR".to_string(),
+            source_detail: None,
+        })?;
+    
+    let status = response.status();
+    if !status.is_success() {
+        let error_text = response.text().await.unwrap_or_else(|e| {
+            eprintln!("[WARN] エラーレスポンスの本文を読み取れませんでした: {}", e);
+            format!("レスポンス本文を読み取れませんでした: {}", e)
+        });
+        return Err(AppError::ApiError {
+            message: format!("ファイルアップロードエラー: HTTP {} - {}", status, error_text),
+            code: status.as_str().to_string(),
+            source_detail: Some(format!("Hugging Face Hubへのファイルアップロードに失敗しました。大容量ファイルの場合はLFS（Large File Storage）が必要な可能性があります。エラー詳細: {}", error_text)),
+        });
+    }
+    
+    eprintln!("[INFO] モデルファイルのアップロードが完了しました: {}", file_name);
+    Ok(())
+}
+
+/// Hugging Face HubにREADMEファイルをアップロード
+async fn upload_readme_to_huggingface(
+    client: &reqwest::Client,
+    token: &str,
+    repo_id: &str,
+    description: &str,
+    tags: &[String],
+    license: &Option<String>,
+) -> Result<(), AppError> {
+    // README.mdの内容を生成
+    let mut readme_content = format!("# {}\n\n", repo_id.split('/').last().unwrap_or(repo_id));
+    readme_content.push_str(&format!("{}\n\n", description));
+    
+    if !tags.is_empty() {
+        readme_content.push_str("## タグ\n\n");
+        for tag in tags {
+            readme_content.push_str(&format!("- {}\n", tag));
+        }
+        readme_content.push_str("\n");
+    }
+    
+    if let Some(license_str) = license {
+        readme_content.push_str(&format!("## ライセンス\n\n{}\n\n", license_str));
+    }
+    
+    // README.mdをアップロード
+    let upload_url = format!("https://huggingface.co/api/models/{}/upload", repo_id);
+    
+    let form = reqwest::multipart::Form::new()
+        .text("path", "README.md")
+        .part("file", reqwest::multipart::Part::bytes(readme_content.into_bytes())
+            .file_name("README.md")
+            .mime_str("text/markdown")
+            .map_err(|e| AppError::ApiError {
+                message: format!("multipart作成エラー: {}", e),
+                code: "MULTIPART_ERROR".to_string(),
+                source_detail: None,
+            })?);
+    
+    let response = client
+        .post(&upload_url)
+        .header("Authorization", &format!("Bearer {}", token))
+        .multipart(form)
+        .send()
+        .await
+        .map_err(|e| AppError::ApiError {
+            message: format!("READMEアップロードリクエストエラー: {}", e),
+            code: "UPLOAD_ERROR".to_string(),
+            source_detail: None,
+        })?;
+    
+    let status = response.status();
+    if !status.is_success() {
+        let error_text = response.text().await.unwrap_or_else(|e| {
+            eprintln!("[WARN] エラーレスポンスの本文を読み取れませんでした: {}", e);
+            format!("レスポンス本文を読み取れませんでした: {}", e)
+        });
+        eprintln!("[WARN] READMEアップロードに失敗しましたが、処理を続行します: HTTP {} - {}", status, error_text);
+        // READMEのアップロード失敗は致命的ではないため、警告のみ
+    } else {
+        eprintln!("[INFO] README.mdのアップロードが完了しました");
+    }
+    
+    Ok(())
 }
 
 /// ローカルデータベースにモデル情報を保存
@@ -351,7 +492,10 @@ async fn search_local_shared_models(
         rusqlite::params_from_iter(param_refs),
         |row| {
             let tags_json: String = row.get(4)?;
-            let tags: Vec<String> = serde_json::from_str(&tags_json).unwrap_or_default();
+            let tags: Vec<String> = serde_json::from_str(&tags_json).unwrap_or_else(|e| {
+                eprintln!("[WARN] タグJSONのパースエラー: {} (JSON: {})", e, tags_json);
+                Vec::new()
+            });
             
             Ok(SharedModelInfo {
                 id: format!("local:{}", row.get::<_, String>(0)?),
@@ -475,8 +619,9 @@ pub async fn download_shared_model(
                 })?;
             }
             
-            // 実際のダウンロード処理は将来実装
-            // 現在はパスのみ返す
+            // Hugging Face Hubからモデルファイルをダウンロード
+            download_huggingface_model(model_name, &download_path).await?;
+            
             Ok(download_path)
         }
         "local" => {
@@ -522,6 +667,157 @@ pub async fn download_shared_model(
             source_detail: None,
         }),
     }
+}
+
+/// Hugging Face Hubからモデルファイルをダウンロード
+async fn download_huggingface_model(
+    model_id: &str,
+    target_dir: &PathBuf,
+) -> Result<(), AppError> {
+    use std::fs::File;
+    use std::io::Write;
+    use futures_util::StreamExt;
+    
+    let client = crate::utils::http_client::create_http_client()?;
+    
+    // 1. モデルのファイルリストを取得
+    let files_url = format!("https://huggingface.co/api/models/{}/tree/main", model_id);
+    let response = client
+        .get(&files_url)
+        .header("Accept", "application/json")
+        .send()
+        .await
+        .map_err(|e| AppError::ApiError {
+            message: format!("Hugging Face Hub APIリクエストエラー: {}", e),
+            code: "API_ERROR".to_string(),
+            source_detail: None,
+        })?;
+    
+    let status = response.status();
+    if !status.is_success() {
+        let error_text = response.text().await.unwrap_or_else(|e| {
+            eprintln!("[WARN] エラーレスポンスの本文を読み取れませんでした: {}", e);
+            format!("レスポンス本文を読み取れませんでした: {}", e)
+        });
+        return Err(AppError::ApiError {
+            message: format!("Hugging Face Hub APIエラー: {} - {}", status, error_text),
+            code: status.as_str().to_string(),
+            source_detail: None,
+        });
+    }
+    
+    let files_json: serde_json::Value = response.json().await
+        .map_err(|e| AppError::ApiError {
+            message: format!("JSON解析エラー: {}", e),
+            code: "JSON_ERROR".to_string(),
+            source_detail: None,
+        })?;
+    
+    // 2. ファイルリストを解析
+    let files: Vec<String> = if let Some(files_array) = files_json.as_array() {
+        files_array
+            .iter()
+            .filter_map(|item| {
+                if let Some(file_path) = item.get("path").and_then(|p| p.as_str()) {
+                    // 重要なファイルのみをダウンロード（.safetensors, .bin, config.json, tokenizer.json等）
+                    if file_path.ends_with(".safetensors") 
+                        || file_path.ends_with(".bin")
+                        || file_path == "config.json"
+                        || file_path == "tokenizer.json"
+                        || file_path == "tokenizer_config.json"
+                        || file_path == "model_index.json"
+                        || file_path.ends_with(".json") && file_path.contains("config")
+                    {
+                        Some(file_path.to_string())
+                    } else {
+                        None
+                    }
+                } else {
+                    None
+                }
+            })
+            .collect()
+    } else {
+        // ファイルリストが取得できない場合、主要なファイルを直接ダウンロードを試みる
+        vec![
+            "config.json".to_string(),
+            "model.safetensors".to_string(),
+            "tokenizer.json".to_string(),
+        ]
+    };
+    
+    if files.is_empty() {
+        return Err(AppError::ApiError {
+            message: format!("モデル '{}' のダウンロード可能なファイルが見つかりません", model_id),
+            code: "NO_FILES_FOUND".to_string(),
+            source_detail: None,
+        });
+    }
+    
+    // 3. 各ファイルをダウンロード
+    let total_files = files.len();
+    for (index, file_path) in files.iter().enumerate() {
+        let file_url = format!("https://huggingface.co/{}/resolve/main/{}", model_id, file_path);
+        let file_path_buf = target_dir.join(file_path);
+        
+        // ディレクトリを作成
+        if let Some(parent) = file_path_buf.parent() {
+            std::fs::create_dir_all(parent).map_err(|e| AppError::IoError {
+                message: format!("ディレクトリ作成エラー: {}", e),
+                source_detail: None,
+            })?;
+        }
+        
+        // ファイルをダウンロード
+        eprintln!("[INFO] ファイルをダウンロード中 ({}/{}): {}", index + 1, total_files, file_path);
+        
+        let file_response = client
+            .get(&file_url)
+            .send()
+            .await
+            .map_err(|e| AppError::ApiError {
+                message: format!("ファイルダウンロードエラー ({}): {}", file_path, e),
+                code: "DOWNLOAD_ERROR".to_string(),
+                source_detail: None,
+            })?;
+        
+        let file_status = file_response.status();
+        if !file_status.is_success() {
+            let error_text = file_response.text().await.unwrap_or_else(|e| {
+                eprintln!("[WARN] エラーレスポンスの本文を読み取れませんでした: {}", e);
+                format!("レスポンス本文を読み取れませんでした: {}", e)
+            });
+            return Err(AppError::ApiError {
+                message: format!("ファイルダウンロードエラー ({}): HTTP {} - {}", file_path, file_status, error_text),
+                code: file_status.as_str().to_string(),
+                source_detail: None,
+            });
+        }
+        
+        // ストリーミングダウンロード
+        let mut file = File::create(&file_path_buf).map_err(|e| AppError::IoError {
+            message: format!("ファイル作成エラー ({}): {}", file_path, e),
+            source_detail: None,
+        })?;
+        
+        let mut stream = file_response.bytes_stream();
+        while let Some(chunk_result) = stream.next().await {
+            let chunk = chunk_result.map_err(|e| AppError::IoError {
+                message: format!("ダウンロードストリームエラー ({}): {}", file_path, e),
+                source_detail: None,
+            })?;
+            
+            file.write_all(&chunk).map_err(|e| AppError::IoError {
+                message: format!("ファイル書き込みエラー ({}): {}", file_path, e),
+                source_detail: None,
+            })?;
+        }
+        
+        eprintln!("[INFO] ファイルダウンロード完了: {}", file_path);
+    }
+    
+    eprintln!("[INFO] モデル '{}' のダウンロードが完了しました: {}", model_id, target_dir.to_string_lossy());
+    Ok(())
 }
 
 

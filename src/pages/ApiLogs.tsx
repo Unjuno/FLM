@@ -78,7 +78,7 @@ export const ApiLogs: React.FC = () => {
   const itemsPerPage = PAGINATION.DEFAULT_ITEMS_PER_PAGE;
 
   // 仮想スクロール用のref
-  const parentRef = useRef<HTMLDivElement>(null);
+  const parentRef = useRef<HTMLDivElement | null>(null);
 
   // API一覧を取得
   const loadApis = useCallback(async () => {

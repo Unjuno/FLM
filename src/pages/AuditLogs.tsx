@@ -73,13 +73,16 @@ export const AuditLogs: React.FC = () => {
       setError(null);
 
       // 監査ログを取得
-      const logsData = await safeInvoke<AuditLogEntry[]>('search_audit_logs', {
+      const request = {
         api_id: null,
         action: filterAction || null,
         resource_type: null,
         start_date: null,
         end_date: null,
         limit: 100,
+      };
+      const logsData = await safeInvoke<AuditLogEntry[]>('search_audit_logs', {
+        request,
       });
       setLogs(logsData);
     } catch (err) {

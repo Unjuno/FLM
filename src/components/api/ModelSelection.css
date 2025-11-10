@@ -389,7 +389,45 @@
 }
 
 .sidebar-recommended-badge {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.375rem;
+  background: var(--selection-recommended-badge-bg);
+  color: var(--selection-recommended-badge-text);
+  border-radius: var(--radius-sm, 0.25rem);
+  font-weight: 600;
+}
+
+.sidebar-catalog-badge {
+  font-size: 0.75rem;
+  padding: 0.125rem 0.375rem;
+  background: var(--color-info-light, rgba(33, 150, 243, 0.1));
+  color: var(--color-info, #2196f3);
+  border-radius: var(--radius-sm, 0.25rem);
+  font-weight: 500;
+}
+
+.sidebar-model-params {
+  font-size: 0.75rem;
+  color: var(--selection-text-tertiary);
+  font-weight: 500;
+}
+
+.sidebar-model-item.installed {
+  border-left: 2px solid var(--color-success, #4caf50);
+}
+
+.sidebar-model-item.catalog {
+  border-left: 2px solid var(--color-info, #2196f3);
+}
+
+.recommended-badge-inline {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  background: var(--selection-recommended-badge-bg);
+  color: var(--selection-recommended-badge-text);
+  border-radius: var(--radius-sm, 0.25rem);
   font-size: 0.875rem;
+  font-weight: 600;
 }
 
 .sidebar-empty {

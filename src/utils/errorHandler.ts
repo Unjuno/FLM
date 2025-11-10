@@ -55,6 +55,9 @@ function getDefaultMessage(key: string, params?: Record<string, string | number>
     'errors.database.connectionFailed': 'データベースへの接続に失敗しました。アプリケーションを再起動してください。',
     'errors.database.general': 'データベースでエラーが発生しました。アプリケーションを再起動してください。',
     'errors.network.general': 'ネットワーク接続に問題があります。インターネット接続を確認してください。',
+    'errors.network.timeout': 'リクエストがタイムアウトしました。ネットワーク接続を確認してください。',
+    'errors.network.connectionFailed': 'ネットワーク接続に失敗しました。インターネット接続を確認してください。',
+    'errors.network.retryFailed': 'リトライ後も接続に失敗しました。ネットワーク接続を確認してください。',
     'errors.permission.general': '必要な権限がありません。権限設定を確認してください。',
     'errors.validation.general': '入力内容に誤りがあります。入力内容を確認してください。',
     'errors.ollama.suggestion': 'Ollamaが正しくインストールされ、起動しているか確認してください。',
@@ -131,7 +134,16 @@ export function parseError(
     // カテゴリの自動判定
     if (!category) {
       const lowerErrorMessage = errorMessage.toLowerCase();
-      if (lowerErrorMessage.includes('ollama')) {
+      // 未実装機能のエラーを優先的に検出
+      if (
+        lowerErrorMessage.includes('未実装') ||
+        lowerErrorMessage.includes('not implemented') ||
+        lowerErrorMessage.includes('feature_not_implemented') ||
+        lowerErrorMessage.includes('将来実装予定')
+      ) {
+        finalCategory = ErrorCategory.GENERAL; // 未実装機能は一般的なエラーとして分類
+        retryable = false; // 未実装機能はリトライ不可
+      } else if (lowerErrorMessage.includes('ollama')) {
         finalCategory = ErrorCategory.OLLAMA;
       } else if (
         lowerErrorMessage.includes('port') ||
@@ -312,6 +324,19 @@ function getUserFriendlyMessage(
       return (
         errorMessage || t('errors.validation.general')
       );
+
+    case ErrorCategory.GENERAL:
+      // 未実装機能のエラーを検出
+      if (
+        lowerMessage.includes('未実装') ||
+        lowerMessage.includes('not implemented') ||
+        lowerMessage.includes('feature_not_implemented') ||
+        lowerMessage.includes('将来実装予定')
+      ) {
+        // 元のエラーメッセージをそのまま返す（既に適切な説明が含まれている）
+        return errorMessage || 'この機能は現在未実装です。将来のバージョンで実装予定です。';
+      }
+      return errorMessage || t('errors.general.unexpected');
 
     default:
       return errorMessage || t('errors.general.unexpected');

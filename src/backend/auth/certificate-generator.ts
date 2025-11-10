@@ -175,7 +175,8 @@ async function generateCertificateWithNodeForge(
       altNames.push({ type: 7, ip: localIp });
     }
 
-    // setExtensionsはany[]を受け取るため、型アサーションを使用
+    // setExtensionsはnode-forgeの型定義が不完全なため、型アサーションを使用
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     cert.setExtensions([
       {
         name: 'basicConstraints',
@@ -200,20 +201,36 @@ async function generateCertificateWithNodeForge(
     const certPem = forge.pki.certificateToPem(cert);
     const keyPem = forge.pki.privateKeyToPem(privateKey);
 
+    // ディレクトリが存在することを再確認（並行処理などで削除された可能性がある）
+    if (!fs.existsSync(certDir)) {
+      fs.mkdirSync(certDir, { recursive: true });
+    }
+
     // ファイルに保存
-    fs.writeFileSync(certPath, certPem);
-    fs.writeFileSync(keyPath, keyPem);
+    try {
+      fs.writeFileSync(certPath, certPem);
+      fs.writeFileSync(keyPath, keyPem);
+    } catch (writeError) {
+      // ファイル書き込みエラーの詳細情報を提供
+      const errorMessage = writeError instanceof Error ? writeError.message : String(writeError);
+      throw new Error(
+        `証明書ファイルの書き込みに失敗しました。パス: ${certPath}, エラー: ${errorMessage}`
+      );
+    }
 
     // ファイルが生成されたか確認
     if (!fs.existsSync(certPath) || !fs.existsSync(keyPath)) {
-      throw new Error('証明書ファイルの生成に失敗しました');
+      throw new Error(
+        `証明書ファイルの生成に失敗しました。certPath: ${certPath}, keyPath: ${keyPath}`
+      );
     }
 
     return { certPath, keyPath };
   } catch (error) {
     console.error('node-forgeによる証明書生成エラー:', error);
+    const errorMessage = error instanceof Error ? error.message : String(error);
     throw new Error(
-      `証明書生成に失敗しました。OpenSSLがインストールされていない可能性があります。Windowsの場合、Git for Windowsに含まれています。エラー: ${error}`
+      `証明書生成に失敗しました。OpenSSLがインストールされていない可能性があります。Windowsの場合、Git for Windowsに含まれています。エラー: ${errorMessage}`
     );
   }
 }

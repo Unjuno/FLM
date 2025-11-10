@@ -150,7 +150,7 @@ export const EngineManagement: React.FC = () => {
       setError(null);
 
       await safeInvoke('start_engine', {
-        engine_type: engineType,
+        engineType: engineType,
         config: null,
       });
       showSuccess(`${ENGINE_NAMES[engineType] || engineType}を起動しました`);
@@ -213,7 +213,7 @@ export const EngineManagement: React.FC = () => {
 
       try {
         // インストール実行
-        await safeInvoke('install_engine', { engine_type: engineType });
+        await safeInvoke('install_engine', { engineType: engineType });
 
         // イベントリスナーを解除
         unlisten();

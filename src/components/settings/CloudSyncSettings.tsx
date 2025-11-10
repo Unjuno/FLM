@@ -245,12 +245,13 @@ export const CloudSyncSettings: React.FC<CloudSyncSettingsProps> = ({
               min="60"
               max="86400"
               value={config.sync_interval_seconds}
-              onChange={e =>
+              onChange={e => {
+                const parsed = parseInt(e.target.value, 10);
                 setConfig({
                   ...config,
-                  sync_interval_seconds: parseInt(e.target.value) || 3600,
-                })
-              }
+                  sync_interval_seconds: isNaN(parsed) ? 3600 : parsed,
+                });
+              }}
             />
             <span className="settings-hint">
               自動同期の間隔を設定します（60秒〜86400秒）

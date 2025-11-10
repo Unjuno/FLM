@@ -4,6 +4,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { safeInvoke } from '../../utils/tauri';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { logger } from '../../utils/logger';
+import { extractErrorMessage } from '../../utils/errorHandler';
 import './AlertHistory.css';
 
 /**

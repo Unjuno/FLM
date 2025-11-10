@@ -84,10 +84,6 @@ export const ApiKeys: React.FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    loadApiKeys();
-  }, [loadApiKeys]);
-
   // ESCキーでのダイアログ閉じる処理はConfirmDialogコンポーネント内で処理
 
   // APIキー一覧を取得（useCallbackでメモ化してパフォーマンス最適化）
@@ -141,6 +137,11 @@ export const ApiKeys: React.FC = () => {
       }
     }
   }, []);
+
+  // コンポーネントマウント時にAPIキー一覧を読み込む
+  useEffect(() => {
+    loadApiKeys();
+  }, [loadApiKeys]);
 
   // 特定のAPIキーを取得（表示時のみ）（useCallbackでメモ化）
   const loadApiKey = useCallback(async (apiId: string) => {
@@ -313,7 +314,7 @@ export const ApiKeys: React.FC = () => {
           }
 
           // バックエンドのdelete_api_keyコマンドを呼び出し
-          await safeInvoke('delete_api_key', { api_id: apiId });
+          await safeInvoke('delete_api_key', { apiId });
 
           // アンマウントチェック
           if (!isMountedRef.current) return;

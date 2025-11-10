@@ -422,7 +422,7 @@ const requestLogMiddleware = async (
    * 機密情報をマスキング（ログ保存用）
    * APIキー、パスワード、トークンなどの機密情報を自動的にマスキング
    */
-  const maskSensitiveData = (obj: any): any => {
+  const maskSensitiveData = (obj: unknown): unknown => {
     if (obj === null || obj === undefined) {
       return obj;
     }
@@ -462,7 +462,7 @@ const requestLogMiddleware = async (
       'account_number', 'routing_number', 'iban', 'swift',
     ];
 
-    const masked: Record<string, any> = {};
+    const masked: Record<string, unknown> = {};
     for (const [key, value] of Object.entries(obj)) {
       const lowerKey = key.toLowerCase();
       const isSensitive = sensitiveFields.some(

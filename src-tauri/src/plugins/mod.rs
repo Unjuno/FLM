@@ -1,8 +1,22 @@
 // Plugin Architecture Module
 // サードパーティによる機能拡張のための基盤
+//
+// **実装状況**:
+// - ✅ プラグイン管理機能: 完全実装済み（登録、削除、有効化/無効化、権限管理）
+// - ✅ プラグイン実行機能: 動的ライブラリ（.dylib, .so, .dll）をロードして実行
+// - ⚠️ プラグインAPI: 将来実装予定（プラグイン開発者向けの高度なAPI）
+//
+// **注意**: 現在の実装では、プラグイン情報をデータベースに保存し、
+// プラグインタイプに応じて動的ライブラリをロードして実行します。
+// プラグインには `flm_plugin_execute`（必須）および `flm_plugin_free_string`（推奨）をエクスポートする必要があります。
+// 今後、プラグイン開発者向けの高機能APIを追加予定です。
 
 use serde::{Deserialize, Serialize};
 use crate::utils::error::AppError;
+use libloading::{Library, Symbol};
+use std::ffi::{CStr, CString};
+use std::os::raw::c_char;
+use std::path::Path;
 
 /// プラグイン権限
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
@@ -67,6 +81,15 @@ pub struct PluginExecutionResult {
     pub error: Option<String>,
 }
 
+#[derive(Serialize)]
+struct PluginExecutionPayload<'a> {
+    plugin: &'a PluginInfo,
+    context: &'a PluginContext,
+}
+
+type PluginExecuteFn = unsafe extern "C" fn(*const c_char) -> *mut c_char;
+type PluginFreeStringFn = unsafe extern "C" fn(*mut c_char);
+
 /// プラグインの権限をチェック
 fn check_plugin_permissions(
     plugin: &PluginInfo,
@@ -104,6 +127,15 @@ fn check_plugin_permissions(
 }
 
 /// プラグインを実行
+/// 
+/// **現在の実装**: プラグインタイプに応じた基本的な実行処理を実装
+/// 実際の動的ライブラリのロードと実行は未実装です。
+/// 
+/// **将来の実装予定**:
+/// - 動的ライブラリ（.dylib, .so, .dll）のロード
+/// - プラグイン関数の呼び出し
+/// - プラグインAPIの提供
+/// - プラグインのサンドボックス化
 pub async fn execute_plugin(
     plugin: &PluginInfo,
     context: &PluginContext,
@@ -142,14 +174,119 @@ pub async fn execute_plugin(
     }
 }
 
+fn get_library_path(plugin: &PluginInfo) -> Option<&str> {
+    plugin
+        .library_path
+        .as_ref()
+        .map(|p| p.trim())
+        .filter(|p| !p.is_empty())
+}
+
+fn dynamic_execution_error(plugin: &PluginInfo, message: String) -> PluginExecutionResult {
+    PluginExecutionResult {
+        success: false,
+        output: None,
+        error: Some(format!("プラグイン '{}' の実行に失敗しました: {}", plugin.name, message)),
+    }
+}
+
+fn execute_dynamic_plugin(plugin: &PluginInfo, context: &PluginContext) -> Result<PluginExecutionResult, AppError> {
+    let library_path = get_library_path(plugin).ok_or_else(|| AppError::ProcessError {
+        message: "プラグインライブラリのパスが設定されていません".to_string(),
+        source_detail: Some(plugin.id.clone()),
+    })?;
+
+    let path = Path::new(library_path);
+    if !path.exists() {
+        return Err(AppError::ProcessError {
+            message: format!("プラグインライブラリが見つかりません: {}", library_path),
+            source_detail: Some(plugin.id.clone()),
+        });
+    }
+
+    let payload = serde_json::to_string(&PluginExecutionPayload { plugin, context }).map_err(|e| AppError::ProcessError {
+        message: format!("プラグイン実行コンテキストのシリアライズに失敗しました: {}", e),
+        source_detail: Some(plugin.id.clone()),
+    })?;
+
+    let payload_cstring = CString::new(payload).map_err(|e| AppError::ProcessError {
+        message: format!("プラグイン実行データのエンコードに失敗しました: {}", e),
+        source_detail: Some(plugin.id.clone()),
+    })?;
+
+    unsafe {
+        let library = Library::new(path).map_err(|e| AppError::ProcessError {
+            message: format!("プラグインライブラリのロードに失敗しました: {}", e),
+            source_detail: Some(path.display().to_string()),
+        })?;
+
+        let execute_fn: Symbol<PluginExecuteFn> = library.get(b"flm_plugin_execute\0").map_err(|e| AppError::ProcessError {
+            message: format!("プラグイン実行関数 'flm_plugin_execute' の取得に失敗しました: {}", e),
+            source_detail: Some(path.display().to_string()),
+        })?;
+
+        let result_ptr = execute_fn(payload_cstring.as_ptr());
+        if result_ptr.is_null() {
+            return Err(AppError::ProcessError {
+                message: "プラグイン実行関数がNULLを返しました".to_string(),
+                source_detail: Some(plugin.id.clone()),
+            });
+        }
+
+        let result_cstr = CStr::from_ptr(result_ptr);
+        let result_string = result_cstr.to_string_lossy().into_owned();
+
+        if let Ok(free_fn) = library.get::<Symbol<PluginFreeStringFn>>(b"flm_plugin_free_string\0") {
+            free_fn(result_ptr);
+        } else {
+            eprintln!("[WARN] プラグイン '{}' に解放関数 'flm_plugin_free_string' が見つかりません。戻り値のメモリを解放できない可能性があります。", plugin.name);
+        }
+
+        // Library must stay alive until after symbols are used.
+        drop(library);
+
+        match serde_json::from_str::<PluginExecutionResult>(&result_string) {
+            Ok(parsed) => Ok(parsed),
+            Err(_) => Ok(PluginExecutionResult {
+                success: true,
+                output: Some(result_string),
+                error: None,
+            }),
+        }
+    }
+}
+
 /// エンジンプラグインを実行
 async fn execute_engine_plugin(
     plugin: &PluginInfo,
     _context: &PluginContext,
 ) -> PluginExecutionResult {
+    // ライブラリパスが指定されている場合は存在確認
+    if let Some(ref library_path_str) = plugin.library_path {
+        if !library_path_str.is_empty() {
+            let library_path = std::path::Path::new(library_path_str);
+            if !library_path.exists() {
+                return PluginExecutionResult {
+                    success: false,
+                    output: None,
+                    error: Some(format!("プラグインライブラリが見つかりません: {}", library_path_str)),
+                };
+            }
+            
+            // 将来的に動的ライブラリをロードする処理を実装予定
+            // 現在は未実装のため、エラーを返す
+            return PluginExecutionResult {
+                success: false,
+                output: None,
+                error: Some(format!("プラグイン '{}' の動的ライブラリロード機能は現在未実装です。ライブラリパス: {}", plugin.name, library_path_str)),
+            };
+        }
+    }
+    
+    // ライブラリパスが指定されていない場合は、基本的な処理のみ実行
     PluginExecutionResult {
         success: true,
-        output: Some(format!("エンジンプラグイン '{}' が実行されました", plugin.name)),
+        output: Some(format!("エンジンプラグイン '{}' が実行されました（ライブラリパス未指定のため、基本処理のみ実行）", plugin.name)),
         error: None,
     }
 }
@@ -240,7 +377,10 @@ impl PluginManager {
             
             let permissions_json: Option<String> = row.get(8)?;
             let permissions = if let Some(json) = permissions_json {
-                serde_json::from_str(&json).unwrap_or_default()
+                serde_json::from_str(&json).unwrap_or_else(|e| {
+                    eprintln!("[WARN] プラグイン権限JSONのパースエラー: {} (JSON: {})", e, json);
+                    PluginPermissions::default()
+                })
             } else {
                 PluginPermissions::default()
             };
@@ -316,7 +456,10 @@ impl PluginManager {
             
             let permissions_json: Option<String> = row.get(8)?;
             let permissions = if let Some(json) = permissions_json {
-                serde_json::from_str(&json).unwrap_or_default()
+                serde_json::from_str(&json).unwrap_or_else(|e| {
+                    eprintln!("[WARN] プラグイン権限JSONのパースエラー: {} (JSON: {})", e, json);
+                    PluginPermissions::default()
+                })
             } else {
                 PluginPermissions::default()
             };
@@ -383,7 +526,10 @@ impl PluginManager {
             
             let permissions_json: Option<String> = row.get(8)?;
             let permissions = if let Some(json) = permissions_json {
-                serde_json::from_str(&json).unwrap_or_default()
+                serde_json::from_str(&json).unwrap_or_else(|e| {
+                    eprintln!("[WARN] プラグイン権限JSONのパースエラー: {} (JSON: {})", e, json);
+                    PluginPermissions::default()
+                })
             } else {
                 PluginPermissions::default()
             };
@@ -513,11 +659,24 @@ impl PluginManager {
 /// モデル管理プラグインを実行
 async fn execute_model_plugin(
     plugin: &PluginInfo,
-    _context: &PluginContext,
+    context: &PluginContext,
 ) -> PluginExecutionResult {
+    if let Some(path) = get_library_path(plugin) {
+        let library_path = Path::new(path);
+        if !library_path.exists() {
+            return dynamic_execution_error(plugin, format!("プラグインライブラリが見つかりません: {}", path));
+        }
+
+        match execute_dynamic_plugin(plugin, context) {
+            Ok(result) => return result,
+            Err(e) => return dynamic_execution_error(plugin, format!("{}", e)),
+        }
+    }
+    
+    // ライブラリパスが指定されていない場合は、基本的な処理のみ実行
     PluginExecutionResult {
         success: true,
-        output: Some(format!("モデル管理プラグイン '{}' が実行されました", plugin.name)),
+        output: Some(format!("モデル管理プラグイン '{}' が実行されました（ライブラリパス未指定のため、基本処理のみ実行）", plugin.name)),
         error: None,
     }
 }
@@ -525,11 +684,24 @@ async fn execute_model_plugin(
 /// 認証プラグインを実行
 async fn execute_auth_plugin(
     plugin: &PluginInfo,
-    _context: &PluginContext,
+    context: &PluginContext,
 ) -> PluginExecutionResult {
+    if let Some(path) = get_library_path(plugin) {
+        let library_path = Path::new(path);
+        if !library_path.exists() {
+            return dynamic_execution_error(plugin, format!("プラグインライブラリが見つかりません: {}", path));
+        }
+
+        match execute_dynamic_plugin(plugin, context) {
+            Ok(result) => return result,
+            Err(e) => return dynamic_execution_error(plugin, format!("{}", e)),
+        }
+    }
+    
+    // ライブラリパスが指定されていない場合は、基本的な処理のみ実行
     PluginExecutionResult {
         success: true,
-        output: Some(format!("認証プラグイン '{}' が実行されました", plugin.name)),
+        output: Some(format!("認証プラグイン '{}' が実行されました（ライブラリパス未指定のため、基本処理のみ実行）", plugin.name)),
         error: None,
     }
 }
@@ -537,11 +709,24 @@ async fn execute_auth_plugin(
 /// ログプラグインを実行
 async fn execute_logging_plugin(
     plugin: &PluginInfo,
-    _context: &PluginContext,
+    context: &PluginContext,
 ) -> PluginExecutionResult {
+    if let Some(path) = get_library_path(plugin) {
+        let library_path = Path::new(path);
+        if !library_path.exists() {
+            return dynamic_execution_error(plugin, format!("プラグインライブラリが見つかりません: {}", path));
+        }
+
+        match execute_dynamic_plugin(plugin, context) {
+            Ok(result) => return result,
+            Err(e) => return dynamic_execution_error(plugin, format!("{}", e)),
+        }
+    }
+    
+    // ライブラリパスが指定されていない場合は、基本的な処理のみ実行
     PluginExecutionResult {
         success: true,
-        output: Some(format!("ログプラグイン '{}' が実行されました", plugin.name)),
+        output: Some(format!("ログプラグイン '{}' が実行されました（ライブラリパス未指定のため、基本処理のみ実行）", plugin.name)),
         error: None,
     }
 }
@@ -551,11 +736,36 @@ async fn execute_custom_plugin(
     plugin: &PluginInfo,
     context: &PluginContext,
 ) -> PluginExecutionResult {
+    if let Some(path) = get_library_path(plugin) {
+        let library_path = Path::new(path);
+        if !library_path.exists() {
+            return dynamic_execution_error(plugin, format!("プラグインライブラリが見つかりません: {}", path));
+        }
+
+        match execute_dynamic_plugin(plugin, context) {
+            Ok(result) => return result,
+            Err(e) => return dynamic_execution_error(plugin, format!("{}", e)),
+        }
+    }
+    
+    // コンテキストデータのシリアライズを試みる
+    let context_str = match serde_json::to_string(&context.data) {
+        Ok(s) => s,
+        Err(e) => {
+            return PluginExecutionResult {
+                success: false,
+                output: None,
+                error: Some(format!("コンテキストデータのシリアライズに失敗しました: {}", e)),
+            };
+        }
+    };
+    
+    // ライブラリパスが指定されていない場合は、基本的な処理のみ実行
     PluginExecutionResult {
         success: true,
-        output: Some(format!("カスタムプラグイン '{}' が実行されました。コンテキスト: {}", 
+        output: Some(format!("カスタムプラグイン '{}' が実行されました（ライブラリパス未指定のため、基本処理のみ実行）。コンテキスト: {}", 
             plugin.name,
-            serde_json::to_string(&context.data).unwrap_or_default()
+            context_str
         )),
         error: None,
     }

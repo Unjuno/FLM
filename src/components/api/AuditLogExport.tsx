@@ -4,8 +4,6 @@ import React, { useState, useCallback, useTransition } from 'react';
 import { safeInvoke } from '../../utils/tauri';
 import { Tooltip } from '../common/Tooltip';
 import { logger } from '../../utils/logger';
-import { save } from '@tauri-apps/api/dialog';
-import { writeTextFile } from '@tauri-apps/api/fs';
 
 /**
  * 監査ログエクスポートコンポーネントのプロパティ
@@ -53,28 +51,27 @@ export const AuditLogExport: React.FC<AuditLogExportProps> = ({
   const [excludeSensitiveInfo, setExcludeSensitiveInfo] = useState(true);
 
   /**
-   * ファイルをダウンロード
+   * ファイルをダウンロード（ブラウザのダウンロード機能を使用）
    */
   const downloadFile = useCallback(
     async (data: string, format: 'csv' | 'json' | 'txt'): Promise<void> => {
       try {
         const extension = format === 'csv' ? 'csv' : format === 'json' ? 'json' : 'txt';
         const filename = `audit-logs_${new Date().toISOString().split('T')[0]}.${extension}`;
+        const mimeType = MIME_TYPES[format];
         
-        const filePath = await save({
-          defaultPath: filename,
-          filters: [
-            {
-              name: format.toUpperCase(),
-              extensions: [extension],
-            },
-          ],
-        });
-
-        if (filePath) {
-          await writeTextFile(filePath, data);
-          logger.info(`監査ログをエクスポートしました: ${filePath}`, 'AuditLogExport');
-        }
+        // Blobを作成してダウンロード
+        const blob = new Blob([data], { type: mimeType });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        
+        logger.info(`監査ログをエクスポートしました: ${filename}`, 'AuditLogExport');
       } catch (err) {
         logger.error('ファイル保存エラー', err, 'AuditLogExport');
         throw err;

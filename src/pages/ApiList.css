@@ -449,12 +449,7 @@
   font-weight: 500;
 }
 
-.select-all-checkbox input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  accent-color: var(--color-primary);
-}
+/* チェックボックスのスタイルは共通CSS（src/styles/common.css）で統一 */
 
 .api-select-checkbox {
   display: flex;
@@ -463,12 +458,7 @@
   flex-shrink: 0;
 }
 
-.api-select-checkbox input[type="checkbox"] {
-  width: 20px;
-  height: 20px;
-  cursor: pointer;
-  accent-color: var(--color-primary);
-}
+/* チェックボックスのスタイルは共通CSS（src/styles/common.css）で統一 */
 
 /* レスポンシブ対応 */
 @media (max-width: 768px) {

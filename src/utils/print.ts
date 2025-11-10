@@ -1,5 +1,8 @@
 // print - 印刷ユーティリティ
 
+import { logger } from './logger';
+import { TIMEOUT } from '../constants/config';
+
 /**
  * 印刷オプション
  */
@@ -17,12 +20,8 @@ export interface PrintOptions {
 }
 
 /**
-
-
-* 印刷処理の定数
+ * 印刷処理の定数
  */
-import { TIMEOUT } from '../constants/config';
-
 const PRINT_DELAY_MS = TIMEOUT.PRINT_DELAY;
 const WINDOW_CLOSE_DELAY_MS = TIMEOUT.WINDOW_CLOSE_DELAY;
 const DEFAULT_PAGE_MARGIN = '1cm';
@@ -33,120 +32,121 @@ const DEFAULT_LINE_HEIGHT = 1.5;
  * エラーメッセージ
  */
 const ERROR_MESSAGES = {
-  POPUP_BLOCKED:
-    '印刷ウィンドウを開けませんでした。ポップアップブロッカーが有効になっている可能性があります。',
-  ELEMENT_NOT_FOUND: '印刷対象の要素が見つかりませんでした。',
-  WINDOW_LOAD_FAILED: '印刷ウィンドウの読み込みに失敗しました。',
-  PRINT_FAILED: '印刷の実行中にエラーが発生しました。',
-  CALLBACK_ERROR: (phase: 'before' | 'after') =>
-    `印刷${phase === 'before' ? '前' : '後'}コールバックでエラーが発生しました:`,
-} as const;
+  NO_ELEMENT: (selector: string) => `印刷対象の要素が見つかりません: ${selector}`,
+  POPUP_BLOCKED: () => '印刷ウィンドウがブロックされました。ポップアップを許可してください。',
+  PRINT_FAILED: () => '印刷処理に失敗しました。',
+  CALLBACK_ERROR: (phase: string) => `${phase}コールバックでエラーが発生しました`,
+};
 
 /**
- * デフォルトの印刷用CSSスタイル
+ * デフォルト印刷スタイル
  */
 const DEFAULT_PRINT_STYLES = `
   @media print {
-    @page {
-      margin: ${DEFAULT_PAGE_MARGIN};
-    }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen',
-        'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue',
-        sans-serif;
+      margin: ${DEFAULT_PAGE_MARGIN};
       font-size: ${DEFAULT_FONT_SIZE};
       line-height: ${DEFAULT_LINE_HEIGHT};
       color: #000;
       background: #fff;
     }
-    /* 印刷時に非表示にする要素 */
+    
+    /* 不要な要素を非表示 */
     .no-print,
     button,
-    .button,
-    nav,
-    header .header-actions,
-    .print-hide {
+    .sidebar,
+    .header,
+    .footer,
+    nav {
       display: none !important;
     }
-    /* 印刷時に表示する要素 */
-    .print-only {
-      display: block !important;
-    }
-    /* テーブルのスタイル */
-    table {
-      width: 100%;
-      border-collapse: collapse;
-      page-break-inside: auto;
-    }
-    tr {
-      page-break-inside: avoid;
-      page-break-after: auto;
-    }
-    thead {
-      display: table-header-group;
-    }
-    tfoot {
-      display: table-footer-group;
-    }
+    
     /* ページ区切り */
     .page-break {
-      page-break-before: always;
+      page-break-after: always;
     }
-    /* リンク */
-    a {
-      color: #000;
-      text-decoration: none;
-    }
-    a[href^="http"]:after {
+    
+    /* リンクのURL表示 */
+    a[href]:after {
       content: " (" attr(href) ")";
-      font-size: 0.8em;
-      color: #666;
+    }
+    
+    /* テーブルの改ページ防止 */
+    table {
+      page-break-inside: avoid;
     }
   }
 `;
 
 /**
- * HTML文字列をエスケープしてXSS攻撃を防ぐ
- * @param str エスケープする文字列
- * @returns エスケープされた文字列
+ * HTMLエレメントを取得
+ * @param selector 要素のIDまたはセレクタ、またはHTMLElement
+ * @returns HTMLElement
  */
-const escapeHtml = (str: string): string => {
-  const map: Record<string, string> = {
-    '&': '&amp;',
-    '<': '&lt;',
-    '>': '&gt;',
-    '"': '&quot;',
-    "'": '&#39;',
-  };
-  return str.replace(/[&<>"']/g, char => map[char] || char);
+const getElement = (selector: string | HTMLElement): HTMLElement | null => {
+  if (typeof selector === 'string') {
+    // IDで検索
+    const element = document.getElementById(selector);
+    if (element) return element;
+    
+    // セレクタで検索
+    return document.querySelector(selector);
+  }
+  return selector;
 };
 
 /**
- * 要素を取得する（型安全）
- * @param targetElement セレクタ文字列またはHTMLElement
- * @returns 取得した要素またはnull
+ * 印刷用スタイルを作成
+ * @param customStyles カスタムスタイル
+ * @returns スタイルタグのHTML文字列
  */
-const getTargetElement = (
-  targetElement?: string | HTMLElement
-): HTMLElement | null => {
-  if (typeof targetElement === 'string') {
-    return document.querySelector<HTMLElement>(targetElement);
-  }
-  if (targetElement instanceof HTMLElement) {
-    return targetElement;
-  }
-  return document.body;
+const createPrintStyles = (customStyles?: string): string => {
+  const styles = customStyles || DEFAULT_PRINT_STYLES;
+  return `<style>${styles}</style>`;
 };
 
 /**
- * コールバック関数を安全に実行する
- * @param callback 実行するコールバック関数
- * @param phase コールバックのフェーズ（エラーメッセージ用）
+ * 印刷ウィンドウのHTMLを作成
+ * @param content 印刷するコンテンツのHTML
+ * @param title ページタイトル
+ * @param styles 印刷用スタイル
+ * @returns 印刷ウィンドウのHTML
+ */
+const createPrintWindowHTML = (
+  content: string,
+  title?: string,
+  styles?: string
+): string => {
+  const pageTitle = title || document.title;
+  const printStyles = createPrintStyles(styles);
+  
+  return `
+    <!DOCTYPE html>
+    <html lang="ja">
+    <head>
+      <meta charset="UTF-8">
+      <meta name="viewport" content="width=device-width, initial-scale=1.0">
+      <title>${pageTitle}</title>
+      ${printStyles}
+    </head>
+    <body>
+      ${content}
+    </body>
+    </html>
+  `;
+};
+
+/**
+ * コールバックを安全に実行
+ * @param callback コールバック関数
+ * @param phase 実行フェーズ（'印刷前' | '印刷後'）
  */
 const safeExecuteCallback = async (
-  callback: () => void | Promise<void>,
-  phase: 'before' | 'after'
+  callback?: () => void | Promise<void>,
+  phase: string = '印刷'
 ): Promise<void> => {
+  if (!callback) return;
+  
   try {
     await Promise.resolve(callback());
   } catch (error) {
@@ -167,175 +167,125 @@ const handleError = async (
     try {
       printWindow.close();
     } catch (error) {
-      logger.error('印刷ウィンドウの閉鎖中にエラーが発生しました', error, 'print');
+      logger.error('印刷ウィンドウのクローズに失敗しました', error, 'print');
     }
   }
-  if (afterPrint) {
-    await safeExecuteCallback(afterPrint, 'after');
+  await safeExecuteCallback(afterPrint, '印刷後');
+};
+
+/**
+ * 印刷を実行
+ * @param options 印刷オプション
+ */
+export const print = async (options: PrintOptions = {}): Promise<void> => {
+  const {
+    targetElement,
+    title,
+    beforePrint,
+    afterPrint,
+    styles,
+  } = options;
+  
+  let printWindow: Window | null = null;
+  
+  try {
+    // 印刷前コールバックを実行
+    await safeExecuteCallback(beforePrint, '印刷前');
+    
+    // 印刷対象のコンテンツを取得
+    let content: string;
+    
+    if (targetElement) {
+      const element = getElement(targetElement);
+      if (!element) {
+        const selector = typeof targetElement === 'string' ? targetElement : 'Unknown';
+        logger.error(ERROR_MESSAGES.NO_ELEMENT(selector), '', 'print');
+        throw new Error(ERROR_MESSAGES.NO_ELEMENT(selector));
+      }
+      content = element.innerHTML;
+    } else {
+      // 対象が指定されていない場合は、body全体を印刷
+      content = document.body.innerHTML;
+    }
+    
+    // 印刷ウィンドウを開く
+    printWindow = window.open('', '_blank', 'width=800,height=600');
+    
+    if (!printWindow) {
+      logger.error(ERROR_MESSAGES.POPUP_BLOCKED(), '', 'print');
+      throw new Error(ERROR_MESSAGES.POPUP_BLOCKED());
+    }
+    
+    // HTMLを書き込む
+    const html = createPrintWindowHTML(content, title, styles);
+    printWindow.document.write(html);
+    printWindow.document.close();
+    
+    // スタイルの読み込みと画像の読み込みを待つ
+    await new Promise<void>((resolve) => {
+      if (!printWindow) {
+        resolve();
+        return;
+      }
+      
+      printWindow.addEventListener('load', () => {
+        setTimeout(() => resolve(), PRINT_DELAY_MS);
+      });
+    });
+    
+    // 印刷ダイアログを表示
+    printWindow.focus();
+    printWindow.print();
+    
+    // 印刷ダイアログが閉じられるのを待つ
+    setTimeout(() => {
+      if (printWindow) {
+        printWindow.close();
+      }
+      safeExecuteCallback(afterPrint, '印刷後');
+    }, WINDOW_CLOSE_DELAY_MS);
+    
+  } catch (error) {
+    logger.error(ERROR_MESSAGES.PRINT_FAILED(), error, 'print');
+    await handleError(printWindow, afterPrint);
+    throw error;
   }
 };
 
 /**
- * 印刷用HTMLテンプレートを生成
- * @param title ページタイトル
- * @param content 印刷コンテンツ（innerHTMLから取得されたHTML文字列）
- * @param styles 追加CSSスタイル
- * @returns 完全なHTML文字列
- *
- * 注意: contentは既存のDOM要素のinnerHTMLから取得されるため、
- * 信頼されたソースからのコンテンツのみが渡されることを前提としています。
- * 外部入力や信頼できないデータが含まれる可能性がある場合は、
- * 事前にサニタイゼーションが必要です。
+ * 現在のページを印刷
  */
-const generatePrintHTML = (
-  title: string,
-  content: string,
-  styles: string
-): string => {
-  const escapedTitle = escapeHtml(title);
-  const escapedStyles = escapeHtml(styles);
-  const currentYear = new Date().getFullYear();
-  const printDate = new Date().toLocaleString('ja-JP');
-
-  // contentはDOM要素のinnerHTMLから取得されるため、そのまま使用
-  // ただし、将来外部入力が含まれる可能性がある場合は、サニタイゼーションが必要
-
-  return `<!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8">
-    <title>${escapedTitle}</title>
-    <style>
-      ${escapedStyles}
-${DEFAULT_PRINT_STYLES.trim()}
-    </style>
-  </head>
-  <body>
-    <div class="print-header">
-      <h1>${escapedTitle}</h1>
-      <p class="print-date">印刷日時: ${printDate}</p>
-    </div>
-    ${content}
-    <div class="print-footer">
-      <p>© ${currentYear} FLM Project. All rights reserved.</p>
-    </div>
-  </body>
-</html>`;
+export const printCurrentPage = async (): Promise<void> => {
+  try {
+    window.print();
+  } catch (error) {
+    logger.error(ERROR_MESSAGES.PRINT_FAILED(), error, 'print');
+    throw error;
+  }
 };
 
 /**
- * 指定された要素を印刷します
+ * 指定された要素を印刷
+ * @param elementId 要素のID
  * @param options 印刷オプション
  */
 export const printElement = async (
-  options: PrintOptions = {}
+  elementId: string,
+  options: Omit<PrintOptions, 'targetElement'> = {}
 ): Promise<void> => {
-  const {
-    targetElement,
-    title = document.title,
-    beforePrint,
-    afterPrint,
-    styles = '',
-  } = options;
-
-  // 印刷前のコールバックを実行
-  if (beforePrint) {
-    await safeExecuteCallback(beforePrint, 'before');
-    // エラーが発生しても処理を続行（コールバック内でエラーが記録される）
-  }
-
-  // 新しいウィンドウを作成
-  const printWindow = window.open('', '_blank');
-  if (!printWindow) {
-    logger.error(ERROR_MESSAGES.POPUP_BLOCKED, null, 'print');
-    // alert()を削除: エラーはコンソールに出力し、呼び出し元で適切に処理される
-    await handleError(null, afterPrint);
-    return;
-  }
-
-  // 読み込み失敗時のエラーハンドリングを先に設定
-  printWindow.onerror = async () => {
-    logger.error(ERROR_MESSAGES.WINDOW_LOAD_FAILED, null, 'print');
-    // alert()を削除: エラーはコンソールに出力し、呼び出し元で適切に処理される
-    await handleError(printWindow, afterPrint);
-  };
-
-  // 印刷対象の要素を取得
-  const elementToPrint = getTargetElement(targetElement);
-  if (!elementToPrint) {
-    logger.error(ERROR_MESSAGES.ELEMENT_NOT_FOUND, null, 'print');
-    // alert()を削除: エラーはコンソールに出力し、呼び出し元で適切に処理される
-    await handleError(printWindow, afterPrint);
-    return;
-  }
-
-  // 印刷用HTMLを作成
-  const printContent = elementToPrint.innerHTML;
-  const printHTML = generatePrintHTML(title, printContent, styles);
-
-  try {
-    // 印刷ウィンドウにコンテンツを書き込み
-    printWindow.document.write(printHTML);
-    printWindow.document.close();
-
-    // 印刷ウィンドウが読み込まれたら印刷を実行
-    printWindow.onload = () => {
-      setTimeout(async () => {
-        try {
-          printWindow.print();
-
-          // 印刷後、ウィンドウを閉じる
-          setTimeout(async () => {
-            try {
-              printWindow.close();
-            } catch (error) {
-              logger.error('印刷ウィンドウの閉鎖中にエラーが発生しました', error, 'print');
-            }
-            if (afterPrint) {
-              await safeExecuteCallback(afterPrint, 'after');
-            }
-          }, WINDOW_CLOSE_DELAY_MS);
-        } catch (error) {
-          logger.error(ERROR_MESSAGES.PRINT_FAILED, error, 'print');
-          await handleError(printWindow, afterPrint);
-        }
-      }, PRINT_DELAY_MS);
-    };
-  } catch (error) {
-    logger.error('印刷処理中にエラーが発生しました', error, 'print');
-    await handleError(printWindow, afterPrint);
-  }
+  await print({ ...options, targetElement: elementId });
 };
 
 /**
- * 現在のページを印刷します
+ * 指定されたセレクタで要素を印刷
+ * @param selector CSSセレクタまたは要素のID
  * @param title ページタイトル（オプション）
- */
-export const printPage = async (title?: string): Promise<void> => {
-  await printElement({
-    title: title || document.title,
-    beforePrint: () => {
-      // 印刷前にページの状態を保存
-      document.body.classList.add('printing');
-    },
-    afterPrint: () => {
-      // 印刷後にページの状態を復元
-      document.body.classList.remove('printing');
-    },
-  });
-};
-
-/**
- * 指定されたセレクタの要素を印刷します
- * @param selector 要素のセレクタ
- * @param title ページタイトル（オプション）
+ * @param options 追加の印刷オプション
  */
 export const printSelector = async (
   selector: string,
-  title?: string
+  title?: string,
+  options: Omit<PrintOptions, 'targetElement' | 'title'> = {}
 ): Promise<void> => {
-  await printElement({
-    targetElement: selector,
-    title: title || document.title,
-  });
+  await print({ ...options, targetElement: selector, title });
 };

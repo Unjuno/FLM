@@ -1296,7 +1296,7 @@ export const Diagnostics: React.FC = () => {
             <div className="diagnostics-card">
               <ul className="diagnostics-tips">
                 <li>ポートが占有されている場合は、ExpressVPN などの常駐アプリが同じポートを使用していないか確認し、必要に応じて停止してください。</li>
-                <li>API が停止中にもかかわらずポートが使用中の場合は、OS を再起動するか <code>netstat -ano | findstr &lt;ポート番号&gt;</code> でプロセスを特定してください。</li>
+                <li>API が停止中にもかかわらずポートが使用中の場合は、OS を再起動するか <code>netstat -ano | findstr {'<'}ポート番号{'>'}</code> でプロセスを特定してください。</li>
                 <li>Ollama が未インストールの場合は、「Ollamaセットアップ」ページからインストールを行ってください。</li>
                 <li>ダウンロードエラーが発生する場合は、インターネット接続と空き容量（推奨 10GB 以上）を確認し、必要に応じて別ドライブを指定してください。</li>
                 <li>セキュリティソフトが `ollama.exe` や `flm.exe` をブロックしている場合は、許可リストに追加してから再実行してください。</li>
@@ -1306,6 +1306,7 @@ export const Diagnostics: React.FC = () => {
           </section>
         </div>
       )}
+      </div>
     </div>
   );
 };

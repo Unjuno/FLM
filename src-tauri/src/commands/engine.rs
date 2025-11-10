@@ -51,10 +51,12 @@ pub async fn detect_all_engines() -> Result<Vec<EngineDetectionResult>, String> 
 
 /// エンジンを起動
 #[tauri::command]
+#[allow(non_snake_case)] // Tauri v2のフロントエンドとの互換性のためcamelCaseを使用
 pub async fn start_engine(
-    engine_type: String,
+    engineType: String,
     config: Option<EngineConfig>
 ) -> Result<u32, String> {
+    let engine_type = engineType;
     let manager = get_engine_manager();
     manager.start_engine(&engine_type, config).await
         .map_err(|e| format!("{}", e))
@@ -195,13 +197,43 @@ pub async fn get_engine_models(engine_type: String) -> Result<Vec<crate::engines
 
 /// エンジンをインストール
 #[tauri::command]
+#[allow(non_snake_case)] // Tauri v2のフロントエンドとの互換性のためcamelCaseを使用
 pub async fn install_engine(
     app_handle: AppHandle,
-    engine_type: String
+    engineType: String
 ) -> Result<String, String> {
+    let engine_type = engineType;
+    
+    // インストール前に、既にインストールされているかチェック
+    let manager = get_engine_manager();
+    match manager.detect_engine(&engine_type).await {
+        Ok(detection_result) => {
+            if detection_result.installed {
+                return Err(format!(
+                    "{}は既にインストールされています。パス: {}",
+                    match engine_type.as_str() {
+                        "lm_studio" => "LM Studio",
+                        "vllm" => "vLLM",
+                        "llama_cpp" => "llama.cpp",
+                        _ => &engine_type,
+                    },
+                    detection_result.path.as_ref()
+                        .map(|p| p.as_str())
+                        .unwrap_or("不明")
+                ));
+            }
+        },
+        Err(e) => {
+            // 検出エラーは無視してインストールを続行（エンジンが存在しない可能性があるため）
+            eprintln!("[WARN] エンジン検出エラー（インストールを続行）: {}", e);
+        }
+    }
+    
     // 進捗をイベントで送信するコールバック
     let progress_callback = |progress: EngineDownloadProgress| -> Result<(), crate::utils::error::AppError> {
-        let _ = app_handle.emit("engine_install_progress", &progress);
+        if let Err(e) = app_handle.emit("engine_install_progress", &progress) {
+            eprintln!("[WARN] エンジンインストール進捗イベントの送信に失敗しました: {}", e);
+        }
         Ok(())
     };
     
@@ -262,7 +294,9 @@ pub async fn update_engine(
 ) -> Result<String, String> {
     // 進捗をイベントで送信するコールバック
     let progress_callback = |progress: EngineDownloadProgress| -> Result<(), crate::utils::error::AppError> {
-        let _ = app_handle.emit("engine_update_progress", &progress);
+        if let Err(e) = app_handle.emit("engine_update_progress", &progress) {
+            eprintln!("[WARN] エンジン更新進捗イベントの送信に失敗しました: {}", e);
+        }
         Ok(())
     };
     

@@ -329,6 +329,15 @@ export const ApiCreate: React.FC = () => {
         setCreationResult(result);
         setCurrentStep(CreationStep.Success);
 
+        // API作成後に自動的に起動を試みる
+        try {
+          await safeInvoke('start_api', { apiId: result.id });
+          logger.info('APIを自動起動しました', '', 'ApiCreate');
+        } catch (startErr) {
+          // 自動起動に失敗してもエラーを表示しない（ユーザーが手動で起動できる）
+          logger.warn('APIの自動起動に失敗しました（手動で起動できます）', String(startErr), 'ApiCreate');
+        }
+
         // 進捗イベントリスナーをクリーンアップ
         if (unlistenProgress) {
           try {
@@ -488,6 +497,22 @@ export const ApiCreate: React.FC = () => {
   };
 
   // 成功画面でホームに戻る
+  // APIを起動するハンドラー
+  const handleStartApi = useCallback(async () => {
+    if (!creationResult) return;
+    
+    try {
+      await safeInvoke('start_api', { apiId: creationResult.id });
+      // 成功メッセージを表示（オプション）
+      logger.info('APIを起動しました', '', 'ApiCreate');
+    } catch (err) {
+      const errorMessage = extractErrorMessage(err, 'APIの起動に失敗しました');
+      setError(errorMessage);
+      logger.error('APIの起動に失敗しました', err, 'ApiCreate');
+      throw err;
+    }
+  }, [creationResult]);
+
   const handleGoHome = () => {
     navigate('/');
   };
@@ -633,6 +658,7 @@ export const ApiCreate: React.FC = () => {
               <ApiCreationSuccess
                 result={creationResult}
                 onGoHome={handleGoHome}
+                onStartApi={handleStartApi}
               />
             )}
           </div>

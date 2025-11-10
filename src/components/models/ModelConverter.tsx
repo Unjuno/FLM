@@ -158,7 +158,7 @@ export const ModelConverter: React.FC = () => {
     } catch (err) {
       // エラーは静かに処理（手動入力にフォールバック）
       // eslint-disable-next-line no-console
-      logger.warn('ファイル選択ダイアログが利用できません', err, 'ModelConverter');
+      logger.warn('ファイル選択ダイアログが利用できません', String(err), 'ModelConverter');
       showError(
         'ファイル選択ダイアログが利用できません。手動でパスを入力してください。'
       );

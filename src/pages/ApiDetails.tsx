@@ -8,6 +8,7 @@ import { SAMPLE_DATA } from '../constants/config';
 import { Breadcrumb, BreadcrumbItem } from '../components/common/Breadcrumb';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { Tooltip } from '../components/common/Tooltip';
 import { useI18n } from '../contexts/I18nContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import type { ApiInfo } from '../types/api';
@@ -306,7 +307,17 @@ export const ApiDetails: React.FC = () => {
 
           {/* エンドポイントセクション */}
           <section className="details-section">
-            <h2>エンドポイント</h2>
+            <h2>
+              <Tooltip
+                content="APIの接続先URLです。外部アプリケーションからこのURLにアクセスしてAPIを使用できます。"
+                title="エンドポイントとは？"
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                  エンドポイント
+                  <span style={{ fontSize: '0.875rem', opacity: 0.7 }}>❓</span>
+                </span>
+              </Tooltip>
+            </h2>
             <div className="endpoint-display">
               <code className="endpoint-url">{apiInfo.endpoint}</code>
               <button
@@ -325,7 +336,17 @@ export const ApiDetails: React.FC = () => {
           {/* APIキーセクション */}
           {apiInfo.enable_auth && (
             <section className="details-section">
-              <h2>APIキー</h2>
+              <h2>
+                <Tooltip
+                  content="APIを安全に使用するための認証キーです。外部アプリケーションからAPIを使用する際に必要です。このキーは秘密にしてください。"
+                  title="APIキーとは？"
+                >
+                  <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                    APIキー
+                    <span style={{ fontSize: '0.875rem', opacity: 0.7 }}>❓</span>
+                  </span>
+                </Tooltip>
+              </h2>
               <div className="api-key-display">
                 {loadingKey ? (
                   <div className="loading-key">

@@ -250,28 +250,10 @@
   -webkit-user-select: none;
   user-select: none;
   font-size: 0.875rem;
+  position: relative;
 }
 
-.settings-checkbox-label input[type="checkbox"] {
-  width: 18px;
-  height: 18px;
-  cursor: pointer;
-  accent-color: var(--color-primary, #667eea);
-}
-
-[data-theme="dark"] .settings-checkbox-label input[type="checkbox"] {
-  accent-color: var(--color-primary, #667eea);
-}
-
-.settings-checkbox-label input[type="checkbox"]:focus-visible {
-  outline: 2px solid var(--color-primary, #667eea);
-  outline-offset: 2px;
-  border-radius: var(--radius-sm, 0.25rem);
-}
-
-[data-theme="dark"] .settings-checkbox-label input[type="checkbox"]:focus-visible {
-  outline-color: var(--color-primary, #667eea);
-}
+/* チェックボックスのスタイルは共通CSS（src/styles/common.css）で統一 */
 
 .settings-info {
   color: var(--color-text-secondary);

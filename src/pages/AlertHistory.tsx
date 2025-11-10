@@ -64,7 +64,7 @@ export const AlertHistory: React.FC = () => {
   });
 
   // 仮想スクロール用のref
-  const parentRef = useRef<HTMLDivElement>(null);
+  const parentRef = useRef<HTMLDivElement | null>(null);
 
   // グローバルキーボードショートカットを有効化
   useGlobalKeyboardShortcuts();

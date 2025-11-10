@@ -24,6 +24,15 @@ module.exports = {
         // '/tests/integration/', // Tauriアプリが必要なため、環境依存のテストとして条件付きで失敗を許容
         // '/tests/e2e/', // Tauriアプリが必要なため、環境依存のテストとして条件付きで失敗を許容
         // '/tests/performance/' // Tauriアプリが必要なため、環境依存のテストとして条件付きで失敗を許容
+        // jsdom環境で実行する必要があるテストファイルを除外
+        '/tests/unit/usePerformanceMetrics.test.ts',
+        '/tests/unit/useResourceUsageMetrics.test.ts',
+        '/tests/unit/useForm.test.ts',
+        '/tests/unit/useApiStatus.test.ts',
+        '/tests/unit/useApiConfigValidation.test.ts',
+        '/tests/unit/useKeyboardShortcuts.test.ts',
+        '/tests/unit/webModelConfig.test.ts',
+        '/tests/unit/modelSelector.test.ts',
       ],
       transform: {
         '^.+\\.(ts|tsx)$': ['ts-jest', {

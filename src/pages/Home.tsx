@@ -18,6 +18,7 @@ import {
 import { SystemCheck } from '../components/common/SystemCheck';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
 import { OllamaDetection } from '../components/common/OllamaDetection';
+import { EngineStatus } from '../components/common/EngineStatus';
 import { useOllamaDetection, useOllamaProcess } from '../hooks/useOllama';
 import { useI18n } from '../contexts/I18nContext';
 import { safeInvoke } from '../utils/tauri';
@@ -54,7 +55,7 @@ export const Home: React.FC = () => {
     runAutoSetup,
   } = useOllamaDetection();
   const { start } = useOllamaProcess();
-  const { showInfo } = useNotifications();
+  const { showInfo, showWarning } = useNotifications();
 
   // グローバルキーボードショートカットを有効化
   useGlobalKeyboardShortcuts();
@@ -296,13 +297,70 @@ export const Home: React.FC = () => {
       const recommendation = await safeInvoke<{
         recommended_model: string;
         reason: string;
+        alternatives?: string[];
       }>('get_model_recommendation');
 
-      // 推奨モデルを選択してAPI作成画面へ
+      const recommendedModelName = recommendation.recommended_model;
+      let chosenModelName = recommendedModelName;
+
+      try {
+        const installedModels = await safeInvoke<
+          Array<{
+            name: string;
+          }>
+        >('get_installed_models');
+
+        const installedSet = new Set(
+          installedModels.map(model => model.name.toLowerCase())
+        );
+
+        if (!installedSet.has(recommendedModelName.toLowerCase())) {
+          const alternative =
+            recommendation.alternatives?.find(alt =>
+              installedSet.has(alt.toLowerCase())
+            ) ?? null;
+
+          if (alternative) {
+            showWarning(
+              t('home.quickCreate.fallbackTitle'),
+              t('home.quickCreate.fallbackMessage', {
+                from: recommendedModelName,
+                to: alternative,
+              })
+            );
+            chosenModelName = alternative;
+          } else if (installedModels.length > 0) {
+            const fallback = installedModels[0].name;
+            showWarning(
+              t('home.quickCreate.fallbackTitle'),
+              t('home.quickCreate.fallbackMessage', {
+                from: recommendedModelName,
+                to: fallback,
+              })
+            );
+            chosenModelName = fallback;
+          } else {
+            showWarning(
+              t('home.quickCreate.noInstalledTitle'),
+              t('home.quickCreate.noInstalledMessage')
+            );
+            navigate('/models');
+            return;
+          }
+        }
+      } catch (checkError) {
+        logger.warn(
+          'インストール済みモデルの確認に失敗しました。推奨モデルをそのまま使用します。',
+          'Home',
+          checkError
+        );
+      }
+
+      // 推奨または代替モデルを使用してAPI作成画面へ
       navigate('/api/create', {
         state: {
           quickCreate: true,
-          recommendedModel: recommendation.recommended_model,
+          recommendedModel: chosenModelName,
         },
       });
     } catch (err) {
@@ -580,16 +638,12 @@ export const Home: React.FC = () => {
 
       <div className="home-container">
         <Breadcrumb items={breadcrumbItems} />
-        <section className="home-section ollama-status-section">
-          <h2 className="home-section-title">Ollama ステータス</h2>
-          <OllamaDetection
-            status={status}
-            isDetecting={isOllamaDetecting}
-            error={ollamaError}
-            autoSteps={autoSteps}
-            autoStatus={autoStatus}
-            autoError={autoError}
-            onRetryAuto={runAutoSetup}
+        <section className="home-section engine-status-section">
+          <h2 className="home-section-title">エンジン ステータス</h2>
+          <EngineStatus
+            engineTypes={['ollama', 'lm_studio', 'vllm', 'llama_cpp']}
+            autoDetect={true}
+            refreshInterval={30000}
           />
         </section>
 

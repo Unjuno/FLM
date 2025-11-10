@@ -548,6 +548,12 @@
     }
   },
   "home": {
+    "quickCreate": {
+      "fallbackTitle": "Using installed model",
+      "fallbackMessage": "The recommended model {{from}} is not installed, so {{to}} will be used instead.",
+      "noInstalledTitle": "No models available",
+      "noInstalledMessage": "Please download a model from Model Management before trying Quick Create again."
+    },
     "sections": {
       "basicFeatures": "Basic Features",
       "monitoring": "Monitoring & Logs",

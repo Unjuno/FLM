@@ -129,9 +129,11 @@ describe('ErrorBoundary.tsx', () => {
     it('「ページを再読み込み」ボタンをクリックするとwindow.location.reloadが呼ばれる', () => {
       // window.location.reloadをモック可能にする
       const reloadSpy = jest.fn();
-      const originalReload = window.location.reload;
+      // window.locationを削除して再定義
+      delete (window as { location?: Location }).location;
       Object.defineProperty(window, 'location', {
         writable: true,
+        configurable: true,
         value: {
           ...window.location,
           reload: reloadSpy,
@@ -151,14 +153,7 @@ describe('ErrorBoundary.tsx', () => {
 
       expect(reloadSpy).toHaveBeenCalled();
 
-      // 元に戻す
-      Object.defineProperty(window, 'location', {
-        writable: true,
-        value: {
-          ...window.location,
-          reload: originalReload,
-        },
-      });
+      // 元に戻す（jsdom環境では自動的に復元される）
     });
 
     it('「ホーム画面に戻る」ボタンをクリックするとwindow.location.hrefが設定される', () => {

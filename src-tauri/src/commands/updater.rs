@@ -141,11 +141,15 @@ pub async fn install_app_update(
                 message: Some("アップデートをダウンロード中...".to_string()),
             };
             
-            let _ = app.emit("app_update_progress", &progress_info);
+            if let Err(e) = app.emit("app_update_progress", &progress_info) {
+                eprintln!("[WARN] アプリ更新進捗イベントの送信に失敗しました: {}", e);
+            }
         },
         || {
             // インストール開始時のコールバック
-            let _ = app.emit("app_update_installed", ());
+            if let Err(e) = app.emit("app_update_installed", ()) {
+                eprintln!("[WARN] アプリ更新インストール完了イベントの送信に失敗しました: {}", e);
+            }
         },
     ).await.map_err(|e| AppError::ApiError {
         message: format!("アップデートのダウンロードとインストールに失敗しました: {}", e),

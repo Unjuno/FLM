@@ -74,6 +74,20 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     }
   };
 
+  // キーボードイベントハンドラー（アクセシビリティ対応）
+  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      if (e.target === e.currentTarget) {
+        if (onClose) {
+          onClose();
+        } else {
+          onCancel();
+        }
+      }
+    }
+  };
+
   if (!isOpen) {
     return null;
   }
@@ -85,6 +99,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       aria-modal="true"
       aria-labelledby="confirm-dialog-title"
       onClick={handleOverlayClick}
+      onKeyDown={handleKeyDown}
+      tabIndex={-1}
     >
       <div className="confirm-dialog" role="document">
         <h3 id="confirm-dialog-title">{title}</h3>

@@ -54,7 +54,7 @@ export const ApiList: React.FC = () => {
   const isMountedRef = useRef(true);
   
   // 仮想スクロール用のref
-  const parentRef = useRef<HTMLDivElement>(null);
+  const parentRef = useRef<HTMLDivElement | null>(null);
   
   // グローバルキーボードショートカットを有効化
   useGlobalKeyboardShortcuts();
@@ -189,9 +189,9 @@ export const ApiList: React.FC = () => {
       
       // バックエンドのIPCコマンドを呼び出し
       if (currentStatus === 'running') {
-        await safeInvoke('stop_api', { api_id: apiId });
+        await safeInvoke('stop_api', { apiId });
       } else {
-        await safeInvoke('start_api', { api_id: apiId });
+        await safeInvoke('start_api', { apiId });
       }
       
       // キャッシュをクリアして最新データを取得
@@ -248,8 +248,7 @@ export const ApiList: React.FC = () => {
                 
                 // バックエンドIPCコマンドを呼び出し（モデル削除オプションを含む）
                 await safeInvoke('delete_api', { 
-                  api_id: apiId,
-                  delete_model: true,
+                  apiId,
                 });
                 
                 // キャッシュをクリアして最新データを取得
@@ -281,8 +280,7 @@ export const ApiList: React.FC = () => {
                   }
                   
                   await safeInvoke('delete_api', { 
-                    api_id: apiId,
-                    delete_model: false,
+                    apiId,
                   });
                   
                   clearInvokeCache('list_apis');
@@ -312,8 +310,7 @@ export const ApiList: React.FC = () => {
               }
               
               await safeInvoke('delete_api', { 
-                api_id: apiId,
-                delete_model: false,
+                apiId,
               });
               
               clearInvokeCache('list_apis');
@@ -437,11 +434,31 @@ export const ApiList: React.FC = () => {
           <span className="info-value">{api.model_name}</span>
         </div>
         <div className="info-row">
-          <span className="info-label">{t('apiList.info.endpoint')}</span>
+          <span className="info-label">
+            <Tooltip
+              content="APIの接続先URLです。外部アプリケーションからこのURLにアクセスしてAPIを使用できます。"
+              title="エンドポイントとは？"
+            >
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                {t('apiList.info.endpoint')}
+                <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>❓</span>
+              </span>
+            </Tooltip>
+          </span>
           <code className="info-value">{api.endpoint}</code>
         </div>
         <div className="info-row">
-          <span className="info-label">{t('apiList.info.port')}</span>
+          <span className="info-label">
+            <Tooltip
+              content="APIが使用する通信ポート番号です。通常は自動的に設定されます。"
+              title="ポート番号とは？"
+            >
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+                {t('apiList.info.port')}
+                <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>❓</span>
+              </span>
+            </Tooltip>
+          </span>
           <span className="info-value">{api.port}</span>
         </div>
       </div>
@@ -480,20 +497,12 @@ export const ApiList: React.FC = () => {
             {t('apiList.actions.details')}
           </button>
         </Tooltip>
-        <Tooltip content={t('apiList.actions.settingsTooltip')} position="top">
-          <button
-            className="action-button settings"
-            onClick={() => navigate(`/api/settings/${api.id}`)}
-          >
-            {t('apiList.actions.settings')}
-          </button>
-        </Tooltip>
-        <Tooltip content={t('apiList.actions.editTooltip')} position="top">
+        <Tooltip content={t('apiList.actions.editTooltip') || 'API設定を変更'} position="top">
           <button
             className="action-button edit"
             onClick={() => navigate(`/api/edit/${api.id}`)}
           >
-            {t('apiList.actions.edit')}
+            {t('apiList.actions.edit') || '設定変更'}
           </button>
         </Tooltip>
         <Tooltip content={t('apiList.actions.deleteTooltip')} position="top">

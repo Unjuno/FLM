@@ -183,7 +183,7 @@ export const ApiSettings: React.FC = () => {
 
           // バックエンドのregenerate_api_keyコマンドを呼び出し
           const newKey = await safeInvoke<string>('regenerate_api_key', {
-            api_id: id,
+            apiId: id,
           });
 
           // 新しいAPIキーを通知で表示
@@ -241,13 +241,64 @@ export const ApiSettings: React.FC = () => {
                   delete_model: true,
                 });
 
-      // API一覧に戻る
-      navigate('/api/list');
-    } catch (err) {
-      setError(extractErrorMessage(err, 'APIの削除に失敗しました'));
-    } finally {
-      setSaving(false);
-    }
+                // API一覧に戻る
+                navigate('/api/list');
+              } catch (err) {
+                setError(extractErrorMessage(err, 'APIの削除に失敗しました'));
+              } finally {
+                setSaving(false);
+              }
+            },
+            onCancel: () => {
+              setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+              
+              // モデル削除なしで削除を実行
+              (async () => {
+                try {
+                  setSaving(true);
+                  setError(null);
+
+                  await safeInvoke('delete_api', {
+                    api_id: id,
+                    delete_model: false,
+                  });
+
+                  // API一覧に戻る
+                  navigate('/api/list');
+                } catch (err) {
+                  setError(extractErrorMessage(err, 'APIの削除に失敗しました'));
+                } finally {
+                  setSaving(false);
+                }
+              })();
+            },
+          });
+        } else {
+          // モデル削除オプションがない場合、直接削除
+          (async () => {
+            try {
+              setSaving(true);
+              setError(null);
+
+              await safeInvoke('delete_api', {
+                api_id: id,
+                delete_model: false,
+              });
+
+              // API一覧に戻る
+              navigate('/api/list');
+            } catch (err) {
+              setError(extractErrorMessage(err, 'APIの削除に失敗しました'));
+            } finally {
+              setSaving(false);
+            }
+          })();
+        }
+      },
+      onCancel: () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+      },
+    });
   };
 
   if (loading) {
@@ -351,12 +402,13 @@ export const ApiSettings: React.FC = () => {
                 id="api-port"
                 type="number"
                 value={settings.port}
-                onChange={e =>
+                onChange={e => {
+                  const parsed = parseInt(e.target.value, 10);
                   setSettings({
                     ...settings,
-                    port: parseInt(e.target.value) || PORT_RANGE.DEFAULT,
-                  })
-                }
+                    port: isNaN(parsed) ? PORT_RANGE.DEFAULT : parsed,
+                  });
+                }}
                 min={PORT_RANGE.MIN}
                 max={PORT_RANGE.MAX}
                 className={errors.port ? 'error' : ''}

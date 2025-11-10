@@ -109,7 +109,7 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
 
   // オートセーブから復元（初回のみ）
   useEffect(() => {
-    const autosaveKey = `api_config_autosave_${model.id || 'new'}`;
+    const autosaveKey = `api_config_autosave_${model.name || 'new'}`;
     try {
       const savedData = localStorage.getItem(autosaveKey);
       if (savedData) {
@@ -121,12 +121,10 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
         
         if (hoursDiff < 24 && parsed.config) {
           // モデルIDが一致する場合のみ復元
-          if (parsed.modelId === model.id) {
+          if (parsed.modelName === model.name) {
             setConfig(prevConfig => ({
               ...prevConfig,
               ...parsed.config,
-              // モデルIDは上書きしない
-              modelId: prevConfig.modelId,
             }));
             if (isDev()) {
               logger.debug('フォーム設定を自動復元しました', 'ApiConfigForm');
@@ -612,10 +610,10 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
     // デバウンス処理: 2秒後に保存
     autosaveTimeoutRef.current = setTimeout(() => {
       try {
-        const autosaveKey = `api_config_autosave_${model.id || 'new'}`;
+        const autosaveKey = `api_config_autosave_${model.name || 'new'}`;
         const autosaveData = {
           config,
-          modelId: model.id,
+          modelName: model.name,
           timestamp: new Date().toISOString(),
         };
         localStorage.setItem(autosaveKey, JSON.stringify(autosaveData));
@@ -634,7 +632,7 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
         clearTimeout(autosaveTimeoutRef.current);
       }
     };
-  }, [config, model.id]);
+  }, [config, model.name]);
 
   // フォームバリデーション
   const validate = (): boolean => {
@@ -755,7 +753,7 @@ export const ApiConfigForm: React.FC<ApiConfigFormProps> = ({
       
       // オートセーブデータを削除
       try {
-        const autosaveKey = `api_config_autosave_${model.id || 'new'}`;
+        const autosaveKey = `api_config_autosave_${model.name || 'new'}`;
         localStorage.removeItem(autosaveKey);
       } catch (err) {
         // 削除エラーは無視

@@ -69,6 +69,7 @@ impl<'a> ErrorLogRepository<'a> {
     }
 
     /// エラーログを取得（IDで）
+    #[allow(dead_code)]
     pub fn find_by_id(&self, id: &str) -> Result<Option<ErrorLog>, DatabaseError> {
         let mut stmt = self.conn.prepare(
             "SELECT id, error_category, error_message, error_stack, context, source, api_id, user_agent, created_at FROM error_logs WHERE id = ?1"
@@ -97,26 +98,26 @@ impl<'a> ErrorLogRepository<'a> {
         let mut query = String::from(
             "SELECT id, error_category, error_message, error_stack, context, source, api_id, user_agent, created_at FROM error_logs WHERE 1=1"
         );
-        let mut params_vec: Vec<&dyn rusqlite::ToSql> = Vec::new();
+        let mut params_vec: Vec<String> = Vec::new();
 
         if let Some(category) = error_category {
             query.push_str(" AND error_category = ?");
-            params_vec.push(category);
+            params_vec.push(category.to_string());
         }
 
         if let Some(api_id) = api_id {
             query.push_str(" AND api_id = ?");
-            params_vec.push(api_id);
+            params_vec.push(api_id.to_string());
         }
 
         if let Some(start_date) = start_date {
             query.push_str(" AND created_at >= ?");
-            params_vec.push(start_date);
+            params_vec.push(start_date.to_string());
         }
 
         if let Some(end_date) = end_date {
             query.push_str(" AND created_at <= ?");
-            params_vec.push(end_date);
+            params_vec.push(end_date.to_string());
         }
 
         query.push_str(" ORDER BY created_at DESC");
@@ -129,7 +130,8 @@ impl<'a> ErrorLogRepository<'a> {
         }
 
         let mut stmt = self.conn.prepare(&query)?;
-        let rows = stmt.query_map(rusqlite::params_from_iter(params_vec.iter()), |row| {
+        let params_refs: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
+        let rows = stmt.query_map(rusqlite::params_from_iter(params_refs.iter()), |row| {
             ErrorLog::from_row(row)
         })?;
 
@@ -142,6 +144,7 @@ impl<'a> ErrorLogRepository<'a> {
     }
 
     /// エラーログの総件数を取得
+    #[allow(dead_code)]
     pub fn count_with_filters(
         &self,
         error_category: Option<&str>,
@@ -150,31 +153,32 @@ impl<'a> ErrorLogRepository<'a> {
         end_date: Option<&str>,
     ) -> Result<i64, DatabaseError> {
         let mut query = String::from("SELECT COUNT(*) FROM error_logs WHERE 1=1");
-        let mut params_vec: Vec<&dyn rusqlite::ToSql> = Vec::new();
+        let mut params_vec: Vec<String> = Vec::new();
 
         if let Some(category) = error_category {
             query.push_str(" AND error_category = ?");
-            params_vec.push(category);
+            params_vec.push(category.to_string());
         }
 
         if let Some(api_id) = api_id {
             query.push_str(" AND api_id = ?");
-            params_vec.push(api_id);
+            params_vec.push(api_id.to_string());
         }
 
         if let Some(start_date) = start_date {
             query.push_str(" AND created_at >= ?");
-            params_vec.push(start_date);
+            params_vec.push(start_date.to_string());
         }
 
         if let Some(end_date) = end_date {
             query.push_str(" AND created_at <= ?");
-            params_vec.push(end_date);
+            params_vec.push(end_date.to_string());
         }
 
         let mut stmt = self.conn.prepare(&query)?;
+        let params_refs: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
         let count: i64 = stmt.query_row(
-            rusqlite::params_from_iter(params_vec.iter()),
+            rusqlite::params_from_iter(params_refs.iter()),
             |row| row.get(0),
         )?;
 
@@ -182,10 +186,11 @@ impl<'a> ErrorLogRepository<'a> {
     }
 
     /// 古いエラーログを削除（保持期間を超えたログ）
+    #[allow(dead_code)]
     pub fn delete_old_logs(&self, days_to_keep: i32) -> Result<usize, DatabaseError> {
         let cutoff_date = Utc::now()
             .checked_sub_signed(chrono::Duration::days(days_to_keep as i64))
-            .ok_or_else(|| DatabaseError::Other("日付計算エラー".to_string()))?
+            .ok_or_else(|| DatabaseError::QueryFailed("日付計算エラー".to_string()))?
             .to_rfc3339();
 
         let deleted = self.conn.execute(

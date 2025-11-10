@@ -10,6 +10,7 @@ import {
   KeyboardShortcut,
 } from '../hooks/useKeyboardShortcuts';
 import { Breadcrumb, BreadcrumbItem } from '../components/common/Breadcrumb';
+import { Tooltip } from '../components/common/Tooltip';
 import { useI18n } from '../contexts/I18nContext';
 import './Help.css';
 
@@ -279,6 +280,12 @@ export const Help: React.FC = () => {
     ];
   }, [t]);
 
+  // パンくずリストの項目
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
+    { label: t('header.home') || 'ホーム', path: '/' },
+    { label: t('help.title') || 'ヘルプ' },
+  ], [t]);
+
   return (
     <AppLayout>
       <Breadcrumb items={breadcrumbItems} />
@@ -320,6 +327,13 @@ export const Help: React.FC = () => {
               >
                 <span className="nav-icon"></span>
                 {t('help.nav.shortcuts')}
+              </button>
+              <button
+                className={`help-nav-button ${activeSection === 'glossary' ? 'active' : ''}`}
+                onClick={() => setActiveSection('glossary')}
+              >
+                <span className="nav-icon"></span>
+                用語集
               </button>
             </nav>
 
@@ -416,6 +430,90 @@ export const Help: React.FC = () => {
                     {t('help.shortcuts.intro')}
                   </p>
                   <KeyboardShortcuts shortcuts={globalShortcuts} />
+                </section>
+              )}
+
+              {activeSection === 'glossary' && (
+                <section className="help-section">
+                  <h2>用語集</h2>
+                  <p className="help-section-intro">
+                    アプリケーションで使用される技術用語の説明です。分からない用語があれば、こちらを参照してください。
+                  </p>
+                  <div className="glossary-list">
+                    <div className="glossary-item">
+                      <h3 className="glossary-term">
+                        <Tooltip
+                          content="APIの接続先URLです。外部アプリケーションからこのURLにアクセスしてAPIを使用できます。"
+                          title="エンドポイントとは？"
+                        >
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                            エンドポイント
+                            <span style={{ fontSize: '0.875rem', opacity: 0.7 }}>❓</span>
+                          </span>
+                        </Tooltip>
+                      </h3>
+                      <p className="glossary-definition">
+                        APIの接続先URLです。外部アプリケーションからこのURLにアクセスしてAPIを使用できます。
+                        例: <code>https://localhost:8080</code>
+                      </p>
+                    </div>
+                    <div className="glossary-item">
+                      <h3 className="glossary-term">
+                        <Tooltip
+                          content="APIを安全に使用するための認証キーです。外部アプリケーションからAPIを使用する際に必要です。"
+                          title="APIキーとは？"
+                        >
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                            APIキー
+                            <span style={{ fontSize: '0.875rem', opacity: 0.7 }}>❓</span>
+                          </span>
+                        </Tooltip>
+                      </h3>
+                      <p className="glossary-definition">
+                        APIを安全に使用するための認証キーです。外部アプリケーションからAPIを使用する際に必要です。
+                        このキーは秘密にしてください。他人に知られると、あなたのAPIが不正に使用される可能性があります。
+                      </p>
+                    </div>
+                    <div className="glossary-item">
+                      <h3 className="glossary-term">
+                        <Tooltip
+                          content="APIが使用する通信ポート番号です。通常は自動的に設定されます。"
+                          title="ポート番号とは？"
+                        >
+                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                            ポート番号
+                            <span style={{ fontSize: '0.875rem', opacity: 0.7 }}>❓</span>
+                          </span>
+                        </Tooltip>
+                      </h3>
+                      <p className="glossary-definition">
+                        APIが使用する通信ポート番号です。通常は自動的に設定されますが、必要に応じて変更できます。
+                        ポート番号が使用中の場合は自動的に利用可能なポートを選択します。
+                        例: <code>8080</code>, <code>8081</code>
+                      </p>
+                    </div>
+                    <div className="glossary-item">
+                      <h3 className="glossary-term">モデル</h3>
+                      <p className="glossary-definition">
+                        質問に答えてくれるAIです。用途に応じて様々なモデルが用意されています。
+                        推奨モデルは初心者にも使いやすいモデルです。
+                      </p>
+                    </div>
+                    <div className="glossary-item">
+                      <h3 className="glossary-term">エンジン</h3>
+                      <p className="glossary-definition">
+                        AIモデルを実行するためのソフトウェアです。Ollama、LM Studio、vLLMなどがあります。
+                        最も一般的なのはOllamaです。
+                      </p>
+                    </div>
+                    <div className="glossary-item">
+                      <h3 className="glossary-term">認証</h3>
+                      <p className="glossary-definition">
+                        APIを安全に使用するための機能です。認証を有効にすると、APIキーが必要になります。
+                        外部アプリケーションから使用する場合は有効にすることをおすすめします。
+                      </p>
+                    </div>
+                  </div>
                 </section>
               )}
             </div>

@@ -3,6 +3,7 @@
 .language-switcher {
   position: relative;
   display: inline-block;
+  z-index: 999999; /* 確実に最前面に表示 */
 }
 
 .language-switcher-button {
@@ -58,17 +59,27 @@
 }
 
 .language-dropdown {
-  position: absolute;
-  bottom: calc(100% + var(--spacing-xs, 0.5rem));
-  right: 0;
+  position: fixed !important;
   min-width: 180px;
+  max-width: 250px;
   background: var(--color-bg-primary, #ffffff);
   border: 1px solid var(--color-border-light, #e2e8f0);
   border-radius: var(--radius-lg, 0.75rem);
   box-shadow: var(--shadow-lg, 0 10px 15px -3px rgba(0, 0, 0, 0.1));
-  z-index: 10000;
+  z-index: 999999 !important; /* 確実に最前面に表示 */
   overflow: hidden;
   animation: slideUp 0.2s ease;
+  /* ウィンドウ内に収まるように位置を調整 */
+  max-height: calc(100vh - 2rem);
+  overflow-y: auto;
+  pointer-events: auto !important; /* 確実にクリック可能にする */
+  /* 確実にクリック可能にする */
+  transform: translateZ(0); /* GPUアクセラレーションを有効化 */
+  will-change: transform; /* パフォーマンス最適化 */
+  /* 確実に表示されるようにする */
+  visibility: visible !important;
+  opacity: 1 !important;
+  display: block !important;
 }
 
 [data-theme="dark"] .language-dropdown {

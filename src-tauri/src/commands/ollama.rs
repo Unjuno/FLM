@@ -6,7 +6,7 @@ use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
 
 use crate::utils::error::AppError;
-use crate::ollama::{self, OllamaDetectionResult};
+use crate::ollama::{self, OllamaDetectionResult, current_ollama_host_port};
 // ログマクロをインポート
 use crate::{debug_log, error_log, log_pid};
 
@@ -76,7 +76,9 @@ pub async fn download_ollama(
     
     let path = ollama::download_ollama(move |progress| {
         // 進捗をイベントとして送信
-        let _ = app_handle.emit("ollama_download_progress", &progress);
+        if let Err(e) = app_handle.emit("ollama_download_progress", &progress) {
+            eprintln!("[WARN] Ollamaダウンロード進捗イベントの送信に失敗しました: {}", e);
+        }
         Ok(())
     }).await?;
     
@@ -115,8 +117,12 @@ pub async fn stop_ollama() -> Result<(), AppError> {
 /// Ollamaのヘルスチェック
 #[tauri::command]
 pub async fn check_ollama_health() -> Result<OllamaHealthStatus, AppError> {
-    let running = ollama::check_ollama_running().await.unwrap_or(false);
-    let port_available = crate::commands::port::is_port_available(11434);
+    let running = ollama::check_ollama_running().await.unwrap_or_else(|e| {
+        eprintln!("[WARN] Ollamaの実行状態確認に失敗しました: {}", e);
+        false
+    });
+    let (_, current_port) = current_ollama_host_port();
+    let port_available = crate::commands::port::is_port_available(current_port);
 
     Ok(OllamaHealthStatus {
         running,
@@ -152,7 +158,10 @@ pub async fn update_ollama(
     app: AppHandle,
 ) -> Result<String, AppError> {
     // 1. 既存のOllamaを停止
-    let was_running = ollama::check_ollama_running().await.unwrap_or(false);
+    let was_running = ollama::check_ollama_running().await.unwrap_or_else(|e| {
+        eprintln!("[WARN] Ollamaの実行状態確認に失敗しました: {}", e);
+        false
+    });
     if was_running {
         ollama::stop_ollama().await?;
         // 停止確認のため少し待機
@@ -163,7 +172,9 @@ pub async fn update_ollama(
     let app_handle = app.clone();
     let new_path = ollama::download_ollama(move |progress| {
         // 進捗をイベントとして送信
-        let _ = app_handle.emit("ollama_update_progress", &progress);
+        if let Err(e) = app_handle.emit("ollama_update_progress", &progress) {
+            eprintln!("[WARN] Ollama更新進捗イベントの送信に失敗しました: {}", e);
+        }
         Ok(())
     }).await?;
 

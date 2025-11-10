@@ -17,6 +17,7 @@ import {
 import { logger } from '../utils/logger';
 import { extractErrorMessage } from '../utils/errorHandler';
 import { retry, isRetryableError } from '../utils/retry';
+import { extractEndpointUrl } from '../utils/llmTest';
 import './ApiTest.css';
 
 /**
@@ -42,6 +43,7 @@ export const ApiTest: React.FC = () => {
   const [inputText, setInputText] = useState('');
   const [loading, setLoading] = useState(false);
   const [loadingApiInfo, setLoadingApiInfo] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [apiInfo, setApiInfo] = useState<{
     endpoint: string;
     apiKey?: string;
@@ -88,11 +90,13 @@ export const ApiTest: React.FC = () => {
   const loadApiInfo = async () => {
     if (!apiId) {
       setLoadingApiInfo(false);
+      setError('API IDが指定されていません');
       return;
     }
 
     try {
       setLoadingApiInfo(true);
+      setError(null);
       // バックエンドのIPCコマンドを呼び出してAPI詳細を取得（APIキーを含む）
       const apiDetails = await safeInvoke<{
         id: string;
@@ -105,7 +109,7 @@ export const ApiTest: React.FC = () => {
         api_key: string | null;
         created_at: string;
         updated_at: string;
-      }>('get_api_details', { api_id: apiId });
+      }>('get_api_details', { apiId: apiId });
 
       setApiInfo({
         endpoint: apiDetails.endpoint,
@@ -164,11 +168,14 @@ export const ApiTest: React.FC = () => {
     }, TIMEOUT_MS);
 
     try {
+      // エンドポイント文字列から実際のURLを抽出（「または」を含む表示用文字列から最初のURLを取得）
+      const actualEndpoint = extractEndpointUrl(apiInfo.endpoint);
+      
       // APIリクエスト送信（リトライ機能付き）
       const response = await retry(
         async () => {
           const fetchResponse = await fetch(
-            `${apiInfo.endpoint}${API_ENDPOINTS.CHAT_COMPLETIONS}`,
+            `${actualEndpoint}${API_ENDPOINTS.CHAT_COMPLETIONS}`,
             {
               method: 'POST',
               headers: {

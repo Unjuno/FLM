@@ -36,6 +36,8 @@ interface OllamaModel {
   families?: string[];
   parameter_size?: string;
   quantization_level?: string;
+  description?: string;
+  recommended?: boolean;
 }
 
 /**
@@ -65,9 +67,23 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
   const navigate = useNavigate();
   const { t } = useI18n();
   const [models, setModels] = useState<OllamaModel[]>([]);
+  const [catalogModels, setCatalogModels] = useState<Array<{
+    name: string;
+    description?: string | null;
+    size?: number | null;
+    parameters?: number | null;
+    category?: string | null;
+    recommended: boolean;
+    author?: string | null;
+    license?: string | null;
+  }>>([]);
   const [loading, setLoading] = useState(true);
+  const [catalogLoading, setCatalogLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [selectedSizeFilter, setSelectedSizeFilter] = useState<string>('all');
+  const [viewMode, setViewMode] = useState<'installed' | 'catalog' | 'all'>('all');
   const [localSelectedModel, setLocalSelectedModel] =
     useState<OllamaModel | null>(null);
   const [selectedEngine, setSelectedEngine] = useState<string>(engineType);
@@ -232,7 +248,7 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
           version?: string | null;
           path?: string | null;
           message?: string | null;
-        }>('detect_engine', { engine_type: selectedEngine });
+        }>('detect_engine', { engineType: selectedEngine });
 
         if (isMountedRef.current) {
           setEngineDetectionResult({
@@ -254,45 +270,81 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
             setEngineStartingMessage(t('engine.starting.message', { engineName }));
 
             try {
-              if (selectedEngine === 'ollama') {
-                await startOllama();
-              } else {
-                // 他のエンジンの場合
-                await safeInvoke('start_engine', {
-                  engine_type: selectedEngine,
-                  config: null,
-                });
+              // 最大3回リトライ（大衆向けのため、より確実に起動させる）
+              let startSuccess = false;
+              for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                  if (selectedEngine === 'ollama') {
+                    await startOllama();
+                  } else {
+                    // 他のエンジンの場合
+                    await safeInvoke('start_engine', {
+                      engine_type: selectedEngine,
+                      config: null,
+                    });
+                  }
+
+                  // 起動確認のため待機（リトライ回数に応じて待機時間を延長）
+                  const waitTime = 2000 + (attempt - 1) * 1000;
+                  await new Promise(resolve => setTimeout(resolve, waitTime));
+
+                  // 再検出して状態を更新
+                  const recheckResult = await safeInvoke<{
+                    engine_type: string;
+                    installed: boolean;
+                    running: boolean;
+                    version?: string | null;
+                    path?: string | null;
+                    message?: string | null;
+                  }>('detect_engine', { engineType: selectedEngine });
+
+                  if (recheckResult.running) {
+                    if (isMountedRef.current) {
+                      setEngineDetectionResult({
+                        installed: recheckResult.installed,
+                        running: recheckResult.running,
+                        message: recheckResult.message || undefined,
+                      });
+                    }
+                    startSuccess = true;
+                    logger.info(`${engineName}を自動起動しました（試行回数: ${attempt}）`, 'ModelSelection');
+                    break;
+                  } else if (attempt < 3) {
+                    // 次の試行に進む
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                  }
+                } catch (attemptErr) {
+                  if (attempt < 3) {
+                    // 次の試行に進む
+                    await new Promise(resolve => setTimeout(resolve, 1000));
+                    continue;
+                  }
+                  throw attemptErr;
+                }
               }
 
-              // 起動確認のため少し待機
-              await new Promise(resolve => setTimeout(resolve, 2000));
-
-              // 再検出して状態を更新
-              const recheckResult = await safeInvoke<{
-                engine_type: string;
-                installed: boolean;
-                running: boolean;
-                version?: string | null;
-                path?: string | null;
-                message?: string | null;
-              }>('detect_engine', { engine_type: selectedEngine });
-
-              if (isMountedRef.current) {
-                setEngineDetectionResult({
-                  installed: recheckResult.installed,
-                  running: recheckResult.running,
-                  message: recheckResult.message || undefined,
-                });
+              if (!startSuccess) {
+                throw new Error(`${engineName}の起動確認に失敗しました（3回試行）`);
               }
-
-              logger.info(`${engineName}を自動起動しました`, 'ModelSelection');
             } catch (startErr) {
-              // 起動に失敗してもエラーを表示しない（サイレント失敗）
+              // 起動に失敗した場合、ユーザーに分かりやすいメッセージを表示
+              const errorMessage = startErr instanceof Error ? startErr.message : String(startErr);
               logger.warn(
-                `${engineName}の自動起動に失敗しました`,
-                startErr instanceof Error ? startErr.message : String(startErr),
+                `${engineName}の自動起動に失敗しました: ${errorMessage}`,
                 'ModelSelection'
               );
+              
+              // エラー状態を設定（ユーザーに表示）
+              if (isMountedRef.current) {
+                const friendlyMessage = selectedEngine === 'ollama'
+                  ? `${engineName}の自動起動に失敗しました。ホーム画面から「Ollamaセットアップ」を実行するか、Ollamaアプリケーションを起動してから再度お試しください。`
+                  : `${engineName}の自動起動に失敗しました。${engineName}アプリケーションを起動してから再度お試しください。詳しい手順はヘルプページをご覧ください。`;
+                setEngineDetectionResult(prev => ({
+                  ...prev!,
+                  running: false,
+                  message: friendlyMessage,
+                }));
+              }
             } finally {
               if (isMountedRef.current) {
                 setEngineStarting(prev => {
@@ -599,12 +651,119 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
   //   return installedModelNames.has(modelName);
   // }, [installedModelNames]);
 
+  // モデルカタログを取得
+  const loadCatalogModels = useCallback(async () => {
+    if (!isMountedRef.current) return;
+    
+    setCatalogLoading(true);
+    try {
+      const catalogModels = await safeInvoke<
+        Array<{
+          name: string;
+          description?: string | null;
+          size?: number | null;
+          parameters?: number | null;
+          category?: string | null;
+          recommended: boolean;
+          author?: string | null;
+          license?: string | null;
+          modified_at?: string | null;
+        }>
+      >('get_model_catalog');
+      
+      if (isMountedRef.current) {
+        setCatalogModels(catalogModels || []);
+      }
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : String(err);
+      logger.warn(`モデルカタログの取得に失敗しました: ${errorMessage}`, 'ModelSelection');
+      // カタログ取得失敗はエラーとして表示しない（オプション機能のため）
+    } finally {
+      if (isMountedRef.current) {
+        setCatalogLoading(false);
+      }
+    }
+  }, []);
+
+  // コンポーネントマウント時にカタログモデルを読み込む
+  useEffect(() => {
+    loadCatalogModels();
+  }, [loadCatalogModels]);
+
+  // カタログモデルをOllamaModel形式に変換
+  const catalogModelsAsOllama = useMemo(() => {
+    return catalogModels.map(model => ({
+      name: model.name,
+      size: model.size ? Number(model.size) : 0,
+      modified_at: new Date().toISOString(),
+      parameter_size: model.parameters ? `${(model.parameters / 1_000_000_000).toFixed(1)}B` : undefined,
+      family: model.category || undefined,
+      description: model.description || undefined,
+      recommended: model.recommended,
+    }));
+  }, [catalogModels]);
+
+  // 表示するモデルリスト（インストール済み + カタログ）
+  const displayModels = useMemo(() => {
+    if (viewMode === 'installed') {
+      return models;
+    } else if (viewMode === 'catalog') {
+      return catalogModelsAsOllama;
+    } else {
+      // 'all'モード: インストール済みとカタログを統合（重複を除去）
+      const installedNames = new Set(models.map(m => m.name));
+      const catalogOnly = catalogModelsAsOllama.filter(m => !installedNames.has(m.name));
+      return [...models, ...catalogOnly];
+    }
+  }, [models, catalogModelsAsOllama, viewMode]);
+
   // 検索フィルタ（useMemoでメモ化）
   const filteredModels = useMemo(() => {
-    return models.filter(model =>
-      model.name.toLowerCase().includes(searchQuery.toLowerCase())
-    );
-  }, [models, searchQuery]);
+    let filtered = displayModels;
+    
+    // 検索クエリでフィルタ
+    if (searchQuery) {
+      filtered = filtered.filter(model =>
+        model.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (model.description && model.description.toLowerCase().includes(searchQuery.toLowerCase()))
+      );
+    }
+    
+    // カテゴリでフィルタ
+    if (selectedCategory !== 'all') {
+      filtered = filtered.filter(model => {
+        const category = model.family || getCategoryFromName(model.name);
+        return category === selectedCategory;
+      });
+    }
+    
+    // サイズでフィルタ
+    if (selectedSizeFilter !== 'all') {
+      filtered = filtered.filter(model => {
+        if (!model.size || model.size === 0) return selectedSizeFilter === 'unknown';
+        const sizeGB = model.size / (1024 * 1024 * 1024);
+        switch (selectedSizeFilter) {
+          case 'small': return sizeGB < 3;
+          case 'medium': return sizeGB >= 3 && sizeGB < 10;
+          case 'large': return sizeGB >= 10 && sizeGB < 30;
+          case 'xlarge': return sizeGB >= 30;
+          default: return true;
+        }
+      });
+    }
+    
+    return filtered;
+  }, [displayModels, searchQuery, selectedCategory, selectedSizeFilter]);
+
+  // モデル名からカテゴリを取得
+  const getCategoryFromName = useCallback((modelName: string): string => {
+    const name = modelName.toLowerCase();
+    if (name.includes('code') || name.includes('coder')) return 'code';
+    if (name.includes('chat')) return 'chat';
+    if (name.includes('vision') || name.includes('llava')) return 'vision';
+    if (name.includes('audio') || name.includes('whisper')) return 'audio';
+    return 'other';
+  }, []);
 
   // formatSizeはformatBytesユーティリティを使用（メモ化不要）
 
@@ -623,12 +782,28 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
     if (localSelectedModel) {
       // 通常のモデル選択の場合
       const capabilities = detectModelCapabilities(localSelectedModel.name);
+      const isInstalled = models.some(m => m.name === localSelectedModel.name);
+      
+      // カタログモデルで未インストールの場合、ダウンロードが必要であることを通知
+      if (!isInstalled) {
+        const catalogModel = catalogModels.find(m => m.name === localSelectedModel.name);
+        if (catalogModel) {
+          // カタログモデルの場合、ダウンロードが必要
+          logger.info(
+            `カタログモデル「${localSelectedModel.name}」を選択しました。ダウンロードが必要です。`,
+            '',
+            'ModelSelection'
+          );
+        }
+      }
+      
       onModelSelected({
         name: localSelectedModel.name,
         size: localSelectedModel.size,
-        description: localSelectedModel.parameter_size
-          ? `${localSelectedModel.parameter_size} パラメータ`
-          : undefined,
+        description: localSelectedModel.description || 
+          (localSelectedModel.parameter_size
+            ? `${localSelectedModel.parameter_size} パラメータ`
+            : undefined),
         capabilities: capabilities,
       });
     }
@@ -744,6 +919,66 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
           </select>
         </div>
 
+        {/* 表示モード選択 */}
+        <div className="sidebar-filters">
+          <label htmlFor="view-mode-select" className="sidebar-filter-label">
+            表示モード
+          </label>
+          <select
+            id="view-mode-select"
+            value={viewMode}
+            onChange={e => setViewMode(e.target.value as 'installed' | 'catalog' | 'all')}
+            className="sidebar-filter"
+            aria-label="表示モード"
+          >
+            <option value="all">すべてのモデル</option>
+            <option value="installed">インストール済み</option>
+            <option value="catalog">カタログから選択</option>
+          </select>
+        </div>
+
+        {/* カテゴリフィルター */}
+        <div className="sidebar-filters">
+          <label htmlFor="category-select" className="sidebar-filter-label">
+            カテゴリ
+          </label>
+          <select
+            id="category-select"
+            value={selectedCategory}
+            onChange={e => setSelectedCategory(e.target.value)}
+            className="sidebar-filter"
+            aria-label="カテゴリ"
+          >
+            <option value="all">すべて</option>
+            <option value="chat">チャット</option>
+            <option value="code">コード生成</option>
+            <option value="vision">画像認識</option>
+            <option value="audio">音声処理</option>
+            <option value="other">その他</option>
+          </select>
+        </div>
+
+        {/* サイズフィルター */}
+        <div className="sidebar-filters">
+          <label htmlFor="size-select" className="sidebar-filter-label">
+            サイズ
+          </label>
+          <select
+            id="size-select"
+            value={selectedSizeFilter}
+            onChange={e => setSelectedSizeFilter(e.target.value)}
+            className="sidebar-filter"
+            aria-label="サイズ"
+          >
+            <option value="all">すべて</option>
+            <option value="small">小（3GB未満）</option>
+            <option value="medium">中（3-10GB）</option>
+            <option value="large">大（10-30GB）</option>
+            <option value="xlarge">超大（30GB以上）</option>
+            <option value="unknown">サイズ不明</option>
+          </select>
+        </div>
+
         {/* モデル一覧（コンパクト） */}
         <div className="sidebar-model-list">
           {filteredModels.length === 0 && !loading && !error && (
@@ -770,39 +1005,57 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
               </p>
             </div>
           )}
-          {filteredModels.map(model => (
-            <div
-              key={model.name}
-              className={`sidebar-model-item ${
-                localSelectedModel?.name === model.name ? 'active' : ''
-              } ${isRecommended(model.name) ? 'recommended' : ''}`}
-              onClick={() => handleModelSelect(model)}
-              onKeyDown={e => {
-                if (e.key === 'Enter' || e.key === ' ') {
-                  e.preventDefault();
-                  handleModelSelect(model);
-                }
-              }}
-              role="button"
-              tabIndex={0}
-              aria-label={`${model.name}を選択`}
-            >
-              <div className="sidebar-model-name">{model.name}</div>
-              <div className="sidebar-model-meta">
-                {model.size > 0 && (
-                  <span className="sidebar-model-size">
-                    {(model.size / FORMATTING.BYTES_PER_GB).toFixed(
-                      FORMATTING.DECIMAL_PLACES_SHORT
-                    )}
-                    GB
-                  </span>
-                )}
-                {isRecommended(model.name) && (
-                  <span className="sidebar-recommended-badge">推奨</span>
-                )}
+          {filteredModels.map(model => {
+            const isInstalled = models.some(m => m.name === model.name);
+            const isFromCatalog = catalogModelsAsOllama.some(m => m.name === model.name);
+            
+            return (
+              <div
+                key={model.name}
+                className={`sidebar-model-item ${
+                  localSelectedModel?.name === model.name ? 'active' : ''
+                } ${(model.recommended || isRecommended(model.name)) ? 'recommended' : ''} ${
+                  isInstalled ? 'installed' : isFromCatalog ? 'catalog' : ''
+                }`}
+                onClick={() => handleModelSelect(model)}
+                onKeyDown={e => {
+                  if (e.key === 'Enter' || e.key === ' ') {
+                    e.preventDefault();
+                    handleModelSelect(model);
+                  }
+                }}
+                role="button"
+                tabIndex={0}
+                aria-label={`${model.name}を選択`}
+                title={model.description || model.name}
+              >
+                <div className="sidebar-model-name">{model.name}</div>
+                <div className="sidebar-model-meta">
+                  {model.size > 0 && (
+                    <span className="sidebar-model-size">
+                      {(model.size / FORMATTING.BYTES_PER_GB).toFixed(
+                        FORMATTING.DECIMAL_PLACES_SHORT
+                      )}
+                      GB
+                    </span>
+                  )}
+                  {model.parameter_size && (
+                    <span className="sidebar-model-params">
+                      {model.parameter_size}
+                    </span>
+                  )}
+                  {(model.recommended || isRecommended(model.name)) && (
+                    <span className="sidebar-recommended-badge">推奨</span>
+                  )}
+                  {!isInstalled && isFromCatalog && (
+                    <span className="sidebar-catalog-badge" title="カタログから選択可能（ダウンロードが必要）">
+                      カタログ
+                    </span>
+                  )}
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </div>
       </div>
 
@@ -1095,7 +1348,25 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
                       <div className="detail-info-item">
                         <span className="detail-info-label">カテゴリ</span>
                         <span className="detail-info-value">
-                          {getCategoryLabel(localSelectedModel.name)}
+                          {localSelectedModel.family || getCategoryLabel(localSelectedModel.name)}
+                        </span>
+                      </div>
+                    )}
+
+                    {localSelectedModel && localSelectedModel.description && (
+                      <div className="detail-info-item full-width">
+                        <span className="detail-info-label">説明</span>
+                        <span className="detail-info-value">
+                          {localSelectedModel.description}
+                        </span>
+                      </div>
+                    )}
+
+                    {localSelectedModel && localSelectedModel.recommended && (
+                      <div className="detail-info-item">
+                        <span className="detail-info-label">推奨</span>
+                        <span className="detail-info-value">
+                          <span className="recommended-badge-inline">推奨モデル</span>
                         </span>
                       </div>
                     )}

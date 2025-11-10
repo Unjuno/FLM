@@ -551,6 +551,12 @@
     }
   },
   "home": {
+    "quickCreate": {
+      "fallbackTitle": "インストール済みモデルを使用します",
+      "fallbackMessage": "{{from}} は未インストールのため、{{to}} を使用します。",
+      "noInstalledTitle": "利用可能なモデルがありません",
+      "noInstalledMessage": "先に「モデル管理」でモデルをダウンロードしてください。"
+    },
     "sections": {
       "basicFeatures": "基本機能",
       "monitoring": "監視・ログ",

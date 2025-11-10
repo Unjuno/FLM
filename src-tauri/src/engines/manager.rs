@@ -189,7 +189,7 @@ impl EngineManager {
             "lm_studio" => LMStudioEngine::new().get_base_url(),
             "vllm" => VLLMEngine::new().get_base_url(),
             "llama_cpp" => LlamaCppEngine::new().get_base_url(),
-            _ => "http://localhost:11434".to_string(), // デフォルト
+            _ => OllamaEngine::new().get_base_url(), // デフォルト
         }
     }
     

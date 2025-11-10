@@ -26,6 +26,18 @@ interface SharedModelInfo {
 
 /**
  * モデル共有コンポーネント
+ * 
+ * **実装状況**:
+ * - ✅ UI実装: 完全実装済み
+ * - ✅ ローカルデータベースへの保存: 完全実装済み
+ * - ✅ Hugging Face Hubリポジトリ作成: 実装済み
+ * - ⚠️ Hugging Face Hubファイルアップロード: 将来実装予定
+ * - ⚠️ Hugging Face Hubからのダウンロード: 将来実装予定
+ * - ⚠️ Ollama Hub連携: 将来実装予定（公式APIが提供されていないため）
+ * 
+ * **注意**: 現在の実装では、モデル情報をローカルデータベースに保存するか、
+ * Hugging Face Hubにリポジトリを作成することのみ可能です。
+ * 実際のファイルアップロード/ダウンロード機能は将来実装予定です。
  */
 export const ModelSharing: React.FC = () => {
   const { showSuccess, showError } = useNotifications();
@@ -39,6 +51,7 @@ export const ModelSharing: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [sharedInfo, setSharedInfo] = useState<SharedModelInfo | null>(null);
   const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
+  const [showIncompleteFeatures, setShowIncompleteFeatures] = useState(false);
   // 確認ダイアログの状態
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
@@ -51,6 +64,20 @@ export const ModelSharing: React.FC = () => {
     onConfirm: () => {},
     onCancel: () => {},
   });
+
+  // 不完全な機能の表示設定を読み込む
+  useEffect(() => {
+    const loadSettings = async () => {
+      try {
+        const settings = await safeInvoke<{ show_incomplete_features?: boolean | null }>('get_app_settings');
+        setShowIncompleteFeatures(settings.show_incomplete_features ?? false);
+      } catch (err) {
+        logger.warn('設定の読み込みに失敗しました。デフォルトで非表示にします。', String(err), 'ModelSharing');
+        setShowIncompleteFeatures(false);
+      }
+    };
+    loadSettings();
+  }, []);
 
   // ESCキーで確認ダイアログを閉じる
   useEffect(() => {
@@ -168,7 +195,7 @@ export const ModelSharing: React.FC = () => {
     } catch (err) {
       // エラーは静かに処理（手動入力にフォールバック）
       // eslint-disable-next-line no-console
-      logger.warn('ファイル選択ダイアログが利用できません', err, 'ModelSharing');
+      logger.warn('ファイル選択ダイアログが利用できません', String(err), 'ModelSharing');
       showError(
         'ファイル選択ダイアログが利用できません。手動でパスを入力してください。'
       );
@@ -177,6 +204,12 @@ export const ModelSharing: React.FC = () => {
 
   return (
     <div className="model-sharing">
+      <InfoBanner
+        type="warning"
+        title="機能制限について"
+        message="現在、モデル情報の保存とリポジトリ作成のみ対応しています。実際のファイルアップロード/ダウンロード機能は開発中です。"
+        dismissible={false}
+      />
       <div className="model-sharing-header">
         <h2>モデル共有</h2>
         <p className="model-sharing-description">

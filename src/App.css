@@ -144,7 +144,8 @@ body {
 
 .app {
   min-height: 100vh;
-  background-color: var(--color-bg-secondary);
+  background-color: var(--color-bg-primary, #ffffff);
+  color: var(--color-text-primary, #1a202c);
 }
 
 /* ========== タイポグラフィ ========== */

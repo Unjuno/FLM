@@ -9,7 +9,7 @@ pub mod integrity;
 
 pub mod models;
 
-use rusqlite::Connection;
+use rusqlite::{Connection, params};
 
 /// データベースエラー型
 #[derive(Debug)]
@@ -106,7 +106,7 @@ pub fn init_database() -> Result<(), DatabaseError> {
     // モデルカタログの初期化（初回起動時のみ）
     #[cfg(debug_assertions)]
     eprintln!("ステップ4: モデルカタログを初期化します...");
-    if let Err(e) = init_model_catalog_if_empty(&conn) {
+    if let Err(e) = init_model_catalog_if_empty(&mut conn) {
         eprintln!("警告: モデルカタログ初期化エラー: {:?}", e);
         #[cfg(debug_assertions)]
         eprintln!("注意: モデルカタログの初期化に失敗しましたが、データベース初期化は継続します");
@@ -120,7 +120,7 @@ pub fn init_database() -> Result<(), DatabaseError> {
     // モデルカタログの定期更新（7日以上経過時）
     #[cfg(debug_assertions)]
     eprintln!("ステップ5: モデルカタログを更新します...");
-    if let Err(e) = update_model_catalog_if_stale(&conn) {
+    if let Err(e) = update_model_catalog_if_stale(&mut conn) {
         eprintln!("警告: モデルカタログ更新エラー: {:?}", e);
         #[cfg(debug_assertions)]
         eprintln!("注意: モデルカタログの更新に失敗しましたが、データベース初期化は継続します");
@@ -136,7 +136,7 @@ pub fn init_database() -> Result<(), DatabaseError> {
 }
 
 /// モデルカタログが空の場合、事前定義されたモデル情報を投入
-fn init_model_catalog_if_empty(conn: &Connection) -> Result<(), DatabaseError> {
+fn init_model_catalog_if_empty(conn: &mut Connection) -> Result<(), DatabaseError> {
     use repository::ModelCatalogRepository;
     use crate::utils::model_catalog_data::get_predefined_model_catalog;
     
@@ -149,10 +149,47 @@ fn init_model_catalog_if_empty(conn: &Connection) -> Result<(), DatabaseError> {
     if existing_models.is_empty() {
         let predefined_models = get_predefined_model_catalog();
         let model_count = predefined_models.len();
-        for model in predefined_models {
-            catalog_repo.upsert(&model)
-                .map_err(|e| DatabaseError::QueryFailed(format!("モデルカタログの初期化に失敗しました ({}): {}", model.name, e)))?;
+        
+        // トランザクションを使用してバッチ処理で高速化
+        let tx = conn.transaction()
+            .map_err(|e| DatabaseError::QueryFailed(format!("トランザクション開始に失敗しました: {}", e)))?;
+        
+        for model in &predefined_models {
+            tx.execute(
+                r#"
+                INSERT INTO models_catalog (name, description, size, parameters, category, recommended, author, license, tags, created_at, updated_at)
+                VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+                ON CONFLICT(name) DO UPDATE SET
+                    description = ?2,
+                    size = ?3,
+                    parameters = ?4,
+                    category = ?5,
+                    recommended = ?6,
+                    author = ?7,
+                    license = ?8,
+                    tags = ?9,
+                    updated_at = ?11
+                "#,
+                params![
+                    model.name,
+                    model.description,
+                    model.size,
+                    model.parameters,
+                    model.category,
+                    if model.recommended { 1 } else { 0 },
+                    model.author,
+                    model.license,
+                    model.tags,
+                    model.created_at.to_rfc3339(),
+                    model.updated_at.to_rfc3339(),
+                ],
+            )
+            .map_err(|e| DatabaseError::QueryFailed(format!("モデルカタログの初期化に失敗しました ({}): {}", model.name, e)))?;
         }
+        
+        tx.commit()
+            .map_err(|e| DatabaseError::QueryFailed(format!("トランザクションのコミットに失敗しました: {}", e)))?;
+        
         #[cfg(debug_assertions)]
         eprintln!("モデルカタログを初期化しました（{}件のモデルを追加）", model_count);
     }
@@ -162,7 +199,7 @@ fn init_model_catalog_if_empty(conn: &Connection) -> Result<(), DatabaseError> {
 
 /// モデルカタログが古い場合（7日以上経過）、事前定義されたモデル情報で更新
 /// 仕様書の「定期的な更新（日次または週次）」要件を満たす
-fn update_model_catalog_if_stale(conn: &Connection) -> Result<(), DatabaseError> {
+fn update_model_catalog_if_stale(conn: &mut Connection) -> Result<(), DatabaseError> {
     use repository::ModelCatalogRepository;
     use crate::utils::model_catalog_data::get_predefined_model_catalog;
     use chrono::Utc;
@@ -186,20 +223,71 @@ fn update_model_catalog_if_stale(conn: &Connection) -> Result<(), DatabaseError>
         // 7日以上経過している場合は更新
         if days_since_update >= 7 {
             let predefined_models = get_predefined_model_catalog();
-            let mut updated_count = 0;
             
-            for model in predefined_models {
-                match catalog_repo.upsert(&model) {
-                    Ok(_) => updated_count += 1,
-                    Err(e) => {
-                        // エラーはログに記録するが、処理は続行
-                        eprintln!("モデルカタログの更新エラー ({}): {}", model.name, e);
+            // トランザクションを使用してバッチ処理で高速化
+            let mut updated_count = 0;
+            let mut error_count = 0;
+            match conn.transaction() {
+                Ok(tx) => {
+                    for model in &predefined_models {
+                        match tx.execute(
+                            r#"
+                            INSERT INTO models_catalog (name, description, size, parameters, category, recommended, author, license, tags, created_at, updated_at)
+                            VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, ?11)
+                            ON CONFLICT(name) DO UPDATE SET
+                                description = ?2,
+                                size = ?3,
+                                parameters = ?4,
+                                category = ?5,
+                                recommended = ?6,
+                                author = ?7,
+                                license = ?8,
+                                tags = ?9,
+                                updated_at = ?11
+                            "#,
+                            params![
+                                model.name,
+                                model.description,
+                                model.size,
+                                model.parameters,
+                                model.category,
+                                if model.recommended { 1 } else { 0 },
+                                model.author,
+                                model.license,
+                                model.tags,
+                                model.created_at.to_rfc3339(),
+                                model.updated_at.to_rfc3339(),
+                            ],
+                        ) {
+                            Ok(_) => updated_count += 1,
+                            Err(e) => {
+                                // エラーはログに記録
+                                error_count += 1;
+                                eprintln!("[WARN] モデルカタログの更新エラー ({}): {}", model.name, e);
+                            }
+                        }
+                    }
+                    
+                    // エラーが発生した場合でも、成功した更新はコミットする
+                    // （一部のモデル更新が失敗しても、他の更新は有効にする）
+                    match tx.commit() {
+                        Ok(_) => {
+                            if updated_count > 0 {
+                                eprintln!("[INFO] モデルカタログを定期更新しました（{}件のモデルを更新、{}件のエラー、最終更新から{}日経過）", updated_count, error_count, days_since_update);
+                            } else if error_count > 0 {
+                                eprintln!("[WARN] モデルカタログの更新に失敗しました（{}件のエラー）", error_count);
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("[ERROR] トランザクションのコミットに失敗しました: {}", e);
+                            eprintln!("[WARN] コミット失敗時は自動的にロールバックされます（Rustのドロップトレイト）");
+                            // コミット失敗時は自動的にロールバックされる（Rustのドロップトレイト）
+                        }
                     }
                 }
-            }
-            
-            if updated_count > 0 {
-                eprintln!("モデルカタログを定期更新しました（{}件のモデルを更新、最終更新から{}日経過）", updated_count, days_since_update);
+                Err(e) => {
+                    eprintln!("[ERROR] トランザクション開始に失敗しました: {}", e);
+                }
             }
         }
     }

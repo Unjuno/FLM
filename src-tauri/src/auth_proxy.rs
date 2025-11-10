@@ -25,19 +25,111 @@ fn get_auth_proxy_command() -> Result<(String, Vec<String>), AppError> {
     };
 
     // 認証プロキシサーバーのパスを取得
-    // 現在の作業ディレクトリを基準に `src/backend/auth/server.ts` へのパスを探す
+    // 複数の可能なパスを試す（開発環境と本番環境の両方に対応）
     let current_dir = std::env::current_dir()
         .map_err(|e| AppError::AuthError {
             message: format!("現在のディレクトリ取得エラー: {}", e),
             source_detail: None,
         })?;
 
-    let dev_path = current_dir.join("src/backend/auth/server.ts");
+    // 可能なパス候補をリストアップ
+    let mut possible_paths: Vec<std::path::PathBuf> = vec![
+        // 開発環境: プロジェクトルートから
+        current_dir.join("src/backend/auth/server.ts"),
+        // 開発環境: src-tauriディレクトリから実行される場合
+        current_dir.join("../src/backend/auth/server.ts"),
+    ];
     
-    Ok((
-        node_command.to_string(),
-        vec![dev_path.to_string_lossy().to_string()],
-    ))
+    // 本番環境: 実行ファイルの場所から相対パスを追加
+    if let Ok(exe) = std::env::current_exe() {
+        if let Some(exe_dir) = exe.parent() {
+            possible_paths.push(exe_dir.join("src/backend/auth/server.ts"));
+            if let Some(exe_parent) = exe_dir.parent() {
+                possible_paths.push(exe_parent.join("src/backend/auth/server.ts"));
+            }
+        }
+    }
+
+    // 最初に見つかった有効なパスを使用
+    let dev_path = possible_paths
+        .into_iter()
+        .find(|path| path.exists());
+
+    let dev_path = match dev_path {
+        Some(path) => path,
+        None => {
+            // すべてのパス候補を試したが、見つからなかった場合
+            let tried_paths: Vec<String> = vec![
+                current_dir.join("src/backend/auth/server.ts").display().to_string(),
+                current_dir.join("../src/backend/auth/server.ts").display().to_string(),
+            ];
+            return Err(AppError::AuthError {
+                message: format!(
+                    "認証プロキシサーバーファイルが見つかりません。以下のパスを確認しましたが、ファイルが見つかりませんでした: {}",
+                    tried_paths.join(", ")
+                ),
+                source_detail: Some(format!(
+                    "現在のディレクトリ: {}. ファイルは src/backend/auth/server.ts に配置されている必要があります。",
+                    current_dir.display()
+                )),
+            });
+        }
+    };
+    
+    // Node.jsコマンドの存在確認
+    use std::process::Command;
+    let node_check = Command::new(&node_command)
+        .arg("--version")
+        .output();
+    
+    match node_check {
+        Ok(output) if output.status.success() => {
+            let version = String::from_utf8_lossy(&output.stdout);
+            eprintln!("[INFO] Node.jsが見つかりました: {}", version.trim());
+        },
+        _ => {
+            return Err(AppError::AuthError {
+                message: format!("Node.jsが見つかりません。Node.jsをインストールしてから再度お試しください。コマンド: {}", node_command),
+                source_detail: None,
+            });
+        }
+    }
+    
+    // TypeScriptファイルを実行するため、Node.jsの--loaderオプションを使用
+    // Node.js 20.6.0以降では、--importオプションでtsxを使用可能
+    // または、npx tsxを使用
+    // まず、npx tsxを試す
+    let npx_command = if cfg!(windows) {
+        "npx.cmd"
+    } else {
+        "npx"
+    };
+    
+    // npx tsxが利用可能か確認
+    let tsx_check = Command::new(npx_command)
+        .args(&["tsx", "--version"])
+        .output();
+    
+    let (command, args) = match tsx_check {
+        Ok(output) if output.status.success() => {
+            // tsxが利用可能な場合
+            eprintln!("[INFO] tsxが見つかりました。TypeScriptファイルを直接実行します。");
+            (
+                npx_command.to_string(),
+                vec!["tsx".to_string(), dev_path.to_string_lossy().to_string()],
+            )
+        },
+        _ => {
+            // tsxが利用できない場合、npx経由でtsxを実行（初回実行時に自動インストールされる）
+            eprintln!("[INFO] tsxが見つかりません。npx経由でtsxを実行します（初回実行時に自動インストールされます）。");
+            (
+                npx_command.to_string(),
+                vec!["tsx".to_string(), dev_path.to_string_lossy().to_string()],
+            )
+        }
+    };
+    
+    Ok((command, args))
 }
 
 /// 認証プロキシを起動
@@ -61,6 +153,9 @@ pub async fn start_auth_proxy(
 
     // 環境変数を設定
     let mut env_vars = std::collections::HashMap::new();
+    // NODE_ENVをdevelopmentに設定（CORS設定のため）
+    // Tauriアプリケーションはローカル環境で動作するため、開発環境として扱う
+    env_vars.insert("NODE_ENV".to_string(), "development".to_string());
     env_vars.insert("PORT".to_string(), port.to_string());
     if let Some(ref url) = engine_base_url {
         env_vars.insert("ENGINE_BASE_URL".to_string(), url.clone());
@@ -87,20 +182,59 @@ pub async fn start_auth_proxy(
 
     let pid = child.id().unwrap_or(0) as u32;
 
-    // 起動確認（最大3回、1秒間隔）
-    for _ in 0..3 {
+    // プロセスの標準エラー出力を読み取るタスクを開始
+    let stderr = child.stderr.take();
+    let mut error_output = String::new();
+    if let Some(mut stderr) = stderr {
+        use tokio::io::AsyncReadExt;
+        let mut buffer = vec![0u8; 1024];
+        if let Ok(n) = stderr.read(&mut buffer).await {
+            if n > 0 {
+                error_output = String::from_utf8_lossy(&buffer[..n]).to_string();
+            }
+        }
+    }
+
+    // 起動確認（最大10回、1秒間隔、合計10秒待機）
+    for attempt in 1..=10 {
         tokio::time::sleep(tokio::time::Duration::from_secs(1)).await;
         if check_proxy_running(port).await {
             return Ok(AuthProxyProcess { pid, port });
         }
+        
+        // プロセスの状態を確認
+        if let Ok(Some(status)) = child.try_wait() {
+            // プロセスが既に終了している場合
+            let exit_code = status.code().unwrap_or(-1);
+            let error_msg = if !error_output.is_empty() {
+                format!("認証プロキシの起動に失敗しました（終了コード: {}）。エラー出力: {}", exit_code, error_output)
+            } else {
+                format!("認証プロキシの起動に失敗しました（終了コード: {}）。Node.jsがインストールされているか、サーバーファイル（src/backend/auth/server.ts）が存在するか確認してください。", exit_code)
+            };
+            return Err(AppError::AuthError {
+                message: error_msg,
+                source_detail: Some(format!("ポート: {}, 試行回数: {}", port, attempt)),
+            });
+        }
     }
 
     // 起動に失敗した場合、プロセスを終了
-    let _ = child.kill().await;
+    if let Err(e) = child.kill().await {
+        eprintln!("[WARN] 認証プロキシプロセスの終了に失敗しました: {}", e);
+    }
+    if let Err(e) = child.wait().await {
+        eprintln!("[WARN] 認証プロキシプロセスの待機に失敗しました: {}", e);
+    }
+
+    let error_msg = if !error_output.is_empty() {
+        format!("認証プロキシの起動確認に失敗しました（10秒経過）。エラー出力: {}. ポート {} が使用可能か確認してください", error_output, port)
+    } else {
+        format!("認証プロキシの起動確認に失敗しました（10秒経過）。ポート {} が使用可能か確認してください。Node.jsがインストールされているか、サーバーファイル（src/backend/auth/server.ts）が存在するか確認してください。", port)
+    };
 
     Err(AppError::AuthError {
-        message: format!("認証プロキシの起動確認に失敗しました。ポート {} が使用可能か確認してください", port),
-        source_detail: None,
+        message: error_msg,
+        source_detail: Some(format!("ポート: {}, PID: {}", port, pid)),
     })
 }
 
@@ -135,10 +269,17 @@ pub async fn stop_auth_proxy_by_port(port: u16) -> Result<(), AppError> {
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
             // netstatの出力からポートとPIDを抽出
+            // 出力形式: "TCP    0.0.0.0:1420           0.0.0.0:0              LISTENING       12345"
             for line in stdout.lines() {
-                if line.contains(&format!(":{}", port)) {
-                    // PIDを抽出（簡易実装）
-                    // 実際の実装では、より詳細なパースが必要
+                if line.contains(&format!(":{}", port)) && line.contains("LISTENING") {
+                    // 行を空白で分割して、最後の要素（PID）を取得
+                    let parts: Vec<&str> = line.split_whitespace().collect();
+                    if let Some(pid_str) = parts.last() {
+                        if let Ok(pid) = pid_str.parse::<u32>() {
+                            // PIDが見つかった場合、プロセスを停止
+                            return stop_auth_proxy(pid).await;
+                        }
+                    }
                 }
             }
         }

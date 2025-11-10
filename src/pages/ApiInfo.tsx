@@ -1,6 +1,6 @@
 // ApiInfo - API情報ページ
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { API_KEY, TIMEOUT } from '../constants/config';
@@ -9,6 +9,7 @@ import { generateSampleCode } from '../utils/apiCodeGenerator';
 import { Breadcrumb, BreadcrumbItem } from '../components/common/Breadcrumb';
 import { SkeletonLoader } from '../components/common/SkeletonLoader';
 import { ErrorMessage } from '../components/common/ErrorMessage';
+import { Tooltip } from '../components/common/Tooltip';
 import { useI18n } from '../contexts/I18nContext';
 import { extractErrorMessage } from '../utils/errorHandler';
 import './ApiInfo.css';
@@ -36,6 +37,19 @@ export const ApiInfo: React.FC = () => {
   const [activeTab, setActiveTab] = useState<'curl' | 'python' | 'javascript'>(
     'curl'
   );
+  const isMountedRef = useRef(true);
+  const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+    return () => {
+      isMountedRef.current = false;
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+        copyTimeoutRef.current = null;
+      }
+    };
+  }, []);
 
   // パンくずリストの項目
   const breadcrumbItems: BreadcrumbItem[] = useMemo(() => {
@@ -61,10 +75,12 @@ export const ApiInfo: React.FC = () => {
       setError(null);
 
       // バックエンドのIPCコマンドを呼び出してAPI詳細を取得（APIキーを含む）
-      const apiDetails = await safeInvoke<ApiDetailsResponse>(
-        'get_api_details',
-        { api_id: apiId }
-      );
+      const apiDetails = await safeInvoke<ApiDetailsResponse>('get_api_details', {
+        apiId: apiId,
+      });
+      if (!isMountedRef.current) {
+        return;
+      }
 
       setApiInfo({
         id: apiDetails.id,
@@ -80,10 +96,16 @@ export const ApiInfo: React.FC = () => {
         updated_at: apiDetails.updated_at,
       });
     } catch (err) {
+      if (!isMountedRef.current) {
+        return;
+      }
       setError(
         extractErrorMessage(err, 'API情報の取得に失敗しました')
       );
     } finally {
+      if (!isMountedRef.current) {
+        return;
+      }
       setLoading(false);
     }
   };
@@ -92,9 +114,24 @@ export const ApiInfo: React.FC = () => {
   const copyToClipboard = async (text: string, label: string) => {
     try {
       await navigator.clipboard.writeText(text);
+      if (!isMountedRef.current) {
+        return;
+      }
       setCopied(label);
-      setTimeout(() => setCopied(null), TIMEOUT.COPY_NOTIFICATION);
+      if (copyTimeoutRef.current) {
+        clearTimeout(copyTimeoutRef.current);
+      }
+      copyTimeoutRef.current = setTimeout(() => {
+        if (!isMountedRef.current) {
+          return;
+        }
+        setCopied(null);
+        copyTimeoutRef.current = null;
+      }, TIMEOUT.COPY_NOTIFICATION);
     } catch (err) {
+      if (!isMountedRef.current) {
+        return;
+      }
       setError('クリップボードへのコピーに失敗しました');
     }
   };
@@ -187,7 +224,17 @@ export const ApiInfo: React.FC = () => {
           </section>
 
           <section className="info-section">
-            <h2>エンドポイント</h2>
+            <h2>
+              <Tooltip
+                content="APIの接続先URLです。外部アプリケーションからこのURLにアクセスしてAPIを使用できます。"
+                title="エンドポイントとは？"
+              >
+                <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                  エンドポイント
+                  <span style={{ fontSize: '0.875rem', opacity: 0.7 }}>❓</span>
+                </span>
+              </Tooltip>
+            </h2>
             <div className="endpoint-display">
               <code className="endpoint-url">{apiInfo.endpoint}</code>
               <button

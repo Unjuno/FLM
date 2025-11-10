@@ -1098,9 +1098,12 @@ impl<'a> RequestLogRepository<'a> {
                 )?
             },
             (none_id, none_date) => {
-                // このパターンは既に上でエラーになっているはず
+                // このパターンは既に上でエラーになっているはず（1069行目で早期リターン）
+                // しかし、念のためエラーを返す（防御的プログラミング）
                 let _ = (none_id, none_date); // 未使用変数の警告を回避
-                unreachable!()
+                return Err(DatabaseError::QueryFailed(
+                    "全ログの削除は許可されていません。API IDまたは日付条件を指定してください。".to_string()
+                ));
             },
         };
         

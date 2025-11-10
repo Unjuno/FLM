@@ -21,8 +21,8 @@
   border-bottom: 1px solid var(--color-border-light, #e2e8f0);
   position: sticky;
   top: 0;
-  z-index: 1000;
-  contain: layout style paint;
+  z-index: 1000; /* ヘッダーのz-index */
+  /* containを削除してドロップダウンが正しく表示されるようにする */
 }
 
 [data-theme="dark"] .app-header {
@@ -258,6 +258,8 @@
   display: flex;
   align-items: center;
   gap: var(--spacing-sm);
+  position: relative;
+  /* isolationを削除してドロップダウンが正しく表示されるようにする */
 }
 
 .action-button {

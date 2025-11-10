@@ -1,7 +1,7 @@
 // App - メインアプリケーションコンポーネント
 
-import React, { useState, useEffect, Suspense, lazy } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useState, useEffect, useRef, Suspense, lazy } from 'react';
+import { Routes, Route, Navigate, useNavigate } from 'react-router-dom';
 import { Home } from './pages/Home';
 import { AppLoading } from './components/common/AppLoading';
 
@@ -11,33 +11,55 @@ import { ApiTest } from './pages/ApiTest';
 import { ApiDetails } from './pages/ApiDetails';
 
 // 使用頻度の低いページはLazy Loading（コード分割）
-const OllamaSetup = lazy(() => import('./pages/OllamaSetup').then(m => ({ default: m.OllamaSetup })));
-const ApiCreate = lazy(() => import('./pages/ApiCreate').then(m => ({ default: m.ApiCreate })));
-const WebServiceSetup = lazy(() => import('./pages/WebServiceSetup').then(m => ({ default: m.WebServiceSetup })));
-const ApiTestSelector = lazy(() => import('./pages/ApiTestSelector').then(m => ({ default: m.ApiTestSelector })));
-const ApiSettings = lazy(() => import('./pages/ApiSettings').then(m => ({ default: m.ApiSettings })));
-const ApiEdit = lazy(() => import('./pages/ApiEdit').then(m => ({ default: m.ApiEdit })));
-const ApiKeys = lazy(() => import('./pages/ApiKeys').then(m => ({ default: m.ApiKeys })));
-const ModelManagement = lazy(() => import('./pages/ModelManagement').then(m => ({ default: m.ModelManagement })));
-const ApiLogs = lazy(() => import('./pages/ApiLogs').then(m => ({ default: m.ApiLogs })));
-const PerformanceDashboard = lazy(() => import('./pages/PerformanceDashboard').then(m => ({ default: m.PerformanceDashboard })));
-const Help = lazy(() => import('./pages/Help').then(m => ({ default: m.Help })));
-const Settings = lazy(() => import('./pages/Settings').then(m => ({ default: m.Settings })));
-const AlertSettings = lazy(() => import('./pages/AlertSettings').then(m => ({ default: m.AlertSettings })));
-const AlertHistory = lazy(() => import('./pages/AlertHistory').then(m => ({ default: m.AlertHistory })));
-const BackupRestore = lazy(() => import('./pages/BackupRestore').then(m => ({ default: m.BackupRestore })));
-const SchedulerSettings = lazy(() => import('./pages/SchedulerSettings').then(m => ({ default: m.SchedulerSettings })));
-const CertificateManagement = lazy(() => import('./pages/CertificateManagement').then(m => ({ default: m.CertificateManagement })));
-const AuditLogs = lazy(() => import('./pages/AuditLogs').then(m => ({ default: m.AuditLogs })));
-const OAuthSettings = lazy(() => import('./pages/OAuthSettings').then(m => ({ default: m.OAuthSettings })));
-const PluginManagement = lazy(() => import('./pages/PluginManagement').then(m => ({ default: m.PluginManagement })));
-const EngineManagement = lazy(() => import('./pages/EngineManagement').then(m => ({ default: m.EngineManagement })));
-const EngineSettings = lazy(() => import('./pages/EngineSettings').then(m => ({ default: m.EngineSettings })));
-const ModelCatalogManagement = lazy(() => import('./pages/ModelCatalogManagement').then(m => ({ default: m.ModelCatalogManagement })));
-const Diagnostics = lazy(() => import('./pages/Diagnostics').then(m => ({ default: m.Diagnostics })));
-const About = lazy(() => import('./pages/About').then(m => ({ default: m.About })));
-const PrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy').then(m => ({ default: m.PrivacyPolicy })));
-const TermsOfService = lazy(() => import('./pages/TermsOfService').then(m => ({ default: m.TermsOfService })));
+// エラーハンドリング付きのlazy loadingヘルパー関数
+// 注意: loggerは後でインポートされるため、エラー時はconsole.errorを使用
+const lazyLoad = (importFn: () => Promise<{ [key: string]: React.ComponentType<any> }>, componentName: string) => {
+  return lazy(() =>
+    importFn()
+      .then(module => {
+        const component = module[componentName] || module.default;
+        if (!component) {
+          throw new Error(`コンポーネント "${componentName}" が見つかりません`);
+        }
+        return { default: component };
+      })
+      .catch(error => {
+        // loggerがまだインポートされていない可能性があるため、console.errorを使用
+        console.error(`[App] ページの読み込みに失敗しました: ${componentName}`, error);
+        // エラーを再スローしてErrorBoundaryでキャッチできるようにする
+        throw error;
+      })
+  );
+};
+
+const OllamaSetup = lazyLoad(() => import('./pages/OllamaSetup'), 'OllamaSetup');
+const ApiCreate = lazyLoad(() => import('./pages/ApiCreate'), 'ApiCreate');
+const WebServiceSetup = lazyLoad(() => import('./pages/WebServiceSetup'), 'WebServiceSetup');
+const ApiTestSelector = lazyLoad(() => import('./pages/ApiTestSelector'), 'ApiTestSelector');
+const ApiSettings = lazyLoad(() => import('./pages/ApiSettings'), 'ApiSettings');
+const ApiEdit = lazyLoad(() => import('./pages/ApiEdit'), 'ApiEdit');
+const ApiKeys = lazyLoad(() => import('./pages/ApiKeys'), 'ApiKeys');
+const ModelManagement = lazyLoad(() => import('./pages/ModelManagement'), 'ModelManagement');
+const ApiLogs = lazyLoad(() => import('./pages/ApiLogs'), 'ApiLogs');
+const PerformanceDashboard = lazyLoad(() => import('./pages/PerformanceDashboard'), 'PerformanceDashboard');
+const Help = lazyLoad(() => import('./pages/Help'), 'Help');
+const Settings = lazyLoad(() => import('./pages/Settings'), 'Settings');
+const AlertSettings = lazyLoad(() => import('./pages/AlertSettings'), 'AlertSettings');
+const AlertHistory = lazyLoad(() => import('./pages/AlertHistory'), 'AlertHistory');
+const BackupRestore = lazyLoad(() => import('./pages/BackupRestore'), 'BackupRestore');
+const SchedulerSettings = lazyLoad(() => import('./pages/SchedulerSettings'), 'SchedulerSettings');
+const CertificateManagement = lazyLoad(() => import('./pages/CertificateManagement'), 'CertificateManagement');
+const AuditLogs = lazyLoad(() => import('./pages/AuditLogs'), 'AuditLogs');
+const OAuthSettings = lazyLoad(() => import('./pages/OAuthSettings'), 'OAuthSettings');
+const PluginManagement = lazyLoad(() => import('./pages/PluginManagement'), 'PluginManagement');
+const EngineManagement = lazyLoad(() => import('./pages/EngineManagement'), 'EngineManagement');
+const EngineSettings = lazyLoad(() => import('./pages/EngineSettings'), 'EngineSettings');
+const ModelCatalogManagement = lazyLoad(() => import('./pages/ModelCatalogManagement'), 'ModelCatalogManagement');
+const Diagnostics = lazyLoad(() => import('./pages/Diagnostics'), 'Diagnostics');
+const ErrorLogs = lazyLoad(() => import('./pages/ErrorLogs'), 'ErrorLogs');
+const About = lazyLoad(() => import('./pages/About'), 'About');
+const PrivacyPolicy = lazyLoad(() => import('./pages/PrivacyPolicy'), 'PrivacyPolicy');
+const TermsOfService = lazyLoad(() => import('./pages/TermsOfService'), 'TermsOfService');
 import { useGlobalKeyboardShortcuts } from './hooks/useKeyboardShortcuts';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 import './styles/common.css';
@@ -68,17 +90,38 @@ const PageLoading: React.FC = () => (
  * メインアプリケーションコンポーネント
  * ルーティング設定を含みます
  */
+/**
+ * アップデートチェックコンポーネント
+ * NotificationProvider内でuseAppUpdateを呼び出すためのラッパー
+ */
+const AppUpdateChecker: React.FC = () => {
+  // アプリケーション起動時に自動アップデートチェック（ユーザー同意後に有効化）
+  useAppUpdate({ autoCheck: false, showNotification: false });
+  return null;
+};
+
 function App() {
   const [isInitializing, setIsInitializing] = useState(true);
+  const navigate = useNavigate();
+
+  // タイムアウトIDを保存（クリーンアップ用）
+  const initTimeoutIdRef = useRef<NodeJS.Timeout | null>(null);
+  const redirectTimeoutIdRef = useRef<NodeJS.Timeout | null>(null);
 
   // グローバルキーボードショートカットを有効化
   useGlobalKeyboardShortcuts();
 
-  // アプリケーション起動時に自動アップデートチェック（ユーザー同意後に有効化）
-  useAppUpdate({ autoCheck: false, showNotification: false });
-
   // アプリケーション初期化処理
   useEffect(() => {
+    // 最大15秒後に強制的にアプリを表示（初回起動時のデータベース初期化が長引く場合の対策）
+    const forceShowTimeout = setTimeout(() => {
+      logger.warn('初期化タイムアウト: 強制的にアプリを表示します', 'App');
+      setIsInitializing(false);
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new CustomEvent('flm-app-initialized'));
+      }
+    }, 15000);
+
     const initializeApp = async () => {
       try {
         // データベース接続確認（オプション）
@@ -86,12 +129,19 @@ function App() {
         try {
           // データベース初期化を確認するため、API一覧取得を試行
           // タイムアウトを設定して、応答がない場合でもアプリを起動できるようにする
+          // 初回起動時はデータベース初期化に時間がかかるため、タイムアウトを10秒に延長
           const initPromise = safeInvoke('list_apis');
-          const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error('初期化タイムアウト')), 3000)
-          );
+          const timeoutPromise = new Promise<never>((_, reject) => {
+            initTimeoutIdRef.current = setTimeout(() => reject(new Error('初期化タイムアウト')), 10000);
+          });
           
           await Promise.race([initPromise, timeoutPromise]);
+          
+          // 成功した場合はタイムアウトをクリア
+          if (initTimeoutIdRef.current) {
+            clearTimeout(initTimeoutIdRef.current);
+            initTimeoutIdRef.current = null;
+          }
 
           try {
             const resolutions = await safeInvoke<
@@ -130,6 +180,11 @@ function App() {
           }
         } catch (err) {
           // 初期化エラーは記録するが、アプリは起動を続ける
+          // エラー時もタイムアウトをクリア
+          if (initTimeoutIdRef.current) {
+            clearTimeout(initTimeoutIdRef.current);
+            initTimeoutIdRef.current = null;
+          }
           logger.warn(
             '初期化確認でエラーが発生しましたが、アプリを起動します',
             err instanceof Error ? err.message : String(err),
@@ -138,7 +193,25 @@ function App() {
         }
 
         // 初期化完了
+        clearTimeout(forceShowTimeout);
         setIsInitializing(false);
+        
+        // 初期ローディング画面を非表示にするイベントを発火
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('flm-app-initialized'));
+        }
+
+        // 初期化完了後、初回起動時はホーム画面にリダイレクト
+        // セッションストレージで初回起動かどうかを判定
+        const hasInitialized = sessionStorage.getItem('flm-initialized');
+        if (!hasInitialized) {
+          sessionStorage.setItem('flm-initialized', 'true');
+          // 少し遅延を入れて、DOMが完全にレンダリングされた後にリダイレクト
+          redirectTimeoutIdRef.current = setTimeout(() => {
+            navigate('/', { replace: true });
+            redirectTimeoutIdRef.current = null;
+          }, 100);
+        }
       } catch (err) {
         // 予期しないエラーが発生した場合
         logger.error(
@@ -148,12 +221,46 @@ function App() {
         );
         // エラーが発生しても、アプリは起動を続ける
         // 初期化エラーは記録されるが、ユーザーはアプリを使用できる
+        clearTimeout(forceShowTimeout);
         setIsInitializing(false);
+        
+        // エラーが発生しても初期ローディング画面を非表示にする
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new CustomEvent('flm-app-initialized'));
+        }
+
+        // エラーが発生した場合も、ホーム画面にリダイレクト
+        const hasInitialized = sessionStorage.getItem('flm-initialized');
+        if (!hasInitialized) {
+          sessionStorage.setItem('flm-initialized', 'true');
+          navigate('/', { replace: true });
+        }
       }
     };
 
     initializeApp();
+    
+    // クリーンアップ
+    return () => {
+      clearTimeout(forceShowTimeout);
+      if (initTimeoutIdRef.current) {
+        clearTimeout(initTimeoutIdRef.current);
+        initTimeoutIdRef.current = null;
+      }
+      if (redirectTimeoutIdRef.current) {
+        clearTimeout(redirectTimeoutIdRef.current);
+        redirectTimeoutIdRef.current = null;
+      }
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // デバッグ用: 初期化完了をログに記録
+  useEffect(() => {
+    if (!isInitializing) {
+      logger.info('アプリケーション初期化完了', 'App');
+    }
+  }, [isInitializing]);
 
   // 初期化中の場合は読み込み画面を表示
   if (isInitializing) {
@@ -171,6 +278,7 @@ function App() {
       <ThemeProvider>
         <ErrorBoundary>
           <NotificationProvider>
+            <AppUpdateChecker />
             <div className="app">
               <Suspense fallback={<PageLoading />}>
                 <Routes>
@@ -201,8 +309,8 @@ function App() {
                   {/* API情報画面 */}
                   <Route path="/api/details/:id" element={<ApiDetails />} />
 
-                  {/* API設定変更画面 */}
-                  <Route path="/api/settings/:id" element={<ApiSettings />} />
+                  {/* API設定変更画面（統合） */}
+                  <Route path="/api/settings/:id" element={<ApiEdit />} />
                   <Route path="/api/edit/:id" element={<ApiEdit />} />
 
                   {/* モデル管理画面 */}
@@ -261,6 +369,9 @@ function App() {
 
                   {/* 診断ツール */}
                   <Route path="/diagnostics" element={<Diagnostics />} />
+
+                  {/* エラーログ画面 */}
+                  <Route path="/error-logs" element={<ErrorLogs />} />
 
                   {/* モデルカタログ管理画面 */}
                   <Route

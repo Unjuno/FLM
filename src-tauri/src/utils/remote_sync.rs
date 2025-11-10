@@ -652,7 +652,10 @@ async fn sync_to_dropbox(
     
     let status = response.status();
     if !status.is_success() {
-        let error_text = response.text().await.unwrap_or_default();
+        let error_text = response.text().await.unwrap_or_else(|e| {
+            eprintln!("[WARN] Dropboxエラーレスポンスの本文を読み取れませんでした: {}", e);
+            format!("レスポンス本文を読み取れませんでした: {}", e)
+        });
         return Err(AppError::ApiError {
             message: format!("Dropboxアップロードに失敗しました: {}", error_text),
             code: status.as_str().to_string(),
@@ -735,12 +738,14 @@ mod tests {
         };
         
         // JSONシリアライゼーションテスト
-        let json = serde_json::to_string(&sync_info).unwrap();
+        let json = serde_json::to_string(&sync_info)
+            .expect("SyncInfoのシリアライゼーションは成功するはず");
         assert!(json.contains("test-device-id"));
         assert!(json.contains("github"));
         
         // デシリアライゼーションテスト
-        let deserialized: SyncInfo = serde_json::from_str(&json).unwrap();
+        let deserialized: SyncInfo = serde_json::from_str(&json)
+            .expect("SyncInfoのデシリアライゼーションは成功するはず");
         assert_eq!(deserialized.device_id, sync_info.device_id);
         assert_eq!(deserialized.sync_enabled, sync_info.sync_enabled);
     }
@@ -755,12 +760,14 @@ mod tests {
             sync_interval_seconds: 3600,
         };
         
-        let json = serde_json::to_string(&config).unwrap();
+        let json = serde_json::to_string(&config)
+            .expect("RemoteAccessConfigのシリアライゼーションは成功するはず");
         assert!(json.contains("test-device"));
         assert!(json.contains("github"));
         assert!(json.contains("3600"));
         
-        let deserialized: RemoteAccessConfig = serde_json::from_str(&json).unwrap();
+        let deserialized: RemoteAccessConfig = serde_json::from_str(&json)
+            .expect("RemoteAccessConfigのデシリアライゼーションは成功するはず");
         assert_eq!(deserialized.device_id, config.device_id);
         assert_eq!(deserialized.sync_interval_seconds, config.sync_interval_seconds);
     }

@@ -265,6 +265,56 @@ pub fn run() {
                 });
             }
             
+            // アプリケーション起動時に、停止状態のAPIを自動的に起動
+            // バックグラウンドタスクとして実行（起動をブロックしない）
+            std::thread::spawn(move || {
+                // スレッド内で新しいTokioランタイムを作成して非同期処理を実行
+                match tokio::runtime::Runtime::new() {
+                    Ok(runtime) => {
+                        runtime.block_on(async {
+                            debug_log!("アプリケーション起動時: 停止状態のAPIを自動起動します...");
+                            
+                            // すべてのAPIを取得
+                            match commands::api::list_apis().await {
+                                Ok(apis) => {
+                                    let mut started_count = 0;
+                                    let mut failed_count = 0;
+                                    
+                                    for api_info in apis {
+                                        // 停止状態のAPIのみ起動
+                                        if api_info.status == "stopped" {
+                                            debug_log!("API「{}」を自動起動します...", api_info.name);
+                                            match commands::api::start_api(api_info.id.clone()).await {
+                                                Ok(_) => {
+                                                    debug_log!("✓ API「{}」の起動に成功しました", api_info.name);
+                                                    started_count += 1;
+                                                },
+                                                Err(e) => {
+                                                    warn_log!("✗ API「{}」の起動に失敗しました: {}", api_info.name, e);
+                                                    failed_count += 1;
+                                                }
+                                            }
+                                        }
+                                    }
+                                    
+                                    if started_count > 0 || failed_count > 0 {
+                                        debug_log!("API自動起動完了: 成功={}件, 失敗={}件", started_count, failed_count);
+                                    } else {
+                                        debug_log!("起動すべき停止状態のAPIはありませんでした");
+                                    }
+                                },
+                                Err(e) => {
+                                    warn_log!("API一覧の取得に失敗しました: {}. 自動起動をスキップします。", e);
+                                }
+                            }
+                        });
+                    },
+                    Err(e) => {
+                        warn_log!("API自動起動用のTokioランタイム作成に失敗しました: {:?}", e);
+                    }
+                }
+            });
+            
             Ok(())
         })
         .invoke_handler(tauri::generate_handler![
@@ -296,6 +346,8 @@ pub fn run() {
             api::save_request_log,
             api::get_request_logs,
             api::save_error_log,
+            api::list_error_logs,
+            api::export_error_logs,
             api::get_log_statistics,
             api::export_logs,
             api::delete_logs,

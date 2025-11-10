@@ -1,0 +1,202 @@
+/* EngineStatus - エンジンステータスコンポーネントのスタイル */
+
+.engine-status {
+  width: 100%;
+}
+
+.engine-status-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 1rem;
+}
+
+.engine-status-card {
+  background: var(--color-bg-secondary, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  padding: 1.5rem;
+  transition: all 0.2s ease;
+}
+
+.engine-status-card:hover {
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  transform: translateY(-2px);
+}
+
+.engine-status-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.engine-status-icon {
+  font-size: 2rem;
+  line-height: 1;
+  flex-shrink: 0;
+}
+
+.engine-status-info {
+  flex: 1;
+  min-width: 0;
+}
+
+.engine-status-name {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+  color: var(--color-text-primary, #1a202c);
+}
+
+.engine-status-state {
+  font-size: 0.875rem;
+  font-weight: 500;
+  margin: 0;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  display: inline-block;
+}
+
+.engine-status-state.status.success {
+  background-color: #d4edda;
+  color: #155724;
+}
+
+.engine-status-state.status.warning {
+  background-color: #fff3cd;
+  color: #856404;
+}
+
+.engine-status-state.status.error {
+  background-color: #f8d7da;
+  color: #721c24;
+}
+
+.engine-status-state.status.unknown {
+  background-color: #e9ecef;
+  color: #6c757d;
+}
+
+.engine-status-details {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border, #e2e8f0);
+}
+
+.engine-status-detail {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+  font-size: 0.875rem;
+}
+
+.engine-status-detail:last-child {
+  margin-bottom: 0;
+}
+
+.detail-label {
+  font-weight: 500;
+  color: var(--color-text-secondary, #718096);
+}
+
+.detail-value {
+  color: var(--color-text-primary, #1a202c);
+  word-break: break-all;
+  text-align: right;
+  max-width: 60%;
+}
+
+.engine-status-message {
+  margin-top: 0.75rem;
+  padding: 0.75rem;
+  background-color: var(--color-bg-tertiary, #f7fafc);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary, #718096);
+}
+
+.engine-status-error {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid var(--color-border, #e2e8f0);
+}
+
+.error-text {
+  color: var(--color-error, #e53e3e);
+  font-size: 0.875rem;
+  margin-bottom: 0.5rem;
+}
+
+.retry-button,
+.refresh-button {
+  padding: 0.5rem 1rem;
+  background-color: var(--color-primary, #3182ce);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  width: 100%;
+  margin-top: 0.5rem;
+}
+
+.retry-button:hover:not(:disabled),
+.refresh-button:hover:not(:disabled) {
+  background-color: var(--color-primary-hover, #2c5aa0);
+}
+
+.retry-button:disabled,
+.refresh-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ダークテーマ対応 */
+@media (prefers-color-scheme: dark) {
+  .engine-status-card {
+    background: var(--color-bg-secondary, #2d3748);
+    border-color: var(--color-border, #4a5568);
+  }
+
+  .engine-status-name {
+    color: var(--color-text-primary, #f7fafc);
+  }
+
+  .engine-status-state.status.success {
+    background-color: #22543d;
+    color: #9ae6b4;
+  }
+
+  .engine-status-state.status.warning {
+    background-color: #744210;
+    color: #fbd38d;
+  }
+
+  .engine-status-state.status.error {
+    background-color: #742a2a;
+    color: #fc8181;
+  }
+
+  .engine-status-state.status.unknown {
+    background-color: #4a5568;
+    color: #cbd5e0;
+  }
+
+  .detail-label {
+    color: var(--color-text-secondary, #cbd5e0);
+  }
+
+  .detail-value {
+    color: var(--color-text-primary, #f7fafc);
+  }
+
+  .engine-status-message {
+    background-color: var(--color-bg-tertiary, #1a202c);
+    color: var(--color-text-secondary, #cbd5e0);
+  }
+}
+

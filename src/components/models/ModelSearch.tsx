@@ -74,16 +74,6 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
 
   // 仮想スクロール用のref
   const parentRef = useRef<HTMLDivElement>(null);
-  
-  // 仮想スクロールの設定（100件以上の場合に有効化）
-  const shouldUseVirtualScroll = filteredModels.length >= 100;
-  const rowVirtualizer = useVirtualizer({
-    count: filteredModels.length,
-    getScrollElement: () => parentRef.current,
-    estimateSize: () => 60, // サイドバー項目の高さの推定値（px）
-    overscan: 5, // 表示領域外のレンダリング数
-    enabled: shouldUseVirtualScroll,
-  });
 
   // モデル一覧を取得（useCallbackでメモ化）
   const loadModels = useCallback(async () => {
@@ -637,23 +627,8 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
     loadModels();
   }, [loadModels]);
 
-  // 人気トップ5を取得（推奨モデルから選出）
-  const popularModels = useMemo(() => {
-    return models.filter(model => model.recommended).slice(0, 5);
-  }, [models]);
-
-  // 初心者向けモデルを取得（小サイズで推奨のモデル）
-  const beginnerModels = useMemo(() => {
-    return models
-      .filter(model => {
-        if (!model.recommended || !model.size) return false;
-        const sizeGB = model.size / (1024 * 1024 * 1024);
-        return sizeGB < 5; // 5GB未満の推奨モデルを初心者向けとする
-      })
-      .slice(0, 5);
-  }, [models]);
-
   // フィルタとソートを適用（useMemoでメモ化してパフォーマンス最適化）
+  // 仮想スクロールの設定で使用するため、先に定義する必要がある
   const filteredModels = useMemo(() => {
     let filtered = [...models];
 
@@ -744,6 +719,32 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
     selectedUseCase,
     sortBy,
   ]);
+
+  // 人気トップ5を取得（推奨モデルから選出）
+  const popularModels = useMemo(() => {
+    return models.filter(model => model.recommended).slice(0, 5);
+  }, [models]);
+
+  // 初心者向けモデルを取得（小サイズで推奨のモデル）
+  const beginnerModels = useMemo(() => {
+    return models
+      .filter(model => {
+        if (!model.recommended || !model.size) return false;
+        const sizeGB = model.size / (1024 * 1024 * 1024);
+        return sizeGB < 5; // 5GB未満の推奨モデルを初心者向けとする
+      })
+      .slice(0, 5);
+  }, [models]);
+
+  // 仮想スクロールの設定（100件以上の場合に有効化）
+  const shouldUseVirtualScroll = filteredModels.length >= 100;
+  const rowVirtualizer = useVirtualizer({
+    count: filteredModels.length,
+    getScrollElement: () => parentRef.current,
+    estimateSize: () => 60, // サイドバー項目の高さの推定値（px）
+    overscan: 5, // 表示領域外のレンダリング数
+    enabled: shouldUseVirtualScroll,
+  });
 
   const downloadAbortControllerRef = useRef<AbortController | null>(null);
   const unsubscribeProgressRef = useRef<(() => void) | null>(null);
@@ -844,7 +845,7 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
 
         // 実際のIPCコマンドを呼び出し
         await safeInvoke('download_model', {
-          model_name: model.name,
+          modelName: model.name,
         });
 
         // ダウンロード完了通知

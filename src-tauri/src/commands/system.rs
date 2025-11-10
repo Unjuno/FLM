@@ -4,6 +4,19 @@ use serde::{Deserialize, Serialize};
 use sysinfo::{System, SystemExt, CpuExt, DiskExt, ProcessExt};
 use crate::commands::port::is_port_available;
 
+/// GPU情報
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub struct GpuInfo {
+    /// GPUが利用可能か
+    pub available: bool,
+    /// GPU名
+    pub name: Option<String>,
+    /// VRAM容量（バイト、利用可能な場合）
+    pub vram_bytes: Option<u64>,
+    /// GPUベンダー（"nvidia" | "amd" | "intel" | "unknown"）
+    pub vendor: Option<String>,
+}
+
 /// システムリソース情報
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct SystemResources {
@@ -19,6 +32,8 @@ pub struct SystemResources {
     pub total_disk: u64,
     /// 利用可能ディスク容量（バイト）
     pub available_disk: u64,
+    /// GPU情報
+    pub gpu: GpuInfo,
     /// システムリソースレベル評価（"low" | "medium" | "high" | "very_high"）
     pub resource_level: String,
 }
@@ -27,18 +42,21 @@ pub struct SystemResources {
 #[tauri::command]
 pub async fn get_system_resources() -> Result<SystemResources, String> {
     // 診断機能が無効化されている場合はエラーを返す
-    use crate::database::connection::get_connection;
-    use crate::database::repository::UserSettingRepository;
-    
-    let conn = get_connection().map_err(|e| {
-        format!("データベース接続エラー: {}", e)
-    })?;
-    
-    let settings_repo = UserSettingRepository::new(&conn);
-    let diagnostics_enabled = settings_repo.get("diagnostics_enabled")
-        .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
-        .and_then(|v| v.parse::<bool>().ok())
-        .unwrap_or(true); // デフォルト: 有効
+    // データベース接続を使用する処理を先に完了させる（awaitの前に）
+    let diagnostics_enabled = {
+        use crate::database::connection::get_connection;
+        use crate::database::repository::UserSettingRepository;
+        
+        let conn = get_connection().map_err(|e| {
+            format!("データベース接続エラー: {}", e)
+        })?;
+        
+        let settings_repo = UserSettingRepository::new(&conn);
+        settings_repo.get("diagnostics_enabled")
+            .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
+            .and_then(|v| v.parse::<bool>().ok())
+            .unwrap_or(true) // デフォルト: 有効
+    };
     
     if !diagnostics_enabled {
         return Err("診断機能が無効化されています。設定画面で有効化してください。".to_string());
@@ -76,13 +94,17 @@ pub async fn get_system_resources() -> Result<SystemResources, String> {
         available_disk += disk.available_space();
     }
     
-    // リソースレベルを評価
+    // GPU情報を取得（データベース接続をドロップした後）
+    let gpu = get_gpu_info().await;
+    
+    // リソースレベルを評価（GPU情報を含む）
     let resource_level = evaluate_resource_level(
         total_memory,
         available_memory,
         cpu_cores,
         total_disk,
         available_disk,
+        &gpu,
     );
     
     Ok(SystemResources {
@@ -92,24 +114,178 @@ pub async fn get_system_resources() -> Result<SystemResources, String> {
         cpu_usage,
         total_disk,
         available_disk,
+        gpu,
         resource_level,
     })
+}
+
+/// GPU情報を取得
+async fn get_gpu_info() -> GpuInfo {
+    #[cfg(windows)]
+    {
+        // NVIDIA GPUを検出（nvidia-smiコマンドを使用）
+        if let Ok(output) = std::process::Command::new("nvidia-smi")
+            .args(&["--query-gpu=name,memory.total", "--format=csv,noheader,nounits"])
+            .output()
+        {
+            if output.status.success() {
+                if let Ok(stdout) = String::from_utf8(output.stdout) {
+                    let lines: Vec<&str> = stdout.lines().collect();
+                    if let Some(first_line) = lines.first() {
+                        let parts: Vec<&str> = first_line.split(',').map(|s| s.trim()).collect();
+                        if parts.len() >= 2 {
+                            let name = parts[0].to_string();
+                            if let Ok(vram_mb) = parts[1].parse::<u64>() {
+                                let vram_bytes = vram_mb * 1024 * 1024; // MB to bytes
+                                return GpuInfo {
+                                    available: true,
+                                    name: Some(name),
+                                    vram_bytes: Some(vram_bytes),
+                                    vendor: Some("nvidia".to_string()),
+                                };
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // AMD GPUを検出（Windows WMIを使用）
+        if let Ok(output) = std::process::Command::new("wmic")
+            .args(&["path", "win32_VideoController", "get", "name,AdapterRAM", "/format:csv"])
+            .output()
+        {
+            if output.status.success() {
+                if let Ok(stdout) = String::from_utf8(output.stdout) {
+                    for line in stdout.lines() {
+                        if line.contains("AMD") || line.contains("Radeon") {
+                            let parts: Vec<&str> = line.split(',').collect();
+                            if parts.len() >= 3 {
+                                let name = parts[parts.len() - 2].trim().to_string();
+                                if !name.is_empty() && name != "Name" {
+                                    return GpuInfo {
+                                        available: true,
+                                        name: Some(name),
+                                        vram_bytes: None, // WMIからは正確なVRAM取得が困難
+                                        vendor: Some("amd".to_string()),
+                                    };
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        // Intel GPUを検出
+        if let Ok(output) = std::process::Command::new("wmic")
+            .args(&["path", "win32_VideoController", "get", "name", "/format:csv"])
+            .output()
+        {
+            if output.status.success() {
+                if let Ok(stdout) = String::from_utf8(output.stdout) {
+                    for line in stdout.lines() {
+                        if line.contains("Intel") {
+                            let parts: Vec<&str> = line.split(',').collect();
+                            if parts.len() >= 2 {
+                                let name = parts[parts.len() - 1].trim().to_string();
+                                if !name.is_empty() && name != "Name" {
+                                    return GpuInfo {
+                                        available: true,
+                                        name: Some(name),
+                                        vram_bytes: None,
+                                        vendor: Some("intel".to_string()),
+                                    };
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    #[cfg(target_os = "linux")]
+    {
+        // Linux: lspciコマンドでGPUを検出
+        if let Ok(output) = std::process::Command::new("lspci")
+            .output()
+        {
+            if output.status.success() {
+                if let Ok(stdout) = String::from_utf8(output.stdout) {
+                    if stdout.contains("VGA") || stdout.contains("3D") {
+                        // NVIDIA
+                        if stdout.contains("NVIDIA") {
+                            return GpuInfo {
+                                available: true,
+                                name: None,
+                                vram_bytes: None,
+                                vendor: Some("nvidia".to_string()),
+                            };
+                        }
+                        // AMD
+                        if stdout.contains("AMD") || stdout.contains("Radeon") {
+                            return GpuInfo {
+                                available: true,
+                                name: None,
+                                vram_bytes: None,
+                                vendor: Some("amd".to_string()),
+                            };
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+    #[cfg(target_os = "macos")]
+    {
+        // macOS: system_profilerコマンドでGPUを検出
+        if let Ok(output) = std::process::Command::new("system_profiler")
+            .args(&["SPDisplaysDataType"])
+            .output()
+        {
+            if output.status.success() {
+                if let Ok(stdout) = String::from_utf8(output.stdout) {
+                    if stdout.contains("Chipset Model") {
+                        return GpuInfo {
+                            available: true,
+                            name: None,
+                            vram_bytes: None,
+                            vendor: Some("apple".to_string()),
+                        };
+                    }
+                }
+            }
+        }
+    }
+    
+    // GPUが見つからない場合
+    GpuInfo {
+        available: false,
+        name: None,
+        vram_bytes: None,
+        vendor: None,
+    }
 }
 
 /// システムリソースレベルを評価
 fn evaluate_resource_level(
     total_memory: u64,
-    _available_memory: u64,
+    available_memory: u64,
     cpu_cores: usize,
     _total_disk: u64,
     available_disk: u64,
+    gpu: &GpuInfo,
 ) -> String {
     // リソースレベルを評価
-    // メモリ: 8GB以上 = high, 4GB以上 = medium, それ以下 = low
+    // メモリ: 利用可能メモリを重視（70Bモデルには40GB以上、34Bモデルには20GB以上、13Bモデルには10GB以上が必要）
     // CPU: 8コア以上 = high, 4コア以上 = medium, それ以下 = low
     // ディスク: 100GB以上空き = high, 50GB以上 = medium, それ以下 = low
     
-    let memory_gb = total_memory as f64 / (1024.0 * 1024.0 * 1024.0);
+    let _total_memory_gb = total_memory as f64 / (1024.0 * 1024.0 * 1024.0);
+    let available_memory_gb = available_memory as f64 / (1024.0 * 1024.0 * 1024.0);
+    
     let cpu_score = if cpu_cores >= 8 {
         3
     } else if cpu_cores >= 4 {
@@ -118,13 +294,22 @@ fn evaluate_resource_level(
         1
     };
     
-    let memory_score = if memory_gb >= 16.0 {
+    // 利用可能メモリを重視した評価
+    // 70Bモデルには40GB以上、34Bモデルには20GB以上、13Bモデルには10GB以上、7Bモデルには6GB以上が必要
+    let memory_score = if available_memory_gb >= 40.0 {
+        // 70Bモデルが実行可能
         3
-    } else if memory_gb >= 8.0 {
+    } else if available_memory_gb >= 20.0 {
+        // 34Bモデルが実行可能
         2
-    } else if memory_gb >= 4.0 {
+    } else if available_memory_gb >= 10.0 {
+        // 13Bモデルが実行可能
+        1
+    } else if available_memory_gb >= 6.0 {
+        // 7Bモデルが実行可能
         1
     } else {
+        // 小規模モデルのみ実行可能
         0
     };
     
@@ -139,14 +324,79 @@ fn evaluate_resource_level(
         0
     };
     
-    // 総合スコア（0-9）
-    let total_score = cpu_score + memory_score + disk_score;
+    // GPUスコアを計算
+    let gpu_score = if gpu.available {
+        if let Some(vram_bytes) = gpu.vram_bytes {
+            let vram_gb = vram_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+            // VRAM容量に基づいてスコアを決定
+            // 24GB以上（RTX 4090等）= 3, 16GB以上（RTX 4080等）= 2, 8GB以上 = 1, それ以下 = 0
+            if vram_gb >= 24.0 {
+                3 // 大規模モデル（70B等）が実行可能
+            } else if vram_gb >= 16.0 {
+                2 // 中規模モデル（34B等）が実行可能
+            } else if vram_gb >= 8.0 {
+                1 // 小規模モデル（13B等）が実行可能
+            } else {
+                0 // 軽量モデルのみ
+            }
+        } else {
+            // VRAM情報が取得できない場合、GPUがあるだけで1ポイント
+            // NVIDIA/AMDの高性能GPUと仮定
+            match gpu.vendor.as_deref() {
+                Some("nvidia") => 2, // NVIDIA GPUは高性能と仮定
+                Some("amd") => 1,    // AMD GPUは中性能と仮定
+                _ => 1,              // その他は中性能と仮定
+            }
+        }
+    } else {
+        0 // GPUなし
+    };
     
-    if total_score >= 7 {
+    // 総合スコア（0-12、GPUスコアを追加）
+    let mut total_score = cpu_score + memory_score + disk_score + gpu_score;
+    
+    // GPUがある場合、メモリ要件を緩和（GPUで推論するため）
+    // ただし、VRAMが少ない場合は制限
+    if gpu.available {
+        if let Some(vram_bytes) = gpu.vram_bytes {
+            let vram_gb = vram_bytes as f64 / (1024.0 * 1024.0 * 1024.0);
+            // VRAMが少ない場合、スコアを調整
+            if vram_gb < 8.0 && total_score >= 7 {
+                // 8GB未満のVRAMでは、大規模モデルは推奨しない
+                total_score = (total_score - 1).max(5); // highレベルに下げる
+            } else if vram_gb < 16.0 && total_score >= 9 {
+                // 16GB未満のVRAMでは、70Bモデルは推奨しない
+                total_score = 8; // very_highだが70Bは推奨しない
+            }
+        }
+    } else {
+        // GPUがない場合、メモリ要件を厳しく評価
+        // 70Bモデルには40GB以上、34Bモデルには20GB以上、13Bモデルには10GB以上が必要
+        if available_memory_gb < 40.0 && total_score >= 7 {
+            // 70Bモデルには40GB以上が必要
+            total_score = 6; // highレベルに下げる（34Bモデルまで）
+        } else if available_memory_gb < 20.0 && total_score >= 7 {
+            // 34Bモデルには20GB以上が必要
+            total_score = 6; // highレベルに下げる
+        } else if available_memory_gb < 10.0 && total_score >= 7 {
+            // 13Bモデルには10GB以上が必要
+            total_score = 6; // highレベルに下げる
+        } else if available_memory_gb < 4.0 && total_score >= 7 {
+            // 7Bモデルには4GB以上が必要
+            total_score = 6; // highレベルに下げる
+        }
+    }
+    
+    // GPUがある場合、スコアの閾値を調整
+    let threshold_very_high = if gpu.available { 8 } else { 7 };
+    let threshold_high = if gpu.available { 6 } else { 5 };
+    let threshold_medium = if gpu.available { 4 } else { 3 };
+    
+    if total_score >= threshold_very_high {
         "very_high"
-    } else if total_score >= 5 {
+    } else if total_score >= threshold_high {
         "high"
-    } else if total_score >= 3 {
+    } else if total_score >= threshold_medium {
         "medium"
     } else {
         "low"
@@ -256,28 +506,104 @@ pub struct UseCaseRecommendation {
 pub async fn get_model_recommendation() -> Result<ModelRecommendation, String> {
     let resources = get_system_resources().await?;
     
-    // リソースレベルに基づいてモデルを提案
+    // GPU情報を考慮したモデル推奨
+    let has_gpu = resources.gpu.available;
+    let vram_gb = resources.gpu.vram_bytes.map(|b| b as f64 / (1024.0 * 1024.0 * 1024.0));
+    let available_memory_gb = resources.available_memory as f64 / (1024.0 * 1024.0 * 1024.0);
+    
+    // リソースレベルに基づいてモデルを提案（GPU情報を考慮）
     let (recommended_model, reason, alternatives) = match resources.resource_level.as_str() {
         "very_high" => {
-            (
-                "llama3.1:70b".to_string(),
-                "高性能システム向け。大規模モデル（70B）が実行可能です。高品質な生成が期待できます。".to_string(),
-                vec!["llama3:70b".to_string(), "mistral:large".to_string(), "codellama:34b".to_string()],
-            )
+            if has_gpu {
+                if let Some(vram) = vram_gb {
+                    if vram >= 24.0 {
+                        (
+                            "llama3.1:70b".to_string(),
+                            format!("高性能GPU（VRAM: {:.1}GB）搭載システム向け。大規模モデル（70B）が実行可能です。GPU推論により高速な生成が期待できます。", vram),
+                            vec!["llama3:70b".to_string(), "mistral:large".to_string(), "codellama:34b".to_string()],
+                        )
+                    } else if vram >= 16.0 {
+                        (
+                            "llama3:34b".to_string(),
+                            format!("高性能GPU（VRAM: {:.1}GB）搭載システム向け。中規模モデル（34B）が実行可能です。GPU推論により高速な生成が期待できます。", vram),
+                            vec!["llama3:13b".to_string(), "mistral:7b".to_string(), "codellama:13b".to_string()],
+                        )
+                    } else {
+                        (
+                            "llama3:13b".to_string(),
+                            format!("GPU（VRAM: {:.1}GB）搭載システム向け。中規模モデル（13B）が実行可能です。GPU推論により高速な生成が期待できます。", vram),
+                            vec!["llama3:8b".to_string(), "mistral:7b".to_string(), "codellama:7b".to_string()],
+                        )
+                    }
+                } else {
+                    (
+                        "llama3:13b".to_string(),
+                        "GPU搭載システム向け。中規模モデル（13B）が実行可能です。GPU推論により高速な生成が期待できます。".to_string(),
+                        vec!["llama3:8b".to_string(), "mistral:7b".to_string(), "codellama:7b".to_string()],
+                    )
+                }
+            } else {
+                // GPUなし、メモリベースの推奨
+                if available_memory_gb >= 40.0 {
+                    (
+                        "llama3.1:70b".to_string(),
+                        "高性能システム向け（CPU推論）。大規模モデル（70B）が実行可能です。高品質な生成が期待できます。".to_string(),
+                        vec!["llama3:70b".to_string(), "mistral:large".to_string(), "codellama:34b".to_string()],
+                    )
+                } else {
+                    (
+                        "llama3:34b".to_string(),
+                        "高性能システム向け（CPU推論）。中規模モデル（34B）が実行可能です。".to_string(),
+                        vec!["llama3:13b".to_string(), "mistral:7b".to_string(), "codellama:13b".to_string()],
+                    )
+                }
+            }
         }
         "high" => {
-            (
-                "llama3.2:3b".to_string(),
-                "中高性能システム向け。バランスの取れたモデル（3B-8B）が推奨されます。".to_string(),
-                vec!["llama3:8b".to_string(), "mistral:7b".to_string(), "codellama:13b".to_string()],
-            )
+            if has_gpu {
+                if let Some(vram) = vram_gb {
+                    if vram >= 16.0 {
+                        (
+                            "llama3:13b".to_string(),
+                            format!("GPU（VRAM: {:.1}GB）搭載システム向け。中規模モデル（13B）が実行可能です。", vram),
+                            vec!["llama3:8b".to_string(), "mistral:7b".to_string(), "codellama:7b".to_string()],
+                        )
+                    } else {
+                        (
+                            "llama3:8b".to_string(),
+                            format!("GPU（VRAM: {:.1}GB）搭載システム向け。バランスの取れたモデル（8B）が推奨されます。", vram),
+                            vec!["llama3.2:3b".to_string(), "mistral:7b".to_string(), "codellama:7b".to_string()],
+                        )
+                    }
+                } else {
+                    (
+                        "llama3:8b".to_string(),
+                        "GPU搭載システム向け。バランスの取れたモデル（8B）が推奨されます。".to_string(),
+                        vec!["llama3.2:3b".to_string(), "mistral:7b".to_string(), "codellama:7b".to_string()],
+                    )
+                }
+            } else {
+                (
+                    "llama3.2:3b".to_string(),
+                    "中高性能システム向け（CPU推論）。バランスの取れたモデル（3B-8B）が推奨されます。".to_string(),
+                    vec!["llama3:8b".to_string(), "mistral:7b".to_string(), "codellama:13b".to_string()],
+                )
+            }
         }
         "medium" => {
-            (
-                "llama3.2:1b".to_string(),
-                "中程度のシステム向け。軽量モデル（1B-3B）が推奨されます。".to_string(),
-                vec!["llama3:8b".to_string(), "phi3:mini".to_string(), "mistral:7b".to_string()],
-            )
+            if has_gpu {
+                (
+                    "llama3.2:3b".to_string(),
+                    "GPU搭載システム向け。軽量モデル（3B）が推奨されます。GPU推論により高速な生成が期待できます。".to_string(),
+                    vec!["llama3:8b".to_string(), "phi3:mini".to_string(), "mistral:7b".to_string()],
+                )
+            } else {
+                (
+                    "llama3.2:1b".to_string(),
+                    "中程度のシステム向け（CPU推論）。軽量モデル（1B-3B）が推奨されます。".to_string(),
+                    vec!["llama3:8b".to_string(), "phi3:mini".to_string(), "mistral:7b".to_string()],
+                )
+            }
         }
         _ => {
             (
@@ -730,7 +1056,12 @@ pub async fn diagnose_filesystem() -> Result<FilesystemDiagnostics, String> {
             let test_file = current_dir.join(".write_test");
             let result = fs::write(&test_file, "test").is_ok();
             if result {
-                let _ = fs::remove_file(&test_file);
+                // テストファイルのクリーンアップ（失敗しても問題ないが、ログに記録）
+                if let Err(e) = fs::remove_file(&test_file) {
+                    // クリーンアップ失敗は警告として記録（診断機能なので詳細ログは不要）
+                    #[cfg(debug_assertions)]
+                    eprintln!("[DEBUG] テストファイルの削除に失敗しました: {}", e);
+                }
             }
             result
         } else {
@@ -750,7 +1081,12 @@ pub async fn diagnose_filesystem() -> Result<FilesystemDiagnostics, String> {
             let test_file = data_dir.join(".write_test");
             let result = fs::write(&test_file, "test").is_ok();
             if result {
-                let _ = fs::remove_file(&test_file);
+                // テストファイルのクリーンアップ（失敗しても問題ないが、ログに記録）
+                if let Err(e) = fs::remove_file(&test_file) {
+                    // クリーンアップ失敗は警告として記録（診断機能なので詳細ログは不要）
+                    #[cfg(debug_assertions)]
+                    eprintln!("[DEBUG] テストファイルの削除に失敗しました: {}", e);
+                }
             }
             result
         } else {
@@ -770,7 +1106,12 @@ pub async fn diagnose_filesystem() -> Result<FilesystemDiagnostics, String> {
         let test_file = temp_dir.join(".write_test");
         let result = fs::write(&test_file, "test").is_ok();
         if result {
-            let _ = fs::remove_file(&test_file);
+            // テストファイルのクリーンアップ（失敗しても問題ないが、ログに記録）
+            if let Err(e) = fs::remove_file(&test_file) {
+                // クリーンアップ失敗は警告として記録（診断機能なので詳細ログは不要）
+                #[cfg(debug_assertions)]
+                eprintln!("[DEBUG] テストファイルの削除に失敗しました: {}", e);
+            }
         }
         result
     };
@@ -901,6 +1242,12 @@ mod tests {
             cpu_usage: 25.5,
             total_disk: 500_000_000_000, // 500GB
             available_disk: 250_000_000_000, // 250GB
+            gpu: GpuInfo {
+                available: false,
+                name: None,
+                vram_bytes: None,
+                vendor: None,
+            },
             resource_level: "medium".to_string(),
         };
         

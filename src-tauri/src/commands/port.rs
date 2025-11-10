@@ -40,6 +40,12 @@ pub fn is_port_available(port: u16) -> bool {
     }
 }
 
+/// APIポートペアが使用可能かどうかをチェック
+/// 現在の実装では単一のポートをチェックします
+pub fn is_api_port_pair_available(port: u16) -> bool {
+    is_port_available(port)
+}
+
 /// 使用可能なポート番号を検出
 #[tauri::command]
 pub async fn find_available_port(start_port: Option<u16>) -> Result<PortDetectionResult, String> {
@@ -48,11 +54,11 @@ pub async fn find_available_port(start_port: Option<u16>) -> Result<PortDetectio
     let mut alternative_ports = Vec::new();
     
     // 開始ポートから順に検索（最大100ポートまで）
-    let mut checked = 0;
     let mut found = false;
+    let max_ports_to_check = 100;
+    let end_port = (start as u32 + max_ports_to_check).min(65535) as u16;
     
-    for port in start..(start + 100).min(65535) {
-        
+    for port in start..end_port {
         if is_port_available(port) {
             if !found {
                 recommended_port = port;
@@ -61,14 +67,10 @@ pub async fn find_available_port(start_port: Option<u16>) -> Result<PortDetectio
                 alternative_ports.push(port);
             }
             
+            // 推奨ポートと代替ポートが十分見つかった場合は終了
             if found && alternative_ports.len() >= 5 {
                 break;
             }
-        }
-        
-        checked += 1;
-        if checked >= 100 {
-            break;
         }
     }
     

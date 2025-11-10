@@ -46,12 +46,6 @@ export const AlertSettings: React.FC = () => {
   const { t } = useI18n();
   const { showSuccess, showError } = useNotifications();
 
-  // パンくずリストの項目
-  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: t('header.settings') || '設定', path: '/settings' },
-    { label: 'アラート設定' },
-  ], [t]);
   const [apiList, setApiList] = useState<ApiInfo[]>([]);
   const [selectedApiId, setSelectedApiId] = useState<string | null>(null);
   const [isGlobalSettings, setIsGlobalSettings] = useState(true);

@@ -67,6 +67,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
       { path: '/apis', label: 'API一覧', icon: '📡' },
       { path: '/models', label: 'モデル管理', icon: '🤖' },
       { path: '/logs', label: 'ログ', icon: '📊' },
+      { path: '/error-logs', label: 'エラーログ', icon: '⚠️' },
       { path: '/performance', label: 'パフォーマンス', icon: '⚡' },
       { path: '/alerts', label: 'アラート', icon: '🔔' },
       { path: '/settings', label: '設定', icon: '⚙️' },

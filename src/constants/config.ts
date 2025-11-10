@@ -83,7 +83,7 @@ export const MODEL_PARAMETERS = {
   TOP_P: { MIN: 0, MAX: 1, DEFAULT: 0.9 },
   TOP_K: { MIN: 1, MAX: 100, DEFAULT: 40 },
   REPEAT_PENALTY: { MIN: 0, MAX: 2, DEFAULT: 1.1 },
-  MAX_TOKENS: { MIN: 1, DEFAULT: 1024 },
+  MAX_TOKENS: { MIN: 1, MAX: 8192, DEFAULT: 1024 },
 } as const;
 
 /**

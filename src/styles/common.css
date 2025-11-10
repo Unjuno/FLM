@@ -90,6 +90,82 @@
   margin-top: var(--spacing-2xl, 3rem);
 }
 
+/* ========== チェックボックス（統一デザイン） ========== */
+/* すべてのチェックボックスに適用される統一スタイル */
+input[type="checkbox"] {
+  width: 20px;
+  height: 20px;
+  min-width: 20px;
+  min-height: 20px;
+  cursor: pointer;
+  accent-color: var(--color-primary, #667eea);
+  border: 2px solid var(--color-border, #cbd5e0);
+  border-radius: var(--radius-sm, 0.25rem);
+  background-color: var(--color-bg-primary, #ffffff);
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  position: relative;
+  flex-shrink: 0;
+  transition: all var(--transition-base, 200ms ease-in-out);
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+[data-theme="dark"] input[type="checkbox"] {
+  border-color: var(--color-border-light, #4a5568);
+  background-color: var(--color-bg-primary, #1a202c);
+}
+
+input[type="checkbox"]:checked {
+  background-color: var(--color-primary, #667eea);
+  border-color: var(--color-primary, #667eea);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 14 14'%3E%3Cpath fill='white' d='M5.5 11L1 6.5l1.4-1.4L5.5 8.2l6.1-6.1L13 3.5z'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 14px 14px;
+}
+
+[data-theme="dark"] input[type="checkbox"]:checked {
+  background-color: var(--color-primary, #667eea);
+  border-color: var(--color-primary, #667eea);
+}
+
+input[type="checkbox"]:hover {
+  border-color: var(--color-primary, #667eea);
+  box-shadow: 0 0 0 2px var(--color-primary-light, rgba(102, 126, 234, 0.1));
+}
+
+[data-theme="dark"] input[type="checkbox"]:hover {
+  border-color: var(--color-primary, #667eea);
+  box-shadow: 0 0 0 2px var(--color-primary-light, rgba(102, 126, 234, 0.2));
+}
+
+input[type="checkbox"]:focus-visible {
+  outline: 2px solid var(--color-primary, #667eea);
+  outline-offset: 2px;
+  border-radius: var(--radius-sm, 0.25rem);
+}
+
+[data-theme="dark"] input[type="checkbox"]:focus-visible {
+  outline-color: var(--color-primary, #667eea);
+}
+
+/* チェックボックスラベル（共通） */
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  -webkit-user-select: none;
+  user-select: none;
+  font-size: 0.875rem;
+  position: relative;
+}
+
 /* ========== ボタン（共通） ========== */
 .back-button {
   background: rgba(255, 255, 255, 0.5);

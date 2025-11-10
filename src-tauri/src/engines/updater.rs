@@ -14,11 +14,29 @@ pub struct EngineUpdateCheck {
 
 /// LM Studioのアップデート確認
 pub async fn check_lm_studio_update() -> Result<EngineUpdateCheck, AppError> {
-    // LM Studioのバージョン取得は困難なため、常にアップデート可能と表示
+    // LM Studioのバージョン取得は困難なため、インストール状態を確認して判断
     // 実際の実装では、LM Studioの公式APIから最新バージョンを取得する必要がある
+    use crate::engines::manager::EngineManager;
+    
+    // LM Studioがインストールされているか確認
+    let manager = EngineManager::new();
+    let detection_result = manager.detect_engine("lm_studio").await?;
+    let is_installed = detection_result.installed;
+    
+    if !is_installed {
+        // インストールされていない場合は、アップデート不要
+        return Ok(EngineUpdateCheck {
+            update_available: false,
+            current_version: None,
+            latest_version: "latest".to_string(),
+        });
+    }
+    
+    // インストールされているが、バージョン取得が困難なため、
+    // アップデート可能と表示（ユーザーが手動で確認できるように）
     Ok(EngineUpdateCheck {
-        update_available: true, // 常にtrue（バージョン取得が困難なため）
-        current_version: None,
+        update_available: true,
+        current_version: detection_result.version,
         latest_version: "latest".to_string(),
     })
 }
@@ -120,10 +138,28 @@ where
 
 /// llama.cppのアップデート確認
 pub async fn check_llama_cpp_update() -> Result<EngineUpdateCheck, AppError> {
-    // llama.cppの現在のバージョンを取得（実装が困難なため、常にアップデート可能と表示）
+    // llama.cppの現在のバージョンを取得（実装が困難なため、インストール状態を確認して判断）
+    use crate::engines::manager::EngineManager;
+    
+    // llama.cppがインストールされているか確認
+    let manager = EngineManager::new();
+    let detection_result = manager.detect_engine("llama_cpp").await?;
+    let is_installed = detection_result.installed;
+    
+    if !is_installed {
+        // インストールされていない場合は、アップデート不要
+        return Ok(EngineUpdateCheck {
+            update_available: false,
+            current_version: None,
+            latest_version: "latest".to_string(),
+        });
+    }
+    
+    // インストールされているが、バージョン取得が困難なため、
+    // アップデート可能と表示（ユーザーが手動で確認できるように）
     Ok(EngineUpdateCheck {
         update_available: true,
-        current_version: None,
+        current_version: detection_result.version,
         latest_version: "latest".to_string(),
     })
 }

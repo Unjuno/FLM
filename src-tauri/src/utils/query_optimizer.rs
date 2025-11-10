@@ -179,6 +179,16 @@ pub fn measure_query_performance(query: &str, iterations: u32) -> Result<QueryPe
     
     // NaNを除外してからソート（監査レポート推奨修正）
     times.retain(|&x| x.is_finite());
+    
+    // 有効なデータが存在しない場合はエラーを返す
+    if times.is_empty() {
+        return Err(AppError::ApiError {
+            message: "有効なクエリ実行時間データが取得できませんでした。NaNまたは無限大の値のみが含まれています。".to_string(),
+            code: "NO_VALID_DATA".to_string(),
+            source_detail: None,
+        });
+    }
+    
     times.sort_by(|a, b| a.partial_cmp(b).unwrap_or(std::cmp::Ordering::Equal));
     
     let min_time = times.first().copied().unwrap_or(0.0);

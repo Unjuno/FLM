@@ -33,6 +33,8 @@ pub struct AppSettings {
     pub device_id_enabled: Option<bool>,
     /// バックアップファイルをデフォルトで暗号化するか（true | false、デフォルト: false、プライバシー保護のため有効化推奨）
     pub backup_encrypt_by_default: Option<bool>,
+    /// 不完全な機能（開発中）を表示するか（true | false、デフォルト: false、大衆向けのため非表示推奨）
+    pub show_incomplete_features: Option<bool>,
 }
 
 /// アプリケーション設定取得コマンド
@@ -98,6 +100,10 @@ pub async fn get_app_settings() -> Result<AppSettings, String> {
         .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
         .and_then(|v| v.parse::<bool>().ok());
     
+    let show_incomplete_features = settings_repo.get("show_incomplete_features")
+        .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
+        .and_then(|v| v.parse::<bool>().ok());
+    
     Ok(AppSettings {
         theme,
         language,
@@ -112,6 +118,7 @@ pub async fn get_app_settings() -> Result<AppSettings, String> {
         include_ip_address_in_audit_log: include_ip_address_in_audit_log.or(Some(true)), // デフォルト: 有効（プライバシー保護のため無効化可能）
         device_id_enabled: device_id_enabled.or(Some(true)), // デフォルト: 有効（リモート同期機能で使用、プライバシー保護のため無効化可能）
         backup_encrypt_by_default: backup_encrypt_by_default.or(Some(false)), // デフォルト: 無効（プライバシー保護のため有効化推奨）
+        show_incomplete_features: show_incomplete_features.or(Some(false)), // デフォルト: 無効（大衆向けのため非表示推奨）
     })
 }
 
@@ -195,6 +202,12 @@ pub async fn update_app_settings(settings: AppSettings) -> Result<(), String> {
     if let Some(enabled) = settings.device_id_enabled {
         settings_repo.set("device_id_enabled", &enabled.to_string()).map_err(|e| {
             format!("デバイスID設定の保存に失敗しました: {}", e)
+        })?;
+    }
+    
+    if let Some(enabled) = settings.show_incomplete_features {
+        settings_repo.set("show_incomplete_features", &enabled.to_string()).map_err(|e| {
+            format!("不完全な機能表示設定の保存に失敗しました: {}", e)
         })?;
     }
     

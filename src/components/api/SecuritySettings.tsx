@@ -59,7 +59,7 @@ export const SecuritySettingsSection: React.FC<
       setLoading(true);
       const securitySettings = await safeInvoke<SecuritySettings | null>(
         'get_security_settings',
-        { api_id: apiId }
+        { apiId: apiId }
       );
 
       if (securitySettings) {
@@ -314,12 +314,13 @@ export const SecuritySettingsSection: React.FC<
                 min="1"
                 max="10000"
                 value={settings.rate_limit_requests}
-                onChange={e =>
+                onChange={e => {
+                  const parsed = parseInt(e.target.value, 10);
                   setSettings({
                     ...settings,
-                    rate_limit_requests: parseInt(e.target.value) || 100,
-                  })
-                }
+                    rate_limit_requests: isNaN(parsed) ? 100 : parsed,
+                  });
+                }}
                 aria-label="レート制限のリクエスト数"
               />
               <small className="form-hint">
@@ -338,12 +339,13 @@ export const SecuritySettingsSection: React.FC<
                 min="1"
                 max="3600"
                 value={settings.rate_limit_window_seconds}
-                onChange={e =>
+                onChange={e => {
+                  const parsed = parseInt(e.target.value, 10);
                   setSettings({
                     ...settings,
-                    rate_limit_window_seconds: parseInt(e.target.value) || 60,
-                  })
-                }
+                    rate_limit_window_seconds: isNaN(parsed) ? 60 : parsed,
+                  });
+                }}
                 aria-label="レート制限の時間窓（秒）"
               />
               <small className="form-hint">
@@ -409,12 +411,13 @@ export const SecuritySettingsSection: React.FC<
                 min="1"
                 max="365"
                 value={settings.key_rotation_interval_days}
-                onChange={e =>
+                onChange={e => {
+                  const parsed = parseInt(e.target.value, 10);
                   setSettings({
                     ...settings,
-                    key_rotation_interval_days: parseInt(e.target.value) || 30,
-                  })
-                }
+                    key_rotation_interval_days: isNaN(parsed) ? 30 : parsed,
+                  });
+                }}
                 disabled={saving}
                 aria-label="APIキーローテーション間隔（日）"
               />

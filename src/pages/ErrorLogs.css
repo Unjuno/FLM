@@ -1,0 +1,346 @@
+/* ErrorLogs - エラーログ一覧ページのスタイル */
+
+.error-logs-page {
+  width: 100%;
+  min-height: 100vh;
+  background-color: var(--color-bg-primary, #ffffff);
+}
+
+.error-logs-container {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.error-logs-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.error-logs-header h1 {
+  font-size: 2rem;
+  font-weight: 600;
+  margin: 0;
+  color: var(--color-text-primary, #1a202c);
+}
+
+/* ErrorLogsページ内の .header-actions にのみ適用されるようにスコープを限定 */
+.error-logs-header .header-actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.export-button,
+.refresh-button {
+  padding: 0.5rem 1rem;
+  background-color: var(--color-primary, #3182ce);
+  color: white;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.export-button:hover:not(:disabled),
+.refresh-button:hover:not(:disabled) {
+  background-color: var(--color-primary-hover, #2c5aa0);
+}
+
+.export-button:disabled,
+.refresh-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.stats-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background-color: var(--color-bg-secondary, #f7fafc);
+  border-radius: 8px;
+}
+
+.stats-section h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  color: var(--color-text-primary, #1a202c);
+}
+
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.stat-card {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1rem;
+  background-color: var(--color-bg-primary, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+}
+
+.stat-label {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary, #718096);
+  margin-bottom: 0.5rem;
+}
+
+.stat-value {
+  font-size: 1.5rem;
+  font-weight: 600;
+  color: var(--color-text-primary, #1a202c);
+}
+
+.filters-section {
+  margin-bottom: 2rem;
+  padding: 1.5rem;
+  background-color: var(--color-bg-secondary, #f7fafc);
+  border-radius: 8px;
+}
+
+.filters-section h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  color: var(--color-text-primary, #1a202c);
+}
+
+.filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.filter-group label {
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-text-secondary, #718096);
+}
+
+.filter-group select,
+.filter-group input {
+  padding: 0.5rem;
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  background-color: var(--color-bg-primary, #ffffff);
+  color: var(--color-text-primary, #1a202c);
+}
+
+.apply-filters-button,
+.clear-filters-button {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.apply-filters-button {
+  background-color: var(--color-primary, #3182ce);
+  color: white;
+}
+
+.apply-filters-button:hover {
+  background-color: var(--color-primary-hover, #2c5aa0);
+}
+
+.clear-filters-button {
+  background-color: var(--color-bg-tertiary, #edf2f7);
+  color: var(--color-text-primary, #1a202c);
+}
+
+.clear-filters-button:hover {
+  background-color: var(--color-bg-quaternary, #e2e8f0);
+}
+
+.logs-section {
+  margin-bottom: 2rem;
+}
+
+.logs-section h2 {
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  color: var(--color-text-primary, #1a202c);
+}
+
+.error-logs-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.error-log-card {
+  padding: 1.5rem;
+  background-color: var(--color-bg-secondary, #f7fafc);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 8px;
+  transition: box-shadow 0.2s ease;
+}
+
+.error-log-card:hover {
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+.error-log-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.error-category {
+  padding: 0.25rem 0.75rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.category-general {
+  background-color: #e2e8f0;
+  color: #4a5568;
+}
+
+.category-api {
+  background-color: #fed7d7;
+  color: #c53030;
+}
+
+.category-database {
+  background-color: #feebc8;
+  color: #c05621;
+}
+
+.category-network {
+  background-color: #bee3f8;
+  color: #2b6cb0;
+}
+
+.category-ollama {
+  background-color: #c6f6d5;
+  color: #22543d;
+}
+
+.category-model {
+  background-color: #fbb6ce;
+  color: #b83280;
+}
+
+.category-permission {
+  background-color: #fbd38d;
+  color: #744210;
+}
+
+.error-date {
+  font-size: 0.875rem;
+  color: var(--color-text-secondary, #718096);
+}
+
+.error-message {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--color-text-primary, #1a202c);
+  margin-bottom: 1rem;
+  word-break: break-word;
+}
+
+.error-stack {
+  margin-top: 1rem;
+  padding: 1rem;
+  background-color: var(--color-bg-primary, #ffffff);
+  border: 1px solid var(--color-border, #e2e8f0);
+  border-radius: 4px;
+}
+
+.error-stack summary {
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--color-text-secondary, #718096);
+  margin-bottom: 0.5rem;
+}
+
+.error-stack pre {
+  margin: 0;
+  padding: 0.5rem;
+  background-color: var(--color-bg-tertiary, #edf2f7);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: var(--color-text-primary, #1a202c);
+  overflow-x: auto;
+  white-space: pre-wrap;
+  word-break: break-all;
+}
+
+.error-context,
+.error-source,
+.error-api-id {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary, #718096);
+}
+
+.error-context strong,
+.error-source strong,
+.error-api-id strong {
+  color: var(--color-text-primary, #1a202c);
+}
+
+.empty-state {
+  padding: 3rem;
+  text-align: center;
+  color: var(--color-text-secondary, #718096);
+}
+
+/* ダークテーマ対応 */
+@media (prefers-color-scheme: dark) {
+  .error-logs-page {
+    background-color: var(--color-bg-primary, #1a202c);
+  }
+
+  .stats-section,
+  .filters-section {
+    background-color: var(--color-bg-secondary, #2d3748);
+  }
+
+  .stat-card {
+    background-color: var(--color-bg-primary, #1a202c);
+    border-color: var(--color-border, #4a5568);
+  }
+
+  .error-log-card {
+    background-color: var(--color-bg-secondary, #2d3748);
+    border-color: var(--color-border, #4a5568);
+  }
+
+  .error-stack {
+    background-color: var(--color-bg-primary, #1a202c);
+    border-color: var(--color-border, #4a5568);
+  }
+
+  .error-stack pre {
+    background-color: var(--color-bg-tertiary, #1a202c);
+  }
+}
+

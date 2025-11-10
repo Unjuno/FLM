@@ -1,6 +1,6 @@
 // AppLoading - アプリケーション起動時の読み込みUI
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import './AppLoading.css';
 
 /**
@@ -8,6 +8,30 @@ import './AppLoading.css';
  * データベース初期化などの処理中に表示されます
  */
 export const AppLoading: React.FC = () => {
+  const [message, setMessage] = useState('アプリケーションを起動しています...');
+  const [step, setStep] = useState(0);
+
+  // 初期化ステップのメッセージ
+  const steps = [
+    'アプリケーションを起動しています...',
+    'データベースを初期化しています...',
+    '設定を読み込んでいます...',
+    '準備中...',
+  ];
+
+  // メッセージを順番に表示（ユーザーに進行状況を伝える）
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setStep((prev) => {
+        const nextStep = (prev + 1) % steps.length;
+        setMessage(steps[nextStep]);
+        return nextStep;
+      });
+    }, 2000); // 2秒ごとにメッセージを変更
+
+    return () => clearInterval(interval);
+  }, []);
+
   return (
     <div className="app-loading">
       <div className="app-loading-panel" role="status" aria-live="polite">
@@ -28,7 +52,7 @@ export const AppLoading: React.FC = () => {
           <div className="app-loading-spinner" aria-hidden="true">
             <span className="app-loading-spinner-circle"></span>
           </div>
-          <p className="app-loading-message">アプリケーションを起動しています...</p>
+          <p className="app-loading-message">{message}</p>
         </div>
 
         <div className="app-loading-progress" aria-hidden="true">

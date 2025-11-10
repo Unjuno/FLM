@@ -184,7 +184,7 @@ export const ApiEdit: React.FC = () => {
 
           // バックエンドのregenerate_api_keyコマンドを呼び出し
           const newApiKey = await safeInvoke<string>('regenerate_api_key', {
-            api_id: id,
+            apiId: id,
           });
 
           // 新しいAPIキーを通知で表示
@@ -203,6 +203,41 @@ export const ApiEdit: React.FC = () => {
             extractErrorMessage(err, 'APIキーの再生成に失敗しました')
           );
           showErrorNotification('APIキーの再生成に失敗しました', extractErrorMessage(err));
+        } finally {
+          setSaving(false);
+        }
+      },
+      onCancel: () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+      },
+    });
+  };
+
+  // APIを削除
+  const handleDelete = async () => {
+    if (!id || !settings) return;
+
+    const confirmMessage = 'このAPIを削除しますか？この操作は取り消せません。';
+
+    // 最初の確認ダイアログを表示
+    setConfirmDialog({
+      isOpen: true,
+      message: confirmMessage,
+      onConfirm: async () => {
+        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+        try {
+          setSaving(true);
+          setError(null);
+
+          await safeInvoke('delete_api', {
+            apiId: id,
+          });
+
+          // API一覧に戻る
+          navigate('/api/list');
+        } catch (err) {
+          setError(extractErrorMessage(err, 'APIの削除に失敗しました'));
+          showErrorNotification('APIの削除に失敗しました', extractErrorMessage(err));
         } finally {
           setSaving(false);
         }
@@ -289,12 +324,13 @@ export const ApiEdit: React.FC = () => {
                 type="number"
                 className={`form-input ${errors.port ? 'error' : ''}`}
                 value={settings.port}
-                onChange={e =>
+                onChange={e => {
+                  const parsed = parseInt(e.target.value, 10);
                   setSettings({
                     ...settings,
-                    port: parseInt(e.target.value) || PORT_RANGE.DEFAULT,
-                  })
-                }
+                    port: isNaN(parsed) ? PORT_RANGE.DEFAULT : parsed,
+                  });
+                }}
                 min={PORT_RANGE.MIN}
                 max={PORT_RANGE.MAX}
                 required
@@ -350,6 +386,28 @@ export const ApiEdit: React.FC = () => {
             </div>
 
             <SecuritySettingsSection apiId={id || ''} />
+          </div>
+
+          <div className="form-section danger-zone">
+            <h2>危険な操作</h2>
+            <div className="danger-actions">
+              <p className="section-description">
+                APIを削除すると、関連するすべてのデータとプロセスが削除されます。
+                この操作は取り消せません。
+              </p>
+              <button
+                type="button"
+                className="delete-button"
+                onClick={() => {
+                  startTransition(() => {
+                    handleDelete();
+                  });
+                }}
+                disabled={isPending || saving}
+              >
+                🗑️ APIを削除
+              </button>
+            </div>
           </div>
 
           <div className="form-actions">

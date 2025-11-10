@@ -1,6 +1,7 @@
 // Ollama Integration Module
 
 use serde::{Deserialize, Serialize};
+use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::fs;
@@ -27,6 +28,144 @@ pub struct DownloadProgress {
     pub total_bytes: u64,           // 総バイト数
     pub speed_bytes_per_sec: f64,   // ダウンロード速度（バイト/秒）
     pub message: Option<String>,    // ステータスメッセージ
+}
+
+fn default_ollama_host() -> String {
+    "127.0.0.1".to_string()
+}
+
+fn default_ollama_port() -> u16 {
+    11434
+}
+
+fn strip_scheme(value: &str) -> &str {
+    value
+        .strip_prefix("http://")
+        .or_else(|| value.strip_prefix("https://"))
+        .unwrap_or(value)
+}
+
+fn normalize_host(raw_host: &str) -> String {
+    let host = raw_host.trim();
+    if host.eq_ignore_ascii_case("localhost") || host == "0.0.0.0" {
+        default_ollama_host()
+    } else {
+        host.trim_matches(|c| c == '[' || c == ']').to_string()
+    }
+}
+
+fn parse_host_port(raw: &str) -> Option<(String, u16)> {
+    let trimmed = strip_scheme(raw).trim();
+    if trimmed.is_empty() {
+        return None;
+    }
+    let authority = trimmed.split('/').next().unwrap_or("").trim();
+    if authority.is_empty() {
+        return None;
+    }
+
+    if authority.starts_with('[') {
+        if let Some(end_idx) = authority.find(']') {
+            let host = authority[1..end_idx].to_string();
+            let mut port = default_ollama_port();
+            if let Some(rest) = authority[end_idx + 1..].strip_prefix(':') {
+                if let Ok(parsed) = rest.parse::<u16>() {
+                    port = parsed;
+                }
+            }
+            return Some((normalize_host(&host), port));
+        }
+    }
+
+    if let Some(idx) = authority.rfind(':') {
+        let host_part = &authority[..idx];
+        let port_part = &authority[idx + 1..];
+        if let Ok(port) = port_part.parse::<u16>() {
+            let host = if host_part.is_empty() {
+                default_ollama_host()
+            } else {
+                normalize_host(host_part)
+            };
+            return Some((host, port));
+        }
+    }
+
+    Some((normalize_host(authority), default_ollama_port()))
+}
+
+fn host_to_url(host: &str, port: u16) -> String {
+    if host.contains(':') && !host.starts_with('[') {
+        format!("http://[{}]:{}", host, port)
+    } else {
+        format!("http://{}:{}", host, port)
+    }
+}
+
+fn is_local_host(host: &str) -> bool {
+    matches!(
+        host.to_lowercase().as_str(),
+        "localhost" | "127.0.0.1" | "0.0.0.0"
+    )
+}
+
+fn is_port_available(port: u16) -> bool {
+    let ipv4 = format!("127.0.0.1:{}", port);
+    if TcpListener::bind(&ipv4).is_ok() {
+        return true;
+    }
+
+    #[cfg(not(target_os = "windows"))]
+    {
+        if TcpListener::bind(format!("[::1]:{}", port)).is_ok() {
+            return true;
+        }
+    }
+
+    false
+}
+
+fn find_available_port(preferred: u16, max_attempts: u16) -> Option<u16> {
+    if is_port_available(preferred) {
+        return Some(preferred);
+    }
+
+    let mut attempts = 0;
+    let mut port = preferred.saturating_add(1);
+    while attempts < max_attempts {
+        if port == 0 {
+            port = 1024;
+        }
+        if is_port_available(port) {
+            return Some(port);
+        }
+        attempts += 1;
+        port = port.saturating_add(1);
+    }
+    None
+}
+
+pub fn current_ollama_host_port() -> (String, u16) {
+    if let Ok(raw) = std::env::var("OLLAMA_HOST") {
+        if let Some((host, port)) = parse_host_port(&raw) {
+            return (host, port);
+        }
+    }
+    (default_ollama_host(), default_ollama_port())
+}
+
+pub fn current_ollama_base_url() -> String {
+    let (host, port) = current_ollama_host_port();
+    host_to_url(&host, port)
+}
+
+pub fn update_ollama_host_env(host: &str, port: u16) {
+    let normalized_host = if is_local_host(host) {
+        default_ollama_host()
+    } else {
+        host.to_string()
+    };
+    let value = format!("{}:{}", normalized_host, port);
+    std::env::set_var("OLLAMA_HOST", &value);
 }
 
 /// Ollama検出機能
@@ -154,8 +293,10 @@ async fn detect_ollama_in_path() -> Result<Option<String>, AppError> {
 /// 実行中のOllamaを検出（HTTP API経由）
 pub async fn check_ollama_running() -> Result<bool, AppError> {
     let client = crate::utils::http_client::create_http_client_short_timeout()?;
+    let base_url = current_ollama_base_url();
+    let url = format!("{}/api/version", base_url.trim_end_matches('/'));
     let response = client
-        .get("http://localhost:11434/api/version")
+        .get(&url)
         .send()
         .await;
 
@@ -168,8 +309,10 @@ pub async fn check_ollama_running() -> Result<bool, AppError> {
 /// API経由でOllamaのバージョン情報を取得
 async fn get_ollama_version_from_api() -> Result<String, AppError> {
     let client = crate::utils::http_client::create_http_client_short_timeout()?;
+    let base_url = current_ollama_base_url();
+    let url = format!("{}/api/version", base_url.trim_end_matches('/'));
     let response = client
-        .get("http://localhost:11434/api/version")
+        .get(&url)
         .send()
         .await
         .map_err(|e| AppError::OllamaError {
@@ -227,7 +370,10 @@ async fn get_ollama_version(ollama_path: &str) -> Result<String, AppError> {
 pub async fn check_ollama_update_available() -> Result<(bool, Option<String>, String), AppError> {
     // 現在のバージョンを取得
     let current_version = if let Some(path) = get_ollama_executable_path_from_env().await {
-        get_ollama_version(&path).await.ok()
+        get_ollama_version(&path).await.map_err(|e| {
+            eprintln!("[WARN] Ollamaのバージョン取得に失敗しました (パス: {}): {}", path, e);
+            e
+        }).ok()
     } else {
         None
     };
@@ -433,8 +579,10 @@ pub async fn get_latest_ollama_version() -> Result<String, AppError> {
 pub async fn stop_ollama() -> Result<(), AppError> {
     // HTTP API経由でシャットダウン
     let client = crate::utils::http_client::create_http_client_short_timeout()?;
+    let base_url = current_ollama_base_url();
+    let url = format!("{}/api/shutdown", base_url.trim_end_matches('/'));
     let _response = client
-        .delete("http://localhost:11434/api/shutdown")
+        .delete(&url)
         .send()
         .await
         .map_err(|e| AppError::OllamaError {
@@ -578,12 +726,52 @@ pub async fn start_ollama(ollama_path: Option<String>) -> Result<u32, AppError> 
                 .unwrap_or_else(|| "ollama".to_string())
         }
     };
+
+    let (configured_host, configured_port) = current_ollama_host_port();
+    let manage_port = is_local_host(&configured_host);
+    let (final_host, final_port) = if manage_port {
+        match find_available_port(configured_port, 50) {
+            Some(port) => {
+                if port != configured_port {
+                    eprintln!(
+                        "[WARN] Ollamaのデフォルトポート {} は使用中のため、ポート {} に自動的に切り替えます。",
+                        configured_port, port
+                    );
+                }
+                (default_ollama_host(), port)
+            }
+            None => {
+                return Err(AppError::OllamaError {
+                    message: format!(
+                        "Ollamaを起動できません。ポート {} 付近で使用可能なポートが見つかりませんでした。",
+                        configured_port
+                    ),
+                    source_detail: None,
+                });
+            }
+        }
+    } else {
+        if !is_port_available(configured_port) {
+            return Err(AppError::OllamaError {
+                message: format!(
+                    "Ollamaを起動できません。指定されたホスト {} のポート {} が既に使用されています。",
+                    configured_host, configured_port
+                ),
+                source_detail: Some("OLLAMA_HOST環境変数を別ポートに変更してください。".to_string()),
+            });
+        }
+        (configured_host.clone(), configured_port)
+    };
+
+    update_ollama_host_env(&final_host, final_port);
+    let ollama_host_env = format!("{}:{}", final_host, final_port);
     
     // Ollamaプロセスを起動
     let mut cmd = Command::new(&executable_path);
     cmd.stdin(std::process::Stdio::null());
     cmd.stdout(std::process::Stdio::null());
     cmd.stderr(std::process::Stdio::null());
+    cmd.env("OLLAMA_HOST", &ollama_host_env);
     
     #[cfg(windows)]
     {
@@ -614,9 +802,19 @@ pub async fn start_ollama(ollama_path: Option<String>) -> Result<u32, AppError> 
     drop(child);
     
     // APIが応答するか確認（最大5秒待機）
+    let mut check_error_logged = false;
     for _ in 0..10 {
-        if check_ollama_running().await.unwrap_or(false) {
-            return Ok(pid);
+        match check_ollama_running().await {
+            Ok(true) => return Ok(pid),
+            Ok(false) => {
+                // まだ起動していない、続行
+            },
+            Err(e) => {
+                if !check_error_logged {
+                    eprintln!("[WARN] Ollamaの起動確認中にエラーが発生しました: {}", e);
+                    check_error_logged = true;
+                }
+            }
         }
         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
     }

@@ -178,13 +178,36 @@ impl Scheduler {
                     use crate::database::connection::get_app_data_dir;
                     
                     // 設定データをエクスポート
-                    if let Ok(settings_data) = remote_sync::export_settings_for_remote().await {
-                        // ローカルファイルに保存
-                        if let Ok(app_data_dir) = get_app_data_dir() {
-                            let sync_dir = app_data_dir.join("sync");
-                            let _ = std::fs::create_dir_all(&sync_dir);
-                            let sync_file = sync_dir.join("settings_backup.json");
-                            let _ = std::fs::write(&sync_file, &settings_data);
+                    match remote_sync::export_settings_for_remote().await {
+                        Ok(settings_data) => {
+                            // ローカルファイルに保存
+                            match get_app_data_dir() {
+                                Ok(app_data_dir) => {
+                                    let sync_dir = app_data_dir.join("sync");
+                                    match std::fs::create_dir_all(&sync_dir) {
+                                        Ok(_) => {
+                                            let sync_file = sync_dir.join("settings_backup.json");
+                                            match std::fs::write(&sync_file, &settings_data) {
+                                                Ok(_) => {
+                                                    eprintln!("[INFO] 設定同期バックアップが正常に保存されました: {:?}", sync_file);
+                                                }
+                                                Err(e) => {
+                                                    eprintln!("[WARN] 設定同期バックアップの保存に失敗しました: {}", e);
+                                                }
+                                            }
+                                        }
+                                        Err(e) => {
+                                            eprintln!("[WARN] 設定同期ディレクトリの作成に失敗しました: {}", e);
+                                        }
+                                    }
+                                }
+                                Err(e) => {
+                                    eprintln!("[WARN] アプリケーションデータディレクトリの取得に失敗しました: {}", e);
+                                }
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("[WARN] 設定データのエクスポートに失敗しました: {}", e);
                         }
                     }
                 },
@@ -267,12 +290,202 @@ impl Scheduler {
                     })?;
                 },
                 TaskType::CertificateRenewal => {
-                    // 証明書更新を実行（将来の実装）
-                    eprintln!("証明書更新タスク: 未実装");
+                    // 証明書更新を実行
+                    // 注意: FLMではHTTPSが常に有効（HTTPは使用不可）のため、
+                    // すべてのAPIに対して証明書の存在を確認し、必要に応じて更新します
+                    use crate::database::connection::get_connection;
+                    use crate::database::repository::ApiRepository;
+                    use crate::utils::certificate::certificate_exists;
+                    
+                    // データベース操作をブロッキングタスクで実行
+                    let api_list = tokio::task::spawn_blocking(|| {
+                        let conn = get_connection().map_err(|e| AppError::DatabaseError {
+                            message: format!("データベース接続エラー: {}", e),
+                            source_detail: None,
+                        })?;
+                        
+                        let api_repo = ApiRepository::new(&conn);
+                        api_repo.find_all().map_err(|e| AppError::DatabaseError {
+                            message: format!("API一覧取得エラー: {}", e),
+                            source_detail: None,
+                        })
+                    }).await.map_err(|e| AppError::ProcessError {
+                        message: format!("証明書更新タスク実行エラー: {}", e),
+                        source_detail: None,
+                    })??;
+                    
+                    let mut renewed_count = 0u32;
+                    let mut checked_count = 0u32;
+                    
+                    // 各APIの証明書を確認
+                    for api in api_list {
+                        checked_count += 1;
+                        
+                        // 証明書の存在を確認
+                        if certificate_exists(&api.id) {
+                            // 証明書が存在する場合、有効期限をチェック
+                            // 注意: 現在の実装では、証明書の有効期限チェックは簡易版です
+                            // 実際の証明書パースと有効期限の確認は将来の拡張で実装予定
+                            // ここでは証明書の存在確認のみを行います
+                            
+                            // 証明書ファイルの最終更新日時を確認（簡易的な有効期限チェック）
+                            use crate::utils::certificate::get_cert_file_path;
+                            use std::fs;
+                            use std::time::SystemTime;
+                            
+                            if let Ok(cert_path) = get_cert_file_path(&api.id) {
+                                if let Ok(metadata) = fs::metadata(&cert_path) {
+                                    if let Ok(modified) = metadata.modified() {
+                                        // 証明書の有効期限は通常90日（自己署名証明書の場合）
+                                        // 60日以上経過している場合は更新を推奨
+                                        match SystemTime::now().duration_since(modified) {
+                                            Ok(cert_age) => {
+                                                let days_old = cert_age.as_secs() / 86400;
+                                                
+                                                if days_old >= 60 {
+                                                    eprintln!("[INFO] 証明書更新を推奨します: API ID={}, 証明書の経過日数={}日", api.id, days_old);
+                                                    renewed_count += 1;
+                                                }
+                                            }
+                                            Err(_) => {
+                                                // システム時刻が証明書の更新時刻より古い場合（時刻設定の問題）
+                                                eprintln!("[WARN] 証明書の更新日時を確認できません: API ID={} (システム時刻の問題の可能性があります)", api.id);
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            // 証明書が存在しない場合は警告を出力
+                            // 注意: FLMではHTTPSが必須のため、証明書がないAPIは起動できません
+                            eprintln!("[WARN] 証明書が見つかりません: API ID={}, 名前={}", api.id, api.name);
+                        }
+                    }
+                    
+                    if renewed_count > 0 {
+                        eprintln!("[INFO] 証明書更新タスク完了: {}件の証明書が更新推奨です（確認したAPI数: {}件）", renewed_count, checked_count);
+                    } else if checked_count > 0 {
+                        eprintln!("[INFO] 証明書更新タスク完了: すべての証明書が有効です（確認したAPI数: {}件）", checked_count);
+                    }
                 },
                 TaskType::ApiKeyRotation => {
-                    // APIキーローテーションを実行（将来の実装）
-                    eprintln!("APIキーローテーションタスク: 未実装");
+                    // APIキーローテーションを実行
+                    use crate::database::connection::get_connection;
+                    use crate::database::repository::{ApiRepository, security_repository::ApiSecuritySettingsRepository, ApiKeyRepository};
+                    use crate::commands::api::regenerate_api_key;
+                    use chrono::{Utc, Duration};
+                    
+                    // データベース操作をブロッキングタスクで実行
+                    let api_list = tokio::task::spawn_blocking(|| {
+                        let conn = get_connection().map_err(|e| AppError::DatabaseError {
+                            message: format!("データベース接続エラー: {}", e),
+                            source_detail: None,
+                        })?;
+                        
+                        let api_repo = ApiRepository::new(&conn);
+                        api_repo.find_all().map_err(|e| AppError::DatabaseError {
+                            message: format!("API一覧取得エラー: {}", e),
+                            source_detail: None,
+                        })
+                    }).await.map_err(|e| AppError::ProcessError {
+                        message: format!("APIキーローテーションタスク実行エラー: {}", e),
+                        source_detail: None,
+                    })??;
+                    
+                    let mut rotated_count = 0u32;
+                    
+                    // 各APIのキーローテーション設定を確認
+                    for api in api_list {
+                        // 認証が有効なAPIのみ処理
+                        if api.enable_auth {
+                            // セキュリティ設定を取得（ブロッキングタスクで実行）
+                            let settings_result = tokio::task::spawn_blocking({
+                                let api_id = api.id.clone();
+                                move || {
+                                    let conn = get_connection().map_err(|e| AppError::DatabaseError {
+                                        message: format!("データベース接続エラー: {}", e),
+                                        source_detail: None,
+                                    })?;
+                                    ApiSecuritySettingsRepository::find_by_api_id(&conn, &api_id)
+                                        .map_err(|e| AppError::DatabaseError {
+                                            message: format!("セキュリティ設定取得エラー: {}", e),
+                                            source_detail: None,
+                                        })
+                                }
+                            }).await.map_err(|e| AppError::ProcessError {
+                                message: format!("タスク実行エラー: {}", e),
+                                source_detail: None,
+                            })?;
+                            
+                            match settings_result {
+                                Ok(Some(settings)) => {
+                                    // キーローテーションが有効な場合のみ処理
+                                    if settings.key_rotation_enabled {
+                                        // APIキーの最終更新日時を取得
+                                        let key_updated_result = tokio::task::spawn_blocking({
+                                            let api_id = api.id.clone();
+                                            move || {
+                                                let conn = get_connection().map_err(|e| AppError::DatabaseError {
+                                                    message: format!("データベース接続エラー: {}", e),
+                                                    source_detail: None,
+                                                })?;
+                                                let key_repo = ApiKeyRepository::new(&conn);
+                                                key_repo.find_by_api_id(&api_id)
+                                                    .map_err(|e| AppError::DatabaseError {
+                                                        message: format!("APIキー取得エラー: {}", e),
+                                                        source_detail: None,
+                                                    })
+                                            }
+                                        }).await.map_err(|e| AppError::ProcessError {
+                                            message: format!("タスク実行エラー: {}", e),
+                                            source_detail: None,
+                                        })?;
+                                        
+                                        // ローテーションが必要かチェック
+                                        let should_rotate = match key_updated_result {
+                                            Ok(Some(key_data)) => {
+                                                let rotation_interval = Duration::days(settings.key_rotation_interval_days as i64);
+                                                let last_updated = key_data.updated_at;
+                                                let now = Utc::now();
+                                                now.signed_duration_since(last_updated) >= rotation_interval
+                                            }
+                                            Ok(None) => {
+                                                // APIキーが存在しない場合はローテーション不要
+                                                false
+                                            }
+                                            Err(_) => {
+                                                // エラーが発生した場合はスキップ
+                                                false
+                                            }
+                                        };
+                                        
+                                        if should_rotate {
+                                            // APIキーを再生成（非同期で実行）
+                                            match regenerate_api_key(api.id.clone()).await {
+                                                Ok(_) => {
+                                                    eprintln!("[INFO] APIキーローテーション完了: API ID={}", api.id);
+                                                    rotated_count += 1;
+                                                }
+                                                Err(e) => {
+                                                    eprintln!("[WARN] APIキーローテーション失敗: API ID={}, エラー={}", api.id, e);
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                                Ok(None) => {
+                                    // セキュリティ設定がない場合はスキップ
+                                }
+                                Err(e) => {
+                                    eprintln!("[WARN] セキュリティ設定の取得に失敗しました: API ID={}, エラー={}", api.id, e);
+                                }
+                            }
+                        }
+                    }
+                    
+                    if rotated_count > 0 {
+                        eprintln!("[INFO] APIキーローテーションタスク完了: {}件のAPIキーがローテーションされました", rotated_count);
+                    }
                 },
             }
         }

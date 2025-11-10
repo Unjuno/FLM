@@ -209,11 +209,12 @@ export const ApiConfigBasicSettings: React.FC<ApiConfigBasicSettingsProps> = ({
             id="api-port"
             type="number"
             value={config.port}
-            onChange={e =>
+            onChange={e => {
+              const parsed = parseInt(e.target.value, 10);
               onConfigChange({
-                port: parseInt(e.target.value) || PORT_RANGE.DEFAULT,
-              })
-            }
+                port: isNaN(parsed) ? PORT_RANGE.DEFAULT : parsed,
+              });
+            }}
             min={PORT_RANGE.MIN}
             max={PORT_RANGE.MAX}
             className={errors.port ? 'error' : ''}
@@ -255,7 +256,15 @@ export const ApiConfigBasicSettings: React.FC<ApiConfigBasicSettingsProps> = ({
           </small>
         )}
         <small className="form-hint">
-          APIエンドポイントのポート番号（デフォルト: {PORT_RANGE.DEFAULT}）
+          <Tooltip
+            content="APIが使用する通信ポート番号です。通常は自動的に設定されますが、必要に応じて変更できます。ポート番号が使用中の場合は自動的に利用可能なポートを選択します。"
+            title="ポート番号とは？"
+          >
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.25rem' }}>
+              APIエンドポイントのポート番号（デフォルト: {PORT_RANGE.DEFAULT}）
+              <span style={{ fontSize: '0.75rem', opacity: 0.7 }}>❓</span>
+            </span>
+          </Tooltip>
           <br />
           <span className="port-help-text">
             ポート番号が使用中の場合は自動的に利用可能なポートを選択します

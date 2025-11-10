@@ -5,13 +5,16 @@ use crate::database::models::*;
 use crate::database::repository::{ApiRepository, ApiKeyRepository, InstalledModelRepository, RequestLogRepository, ModelCatalogRepository, error_log_repository::ErrorLogRepository};
 use crate::database::connection::get_connection;
 use crate::database::DatabaseError;
+use crate::utils::error::AppError;
 use crate::auth; // 認証モジュール（監査レポートの推奨事項に基づき追加）
+use crate::ollama::current_ollama_base_url;
 use chrono::Utc;
+use std::collections::HashMap;
 use uuid::Uuid;
 use bytes::Bytes;
 use tauri::Emitter;
-// ログマクロをインポート
-use crate::{debug_log, error_log, log_pid};
+// ログマクロをインポート（必要に応じて使用）
+// use crate::{debug_log, error_log, log_pid};
 
 /// API作成設定
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -65,84 +68,26 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
     // 1. エンジンタイプの決定（デフォルト: 'ollama'）
     let engine_type = config.engine_type.as_deref().unwrap_or("ollama");
     
-    // 2. エンジンが実行中か確認・起動
-    use crate::engines::{EngineManager, EngineConfig};
-    let engine_manager = EngineManager::new();
-    
-    // エンジンの状態を確認
-    let detection_result = engine_manager.detect_engine(engine_type).await
-        .map_err(|e| format!("エンジン検出エラー: {e}"))?;
-    
-    if !detection_result.running {
-        // エンジン起動設定を作成
-        let engine_config = EngineConfig {
-            engine_type: engine_type.to_string(),
-            base_url: None,
-            executable_path: None,
-            port: None,
-            auto_detect: true,
-        };
-        
-        match engine_manager.start_engine(engine_type, Some(engine_config)).await {
-            Ok(_) => {
-                // 起動確認のため少し待機
-                tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-            },
-            Err(e) => {
-                // 手動起動が必要なエンジンの場合、より明確なメッセージを表示
-                let error_message = match engine_type {
-                    "lm_studio" => {
-                        format!("LM Studioは手動で起動する必要があります。LM Studioアプリケーションを起動してから再度お試しください。エラー詳細: {}", e)
-                    },
-                    "vllm" => {
-                        format!("vLLMは手動で起動する必要があります。vLLMサーバーを起動してから再度お試しください。例: python -m vllm.entrypoints.openai.api_server --model <model_name>。エラー詳細: {}", e)
-                    },
-                    "llama_cpp" => {
-                        format!("llama.cppは手動で起動する必要があります。llama.cppサーバーを起動してから再度お試しください。エラー詳細: {}", e)
-                    },
-                    _ => {
-                        format!("エンジンの起動に失敗しました: {}. 手動でエンジンを起動してから再度お試しください。", e)
-                    }
-                };
-                
-                // エンジンが既に起動している可能性があるため、再度確認
-                let is_running_retry = match engine_type {
-                    "ollama" => {
-                        use crate::engines::{ollama::OllamaEngine, traits::LLMEngine};
-                        OllamaEngine::new().is_running().await.unwrap_or(false)
-                    },
-                    "lm_studio" => {
-                        use crate::engines::{lm_studio::LMStudioEngine, traits::LLMEngine};
-                        LMStudioEngine::new().is_running().await.unwrap_or(false)
-                    },
-                    "vllm" => {
-                        use crate::engines::{vllm::VLLMEngine, traits::LLMEngine};
-                        VLLMEngine::new().is_running().await.unwrap_or(false)
-                    },
-                    "llama_cpp" => {
-                        use crate::engines::{llama_cpp::LlamaCppEngine, traits::LLMEngine};
-                        LlamaCppEngine::new().is_running().await.unwrap_or(false)
-                    },
-                    _ => false,
-                };
-                
-                if !is_running_retry {
-                    return Err(error_message);
-                }
-                // エンジンが既に起動している場合は続行
-            }
+    // 2. モデルがインストールされているか確認（データベースから取得）
+    // 注意: API作成時はエンジンを起動せず、インストール済みモデルのみを確認します
+    // エンジンの起動は、APIを実際に使用する際（start_api関数など）に行います
+    let model_exists = tokio::task::spawn_blocking({
+        let model_name = config.model_name.clone();
+        move || {
+            let conn = get_connection().map_err(|e| {
+                format!("データベース接続に失敗しました: {}. アプリを再起動して再度お試しください。", e)
+            })?;
+            
+            let model_repo = InstalledModelRepository::new(&conn);
+            let installed_models = model_repo.find_all().map_err(|e| {
+                format!("インストール済みモデルの取得に失敗しました: {}. アプリを再起動して再度お試しください。", e)
+            })?;
+            
+            Ok::<bool, String>(installed_models.iter().any(|m| m.name == model_name))
         }
-    }
+    }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
     
-    // 3. モデルが存在するか確認（エンジンから取得）
-    let models = engine_manager.get_engine_models(engine_type).await.map_err(|e| {
-        format!("エンジンからモデル一覧を取得できませんでした: {e}")
-    })?;
-    
-    let model_names: Vec<String> = models.iter().map(|m| m.name.clone()).collect();
-    
-    // 指定されたモデルが存在するか確認
-    if !model_names.iter().any(|m| m == &config.model_name) {
+    if !model_exists {
         return Err(format!(
             "選択されたAIモデル「{}」が見つかりませんでした。\n\n先に「モデル管理」画面からこのモデルをダウンロードしてください。",
             config.model_name
@@ -188,7 +133,7 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
                 eprintln!("ポート範囲 8000-9000 から検索中...");
                 let mut fallback_port = None;
                 for p in 8000..9000 {
-                    if crate::commands::port::is_port_available(p) {
+                    if crate::commands::port::is_api_port_pair_available(p) {
                         fallback_port = Some(p);
                         break;
                     }
@@ -236,10 +181,10 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
             match api_repo.find_by_port(port_for_db) {
                 Ok(Some(existing_api)) => {
                     // ポートが既に使用されている場合は、エラーを返す
-                    // 実際のポート検出は非同期で行う必要があるため、ここではエラーを返す
+                    // フロントエンド側で自動修正が機能するように、エラーメッセージに「使用中」を含める
                     // （TCPレベルのチェックで既に検出されているはずだが、念のため）
                     return Err(format!(
-                        "ポート番号 {} は既にAPI「{}」で使用されています。別のポート番号を指定するか、既存のAPIを停止してください。",
+                        "ポート番号 {} は既にAPI「{}」で使用中です。自動的に代替ポートが検出されますが、別のポート番号を手動で指定することもできます。",
                         port_for_db, existing_api.name
                     ));
                 },
@@ -249,6 +194,27 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
                 Err(e) => {
                     return Err(format!("データベースエラーが発生しました: {}. アプリを再起動して再度お試しください。", e));
                 }
+            }
+
+            // 近接ポートの競合（HTTPSリダイレクトで利用する port+1）をチェック
+            let existing_apis = api_repo.find_all().map_err(|e| {
+                format!("既存APIの取得に失敗しました: {}. アプリを再起動して再度お試しください。", e)
+            })?;
+            let port_u16 = final_port_local as u16;
+            if let Some(conflict) = existing_apis.iter().find(|api| {
+                let existing_port = api.port as u16;
+                if existing_port == port_u16 {
+                    false
+                } else {
+                    existing_port.abs_diff(port_u16) <= 1
+                }
+            }) {
+                return Err(format!(
+                    "ポート番号 {} は API「{}」(ポート {}) に隣接しているため使用できません。HTTPSリダイレクトで連番のポートを共有できないため、2以上離れたポート番号を選択してください。",
+                    port_u16,
+                    conflict.name,
+                    conflict.port
+                ));
             }
             
             // API設定を作成
@@ -378,7 +344,9 @@ pub async fn list_apis() -> Result<Vec<ApiInfo>, String> {
 
 /// API起動コマンド
 #[tauri::command]
-pub async fn start_api(api_id: String) -> Result<(), String> {
+#[allow(non_snake_case)] // Tauri v2のフロントエンドとの互換性のためcamelCaseを使用
+pub async fn start_api(apiId: String) -> Result<(), String> {
+    let api_id = apiId; // Tauri v2の自動変換に対応
     // データベース操作を同期的に実行（非Send型のため）
     let (port, enable_auth, engine_type, engine_base_url) = tokio::task::spawn_blocking({
         let api_id = api_id.clone();
@@ -412,10 +380,10 @@ pub async fn start_api(api_id: String) -> Result<(), String> {
                             use crate::engines::{llama_cpp::LlamaCppEngine, traits::LLMEngine};
                             LlamaCppEngine::new().get_base_url()
                         },
-                        _ => "http://localhost:11434".to_string(),
+                        _ => current_ollama_base_url(),
                     }
                 })
-                .unwrap_or_else(|| "http://localhost:11434".to_string());
+                .unwrap_or_else(current_ollama_base_url);
             
             Ok::<(u16, bool, Option<String>, String), String>((
                 api.port as u16, 
@@ -426,147 +394,47 @@ pub async fn start_api(api_id: String) -> Result<(), String> {
         }
     }).await.map_err(|e| format!("データベース操作エラー: {e}"))??;
     
+    let mut selected_port = port;
+    let mut port_changed = false;
+
+    let update_port_in_db = |new_port: u16| {
+        let api_id = api_id.clone();
+        let task = tokio::task::spawn_blocking(move || {
+            let conn = get_connection().map_err(|_| {
+                "ポート情報の更新に失敗しました。アプリを再起動して再度お試しください。".to_string()
+            })?;
+
+            let api_repo = ApiRepository::new(&conn);
+            let mut api = api_repo.find_by_id(&api_id).map_err(|_| {
+                "指定されたAPIが見つかりませんでした。API一覧を確認してください。".to_string()
+            })?;
+
+            api.port = new_port as i32;
+            api_repo.update(&api).map_err(|_| {
+                "ポート情報の更新に失敗しました。アプリを再起動して再度お試しください。".to_string()
+            })
+        });
+        async move { task.await.map_err(|e| format!("データベース操作エラー: {e}"))??; Ok::<(), String>(()) }
+    };
+
+    if !crate::commands::port::is_api_port_pair_available(selected_port as u16) {
+        let detection = crate::commands::port::find_available_port(Some(selected_port as u16))
+            .await
+            .map_err(|e| format!("使用可能なポート番号の検出に失敗しました: {}", e))?;
+
+        if detection.recommended_port != selected_port {
+            selected_port = detection.recommended_port;
+            port_changed = true;
+            update_port_in_db(selected_port).await?;
+        }
+    }
+    
+    // 注意: API作成時はエンジンを起動しません
+    // エンジンの起動は、APIを実際に使用する際（start_api関数など）に行います
+    // ここでは、APIの設定を保存するだけです
+    
     // デバッグモードのチェック（環境変数で制御）
     let debug_mode = std::env::var("FLM_DEBUG").unwrap_or_default() == "1";
-    
-    // 2. エンジンが起動しているか確認・起動
-    let engine_type_str = engine_type.as_deref().unwrap_or("ollama");
-    if debug_mode {
-        eprintln!("[DEBUG] エンジン状態確認開始: エンジンタイプ={}, ベースURL={}", engine_type_str, engine_base_url);
-    }
-    use crate::engines::{EngineManager, EngineConfig};
-    let engine_manager = EngineManager::new();
-    
-    let is_running = match engine_type_str {
-        "ollama" => {
-            use crate::engines::{ollama::OllamaEngine, traits::LLMEngine};
-            if debug_mode {
-                eprintln!("[DEBUG] Ollamaの実行状態を確認中...");
-            }
-            OllamaEngine::new().is_running().await.map_err(|e| {
-                eprintln!("[ERROR] Ollama状態確認エラー: {:?}", e);
-                format!("エンジン状態確認エラー: {e}")
-            })?
-        },
-        "lm_studio" => {
-            use crate::engines::{lm_studio::LMStudioEngine, traits::LLMEngine};
-            if debug_mode {
-                eprintln!("[DEBUG] LM Studioの実行状態を確認中...");
-            }
-            LMStudioEngine::new().is_running().await.map_err(|e| {
-                eprintln!("[ERROR] LM Studio状態確認エラー: {:?}", e);
-                format!("エンジン状態確認エラー: {e}")
-            })?
-        },
-        "vllm" => {
-            use crate::engines::{vllm::VLLMEngine, traits::LLMEngine};
-            if debug_mode {
-                eprintln!("[DEBUG] vLLMの実行状態を確認中...");
-            }
-            VLLMEngine::new().is_running().await.map_err(|e| {
-                eprintln!("[ERROR] vLLM状態確認エラー: {:?}", e);
-                format!("エンジン状態確認エラー: {e}")
-            })?
-        },
-        "llama_cpp" => {
-            use crate::engines::{llama_cpp::LlamaCppEngine, traits::LLMEngine};
-            if debug_mode {
-                eprintln!("[DEBUG] llama.cppの実行状態を確認中...");
-            }
-            LlamaCppEngine::new().is_running().await.map_err(|e| {
-                eprintln!("[ERROR] llama.cpp状態確認エラー: {:?}", e);
-                format!("エンジン状態確認エラー: {e}")
-            })?
-        },
-        _ => {
-            eprintln!("[ERROR] 不明なエンジンタイプ: {}", engine_type_str);
-            return Err(format!("不明なエンジンタイプ: {engine_type_str}"));
-        },
-    };
-    
-    if debug_mode {
-        eprintln!("[DEBUG] エンジン実行状態: エンジンタイプ={}, 実行中={}", engine_type_str, is_running);
-    }
-    
-    if !is_running {
-        if debug_mode {
-            eprintln!("[DEBUG] エンジンが起動していないため、自動起動を試みます: エンジンタイプ={}", engine_type_str);
-        }
-        let engine_config = EngineConfig {
-            engine_type: engine_type_str.to_string(),
-            base_url: Some(engine_base_url.clone()),
-            executable_path: None,
-            port: None,
-            auto_detect: true,
-        };
-        
-        if debug_mode {
-            debug_log!("[DEBUG] エンジン起動設定: {:?}", engine_config);
-        }
-        match engine_manager.start_engine(engine_type_str, Some(engine_config)).await {
-            Ok(pid) => {
-                if debug_mode {
-                    log_pid!(pid, "[DEBUG] エンジンの起動に成功しました: エンジンタイプ={}, PID={}", engine_type_str);
-                    debug_log!("[DEBUG] エンジンの起動確認のため、2秒待機中...");
-                }
-                // エンジンが起動した後、少し待機してから起動確認
-                tokio::time::sleep(tokio::time::Duration::from_secs(2)).await;
-            },
-            Err(e) => {
-                error_log!("[ERROR] エンジンの起動に失敗しました: エンジンタイプ={}, エラー={:?}", engine_type_str, e);
-                
-                // 手動起動が必要なエンジンの場合、より明確なメッセージを表示
-                let error_message = match engine_type_str {
-                    "lm_studio" => {
-                        format!("LM Studioは手動で起動する必要があります。LM Studioアプリケーションを起動してから再度お試しください。エラー詳細: {}", e)
-                    },
-                    "vllm" => {
-                        format!("vLLMは手動で起動する必要があります。vLLMサーバーを起動してから再度お試しください。例: python -m vllm.entrypoints.openai.api_server --model <model_name>。エラー詳細: {}", e)
-                    },
-                    "llama_cpp" => {
-                        format!("llama.cppは手動で起動する必要があります。llama.cppサーバーを起動してから再度お試しください。エラー詳細: {}", e)
-                    },
-                    _ => {
-                        format!("エンジンの起動に失敗しました: {}. 手動でエンジンを起動してから再度お試しください。エンジンタイプ: {}", e, engine_type_str)
-                    }
-                };
-                
-                // エンジンが既に起動している可能性があるため、再度確認
-                let is_running_retry = match engine_type_str {
-                    "ollama" => {
-                        use crate::engines::{ollama::OllamaEngine, traits::LLMEngine};
-                        OllamaEngine::new().is_running().await.unwrap_or(false)
-                    },
-                    "lm_studio" => {
-                        use crate::engines::{lm_studio::LMStudioEngine, traits::LLMEngine};
-                        LMStudioEngine::new().is_running().await.unwrap_or(false)
-                    },
-                    "vllm" => {
-                        use crate::engines::{vllm::VLLMEngine, traits::LLMEngine};
-                        VLLMEngine::new().is_running().await.unwrap_or(false)
-                    },
-                    "llama_cpp" => {
-                        use crate::engines::{llama_cpp::LlamaCppEngine, traits::LLMEngine};
-                        LlamaCppEngine::new().is_running().await.unwrap_or(false)
-                    },
-                    _ => false,
-                };
-                
-                if is_running_retry {
-                    if debug_mode {
-                        eprintln!("[DEBUG] エンジン起動に失敗しましたが、エンジンは既に実行中です。API作成を続行します。");
-                    }
-                    // エンジンが既に起動している場合は続行
-                } else {
-                    return Err(error_message);
-                }
-            }
-        }
-    } else {
-        if debug_mode {
-            eprintln!("[DEBUG] エンジンは既に実行中です: エンジンタイプ={}", engine_type_str);
-        }
-    }
     
     // 3. SSL証明書を生成（HTTPS必須）
     // セキュリティ: HTTPは使用不可（パスワード漏洩のリスクがあるため）
@@ -575,47 +443,107 @@ pub async fn start_api(api_id: String) -> Result<(), String> {
     
     // 4. 認証プロキシを起動（認証が有効な場合）
     if enable_auth {
+        fn is_addr_in_use_error(error: &AppError) -> bool {
+            match error {
+                AppError::AuthError { message, .. }
+                | AppError::ProcessError { message, .. }
+                | AppError::ConnectionError { message, .. } => {
+                    message.contains("EADDRINUSE")
+                        || message.contains("address already in use")
+                        || message.contains("ポート") && message.contains("使用")
+                }
+                _ => false,
+            }
+        }
+
+        let mut current_port = selected_port;
+        let mut attempts = 0;
         if debug_mode {
             eprintln!("[DEBUG] ===== 認証プロキシ起動処理開始 =====");
-            eprintln!("[DEBUG] 認証プロキシ起動設定: ポート={}, API_ID={}, エンジン={}, ベースURL={}", 
-                port, api_id, engine_type.as_deref().unwrap_or("ollama"), engine_base_url);
-            eprintln!("[DEBUG] ポート {} の使用状況を再確認中...", port);
+            eprintln!("[DEBUG] 認証プロキシ起動設定: ポート={}, API_ID={}, エンジン={}, ベースURL={}",
+                current_port, api_id, engine_type.as_deref().unwrap_or("ollama"), engine_base_url);
+            eprintln!("[DEBUG] ポート {} の使用状況を再確認中...", current_port);
         }
-        
-        // ポートの使用状況を再確認
-        match crate::commands::port::is_port_available(port as u16) {
-            true => {
-                if debug_mode {
-                    eprintln!("[DEBUG] ✓ ポート {} は使用可能です", port);
+
+        loop {
+            if debug_mode {
+                eprintln!("[DEBUG] start_auth_proxyを呼び出します (ポート {})...", current_port);
+            }
+            match auth::start_auth_proxy(
+                current_port as u16,
+                None,
+                Some(engine_base_url.clone()),
+                Some(api_id.clone()),
+                engine_type.clone(),
+            ).await {
+                Ok(_) => {
+                    if debug_mode {
+                        eprintln!("[DEBUG] ✓ 認証プロキシの起動に成功しました (ポート {})", current_port);
+                        eprintln!("[DEBUG] ===== 認証プロキシ起動処理完了 =====");
+                    }
+                    selected_port = current_port;
+                    if selected_port != port {
+                        port_changed = true;
+                    }
+                    break;
                 }
-            },
-            false => eprintln!("[ERROR] ✗ ポート {} は既に使用されています", port),
-        }
-        
-        // 認証プロキシを起動
-        // 認証プロキシサーバーはデータベースから直接APIキーのハッシュを確認するため、
-        // APIキーを環境変数として渡す必要はない
-        // API IDはリクエストログ記録用に環境変数として渡す
-        // エンジン別のベースURLとエンジンタイプを環境変数として渡す
-        if debug_mode {
-            eprintln!("[DEBUG] start_auth_proxyを呼び出します...");
-        }
-        auth::start_auth_proxy(
-            port as u16, 
-            None, 
-            Some(engine_base_url.clone()), 
-            Some(api_id.clone()),
-            engine_type.clone()
-        ).await.map_err(|e| {
-            eprintln!("[ERROR] ===== 認証プロキシ起動エラー =====");
-            eprintln!("[ERROR] エラー詳細: {:?}", e);
-            eprintln!("[ERROR] ポート: {}", port);
-            eprintln!("[ERROR] API_ID: {}", api_id);
-            format!("認証プロキシの起動に失敗しました: {}. ポート番号 {} が他のアプリケーションで使用されていないか確認してください。", e, port)
-        })?;
-        if debug_mode {
-            eprintln!("[DEBUG] ✓ 認証プロキシの起動に成功しました");
-            eprintln!("[DEBUG] ===== 認証プロキシ起動処理完了 =====");
+                Err(e) => {
+                    if is_addr_in_use_error(&e) && attempts < 20 {
+                        attempts += 1;
+                        if debug_mode {
+                            eprintln!("[WARN] ポート {} が使用中のため再試行します (試行回数: {})", current_port, attempts);
+                        }
+
+                        const PORT_MIN: u16 = 1024;
+                        let mut next_port = current_port as u32 + 1;
+                        let mut wrapped = false;
+                        let mut candidate: Option<u16> = None;
+
+                        loop {
+                            if next_port > u16::MAX as u32 {
+                                if wrapped {
+                                    break;
+                                }
+                                next_port = PORT_MIN as u32;
+                                wrapped = true;
+                            }
+
+                            let port_candidate = next_port as u16;
+                            if crate::commands::port::is_api_port_pair_available(port_candidate) {
+                                candidate = Some(port_candidate);
+                                break;
+                            }
+
+                            next_port += 1;
+
+                            if wrapped && port_candidate == current_port {
+                                break;
+                            }
+                        }
+
+                        let Some(new_port) = candidate else {
+                            return Err(format!(
+                                "認証プロキシの起動に失敗しました: {}. 使用可能な別のポートを自動的に検出できませんでした。",
+                                e
+                            ));
+                        };
+
+                        current_port = new_port;
+                        update_port_in_db(current_port).await?;
+                        port_changed = true;
+                        continue;
+                    } else {
+                        eprintln!("[ERROR] ===== 認証プロキシ起動エラー =====");
+                        eprintln!("[ERROR] エラー詳細: {:?}", e);
+                        eprintln!("[ERROR] ポート: {}", current_port);
+                        eprintln!("[ERROR] API_ID: {}", api_id);
+                        return Err(format!(
+                            "認証プロキシの起動に失敗しました: {}. ポート番号 {} が他のアプリケーションで使用されていないか確認してください。",
+                            e, current_port
+                        ));
+                    }
+                }
+            }
         }
     } else {
         if debug_mode {
@@ -626,6 +554,8 @@ pub async fn start_api(api_id: String) -> Result<(), String> {
     // 5. ステータスを更新（同期的に実行）
     tokio::task::spawn_blocking({
         let api_id = api_id.clone();
+        let port_to_update = selected_port as i32;
+        let port_changed = port_changed;
         move || {
             let conn = get_connection().map_err(|_| {
                 "データの読み込みに失敗しました。アプリを再起動して再度お試しください。".to_string()
@@ -638,6 +568,9 @@ pub async fn start_api(api_id: String) -> Result<(), String> {
             
             api.status = ApiStatus::Running;
             api.updated_at = Utc::now();
+            if port_changed {
+                api.port = port_to_update;
+            }
             
             api_repo.update(&api).map_err(|_| {
                 "APIの状態を更新できませんでした。アプリを再起動して再度お試しください。".to_string()
@@ -650,7 +583,9 @@ pub async fn start_api(api_id: String) -> Result<(), String> {
 
 /// API停止コマンド
 #[tauri::command]
-pub async fn stop_api(api_id: String) -> Result<(), String> {
+#[allow(non_snake_case)] // Tauri v2のフロントエンドとの互換性のためcamelCaseを使用
+pub async fn stop_api(apiId: String) -> Result<(), String> {
+    let api_id = apiId; // Tauri v2の自動変換に対応
     // データベース操作を同期的に実行（非Send型のため）
     let port = tokio::task::spawn_blocking({
         let api_id = api_id.clone();
@@ -800,7 +735,9 @@ pub async fn stop_all_running_apis() -> Result<(), String> {
 
 /// API削除コマンド
 #[tauri::command]
-pub async fn delete_api(api_id: String) -> Result<(), String> {
+#[allow(non_snake_case)] // Tauri v2のフロントエンドとの互換性のためcamelCaseを使用
+pub async fn delete_api(apiId: String) -> Result<(), String> {
+    let api_id = apiId; // Tauri v2の自動変換に対応
     // 1. APIが実行中の場合は停止（データベース操作を同期的に実行）
     let was_running = tokio::task::spawn_blocking({
         let api_id = api_id.clone();
@@ -842,7 +779,9 @@ pub async fn delete_api(api_id: String) -> Result<(), String> {
 
 /// API詳細取得コマンド
 #[tauri::command]
-pub async fn get_api_details(api_id: String) -> Result<ApiDetailsResponse, String> {
+#[allow(non_snake_case)] // Tauri v2のフロントエンドとの互換性のためcamelCaseを使用
+pub async fn get_api_details(apiId: String) -> Result<ApiDetailsResponse, String> {
+    let api_id = apiId; // Tauri v2の自動変換に対応
     let conn = get_connection().map_err(|e| {
         format!("データベース接続エラー: {e}")
     })?;
@@ -862,7 +801,10 @@ pub async fn get_api_details(api_id: String) -> Result<ApiDetailsResponse, Strin
                 
                 // 暗号化されたキーを復号化
                 let encrypted_str = STANDARD.encode(&key_data.encrypted_key);
-                encryption::decrypt_api_key(&encrypted_str).ok()
+                encryption::decrypt_api_key(&encrypted_str).map_err(|e| {
+                    eprintln!("[WARN] APIキーの復号化に失敗しました: {}", e);
+                    e
+                }).ok()
             }
             _ => None,
         }
@@ -995,7 +937,9 @@ pub async fn update_api(api_id: String, config: ApiUpdateConfig) -> Result<(), S
     // 設定変更により再起動が必要な場合
     if needs_restart_flag && was_running {
         // 1. 既存の認証プロキシを停止（古いポート番号で）
-        let _ = auth::stop_auth_proxy_by_port(old_port as u16).await;
+        if let Err(e) = auth::stop_auth_proxy_by_port(old_port as u16).await {
+            eprintln!("[WARN] 認証プロキシの停止に失敗しました（ポート {}）: {}", old_port, e);
+        }
         
         // 2. エンジンタイプとベースURLを取得（再起動時に必要）
         let (engine_type_for_restart, engine_base_url_for_restart) = tokio::task::spawn_blocking({
@@ -1029,10 +973,10 @@ pub async fn update_api(api_id: String, config: ApiUpdateConfig) -> Result<(), S
                                 use crate::engines::{llama_cpp::LlamaCppEngine, traits::LLMEngine};
                                 LlamaCppEngine::new().get_base_url()
                             },
-                            _ => "http://localhost:11434".to_string(),
+                            _ => current_ollama_base_url(),
                         }
                     })
-                    .unwrap_or_else(|| "http://localhost:11434".to_string());
+                    .unwrap_or_else(current_ollama_base_url);
                 
                 Ok::<(Option<String>, String), String>((api.engine_type, engine_base_url))
             }
@@ -1108,7 +1052,8 @@ pub async fn get_api_key(api_id: String) -> Result<Option<String>, String> {
 /// APIキー再生成コマンド
 #[tauri::command]
 #[allow(non_snake_case)] // Noneはパターンマッチングのリテラル（Clippyの誤検知）
-pub async fn regenerate_api_key(api_id: String) -> Result<String, String> {
+pub async fn regenerate_api_key(apiId: String) -> Result<String, String> {
+    let api_id = apiId; // Tauri v2の自動変換に対応
     let conn = get_connection().map_err(|e| {
         format!("データベース接続エラー: {e}")
     })?;
@@ -1188,7 +1133,9 @@ pub async fn regenerate_api_key(api_id: String) -> Result<String, String> {
 
 /// APIキー削除コマンド
 #[tauri::command]
-pub async fn delete_api_key(api_id: String) -> Result<(), String> {
+#[allow(non_snake_case)] // Tauri v2のフロントエンドとの互換性のためcamelCaseを使用
+pub async fn delete_api_key(apiId: String) -> Result<(), String> {
+    let api_id = apiId; // Tauri v2の自動変換に対応
     let conn = get_connection().map_err(|e| {
         format!("データベース接続エラー: {e}")
     })?;
@@ -1226,8 +1173,10 @@ pub async fn get_models_list() -> Result<Vec<ModelInfo>, String> {
     
     // Ollama APIからモデル一覧を取得
     let client = crate::utils::http_client::create_http_client()?;
+    let base_url = current_ollama_base_url();
+    let tags_endpoint = format!("{}/api/tags", base_url.trim_end_matches('/'));
     let response = client
-        .get("http://localhost:11434/api/tags")
+        .get(&tags_endpoint)
         .send()
         .await
         .map_err(|_| "AIエンジンに接続できませんでした。AIエンジンが正常に起動しているか確認してください。".to_string())?;
@@ -1261,7 +1210,10 @@ pub async fn get_models_list() -> Result<Vec<ModelInfo>, String> {
 fn extract_parameter_size(model_name: &str) -> Option<String> {
     // モデル名からパラメータ数を推定（例: "llama3:8b" -> "8B", "mistral:7b" -> "7B"）
     // 正規表現パターン: 数字の後に "b" または "B" が続くパターンを探す
-    let re = regex::Regex::new(r"(\d+(?:\.\d+)?)\s*[bB]").ok()?;
+    let re = regex::Regex::new(r"(\d+(?:\.\d+)?)\s*[bB]").map_err(|e| {
+        eprintln!("[WARN] パラメータサイズ抽出用の正規表現コンパイルに失敗しました: {}", e);
+        e
+    }).ok()?;
     if let Some(captures) = re.captures(model_name) {
         if let Some(size_str) = captures.get(1) {
             // 単位は常に "B" (Billion) とする
@@ -1322,7 +1274,9 @@ pub async fn download_model(
         }
     }
     
-    eprintln!("[DEBUG] Ollama APIにモデルダウンロードリクエストを送信: http://localhost:11434/api/pull");
+    let base_url = current_ollama_base_url();
+    let pull_endpoint = format!("{}/api/pull", base_url.trim_end_matches('/'));
+    eprintln!("[DEBUG] Ollama APIにモデルダウンロードリクエストを送信: {}", pull_endpoint);
     
     // Ollama APIにモデルダウンロードリクエストを送信
     let client = reqwest::Client::builder()
@@ -1335,7 +1289,7 @@ pub async fn download_model(
     
     eprintln!("[DEBUG] モデルダウンロードリクエスト送信: モデル名={}", model_name);
     let response = client
-        .post("http://localhost:11434/api/pull")
+        .post(&pull_endpoint)
         .json(&serde_json::json!({
             "name": model_name.clone(),
             "stream": true
@@ -1347,7 +1301,8 @@ pub async fn download_model(
             let error_msg = if e.is_timeout() {
                 format!("Ollama APIへの接続がタイムアウトしました（30秒）。Ollamaが正常に起動しているか確認してください。エラー詳細: {}", e)
             } else if e.is_connect() {
-                format!("Ollama APIに接続できませんでした（ポート11434）。Ollamaが正常に起動しているか確認してください。エラー詳細: {}", e)
+                let (_, port) = crate::ollama::current_ollama_host_port();
+                format!("Ollama APIに接続できませんでした（ポート{}）。Ollamaが正常に起動しているか確認してください。エラー詳細: {}", port, e)
             } else {
                 format!("Ollama APIへの接続中にエラーが発生しました。エラー詳細: {}", e)
             };
@@ -1382,13 +1337,55 @@ pub async fn download_model(
     // Ollama APIは各行がJSONオブジェクトの形式で進捗を返す
     let mut stream = response.bytes_stream();
     let mut buffer = String::with_capacity(4096); // 初期容量を設定してメモリアロケーションを最適化
-    let mut total_downloaded = 0u64;
-    let mut total_size = 0u64;
+    let mut aggregated_total_bytes = 0u64;
+    let mut aggregated_downloaded_bytes = 0u64;
+    let mut layer_totals: HashMap<String, u64> = HashMap::new();
+    let mut layer_completed: HashMap<String, u64> = HashMap::new();
     let start_time = std::time::Instant::now();
     let mut last_progress_update = std::time::Instant::now();
     
     // バッファサイズの上限（10KB）- メモリリーク防止
     const MAX_BUFFER_SIZE: usize = 10 * 1024;
+
+    let mut update_progress_stats = |json: &serde_json::Value| -> (u64, u64) {
+        let digest_key_option = if let Some(digest) = json.get("digest").and_then(|d| d.as_str()) {
+            Some(digest.to_string())
+        } else if layer_totals.is_empty() {
+            Some("__overall__".to_string())
+        } else {
+            None
+        };
+
+        if let Some(ref digest_key) = digest_key_option {
+            if let Some(total) = json.get("total").and_then(|t| t.as_u64()) {
+                if total > 0 {
+                    layer_totals.insert(digest_key.clone(), total);
+                }
+            }
+
+            if let Some(completed) = json.get("completed").and_then(|c| c.as_u64()) {
+                let total_for_key = layer_totals
+                    .get(digest_key)
+                    .copied()
+                    .unwrap_or_default();
+                let capped_completed = if total_for_key > 0 {
+                    completed.min(total_for_key)
+                } else {
+                    completed
+                };
+                layer_completed.insert(digest_key.clone(), capped_completed);
+            }
+        }
+
+        aggregated_total_bytes = layer_totals.values().copied().sum();
+        aggregated_downloaded_bytes = layer_completed.values().copied().sum();
+
+        if aggregated_total_bytes > 0 && aggregated_downloaded_bytes > aggregated_total_bytes {
+            aggregated_downloaded_bytes = aggregated_total_bytes;
+        }
+        
+        (aggregated_downloaded_bytes, aggregated_total_bytes)
+    };
     
     while let Some(chunk_result) = stream.next().await {
         let chunk: Bytes = match chunk_result {
@@ -1402,22 +1399,24 @@ pub async fn download_model(
                 } else {
                     format!("ダウンロード中にエラーが発生しました。ネットワーク接続を確認してください。エラー詳細: {}", e)
                 };
-                // エラー進捗を送信
+                // エラー進捗を送信（値をコピーして借用チェックを回避）
+                let current_downloaded_bytes = aggregated_downloaded_bytes;
+                let current_total_bytes = aggregated_total_bytes;
                 let error_progress = ModelDownloadProgress {
                     status: "error".to_string(),
                     progress: 0.0,
-                    downloaded_bytes: total_downloaded,
-                    total_bytes: total_size,
+                    downloaded_bytes: current_downloaded_bytes,
+                    total_bytes: current_total_bytes,
                     speed_bytes_per_sec: 0.0,
                     message: Some(error_msg.clone()),
                 };
-                let _ = app_handle.emit("model_download_progress", &error_progress);
+                // エラー進捗を送信（送信に失敗しても処理は続行）
+                if let Err(e) = app_handle.emit("model_download_progress", &error_progress) {
+                    eprintln!("[WARN] エラー進捗の送信に失敗しました: {}", e);
+                }
                 return Err(error_msg);
             }
         };
-        
-        let chunk_len: usize = chunk.len();
-        total_downloaded += chunk_len as u64;
         
         // チャンクを文字列に変換してバッファに追加
         let chunk_str = String::from_utf8_lossy(&chunk);
@@ -1438,13 +1437,9 @@ pub async fn download_model(
                 buffer.drain(..line_end);
                 
                 if !line_str.is_empty() {
-                    // JSONオブジェクトを解析（total_sizeを更新するため）
+                    // JSONオブジェクトを解析して進捗情報を更新
                     if let Ok(json) = serde_json::from_str::<serde_json::Value>(&line_str) {
-                        if let Some(total) = json.get("total").and_then(|t| t.as_u64()) {
-                            if total > 0 {
-                                total_size = total_size.max(total);
-                            }
-                        }
+                        update_progress_stats(&json);
                     }
                 }
             }
@@ -1462,74 +1457,78 @@ pub async fn download_model(
             let line_str = buffer[..newline_pos].trim().to_string();
             buffer = buffer[newline_pos + 1..].to_string();
             
-            if line_str.is_empty() {
-                continue;
-            }
-            
-            // JSONオブジェクトを解析
-            if let Ok(json) = serde_json::from_str::<serde_json::Value>(&line_str) {
-                // エラーレスポンスをチェック
-                if let Some(error_msg) = json.get("error").and_then(|e| e.as_str()) {
-                    eprintln!("[ERROR] Ollama APIからエラーレスポンスを受信: {}", error_msg);
-                    let error_progress = ModelDownloadProgress {
-                        status: "error".to_string(),
-                        progress: 0.0,
-                        downloaded_bytes: total_downloaded,
-                        total_bytes: total_size,
-                        speed_bytes_per_sec: 0.0,
-                        message: Some(format!("Ollama APIエラー: {}", error_msg)),
-                    };
-                    let _ = app_handle.emit("model_download_progress", &error_progress);
-                    return Err(format!("モデルダウンロード中にエラーが発生しました: {}", error_msg));
-                }
-                
-                // Ollama APIの進捗情報を取得
-                // レスポンス形式: {"status": "pulling manifest", "digest": "...", "total": 100, "completed": 50}
-                let status = json.get("status")
-                    .and_then(|s| s.as_str())
-                    .unwrap_or("pulling")
-                    .to_string();
-                
-                // 進捗情報を取得（Ollama APIの形式に合わせる）
-                let completed = json.get("completed")
-                    .and_then(|c| c.as_u64())
-                    .unwrap_or(0u64);
-                let total = json.get("total")
-                    .and_then(|t| t.as_u64())
-                    .unwrap_or(0u64);
-                
-                if total > 0 {
-                    total_size = total_size.max(total);
-                }
-                
-                // 速度計算
-                let elapsed = start_time.elapsed().as_secs_f64();
-                let speed = if elapsed > 0.0 {
-                    total_downloaded as f64 / elapsed
-                } else {
-                    0.0
-                };
-                
-                // 進捗率を計算
-                let progress_percent = if total_size > 0 {
-                    (completed as f64 / total_size as f64) * 100.0
-                } else {
-                    0.0
-                };
-                
-                // 進捗イベントを送信（0.5秒ごとに更新）
-                if last_progress_update.elapsed().as_millis() >= 500 {
-                    let progress = ModelDownloadProgress {
-                        status: status.clone(),
-                        progress: progress_percent,
-                        downloaded_bytes: completed,
-                        total_bytes: total_size,
-                        speed_bytes_per_sec: speed,
-                        message: Some(status.clone()),
+            // 空行はスキップ
+            if !line_str.is_empty() {
+                // JSONオブジェクトを解析
+                if let Ok(json) = serde_json::from_str::<serde_json::Value>(&line_str) {
+                    // エラーレスポンスをチェック
+                    if let Some(error_msg) = json.get("error").and_then(|e| e.as_str()) {
+                        eprintln!("[ERROR] Ollama APIからエラーレスポンスを受信: {}", error_msg);
+                        // 値をコピーして借用チェックを回避
+                        let current_downloaded_bytes = aggregated_downloaded_bytes;
+                        let current_total_bytes = aggregated_total_bytes;
+                        let error_progress = ModelDownloadProgress {
+                            status: "error".to_string(),
+                            progress: 0.0,
+                            downloaded_bytes: current_downloaded_bytes,
+                            total_bytes: current_total_bytes,
+                            speed_bytes_per_sec: 0.0,
+                            message: Some(format!("Ollama APIエラー: {}", error_msg)),
+                        };
+                        // エラー進捗を送信（送信に失敗しても処理は続行）
+                        if let Err(e) = app_handle.emit("model_download_progress", &error_progress) {
+                            eprintln!("[WARN] エラー進捗の送信に失敗しました: {}", e);
+                        }
+                        return Err(format!("モデルダウンロード中にエラーが発生しました: {}", error_msg));
+                    }
+                    
+                    // クロージャを呼び出して更新された値を取得
+                    let (current_downloaded_bytes, current_total_bytes) = update_progress_stats(&json);
+                    
+                    // Ollama APIの進捗情報を取得
+                    // レスポンス形式: {"status": "pulling manifest", "digest": "...", "total": 100, "completed": 50}
+                    let status = json.get("status")
+                        .and_then(|s| s.as_str())
+                        .unwrap_or("pulling")
+                        .to_string();
+
+                    // 速度計算
+                    let elapsed = start_time.elapsed().as_secs_f64();
+                    let speed = if elapsed > 0.0 {
+                        current_downloaded_bytes as f64 / elapsed
+                    } else {
+                        0.0
                     };
                     
-                    let _ = app_handle.emit("model_download_progress", &progress);
-                    last_progress_update = std::time::Instant::now();
+                    // 進捗率を計算
+                    let mut progress_percent = if current_total_bytes > 0 {
+                        (current_downloaded_bytes as f64 / current_total_bytes as f64) * 100.0
+                    } else {
+                        0.0
+                    };
+                    if progress_percent < 0.0 {
+                        progress_percent = 0.0;
+                    }
+                    if progress_percent > 100.0 {
+                        progress_percent = 100.0;
+                    }
+                    
+                    // 進捗イベントを送信（0.5秒ごとに更新）
+                    if last_progress_update.elapsed().as_millis() >= 500 {
+                        let progress = ModelDownloadProgress {
+                            status: status.clone(),
+                            progress: progress_percent,
+                            downloaded_bytes: current_downloaded_bytes,
+                            total_bytes: current_total_bytes,
+                            speed_bytes_per_sec: speed,
+                            message: Some(status.clone()),
+                        };
+                        
+                        if let Err(e) = app_handle.emit("model_download_progress", &progress) {
+                            eprintln!("[WARN] モデルダウンロード進捗イベントの送信に失敗しました: {}", e);
+                        }
+                        last_progress_update = std::time::Instant::now();
+                    }
                 }
             }
         }
@@ -1538,6 +1537,7 @@ pub async fn download_model(
     // 残りのバッファを処理
     if !buffer.trim().is_empty() {
         if let Ok(json) = serde_json::from_str::<serde_json::Value>(buffer.trim()) {
+            update_progress_stats(&json);
             let status = json.get("status")
                 .and_then(|s| s.as_str())
                 .unwrap_or("completed")
@@ -1548,7 +1548,7 @@ pub async fn download_model(
                 // モデル情報を取得（Ollama APIから）
                 if let Ok(client) = crate::utils::http_client::create_http_client() {
                  if let Ok(tags_response) = client
-                     .get("http://localhost:11434/api/tags")
+                     .get(&format!("{}/api/tags", base_url.trim_end_matches('/')))
                      .send()
                      .await
                  {
@@ -1560,7 +1560,10 @@ pub async fn download_model(
                                          let size = model_data["size"].as_u64().unwrap_or(0);
                                          let parameters = extract_parameter_size(name)
                                              .and_then(|ps| {
-                                                 ps.trim_end_matches('B').parse::<i64>().ok()
+                                                ps.trim_end_matches('B').parse::<i64>().map_err(|e| {
+                                                    eprintln!("[WARN] パラメータサイズのパースに失敗しました (値: {}): {}", ps, e);
+                                                    e
+                                                }).ok()
                                                      .map(|p| p * 1_000_000_000)
                                              });
                                          
@@ -1575,42 +1578,73 @@ pub async fn download_model(
                                          
                                          // データベースに保存（spawn_blocking内で実行）
                                          let model_to_save = installed_model.clone();
-                                         tokio::task::spawn_blocking(move || {
+                                         if let Err(e) = tokio::task::spawn_blocking(move || {
                                              if let Ok(conn) = get_connection() {
                                                  let model_repo = InstalledModelRepository::new(&conn);
-                                                 let _ = model_repo.upsert(&model_to_save);
+                                                 if let Err(err) = model_repo.upsert(&model_to_save) {
+                                                     eprintln!("[WARN] モデル情報の保存に失敗しました ({}): {}", model_to_save.name, err);
+                                                 }
+                                             } else {
+                                                 eprintln!("[WARN] データベース接続に失敗しました");
                                              }
-                                         }).await.ok();
+                                         }).await {
+                                             eprintln!("[WARN] モデル情報の保存タスクが失敗しました: {}", e);
+                                         }
                                          break;
                                      }
                                  }
                              }
                          }
-                     }
-                 }
-                 
-                 let progress = ModelDownloadProgress {
-                     status: "completed".to_string(),
-                     progress: 100.0,
-                     downloaded_bytes: total_downloaded,
-                     total_bytes: total_size,
-                     speed_bytes_per_sec: 0.0,
-                     message: Some(format!("モデル '{model_name}' のダウンロードが完了しました")),
-                 };
-                 let _ = app_handle.emit("model_download_progress", &progress);
-             }
+                    }
+                }
+                }
+                
+                let total_for_report = if aggregated_total_bytes > 0 {
+                    aggregated_total_bytes
+                } else {
+                    aggregated_downloaded_bytes
+                };
+                let downloaded_for_report = if aggregated_downloaded_bytes > 0 {
+                    aggregated_downloaded_bytes
+                } else {
+                    total_for_report
+                };
+                let progress = ModelDownloadProgress {
+                    status: "completed".to_string(),
+                    progress: 100.0,
+                    downloaded_bytes: downloaded_for_report,
+                    total_bytes: total_for_report,
+                    speed_bytes_per_sec: 0.0,
+                    message: Some(format!("モデル '{model_name}' のダウンロードが完了しました")),
+                };
+                if let Err(e) = app_handle.emit("model_download_progress", &progress) {
+                    eprintln!("[WARN] モデルダウンロード完了イベントの送信に失敗しました: {}", e);
+                }
+            }
          }
      } else {
          // 完了通知（バッファが空の場合）
+         let total_for_report = if aggregated_total_bytes > 0 {
+             aggregated_total_bytes
+         } else {
+             aggregated_downloaded_bytes
+         };
+         let downloaded_for_report = if aggregated_downloaded_bytes > 0 {
+             aggregated_downloaded_bytes
+         } else {
+             total_for_report
+         };
          let final_progress = ModelDownloadProgress {
              status: "completed".to_string(),
              progress: 100.0,
-             downloaded_bytes: total_downloaded,
-             total_bytes: total_size,
+             downloaded_bytes: downloaded_for_report,
+             total_bytes: total_for_report,
              speed_bytes_per_sec: 0.0,
              message: Some(format!("モデル '{model_name}' のダウンロードが完了しました")),
          };
-         let _ = app_handle.emit("model_download_progress", &final_progress);
+         if let Err(e) = app_handle.emit("model_download_progress", &final_progress) {
+             eprintln!("[WARN] モデルダウンロード完了イベントの送信に失敗しました: {}", e);
+         }
      }
      
      Ok(())
@@ -1631,9 +1665,11 @@ pub async fn delete_model(model_name: String) -> Result<(), String> {
     }
     
     // Ollama APIにモデル削除リクエストを送信
+    let base_url = current_ollama_base_url();
+    let delete_endpoint = format!("{}/api/delete", base_url.trim_end_matches('/'));
     let client = crate::utils::http_client::create_http_client()?;
     let response = client
-        .post("http://localhost:11434/api/delete")
+        .post(&delete_endpoint)
         .json(&serde_json::json!({
             "name": model_name.clone()
         }))
@@ -1685,10 +1721,28 @@ pub async fn get_installed_models() -> Result<Vec<InstalledModelInfo>, String> {
     })? {
         let client = match crate::utils::http_client::create_http_client() {
             Ok(client) => client,
-            Err(_) => return Ok(Vec::new()),
+            Err(e) => {
+                // HTTPクライアントの作成に失敗した場合、データベースの情報のみを返す
+                // エラーをログに記録するが、データベースから取得した情報は返す
+                eprintln!("[WARN] HTTPクライアントの作成に失敗しました。データベースの情報のみを返します: {}", e);
+                // データベースから取得したモデル情報を返す（Ollama APIからの追加情報なし）
+                // InstalledModelInfo形式に変換
+                let result: Vec<InstalledModelInfo> = installed_models.into_iter().map(|model| {
+                    InstalledModelInfo {
+                        name: model.name,
+                        size: model.size as u64,
+                        parameters: model.parameters,
+                        installed_at: model.installed_at.to_rfc3339(),
+                        last_used_at: model.last_used_at.map(|d| d.to_rfc3339()),
+                        usage_count: model.usage_count,
+                    }
+                }).collect();
+                return Ok(result);
+            }
         };
+        let base_url = current_ollama_base_url();
         if let Ok(response) = client
-            .get("http://localhost:11434/api/tags")
+            .get(&format!("{}/api/tags", base_url.trim_end_matches('/')))
             .send()
             .await
         {
@@ -1729,14 +1783,20 @@ pub async fn get_installed_models() -> Result<Vec<InstalledModelInfo>, String> {
                         
                         // データベースを一括更新（spawn_blocking内で実行）
                         let models_to_save = installed_models.clone();
-                        tokio::task::spawn_blocking(move || {
+                        if let Err(e) = tokio::task::spawn_blocking(move || {
                             if let Ok(conn) = get_connection() {
                                 let model_repo = InstalledModelRepository::new(&conn);
                                 for model in models_to_save {
-                                    let _ = model_repo.upsert(&model);
+                                    if let Err(err) = model_repo.upsert(&model) {
+                                        eprintln!("[WARN] モデル情報の保存に失敗しました ({}): {}", model.name, err);
                                 }
+                                }
+                            } else {
+                                eprintln!("[WARN] データベース接続に失敗しました");
                             }
-                        }).await.ok();
+                        }).await {
+                            eprintln!("[WARN] モデル情報の一括更新タスクが失敗しました: {}", e);
+                        }
                     }
                 }
             }
@@ -2199,19 +2259,31 @@ fn mask_sensitive_data(body: &str) -> String {
         
         let mut masked = body.to_string();
         for (pattern, replacement) in sensitive_patterns {
-            masked = regex::Regex::new(pattern)
-                .unwrap_or_else(|_| {
+            // 正規表現のコンパイルを試みる
+            let regex = match regex::Regex::new(pattern) {
+                Ok(re) => re,
+                Err(_) => {
                     // 正規表現のコンパイルに失敗した場合は、空の正規表現を使用
                     // 空の正規表現は常にマッチしないため、安全
-                    regex::Regex::new("(?!)").unwrap_or_else(|_| {
-                        // これも失敗する可能性は極めて低いが、念のため
-                        // 空文字列の正規表現は常に成功する（コンパイルエラーにならない）
-                        regex::Regex::new("")
-                            .expect("空文字列の正規表現コンパイルは常に成功するはず")
-                    })
-                })
-                .replace_all(&masked, replacement)
-                .to_string();
+                    match regex::Regex::new("(?!)") {
+                        Ok(re) => re,
+                        Err(_) => {
+                            // これも失敗する可能性は極めて低いが、念のため
+                            // 空文字列の正規表現は常に成功する（コンパイルエラーにならない）
+                            // 万が一失敗した場合は、元の文字列をそのまま返す
+                            match regex::Regex::new("") {
+                                Ok(re) => re,
+                                Err(_) => {
+                                    // すべての正規表現コンパイルに失敗した場合（理論上発生しない）
+                                    // このパターンはスキップして次のパターンに進む
+                                    continue;
+                                }
+                            }
+                        }
+                    }
+                }
+            };
+            masked = regex.replace_all(&masked, replacement).to_string();
         }
         
         if masked == body {
@@ -2454,6 +2526,12 @@ pub async fn import_api_settings(request: ImportApiSettingsRequest) -> Result<Im
                                     // 名前が使用されている場合は番号を追加
                                     new_name = format!("{} ({})", api_data.name, counter);
                                     counter += 1;
+                                    
+                                    // 無限ループを防ぐ（最大100回まで試行）
+                                    if counter > 100 {
+                                        new_name = format!("{} ({})", api_data.name, chrono::Utc::now().timestamp());
+                                        break;
+                                    }
                                 },
                                 #[allow(non_snake_case)]
                                 Ok(None) => {
@@ -2642,7 +2720,9 @@ pub async fn get_huggingface_model_info(model_id: String) -> Result<crate::utils
 
 /// セキュリティ設定取得コマンド
 #[tauri::command]
-pub async fn get_security_settings(api_id: String) -> Result<Option<serde_json::Value>, String> {
+#[allow(non_snake_case)] // Tauri v2のフロントエンドとの互換性のためcamelCaseを使用
+pub async fn get_security_settings(apiId: String) -> Result<Option<serde_json::Value>, String> {
+    let api_id = apiId; // Tauri v2の自動変換に対応
     use crate::database::repository::security_repository::ApiSecuritySettingsRepository;
     
     let conn = get_connection().map_err(|e| {
@@ -2659,7 +2739,12 @@ pub async fn get_security_settings(api_id: String) -> Result<Option<serde_json::
             let ip_whitelist: Vec<String> = settings.ip_whitelist
                 .as_ref()
                 .and_then(|s| serde_json::from_str(s).ok())
-                .unwrap_or_default();
+                .unwrap_or_else(|| {
+                    if let Some(json_str) = settings.ip_whitelist.as_ref() {
+                        eprintln!("[WARN] IPホワイトリストJSONのパースエラー (JSON: {})", json_str);
+                    }
+                    Vec::new()
+                });
             
             let result = serde_json::json!({
                 "ip_whitelist": ip_whitelist,
@@ -2938,6 +3023,178 @@ pub async fn save_error_log(request: SaveErrorLogRequest) -> Result<(), String> 
     })?;
     
     Ok(())
+}
+
+/// エラーログ一覧取得リクエスト
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ListErrorLogsRequest {
+    pub error_category: Option<String>,
+    pub api_id: Option<String>,
+    pub limit: Option<i32>,
+    pub offset: Option<i32>,
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+}
+
+/// エラーログ情報
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ErrorLogInfo {
+    pub id: String,
+    pub error_category: String,
+    pub error_message: String,
+    pub error_stack: Option<String>,
+    pub context: Option<String>,
+    pub source: Option<String>,
+    pub api_id: Option<String>,
+    pub user_agent: Option<String>,
+    pub created_at: String,
+}
+
+/// エラーログ一覧取得コマンド
+#[tauri::command]
+pub async fn list_error_logs(request: ListErrorLogsRequest) -> Result<Vec<ErrorLogInfo>, String> {
+    let conn = get_connection().map_err(|e| {
+        format!("データベース接続エラー: {}", e)
+    })?;
+    
+    let error_log_repo = ErrorLogRepository::new(&conn);
+    
+    let error_logs = error_log_repo.find_with_filters(
+        request.error_category.as_deref(),
+        request.api_id.as_deref(),
+        request.limit,
+        request.offset,
+        request.start_date.as_deref(),
+        request.end_date.as_deref(),
+    ).map_err(|e| format!("エラーログの取得に失敗しました: {}", e))?;
+    
+    let error_log_infos: Vec<ErrorLogInfo> = error_logs.into_iter().map(|log| {
+        ErrorLogInfo {
+            id: log.id,
+            error_category: log.error_category,
+            error_message: log.error_message,
+            error_stack: log.error_stack,
+            context: log.context,
+            source: log.source,
+            api_id: log.api_id,
+            user_agent: log.user_agent,
+            created_at: log.created_at,
+        }
+    }).collect();
+    
+    Ok(error_log_infos)
+}
+
+/// エラーログエクスポートリクエスト
+#[derive(Debug, Serialize, Deserialize)]
+pub struct ExportErrorLogsRequest {
+    pub format: String, // "csv", "json", "txt"
+    pub error_category: Option<String>,
+    pub api_id: Option<String>,
+    pub start_date: Option<String>,
+    pub end_date: Option<String>,
+}
+
+/// エラーログエクスポートコマンド
+#[tauri::command]
+pub async fn export_error_logs(request: ExportErrorLogsRequest) -> Result<String, String> {
+    let conn = get_connection().map_err(|e| {
+        format!("データベース接続エラー: {}", e)
+    })?;
+    
+    let error_log_repo = ErrorLogRepository::new(&conn);
+    
+    let error_logs = error_log_repo.find_with_filters(
+        request.error_category.as_deref(),
+        request.api_id.as_deref(),
+        None, // エクスポート時は全件取得
+        None,
+        request.start_date.as_deref(),
+        request.end_date.as_deref(),
+    ).map_err(|e| format!("エラーログの取得に失敗しました: {}", e))?;
+    
+    let format = request.format.to_lowercase();
+    let content = match format.as_str() {
+        "csv" => {
+            let mut csv = String::from("ID,カテゴリ,メッセージ,スタック,コンテキスト,ソース,API ID,ユーザーエージェント,作成日時\n");
+            for log in &error_logs {
+                csv.push_str(&format!(
+                    "{},\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\",\"{}\"\n",
+                    log.id,
+                    log.error_category,
+                    log.error_message.replace('"', "\"\""),
+                    log.error_stack.as_deref().unwrap_or("").replace('"', "\"\""),
+                    log.context.as_deref().unwrap_or("").replace('"', "\"\""),
+                    log.source.as_deref().unwrap_or(""),
+                    log.api_id.as_deref().unwrap_or(""),
+                    log.user_agent.as_deref().unwrap_or(""),
+                    log.created_at,
+                ));
+            }
+            csv
+        },
+        "json" => {
+            // ErrorLogInfoに変換してからシリアライズ
+            let error_log_infos: Vec<ErrorLogInfo> = error_logs.into_iter().map(|log| {
+                ErrorLogInfo {
+                    id: log.id,
+                    error_category: log.error_category,
+                    error_message: log.error_message,
+                    error_stack: log.error_stack,
+                    context: log.context,
+                    source: log.source,
+                    api_id: log.api_id,
+                    user_agent: log.user_agent,
+                    created_at: log.created_at,
+                }
+            }).collect();
+            serde_json::to_string_pretty(&error_log_infos).map_err(|e| {
+                format!("JSONシリアライズエラー: {}", e)
+            })?
+        },
+        "txt" => {
+            let mut txt = String::from("エラーログ一覧\n");
+            txt.push_str(&"=".repeat(80));
+            txt.push('\n');
+            for log in &error_logs {
+                txt.push_str(&format!(
+                    "\nID: {}\nカテゴリ: {}\nメッセージ: {}\n",
+                    log.id, log.error_category, log.error_message
+                ));
+                if let Some(stack) = &log.error_stack {
+                    txt.push_str(&format!("スタックトレース:\n{}\n", stack));
+                }
+                if let Some(context) = &log.context {
+                    txt.push_str(&format!("コンテキスト: {}\n", context));
+                }
+                if let Some(source) = &log.source {
+                    txt.push_str(&format!("ソース: {}\n", source));
+                }
+                if let Some(api_id) = &log.api_id {
+                    txt.push_str(&format!("API ID: {}\n", api_id));
+                }
+                txt.push_str(&format!("作成日時: {}\n", log.created_at));
+                txt.push_str(&"-".repeat(80));
+                txt.push('\n');
+            }
+            txt
+        },
+        _ => return Err("サポートされていない形式です。csv、json、txtのいずれかを指定してください。".to_string()),
+    };
+    
+    // ファイル名を生成（タイムスタンプ付き）
+    let timestamp = Utc::now().format("%Y%m%d_%H%M%S");
+    let filename = format!("error_logs_{}.{}", timestamp, format);
+    
+    // 一時ディレクトリに保存
+    let temp_dir = std::env::temp_dir();
+    let file_path = temp_dir.join(&filename);
+    
+    std::fs::write(&file_path, content).map_err(|e| {
+        format!("ファイルの書き込みに失敗しました: {}", e)
+    })?;
+    
+    Ok(file_path.to_string_lossy().to_string())
 }
 
 /// 監査ログエクスポートリクエスト

@@ -68,8 +68,9 @@
 }
 
 /* 共通スタイルの .header-actions を使用 */
+/* ApiDetailsページ内の .header-actions にのみ適用されるようにスコープを限定 */
 
-.header-actions button {
+.api-details-header .header-actions button {
   padding: var(--spacing-xs) var(--spacing-sm);
   border: 1px solid var(--color-border-light, #e2e8f0);
   border-radius: var(--radius-md);
@@ -84,20 +85,20 @@
   gap: var(--spacing-xs);
 }
 
-[data-theme="dark"] .header-actions button {
+[data-theme="dark"] .api-details-header .header-actions button {
   background: var(--color-bg-primary, #1a202c);
   border-color: var(--color-border, #718096);
   color: var(--color-text-primary, #f7fafc);
 }
 
-.header-actions button:hover {
+.api-details-header .header-actions button:hover {
   background: var(--color-bg-tertiary, #edf2f7);
   border-color: var(--color-border-dark, #a0aec0);
   transform: translateY(-1px);
   box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
 }
 
-[data-theme="dark"] .header-actions button:hover {
+[data-theme="dark"] .api-details-header .header-actions button:hover {
   background: var(--color-bg-tertiary, #4a5568);
 }
 
@@ -504,12 +505,12 @@
     align-items: stretch;
   }
 
-  .header-actions {
+  .api-details-header .header-actions {
     width: 100%;
     justify-content: stretch;
   }
 
-  .header-actions button {
+  .api-details-header .header-actions button {
     flex: 1;
     justify-content: center;
   }

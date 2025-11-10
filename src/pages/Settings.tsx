@@ -80,6 +80,7 @@ interface AppSettings {
   performance_metrics_enabled: boolean | null;
   include_ip_address_in_audit_log: boolean | null;
   device_id_enabled: boolean | null;
+  show_incomplete_features: boolean | null;
 }
 
 /**
@@ -103,11 +104,13 @@ export const Settings: React.FC = () => {
     performance_metrics_enabled: null,
     include_ip_address_in_audit_log: null,
     device_id_enabled: null,
+    show_incomplete_features: null,
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const successMessageTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     message: string;
@@ -148,6 +151,15 @@ export const Settings: React.FC = () => {
     loadSettings();
   }, [loadSettings]);
 
+  useEffect(() => {
+    return () => {
+      if (successMessageTimeoutRef.current) {
+        clearTimeout(successMessageTimeoutRef.current);
+        successMessageTimeoutRef.current = null;
+      }
+    };
+  }, []);
+
   // テーマが変更されたときに設定を更新
   useEffect(() => {
     if (settings.theme !== theme) {
@@ -172,7 +184,13 @@ export const Settings: React.FC = () => {
       setSuccessMessage(t('settings.messages.saveSuccess'));
 
       // 5秒後に成功メッセージを非表示
-      setTimeout(() => setSuccessMessage(null), TIMEOUT.SUCCESS_MESSAGE);
+      if (successMessageTimeoutRef.current) {
+        clearTimeout(successMessageTimeoutRef.current);
+      }
+      successMessageTimeoutRef.current = setTimeout(() => {
+        setSuccessMessage(null);
+        successMessageTimeoutRef.current = null;
+      }, TIMEOUT.SUCCESS_MESSAGE);
     } catch (err) {
       setError(
         err instanceof Error ? err.message : t('settings.messages.saveError')
@@ -188,7 +206,13 @@ export const Settings: React.FC = () => {
       await setTheme(newTheme);
       setSettings(prev => ({ ...prev, theme: newTheme }));
       setSuccessMessage(t('settings.messages.themeChangeSuccess'));
-      setTimeout(() => setSuccessMessage(null), TIMEOUT.ERROR_MESSAGE);
+      if (successMessageTimeoutRef.current) {
+        clearTimeout(successMessageTimeoutRef.current);
+      }
+      successMessageTimeoutRef.current = setTimeout(() => {
+        setSuccessMessage(null);
+        successMessageTimeoutRef.current = null;
+      }, TIMEOUT.ERROR_MESSAGE);
     } catch (err) {
       setError(
         err instanceof Error
@@ -223,13 +247,20 @@ export const Settings: React.FC = () => {
             performance_metrics_enabled: true, // デフォルト: 有効
             include_ip_address_in_audit_log: true, // デフォルト: 有効
             device_id_enabled: true, // デフォルト: 有効（リモート同期機能で使用）
+            show_incomplete_features: false, // デフォルト: 無効（大衆向けのため非表示推奨）
           };
 
           await safeInvoke('update_app_settings', { settings: defaultSettings });
           setSettings(defaultSettings);
           setSuccessMessage(t('settings.messages.resetSuccess'));
 
-          setTimeout(() => setSuccessMessage(null), TIMEOUT.SUCCESS_MESSAGE);
+          if (successMessageTimeoutRef.current) {
+            clearTimeout(successMessageTimeoutRef.current);
+          }
+          successMessageTimeoutRef.current = setTimeout(() => {
+            setSuccessMessage(null);
+            successMessageTimeoutRef.current = null;
+          }, TIMEOUT.SUCCESS_MESSAGE);
         } catch (err) {
           setError(
             err instanceof Error ? err.message : t('settings.messages.resetError')
@@ -421,14 +452,15 @@ export const Settings: React.FC = () => {
                     settings.auto_refresh_interval ||
                     AUTO_REFRESH.DEFAULT_INTERVAL
                   }
-                  onChange={e =>
+                  onChange={e => {
+                    const parsed = parseInt(e.target.value, 10);
                     setSettings({
                       ...settings,
-                      auto_refresh_interval:
-                        parseInt(e.target.value) ||
-                        AUTO_REFRESH.DEFAULT_INTERVAL,
-                    })
-                  }
+                      auto_refresh_interval: isNaN(parsed)
+                        ? AUTO_REFRESH.DEFAULT_INTERVAL
+                        : parsed,
+                    });
+                  }}
                   className="settings-input"
                   aria-label={`自動更新間隔（秒）。最小${AUTO_REFRESH.MIN_INTERVAL}秒、最大${AUTO_REFRESH.MAX_INTERVAL}秒。`}
                 />
@@ -461,13 +493,15 @@ export const Settings: React.FC = () => {
                   value={
                     settings.log_retention_days || LOG_RETENTION.DEFAULT_DAYS
                   }
-                  onChange={e =>
+                  onChange={e => {
+                    const parsed = parseInt(e.target.value, 10);
                     setSettings({
                       ...settings,
-                      log_retention_days:
-                        parseInt(e.target.value) || LOG_RETENTION.DEFAULT_DAYS,
-                    })
-                  }
+                      log_retention_days: isNaN(parsed)
+                        ? LOG_RETENTION.DEFAULT_DAYS
+                        : parsed,
+                    });
+                  }}
                   className="settings-input"
                   aria-label={`ログ保持期間（日数）。最小${LOG_RETENTION.MIN_DAYS}日、最大${LOG_RETENTION.MAX_DAYS}日。`}
                 />
@@ -487,13 +521,13 @@ export const Settings: React.FC = () => {
                   value={
                     settings.audit_log_retention_days ?? 90
                   }
-                  onChange={e =>
+                  onChange={e => {
+                    const parsed = parseInt(e.target.value, 10);
                     setSettings({
                       ...settings,
-                      audit_log_retention_days:
-                        parseInt(e.target.value) || 90,
-                    })
-                  }
+                      audit_log_retention_days: isNaN(parsed) ? 90 : parsed,
+                    });
+                  }}
                   className="settings-input"
                   aria-label={`監査ログ保持期間（日数）。最小${LOG_RETENTION.MIN_DAYS}日、最大${LOG_RETENTION.MAX_DAYS}日。`}
                 />
@@ -647,6 +681,37 @@ export const Settings: React.FC = () => {
                 <span className="settings-hint">
                   このオプションを有効にすると、アプリケーションを閉じる際に実行中のすべてのAPIが自動的に停止されます。
                   無効にすると、アプリを閉じてもAPIは実行し続けます。
+                </span>
+              </div>
+            </section>
+
+            {/* 機能表示設定 */}
+            <section
+              className="settings-section"
+              aria-labelledby="features-heading"
+            >
+              <h2 id="features-heading" className="settings-section-title">
+                機能表示設定
+              </h2>
+              <div className="settings-group">
+                <label className="settings-checkbox-label">
+                  <input
+                    type="checkbox"
+                    checked={settings.show_incomplete_features ?? false}
+                    onChange={e =>
+                      setSettings({
+                        ...settings,
+                        show_incomplete_features: e.target.checked,
+                      })
+                    }
+                    className="settings-checkbox"
+                    aria-label="不完全な機能（開発中）を表示する"
+                  />
+                  <span>不完全な機能（開発中）を表示する</span>
+                </label>
+                <span className="settings-hint">
+                  このオプションを有効にすると、開発中の機能（モデル共有、プラグイン実行など）が表示されます。
+                  大衆向けのため、デフォルトでは非表示になっています。開発者やテスト目的で有効化できます。
                 </span>
               </div>
             </section>
@@ -887,6 +952,7 @@ const EngineUpdateSection: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<{
     [key: string]: string | null;
   }>({});
+  const successMessageTimeoutsRef = useRef<Record<string, NodeJS.Timeout | null>>({});
   const [progress, setProgress] = useState<{
     [key: string]: EngineDownloadProgress | null;
   }>({});
@@ -983,7 +1049,7 @@ const EngineUpdateSection: React.FC = () => {
             });
 
             // インストール実行
-            await safeInvoke('install_engine', { engine_type: engineType });
+            await safeInvoke('install_engine', { engineType });
 
             // イベントリスナーを解除
             unlisten();
@@ -992,10 +1058,15 @@ const EngineUpdateSection: React.FC = () => {
               ...prev,
               [engineType]: `${engineNames[engineType]}のインストールが完了しました`,
             }));
-            setTimeout(
-              () => setSuccessMessage(prev => ({ ...prev, [engineType]: null })),
-              TIMEOUT.SUCCESS_MESSAGE
-            );
+            const existingTimeout = successMessageTimeoutsRef.current[engineType];
+            if (existingTimeout) {
+              clearTimeout(existingTimeout);
+            }
+            const timeoutId = setTimeout(() => {
+              setSuccessMessage(prev => ({ ...prev, [engineType]: null }));
+              successMessageTimeoutsRef.current[engineType] = null;
+            }, TIMEOUT.SUCCESS_MESSAGE);
+            successMessageTimeoutsRef.current[engineType] = timeoutId;
             setProgress(prev => ({ ...prev, [engineType]: null }));
 
             // インストール後に再度検出
@@ -1066,10 +1137,15 @@ const EngineUpdateSection: React.FC = () => {
               ...prev,
               [engineType]: `${engineNames[engineType]}を最新版に更新しました`,
             }));
-            setTimeout(
-              () => setSuccessMessage(prev => ({ ...prev, [engineType]: null })),
-              TIMEOUT.SUCCESS_MESSAGE
-            );
+            const existingTimeout = successMessageTimeoutsRef.current[engineType];
+            if (existingTimeout) {
+              clearTimeout(existingTimeout);
+            }
+            const timeoutId = setTimeout(() => {
+              setSuccessMessage(prev => ({ ...prev, [engineType]: null }));
+              successMessageTimeoutsRef.current[engineType] = null;
+            }, TIMEOUT.SUCCESS_MESSAGE);
+            successMessageTimeoutsRef.current[engineType] = timeoutId;
             setUpdateInfo(prev => ({ ...prev, [engineType]: null }));
             setProgress(prev => ({ ...prev, [engineType]: null }));
 
@@ -1093,6 +1169,17 @@ const EngineUpdateSection: React.FC = () => {
     },
     [engineNames, checkUpdate, setConfirmDialog]
   );
+
+  useEffect(() => {
+    return () => {
+      Object.values(successMessageTimeoutsRef.current).forEach(timeout => {
+        if (timeout) {
+          clearTimeout(timeout);
+        }
+      });
+      successMessageTimeoutsRef.current = {};
+    };
+  }, []);
 
   // 初回マウント時に全エンジンを検出・チェック
   useEffect(() => {

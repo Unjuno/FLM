@@ -58,6 +58,61 @@ where
 
     progress_callback(EngineDownloadProgress {
         status: "installing".to_string(),
+        progress: 50.0,
+        downloaded_bytes: 0,
+        total_bytes: 0,
+        speed_bytes_per_sec: 0.0,
+        message: Some("LM Studioのインストーラーを起動しています...".to_string()),
+    })?;
+
+    // Windowsの場合、インストーラーを実行
+    #[cfg(target_os = "windows")]
+    {
+        let status = Command::new(&download_file)
+            .spawn()
+            .map_err(|e| AppError::ProcessError {
+                message: format!("LM Studioインストーラーの起動に失敗しました: {}", e),
+                source_detail: None,
+            })?
+            .wait()
+            .map_err(|e| AppError::ProcessError {
+                message: format!("LM Studioインストーラーの実行エラー: {}", e),
+                source_detail: None,
+            })?;
+
+        if !status.success() {
+            return Err(AppError::ProcessError {
+                message: "LM Studioのインストールに失敗しました".to_string(),
+                source_detail: None,
+            });
+        }
+    }
+
+    // macOSの場合、DMGをマウントしてインストール
+    #[cfg(target_os = "macos")]
+    {
+        // DMGのマウントとインストール処理（実装が必要）
+        // 現在はダウンロードのみ
+    }
+
+    // Linuxの場合、AppImageを実行可能にする
+    #[cfg(target_os = "linux")]
+    {
+        use std::os::unix::fs::PermissionsExt;
+        let mut perms = fs::metadata(&download_file)
+            .map_err(|e| AppError::IoError {
+                message: format!("ファイル情報取得エラー: {}", e),
+                source_detail: None,
+            })?.permissions();
+        perms.set_mode(0o755);
+        fs::set_permissions(&download_file, perms).map_err(|e| AppError::IoError {
+            message: format!("実行権限設定エラー: {}", e),
+            source_detail: None,
+        })?;
+    }
+
+    progress_callback(EngineDownloadProgress {
+        status: "completed".to_string(),
         progress: 100.0,
         downloaded_bytes: 0,
         total_bytes: 0,

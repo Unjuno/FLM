@@ -4,7 +4,7 @@
 use crate::utils::error::AppError;
 use super::traits::LLMEngine;
 use super::models::{EngineDetectionResult, EngineConfig, ModelInfo};
-use crate::ollama as ollama_module;
+use crate::ollama::{self as ollama_module, current_ollama_base_url, current_ollama_host_port};
 use regex::Regex;
 
 /// デバッグビルドでのみログを出力するマクロ
@@ -238,11 +238,11 @@ impl LLMEngine for OllamaEngine {
     }
     
     fn get_base_url(&self) -> String {
-        "http://localhost:11434".to_string()
+        current_ollama_base_url()
     }
     
     fn default_port(&self) -> u16 {
-        11434
+        current_ollama_host_port().1
     }
     
     fn supports_openai_compatible_api(&self) -> bool {

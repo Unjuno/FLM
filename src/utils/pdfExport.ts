@@ -1,6 +1,6 @@
 // pdfExport - PDFエクスポートユーティリティ
 
-import { printElement, type PrintOptions } from './print';
+import { print, type PrintOptions } from './print';
 import { logger } from './logger';
 
 /**
@@ -95,8 +95,15 @@ const togglePdfExportClass = (
 
 /**
  * 指定された要素をPDFとしてエクスポートします
- * 現在の実装では、ブラウザの印刷機能を使用してPDFとして保存できます。
- * 将来的には、jsPDF等のライブラリを使用した直接的なPDF生成に対応予定です。
+ * 
+ * **現在の実装**: ブラウザの印刷機能を使用してPDFとして保存できます。
+ * ユーザーがブラウザの印刷ダイアログで「PDFに保存」を選択することでPDFを生成します。
+ * 
+ * **将来の実装予定**:
+ * - jsPDF等のライブラリを使用した直接的なPDF生成
+ * - `pageSize`、`orientation`、`margins`オプションの完全対応
+ * - プログラムによるPDFファイルの直接生成とダウンロード
+ * 
  * @param options PDFエクスポートオプション
  * @throws Error 要素が見つからない場合、またはエクスポートに失敗した場合
  */
@@ -129,7 +136,7 @@ export const exportToPdf = async (
       },
     };
 
-    await printElement(printOptions);
+    await print(printOptions);
   } catch (error) {
     logger.error(
       ERROR_MESSAGES.EXPORT_FAILED,
@@ -157,9 +164,16 @@ export interface LogData {
 
 /**
  * ログ一覧をPDFとしてエクスポートします
- * 注意: 現在の実装では`logData`パラメータは使用されません。
- * 将来的にPDFライブラリを使用する際に、データから直接PDFを生成する実装に変更予定です。
- * @param logData ログデータ（将来の実装で使用）
+ * 
+ * **現在の実装**: ブラウザの印刷機能を使用して、画面上のログ一覧をPDFとして保存できます。
+ * 
+ * **将来の実装予定**:
+ * - `logData`パラメータを使用してデータから直接PDFを生成
+ * - PDFライブラリ（jsPDF等）を使用した実装
+ * - ログデータが空の場合の適切なエラーハンドリング
+ * - カスタムフォーマットでのPDF生成
+ * 
+ * @param logData ログデータ（将来の実装で使用予定）
  * @param options エクスポートオプション
  */
 export const exportLogsToPdf = async (
@@ -167,9 +181,8 @@ export const exportLogsToPdf = async (
   options: Omit<PdfExportOptions, 'targetElement'> = {}
 ): Promise<void> => {
   // 将来の実装: logDataを使用してPDFを生成
-  // 現在はブラウザの印刷機能を使用
+  // 現在はブラウザの印刷機能を使用して画面上のログ一覧をPDFとして保存
   // 注意: ログデータが空の場合でも処理を続行（将来的にPDFライブラリを使用する際に実装）
-  // 開発環境での警告は、実装が完了した際に追加予定
 
   await exportToPdf({
     ...options,
@@ -199,8 +212,16 @@ const generateReportTitle = (apiName?: string): string => {
 
 /**
  * パフォーマンスレポートをPDFとしてエクスポートします
- * 注意: 現在の実装では`reportData`パラメータの一部のみ使用されます。
- * 将来的にPDFライブラリを使用する際に、データから直接PDFを生成する実装に変更予定です。
+ * 
+ * **現在の実装**: ブラウザの印刷機能を使用して、画面上のパフォーマンスレポートをPDFとして保存できます。
+ * `reportData.apiName`のみを使用してタイトルを生成します。
+ * 
+ * **将来の実装予定**:
+ * - `reportData`の全データを使用してPDFを生成
+ * - PDFライブラリ（jsPDF等）を使用した実装
+ * - グラフやチャートを含む詳細なレポート生成
+ * - カスタムフォーマットでのPDF生成
+ * 
  * @param reportData レポートデータ
  * @param options エクスポートオプション
  */
@@ -209,7 +230,7 @@ export const exportPerformanceReportToPdf = async (
   options: Omit<PdfExportOptions, 'targetElement'> = {}
 ): Promise<void> => {
   // 将来の実装: reportDataを使用してPDFを生成
-  // 現在はブラウザの印刷機能を使用
+  // 現在はブラウザの印刷機能を使用して画面上のパフォーマンスレポートをPDFとして保存
   const reportTitle = generateReportTitle(reportData.apiName);
 
   await exportToPdf({

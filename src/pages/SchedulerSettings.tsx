@@ -297,9 +297,9 @@ export const SchedulerSettings: React.FC = () => {
                         title="実行間隔（秒）"
                         placeholder="3600"
                         onChange={e => {
+                          const parsed = parseInt(e.target.value, 10);
                           const updatedTasks = [...tasks];
-                          updatedTasks[index].interval_seconds =
-                            parseInt(e.target.value) || 3600;
+                          updatedTasks[index].interval_seconds = isNaN(parsed) ? 3600 : parsed;
                           setTasks(updatedTasks);
                         }}
                         disabled={saving}

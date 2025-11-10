@@ -188,7 +188,7 @@ export async function safeInvoke<T = unknown>(
   }
 
   // キャッシュチェック（読み取り専用コマンドのみ）
-  if (CACHEABLE_COMMANDS.has(cmd) {
+  if (CACHEABLE_COMMANDS.has(cmd)) {
     const cacheKey = args ? `${cmd}:${JSON.stringify(args)}` : cmd;
     const cached = invokeCache.get(cacheKey);
     const now = Date.now();

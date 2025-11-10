@@ -57,7 +57,8 @@ pub async fn delete_schedule_task(task_type: String) -> Result<(), AppError> {
     };
     
     let scheduler = GLOBAL_SCHEDULER.lock().await;
-    scheduler.start_task(task_type_enum).await
+    // タスクを無効化（削除）するため、stop_taskを呼ぶ
+    scheduler.stop_task(task_type_enum).await
 }
 
 /// スケジュールタスクを停止

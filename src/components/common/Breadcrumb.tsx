@@ -76,13 +76,12 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
       <ol className="breadcrumb-list" itemScope itemType="https://schema.org/BreadcrumbList">
         {items.map((item, index) => {
           const isLast = isLastItem(index);
-          const itemClassName = React.useMemo(() => {
-            const classes = ['breadcrumb-item'];
-            if (isLast) {
-              classes.push('breadcrumb-item-current');
-            }
-            return classes.join(' ');
-          }, [isLast]);
+          // useMemoはループ内で使用できないため、通常の変数として計算
+          const classes = ['breadcrumb-item'];
+          if (isLast) {
+            classes.push('breadcrumb-item-current');
+          }
+          const itemClassName = classes.join(' ');
 
           return (
             <li

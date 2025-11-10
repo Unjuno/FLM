@@ -135,7 +135,7 @@ export const HuggingFaceSearch: React.FC = () => {
       // 現在はOllamaモデル名として直接ダウンロードを試みます
       // 将来的には、Hugging FaceモデルをOllama形式に変換する機能を追加する予定
       await safeInvoke('download_model', {
-        model_name: modelId,
+        modelName: modelId,
       });
 
       showSuccess(`モデル "${modelId}" のダウンロードを開始しました`);
