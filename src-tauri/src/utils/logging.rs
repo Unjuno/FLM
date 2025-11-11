@@ -85,16 +85,14 @@ pub fn should_log(level: LogLevel) -> bool {
 /// デバッグログを出力（開発環境でのみ）
 #[macro_export]
 macro_rules! debug_log {
-    ($($arg:tt)*) => {
-        #[cfg(debug_assertions)]
-        {
+    ($($arg:tt)*) => {{
+        if $crate::utils::logging::should_log($crate::utils::logging::LogLevel::Debug) {
             use $crate::utils::logging::mask_file_path;
             let message = format!($($arg)*);
-            // ファイルパスをマスク処理
             let masked_message = mask_file_path(&message);
             eprintln!("[DEBUG] {}", masked_message);
         }
-    };
+    }};
 }
 
 /// 情報ログを出力（本番環境では出力しない）
@@ -142,11 +140,10 @@ macro_rules! error_log {
 /// プロセスIDをログに出力（開発環境でのみ）
 #[macro_export]
 macro_rules! log_pid {
-    ($pid:expr, $($arg:tt)*) => {
-        #[cfg(debug_assertions)]
-        {
+    ($pid:expr, $($arg:tt)*) => {{
+        if $crate::utils::logging::should_log($crate::utils::logging::LogLevel::Debug) {
             eprintln!($($arg)*, $pid);
         }
-    };
+    }};
 }
 

@@ -3,6 +3,18 @@
 
 use crate::utils::error::AppError;
 use serde::{Deserialize, Serialize};
+use std::collections::HashMap;
+use std::sync::Mutex;
+use std::time::SystemTime;
+use lazy_static::lazy_static;
+
+// OAuth state管理用のストレージ（セキュリティ対策）
+lazy_static! {
+    static ref OAUTH_STATES: Mutex<HashMap<String, SystemTime>> = Mutex::new(HashMap::new());
+}
+
+// Stateの有効期限（10分）
+const STATE_EXPIRY_SECONDS: u64 = 600;
 
 /// OAuth 2.0設定
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,11 +38,40 @@ pub struct OAuthToken {
     pub scope: Option<Vec<String>>,
 }
 
+/// 期限切れのstateをクリーンアップ
+fn cleanup_expired_states() {
+    let mut states = OAUTH_STATES.lock().unwrap();
+    let now = SystemTime::now();
+    states.retain(|_, &mut timestamp| {
+        now.duration_since(timestamp)
+            .map(|d| d.as_secs() < STATE_EXPIRY_SECONDS)
+            .unwrap_or(false)
+    });
+}
+
+/// OAuth認証フロー開始結果
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct OAuthFlowStartResult {
+    pub auth_url: String,
+    pub state: String,
+}
+
 /// OAuth 2.0認証フローを開始
-pub async fn start_oauth_flow(config: &OAuthConfig) -> Result<String, AppError> {
+pub async fn start_oauth_flow(config: &OAuthConfig) -> Result<OAuthFlowStartResult, AppError> {
+    // 期限切れのstateをクリーンアップ
+    cleanup_expired_states();
+    
     // 認証URLを生成
     let state = uuid::Uuid::new_v4().to_string();
     let scope = config.scope.join(" ");
+    
+    // stateを保存（CSRF対策）
+    let mut states = OAUTH_STATES.lock().map_err(|e| AppError::ApiError {
+        message: format!("OAuth state管理のロック取得に失敗しました: {}", e),
+        code: "OAUTH_STATE_LOCK_ERROR".to_string(),
+        source_detail: None,
+    })?;
+    states.insert(state.clone(), SystemTime::now());
     
     let auth_url = format!(
         "{}?client_id={}&redirect_uri={}&response_type=code&scope={}&state={}",
@@ -41,7 +82,10 @@ pub async fn start_oauth_flow(config: &OAuthConfig) -> Result<String, AppError> 
         state
     );
     
-    Ok(auth_url)
+    Ok(OAuthFlowStartResult {
+        auth_url,
+        state,
+    })
 }
 
 /// URLエンコーディング（手動実装）
@@ -59,7 +103,39 @@ fn encode_url(s: &str) -> String {
 pub async fn exchange_code_for_token(
     config: &OAuthConfig,
     code: &str,
+    state: &str,
 ) -> Result<OAuthToken, AppError> {
+    // stateの検証（CSRF対策）
+    let state_timestamp = {
+        let mut states = OAUTH_STATES.lock().map_err(|e| AppError::ApiError {
+            message: format!("OAuth state管理のロック取得に失敗しました: {}", e),
+            code: "OAUTH_STATE_LOCK_ERROR".to_string(),
+            source_detail: None,
+        })?;
+        
+        states.remove(state).ok_or_else(|| AppError::ApiError {
+        message: "無効または期限切れのstateパラメータです。認証フローを最初からやり直してください。".to_string(),
+        code: "INVALID_STATE".to_string(),
+        source_detail: None,
+        })
+    }?;
+
+    // 期限チェック
+    let now = SystemTime::now();
+    let elapsed = now.duration_since(state_timestamp).map_err(|_| AppError::ApiError {
+        message: "stateのタイムスタンプが無効です".to_string(),
+        code: "INVALID_STATE_TIMESTAMP".to_string(),
+        source_detail: None,
+    })?;
+    
+    if elapsed.as_secs() > STATE_EXPIRY_SECONDS {
+        return Err(AppError::ApiError {
+            message: "stateパラメータの有効期限が切れています。認証フローを最初からやり直してください。".to_string(),
+            code: "STATE_EXPIRED".to_string(),
+            source_detail: None,
+        });
+    }
+
     let client = crate::utils::http_client::create_http_client()?;
     
     let params = [

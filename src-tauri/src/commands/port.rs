@@ -41,9 +41,15 @@ pub fn is_port_available(port: u16) -> bool {
 }
 
 /// APIポートペアが使用可能かどうかをチェック
-/// 現在の実装では単一のポートをチェックします
 pub fn is_api_port_pair_available(port: u16) -> bool {
-    is_port_available(port)
+    if !is_port_available(port) {
+        return false;
+    }
+
+    match port.checked_add(1) {
+        Some(https_port) => is_port_available(https_port),
+        None => false,
+    }
 }
 
 /// 使用可能なポート番号を検出
@@ -59,7 +65,7 @@ pub async fn find_available_port(start_port: Option<u16>) -> Result<PortDetectio
     let end_port = (start as u32 + max_ports_to_check).min(65535) as u16;
     
     for port in start..end_port {
-        if is_port_available(port) {
+        if is_api_port_pair_available(port) {
             if !found {
                 recommended_port = port;
                 found = true;
@@ -78,18 +84,26 @@ pub async fn find_available_port(start_port: Option<u16>) -> Result<PortDetectio
     if !found {
         // 別の範囲から検索（8000から）
         for port in 8000..9000 {
-            if is_port_available(port) {
+            if is_api_port_pair_available(port) {
                 recommended_port = port;
                 found = true;
                 
                 // 追加の代替ポートを検索
-                for alt_port in (port + 1)..(port + 6).min(65535) {
-                    if is_port_available(alt_port) {
+                let mut alt_port = match port.checked_add(1) {
+                    Some(next) => next,
+                    None => break,
+                };
+                while alt_port <= u16::MAX {
+                    if is_api_port_pair_available(alt_port) {
                         alternative_ports.push(alt_port);
                         if alternative_ports.len() >= 5 {
                             break;
                         }
                     }
+                    alt_port = match alt_port.checked_add(1) {
+                        Some(next) => next,
+                        None => break,
+                    };
                 }
                 break;
             }
@@ -112,12 +126,22 @@ pub async fn find_available_port(start_port: Option<u16>) -> Result<PortDetectio
 #[tauri::command]
 pub async fn check_port_availability(port: u16) -> Result<bool, String> {
     eprintln!("ポート {} の使用可能性をチェック中...", port);
-    let available = is_port_available(port);
+
+    let https_port = match port.checked_add(1) {
+        Some(value) => value,
+        None => {
+            eprintln!("✗ ポート {} はHTTPSペアを確保できないため使用できません", port);
+            return Ok(false);
+        }
+    };
+
+    let available = is_api_port_pair_available(port);
     if available {
-        eprintln!("✓ ポート {} は使用可能です", port);
+        eprintln!("✓ ポートペア {} / {} は使用可能です", port, https_port);
     } else {
-        eprintln!("✗ ポート {} は既に使用されています", port);
+        eprintln!("✗ ポートペア {} / {} は使用できません", port, https_port);
     }
+
     Ok(available)
 }
 
@@ -131,7 +155,7 @@ pub async fn resolve_port_conflicts() -> Result<Vec<PortConflictResolution>, Str
     for api in apis {
         let port = api.port as u16;
 
-        if is_port_available(port) {
+        if is_api_port_pair_available(port) {
             continue;
         }
 
@@ -139,18 +163,24 @@ pub async fn resolve_port_conflicts() -> Result<Vec<PortConflictResolution>, Str
             continue;
         }
 
-        let mut candidate = port.saturating_add(1);
+        let mut candidate = match port.checked_add(1) {
+            Some(next) => next,
+            None => continue,
+        };
         let mut replacement = None;
 
         for _ in 0..100 {
             if candidate == 0 {
                 break;
             }
-            if is_port_available(candidate) {
+            if is_api_port_pair_available(candidate) {
                 replacement = Some(candidate);
                 break;
             }
-            candidate = candidate.saturating_add(1);
+            candidate = match candidate.checked_add(1) {
+                Some(next) => next,
+                None => break,
+            };
         }
 
         let new_port = match replacement {
@@ -230,4 +260,6 @@ mod tests {
         assert_eq!(resolution.new_port, 8081);
     }
 }
+
+
 

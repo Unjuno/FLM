@@ -13,6 +13,7 @@ use std::collections::HashMap;
 use uuid::Uuid;
 use bytes::Bytes;
 use tauri::Emitter;
+use crate::{debug_log, error_log, info_log, warn_log};
 // ログマクロをインポート（必要に応じて使用）
 // use crate::{debug_log, error_log, log_pid};
 
@@ -106,31 +107,34 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
     // 5. ポート番号の決定（自動検出）
     // まず、要求されたポートが使用可能かチェック（TCPレベル）
     let requested_port = config.port.unwrap_or(8080);
-    eprintln!("API作成: ポート {} の検証を開始します", requested_port);
+    if requested_port > 65534 {
+        return Err("ポート番号 65535 は使用できません。HTTPS通信には隣接するポートを利用する必要があるため、1024から65534の範囲で指定してください。".to_string());
+    }
+    info_log!("API作成: ポート {} の検証を開始します", requested_port);
     
     let port_available = match crate::commands::port::check_port_availability(requested_port).await {
         Ok(available) => available,
         Err(e) => {
-            eprintln!("警告: ポート検証エラー: {}。自動検出を試みます。", e);
+            warn_log!("警告: ポート検証エラー: {}。自動検出を試みます。", e);
             false
         }
     };
     
     let port = if port_available {
-        eprintln!("✓ ポート {} を使用します", requested_port);
+        info_log!("✓ ポート {} を使用します", requested_port);
         requested_port as i32
     } else {
-        eprintln!("ポート {} は使用中のため、代替ポートを検出中...", requested_port);
+        info_log!("ポート {} は使用中のため、代替ポートを検出中...", requested_port);
         // TCPレベルで使用中の場合は、自動的に利用可能なポートを検出
         match crate::commands::port::find_available_port(Some(requested_port)).await {
             Ok(port_result) => {
-                eprintln!("✓ 代替ポート {} を使用します", port_result.recommended_port);
+                info_log!("✓ 代替ポート {} を使用します", port_result.recommended_port);
                 port_result.recommended_port as i32
             },
             Err(e) => {
-                eprintln!("✗ 代替ポートの検出に失敗しました: {}", e);
+                error_log!("✗ 代替ポートの検出に失敗しました: {}", e);
                 // 最後の手段: 8000-9000の範囲からランダムに試す
-                eprintln!("ポート範囲 8000-9000 から検索中...");
+                info_log!("ポート範囲 8000-9000 から検索中...");
                 let mut fallback_port = None;
                 for p in 8000..9000 {
                     if crate::commands::port::is_api_port_pair_available(p) {
@@ -140,7 +144,7 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
                 }
                 match fallback_port {
                     Some(p) => {
-                        eprintln!("✓ フォールバックポート {} を使用します", p);
+                        info_log!("✓ フォールバックポート {} を使用します", p);
                         p as i32
                     },
                     None => {
@@ -152,8 +156,8 @@ pub async fn create_api(config: ApiCreateConfig) -> Result<ApiCreateResponse, St
     };
     
     // ポート番号の範囲チェック（念のため）
-    if port < 1024 || port > 65535 {
-        return Err(format!("無効なポート番号: {}。ポート番号は1024から65535の間である必要があります。", port));
+    if port < 1024 || port > 65534 {
+        return Err(format!("無効なポート番号: {}。ポート番号は1024から65534の間である必要があります。HTTPS通信には隣接するポートが必要です。", port));
     }
     
     // 6. 認証設定のデフォルト値
@@ -441,113 +445,132 @@ pub async fn start_api(apiId: String) -> Result<(), String> {
     // 注意: 証明書生成はstart_apiで行う（認証プロキシ起動時）
     // API作成時は証明書生成をスキップ（Node.js側で自動生成される）
     
-    // 4. 認証プロキシを起動（認証が有効な場合）
-    if enable_auth {
-        fn is_addr_in_use_error(error: &AppError) -> bool {
-            match error {
-                AppError::AuthError { message, .. }
-                | AppError::ProcessError { message, .. }
-                | AppError::ConnectionError { message, .. } => {
-                    message.contains("EADDRINUSE")
-                        || message.contains("address already in use")
-                        || message.contains("ポート") && message.contains("使用")
-                }
-                _ => false,
+    // 4. 認証プロキシを起動（認証有無に関わらずプロキシは必須）
+    fn is_addr_in_use_error(error: &AppError) -> bool {
+        match error {
+            AppError::AuthError { message, .. }
+            | AppError::ProcessError { message, .. }
+            | AppError::ConnectionError { message, .. } => {
+                message.contains("EADDRINUSE")
+                    || message.contains("address already in use")
+                    || (message.contains("ポート") && message.contains("使用"))
             }
+            _ => false,
         }
+    }
 
-        let mut current_port = selected_port;
-        let mut attempts = 0;
+    let mut current_port = selected_port;
+    let mut attempts = 0;
+
+    if debug_mode {
+        if enable_auth {
+            debug_log!(" ===== 認証プロキシ起動処理開始 =====");
+        } else {
+            debug_log!(" ===== プロキシ起動処理開始（認証なし） =====");
+        }
+        debug_log!(
+            " プロキシ起動設定: ポート={}, API_ID={}, エンジン={}, ベースURL={}",
+            current_port,
+            api_id,
+            engine_type.as_deref().unwrap_or("ollama"),
+            engine_base_url
+        );
+        debug_log!(" ポート {} の使用状況を再確認中...", current_port);
+    }
+
+    loop {
         if debug_mode {
-            eprintln!("[DEBUG] ===== 認証プロキシ起動処理開始 =====");
-            eprintln!("[DEBUG] 認証プロキシ起動設定: ポート={}, API_ID={}, エンジン={}, ベースURL={}",
-                current_port, api_id, engine_type.as_deref().unwrap_or("ollama"), engine_base_url);
-            eprintln!("[DEBUG] ポート {} の使用状況を再確認中...", current_port);
+            debug_log!(
+                " start_auth_proxyを呼び出します (ポート {}, 認証={})...",
+                current_port,
+                enable_auth
+            );
         }
-
-        loop {
-            if debug_mode {
-                eprintln!("[DEBUG] start_auth_proxyを呼び出します (ポート {})...", current_port);
+        match auth::start_auth_proxy(
+            current_port as u16,
+            None,
+            Some(engine_base_url.clone()),
+            Some(api_id.clone()),
+            engine_type.clone(),
+            enable_auth,
+        )
+        .await
+        {
+            Ok(_) => {
+                if debug_mode {
+                    debug_log!(
+                        " ✓ プロキシの起動に成功しました (ポート {}, 認証={})",
+                        current_port,
+                        enable_auth
+                    );
+                    debug_log!(" ===== プロキシ起動処理完了 =====");
+                }
+                selected_port = current_port;
+                if selected_port != port {
+                    port_changed = true;
+                }
+                break;
             }
-            match auth::start_auth_proxy(
-                current_port as u16,
-                None,
-                Some(engine_base_url.clone()),
-                Some(api_id.clone()),
-                engine_type.clone(),
-            ).await {
-                Ok(_) => {
+            Err(e) => {
+                if is_addr_in_use_error(&e) && attempts < 20 {
+                    attempts += 1;
                     if debug_mode {
-                        eprintln!("[DEBUG] ✓ 認証プロキシの起動に成功しました (ポート {})", current_port);
-                        eprintln!("[DEBUG] ===== 認証プロキシ起動処理完了 =====");
+                        warn_log!(
+                            " ポート {} が使用中のため再試行します (試行回数: {})",
+                            current_port,
+                            attempts
+                        );
                     }
-                    selected_port = current_port;
-                    if selected_port != port {
-                        port_changed = true;
-                    }
-                    break;
-                }
-                Err(e) => {
-                    if is_addr_in_use_error(&e) && attempts < 20 {
-                        attempts += 1;
-                        if debug_mode {
-                            eprintln!("[WARN] ポート {} が使用中のため再試行します (試行回数: {})", current_port, attempts);
-                        }
 
-                        const PORT_MIN: u16 = 1024;
-                        let mut next_port = current_port as u32 + 1;
-                        let mut wrapped = false;
-                        let mut candidate: Option<u16> = None;
+                    const PORT_MIN: u16 = 1024;
+                    let mut next_port = current_port as u32 + 1;
+                    let mut wrapped = false;
+                    let mut candidate: Option<u16> = None;
 
-                        loop {
-                            if next_port > u16::MAX as u32 {
-                                if wrapped {
-                                    break;
-                                }
-                                next_port = PORT_MIN as u32;
-                                wrapped = true;
-                            }
-
-                            let port_candidate = next_port as u16;
-                            if crate::commands::port::is_api_port_pair_available(port_candidate) {
-                                candidate = Some(port_candidate);
+                    loop {
+                        if next_port > u16::MAX as u32 {
+                            if wrapped {
                                 break;
                             }
-
-                            next_port += 1;
-
-                            if wrapped && port_candidate == current_port {
-                                break;
-                            }
+                            next_port = PORT_MIN as u32;
+                            wrapped = true;
                         }
 
-                        let Some(new_port) = candidate else {
-                            return Err(format!(
-                                "認証プロキシの起動に失敗しました: {}. 使用可能な別のポートを自動的に検出できませんでした。",
-                                e
-                            ));
-                        };
+                        let port_candidate = next_port as u16;
+                        if crate::commands::port::is_api_port_pair_available(port_candidate) {
+                            candidate = Some(port_candidate);
+                            break;
+                        }
 
-                        current_port = new_port;
-                        update_port_in_db(current_port).await?;
-                        port_changed = true;
-                        continue;
-                    } else {
-                        eprintln!("[ERROR] ===== 認証プロキシ起動エラー =====");
-                        eprintln!("[ERROR] エラー詳細: {:?}", e);
-                        eprintln!("[ERROR] ポート: {}", current_port);
-                        eprintln!("[ERROR] API_ID: {}", api_id);
+                        next_port += 1;
+
+                        if wrapped && port_candidate == current_port {
+                            break;
+                        }
+                    }
+
+                    let Some(new_port) = candidate else {
                         return Err(format!(
-                            "認証プロキシの起動に失敗しました: {}. ポート番号 {} が他のアプリケーションで使用されていないか確認してください。",
-                            e, current_port
+                            "認証プロキシの起動に失敗しました: {}. 使用可能な別のポートを自動的に検出できませんでした。",
+                            e
                         ));
-                    }
+                    };
+
+                    current_port = new_port;
+                    update_port_in_db(current_port).await?;
+                    port_changed = true;
+                    continue;
+                } else {
+                    error_log!(" ===== 認証プロキシ起動エラー =====");
+                    error_log!(" エラー詳細: {:?}", e);
+                    error_log!(" ポート: {}", current_port);
+                    error_log!(" API_ID: {}", api_id);
+                    return Err(format!(
+                        "認証プロキシの起動に失敗しました: {}. ポート番号 {} が他のアプリケーションで使用されていないか確認してください。",
+                        e, current_port
+                    ));
                 }
             }
-        }
-    } else {
-        if debug_mode {
-            eprintln!("[DEBUG] 認証は無効のため、認証プロキシは起動しません");
         }
     }
     
@@ -645,8 +668,8 @@ pub async fn stop_all_running_apis() -> Result<(), String> {
     let debug_mode = std::env::var("FLM_DEBUG").unwrap_or_default() == "1";
     
     if debug_mode {
-        eprintln!("[DEBUG] ===== 全API停止処理開始 =====");
-        eprintln!("[DEBUG] 実行中のAPI一覧を取得中...");
+        debug_log!(" ===== 全API停止処理開始 =====");
+        debug_log!(" 実行中のAPI一覧を取得中...");
     }
     
     // 1. 実行中のAPI一覧を取得
@@ -674,17 +697,17 @@ pub async fn stop_all_running_apis() -> Result<(), String> {
     let debug_mode = std::env::var("FLM_DEBUG").unwrap_or_default() == "1";
     
     if debug_mode {
-        eprintln!("[DEBUG] 実行中のAPI数: {}", running_apis.len());
+        debug_log!(" 実行中のAPI数: {}", running_apis.len());
     }
     
     // 2. 各APIを停止（監査レポートの推奨事項に基づきプロセス監視を強化）
     for (api_id, port) in running_apis {
         if debug_mode {
-            eprintln!("[DEBUG] API停止中: ID={}, ポート={}", api_id, port);
+            debug_log!(" API停止中: ID={}, ポート={}", api_id, port);
         }
         // 認証プロキシを停止
         if let Err(e) = auth::stop_auth_proxy_by_port(port).await {
-            eprintln!("警告: ポート {} の認証プロキシ停止に失敗しました: {:?}", port, e);
+            warn_log!("警告: ポート {} の認証プロキシ停止に失敗しました: {:?}", port, e);
             // エラーが発生しても処理を続行
         }
         
@@ -693,7 +716,7 @@ pub async fn stop_all_running_apis() -> Result<(), String> {
         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
         let is_still_running = auth::check_proxy_running(port).await;
         if is_still_running {
-            eprintln!("警告: ポート {} のプロセスが停止していない可能性があります。手動で確認してください。", port);
+            warn_log!("警告: ポート {} のプロセスが停止していない可能性があります。手動で確認してください。", port);
         }
         
         // ステータスを更新（同期的に実行）
@@ -719,16 +742,16 @@ pub async fn stop_all_running_apis() -> Result<(), String> {
                 // 成功
             }
             Ok(Err(e)) => {
-                eprintln!("警告: API {} のステータス更新に失敗しました: {}", api_id, e);
+                warn_log!("警告: API {} のステータス更新に失敗しました: {}", api_id, e);
             }
             Err(e) => {
-                eprintln!("警告: API {} のステータス更新タスクが失敗しました: {}", api_id, e);
+                warn_log!("警告: API {} のステータス更新タスクが失敗しました: {}", api_id, e);
             }
         }
     }
     
     if debug_mode {
-        eprintln!("[DEBUG] ===== 全API停止処理完了 =====");
+        debug_log!(" ===== 全API停止処理完了 =====");
     }
     Ok(())
 }
@@ -802,7 +825,7 @@ pub async fn get_api_details(apiId: String) -> Result<ApiDetailsResponse, String
                 // 暗号化されたキーを復号化
                 let encrypted_str = STANDARD.encode(&key_data.encrypted_key);
                 encryption::decrypt_api_key(&encrypted_str).map_err(|e| {
-                    eprintln!("[WARN] APIキーの復号化に失敗しました: {}", e);
+                    warn_log!(" APIキーの復号化に失敗しました: {}", e);
                     e
                 }).ok()
             }
@@ -938,7 +961,7 @@ pub async fn update_api(api_id: String, config: ApiUpdateConfig) -> Result<(), S
     if needs_restart_flag && was_running {
         // 1. 既存の認証プロキシを停止（古いポート番号で）
         if let Err(e) = auth::stop_auth_proxy_by_port(old_port as u16).await {
-            eprintln!("[WARN] 認証プロキシの停止に失敗しました（ポート {}）: {}", old_port, e);
+            warn_log!(" 認証プロキシの停止に失敗しました（ポート {}）: {}", old_port, e);
         }
         
         // 2. エンジンタイプとベースURLを取得（再起動時に必要）
@@ -990,7 +1013,8 @@ pub async fn update_api(api_id: String, config: ApiUpdateConfig) -> Result<(), S
                 None, 
                 Some(engine_base_url_for_restart.clone()), 
                 Some(api_id.clone()),
-                engine_type_for_restart.clone()
+                engine_type_for_restart.clone(),
+                new_enable_auth,
             ).await.map_err(|_| {
                 "セキュリティ機能の再起動に失敗しました。ポート番号が他のアプリで使用されていないか確認してください。".to_string()
             })?;
@@ -1211,7 +1235,7 @@ fn extract_parameter_size(model_name: &str) -> Option<String> {
     // モデル名からパラメータ数を推定（例: "llama3:8b" -> "8B", "mistral:7b" -> "7B"）
     // 正規表現パターン: 数字の後に "b" または "B" が続くパターンを探す
     let re = regex::Regex::new(r"(\d+(?:\.\d+)?)\s*[bB]").map_err(|e| {
-        eprintln!("[WARN] パラメータサイズ抽出用の正規表現コンパイルに失敗しました: {}", e);
+        warn_log!(" パラメータサイズ抽出用の正規表現コンパイルに失敗しました: {}", e);
         e
     }).ok()?;
     if let Some(captures) = re.captures(model_name) {
@@ -1256,38 +1280,38 @@ pub async fn download_model(
     use futures_util::StreamExt;
     
     // Ollamaが実行中か確認
-    eprintln!("[DEBUG] ===== モデルダウンロード開始 =====");
-    eprintln!("[DEBUG] モデル名: {}", model_name);
-    eprintln!("[DEBUG] Ollamaの実行状態を確認中...");
+    debug_log!(" ===== モデルダウンロード開始 =====");
+    debug_log!(" モデル名: {}", model_name);
+    debug_log!(" Ollamaの実行状態を確認中...");
     
     match check_ollama_running().await {
         Ok(true) => {
-            eprintln!("[DEBUG] ✓ Ollamaは実行中です");
+            debug_log!(" ✓ Ollamaは実行中です");
         },
         Ok(false) => {
-            eprintln!("[ERROR] ✗ Ollamaが実行されていません");
+            error_log!(" ✗ Ollamaが実行されていません");
             return Err("AIエンジンが実行されていません。先にAIエンジンを起動してください。ホーム画面から「Ollamaセットアップ」を実行するか、Ollamaを手動で起動してください。".to_string());
         },
         Err(e) => {
-            eprintln!("[ERROR] Ollama状態確認エラー: {:?}", e);
+            error_log!(" Ollama状態確認エラー: {:?}", e);
             return Err(format!("AIエンジンの状態を確認できませんでした。Ollamaが正常にインストールされているか確認してください。エラー詳細: {}", e));
         }
     }
     
     let base_url = current_ollama_base_url();
     let pull_endpoint = format!("{}/api/pull", base_url.trim_end_matches('/'));
-    eprintln!("[DEBUG] Ollama APIにモデルダウンロードリクエストを送信: {}", pull_endpoint);
+    debug_log!(" Ollama APIにモデルダウンロードリクエストを送信: {}", pull_endpoint);
     
     // Ollama APIにモデルダウンロードリクエストを送信
     let client = reqwest::Client::builder()
         .timeout(std::time::Duration::from_secs(30)) // タイムアウトを30秒に設定
         .build()
         .map_err(|e| {
-            eprintln!("[ERROR] HTTPクライアント作成エラー: {:?}", e);
+            error_log!(" HTTPクライアント作成エラー: {:?}", e);
             format!("HTTPクライアントの作成に失敗しました: {}", e)
         })?;
     
-    eprintln!("[DEBUG] モデルダウンロードリクエスト送信: モデル名={}", model_name);
+    debug_log!(" モデルダウンロードリクエスト送信: モデル名={}", model_name);
     let response = client
         .post(&pull_endpoint)
         .json(&serde_json::json!({
@@ -1297,7 +1321,7 @@ pub async fn download_model(
         .send()
         .await
         .map_err(|e| {
-            eprintln!("[ERROR] Ollama API接続エラー: {:?}", e);
+            error_log!(" Ollama API接続エラー: {:?}", e);
             let error_msg = if e.is_timeout() {
                 format!("Ollama APIへの接続がタイムアウトしました（30秒）。Ollamaが正常に起動しているか確認してください。エラー詳細: {}", e)
             } else if e.is_connect() {
@@ -1309,13 +1333,13 @@ pub async fn download_model(
             error_msg
         })?;
     
-    eprintln!("[DEBUG] Ollama APIレスポンス受信: ステータスコード={}", response.status());
+    debug_log!(" Ollama APIレスポンス受信: ステータスコード={}", response.status());
     
     let status = response.status();
     if !status.is_success() {
-        eprintln!("[ERROR] ✗ Ollama APIエラー: ステータスコード={}", status);
+        error_log!(" ✗ Ollama APIエラー: ステータスコード={}", status);
         let error_body = response.text().await.unwrap_or_else(|_| "レスポンス本文を読み取れませんでした".to_string());
-        eprintln!("[ERROR] エラー詳細: {}", error_body);
+        error_log!(" エラー詳細: {}", error_body);
         
         // エラーレスポンスをJSONとして解析して、より詳細なエラーメッセージを取得
         let error_message = if let Ok(error_json) = serde_json::from_str::<serde_json::Value>(&error_body) {
@@ -1331,7 +1355,7 @@ pub async fn download_model(
         return Err(error_message);
     }
     
-    eprintln!("[DEBUG] ✓ Ollama APIリクエスト成功、ストリーミング開始");
+    debug_log!(" ✓ Ollama APIリクエスト成功、ストリーミング開始");
     
     // ストリーミングレスポンスを処理
     // Ollama APIは各行がJSONオブジェクトの形式で進捗を返す
@@ -1391,7 +1415,7 @@ pub async fn download_model(
         let chunk: Bytes = match chunk_result {
             Ok(chunk) => chunk,
             Err(e) => {
-                eprintln!("[ERROR] ストリーミングデータ受信エラー: {:?}", e);
+                error_log!(" ストリーミングデータ受信エラー: {:?}", e);
                 let error_msg = if e.is_timeout() {
                     format!("ダウンロード中にタイムアウトが発生しました。ネットワーク接続を確認してください。エラー詳細: {}", e)
                 } else if e.is_request() {
@@ -1412,7 +1436,7 @@ pub async fn download_model(
                 };
                 // エラー進捗を送信（送信に失敗しても処理は続行）
                 if let Err(e) = app_handle.emit("model_download_progress", &error_progress) {
-                    eprintln!("[WARN] エラー進捗の送信に失敗しました: {}", e);
+                    warn_log!(" エラー進捗の送信に失敗しました: {}", e);
                 }
                 return Err(error_msg);
             }
@@ -1463,7 +1487,7 @@ pub async fn download_model(
                 if let Ok(json) = serde_json::from_str::<serde_json::Value>(&line_str) {
                     // エラーレスポンスをチェック
                     if let Some(error_msg) = json.get("error").and_then(|e| e.as_str()) {
-                        eprintln!("[ERROR] Ollama APIからエラーレスポンスを受信: {}", error_msg);
+                        error_log!(" Ollama APIからエラーレスポンスを受信: {}", error_msg);
                         // 値をコピーして借用チェックを回避
                         let current_downloaded_bytes = aggregated_downloaded_bytes;
                         let current_total_bytes = aggregated_total_bytes;
@@ -1477,7 +1501,7 @@ pub async fn download_model(
                         };
                         // エラー進捗を送信（送信に失敗しても処理は続行）
                         if let Err(e) = app_handle.emit("model_download_progress", &error_progress) {
-                            eprintln!("[WARN] エラー進捗の送信に失敗しました: {}", e);
+                            warn_log!(" エラー進捗の送信に失敗しました: {}", e);
                         }
                         return Err(format!("モデルダウンロード中にエラーが発生しました: {}", error_msg));
                     }
@@ -1525,7 +1549,7 @@ pub async fn download_model(
                         };
                         
                         if let Err(e) = app_handle.emit("model_download_progress", &progress) {
-                            eprintln!("[WARN] モデルダウンロード進捗イベントの送信に失敗しました: {}", e);
+                            warn_log!(" モデルダウンロード進捗イベントの送信に失敗しました: {}", e);
                         }
                         last_progress_update = std::time::Instant::now();
                     }
@@ -1561,7 +1585,7 @@ pub async fn download_model(
                                          let parameters = extract_parameter_size(name)
                                              .and_then(|ps| {
                                                 ps.trim_end_matches('B').parse::<i64>().map_err(|e| {
-                                                    eprintln!("[WARN] パラメータサイズのパースに失敗しました (値: {}): {}", ps, e);
+                                                    warn_log!(" パラメータサイズのパースに失敗しました (値: {}): {}", ps, e);
                                                     e
                                                 }).ok()
                                                      .map(|p| p * 1_000_000_000)
@@ -1582,13 +1606,13 @@ pub async fn download_model(
                                              if let Ok(conn) = get_connection() {
                                                  let model_repo = InstalledModelRepository::new(&conn);
                                                  if let Err(err) = model_repo.upsert(&model_to_save) {
-                                                     eprintln!("[WARN] モデル情報の保存に失敗しました ({}): {}", model_to_save.name, err);
+                                                     warn_log!(" モデル情報の保存に失敗しました ({}): {}", model_to_save.name, err);
                                                  }
                                              } else {
-                                                 eprintln!("[WARN] データベース接続に失敗しました");
+                                                 warn_log!(" データベース接続に失敗しました");
                                              }
                                          }).await {
-                                             eprintln!("[WARN] モデル情報の保存タスクが失敗しました: {}", e);
+                                             warn_log!(" モデル情報の保存タスクが失敗しました: {}", e);
                                          }
                                          break;
                                      }
@@ -1618,7 +1642,7 @@ pub async fn download_model(
                     message: Some(format!("モデル '{model_name}' のダウンロードが完了しました")),
                 };
                 if let Err(e) = app_handle.emit("model_download_progress", &progress) {
-                    eprintln!("[WARN] モデルダウンロード完了イベントの送信に失敗しました: {}", e);
+                    warn_log!(" モデルダウンロード完了イベントの送信に失敗しました: {}", e);
                 }
             }
          }
@@ -1643,7 +1667,7 @@ pub async fn download_model(
              message: Some(format!("モデル '{model_name}' のダウンロードが完了しました")),
          };
          if let Err(e) = app_handle.emit("model_download_progress", &final_progress) {
-             eprintln!("[WARN] モデルダウンロード完了イベントの送信に失敗しました: {}", e);
+             warn_log!(" モデルダウンロード完了イベントの送信に失敗しました: {}", e);
          }
      }
      
@@ -1724,7 +1748,7 @@ pub async fn get_installed_models() -> Result<Vec<InstalledModelInfo>, String> {
             Err(e) => {
                 // HTTPクライアントの作成に失敗した場合、データベースの情報のみを返す
                 // エラーをログに記録するが、データベースから取得した情報は返す
-                eprintln!("[WARN] HTTPクライアントの作成に失敗しました。データベースの情報のみを返します: {}", e);
+                warn_log!(" HTTPクライアントの作成に失敗しました。データベースの情報のみを返します: {}", e);
                 // データベースから取得したモデル情報を返す（Ollama APIからの追加情報なし）
                 // InstalledModelInfo形式に変換
                 let result: Vec<InstalledModelInfo> = installed_models.into_iter().map(|model| {
@@ -1788,14 +1812,14 @@ pub async fn get_installed_models() -> Result<Vec<InstalledModelInfo>, String> {
                                 let model_repo = InstalledModelRepository::new(&conn);
                                 for model in models_to_save {
                                     if let Err(err) = model_repo.upsert(&model) {
-                                        eprintln!("[WARN] モデル情報の保存に失敗しました ({}): {}", model.name, err);
+                                        warn_log!(" モデル情報の保存に失敗しました ({}): {}", model.name, err);
                                 }
                                 }
                             } else {
-                                eprintln!("[WARN] データベース接続に失敗しました");
+                                warn_log!(" データベース接続に失敗しました");
                             }
                         }).await {
-                            eprintln!("[WARN] モデル情報の一括更新タスクが失敗しました: {}", e);
+                            warn_log!(" モデル情報の一括更新タスクが失敗しました: {}", e);
                         }
                     }
                 }
@@ -2741,7 +2765,7 @@ pub async fn get_security_settings(apiId: String) -> Result<Option<serde_json::V
                 .and_then(|s| serde_json::from_str(s).ok())
                 .unwrap_or_else(|| {
                     if let Some(json_str) = settings.ip_whitelist.as_ref() {
-                        eprintln!("[WARN] IPホワイトリストJSONのパースエラー (JSON: {})", json_str);
+                        warn_log!(" IPホワイトリストJSONのパースエラー (JSON: {})", json_str);
                     }
                     Vec::new()
                 });

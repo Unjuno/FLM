@@ -32,8 +32,8 @@ interface LoggerConfig {
 function isDebugMode(): boolean {
   return (
     isDev() ||
-    process.env.FLM_DEBUG === '1' ||
-    process.env.FLM_DEBUG === 'true' ||
+    (typeof process !== 'undefined' &&
+      (process.env.FLM_DEBUG === '1' || process.env.FLM_DEBUG === 'true')) ||
     (typeof window !== 'undefined' &&
       (window as unknown as { FLM_DEBUG?: string }).FLM_DEBUG === '1')
   );

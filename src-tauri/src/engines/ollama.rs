@@ -162,8 +162,12 @@ impl LLMEngine for OllamaEngine {
         let result = ollama_module::start_ollama(ollama_path).await;
         
         match &result {
-            Ok(pid) => debug_log!("OllamaEngine::start 成功: PID={}", pid),
-            Err(e) => error_log!("OllamaEngine::start 失敗: {:?}", e),
+            Ok(pid) => {
+                debug_log!("OllamaEngine::start 成功: PID={}", pid);
+            }
+            Err(e) => {
+                error_log!("OllamaEngine::start 失敗: {:?}", e);
+            }
         }
         
         result

@@ -2,6 +2,8 @@
 // アプリバンドル方式: FLMインストーラーにOllamaバイナリを含める機能
 
 use crate::utils::error::AppError;
+#[cfg(not(target_os = "windows"))]
+use std::fs;
 use std::path::PathBuf;
 
 /// バンドルされたOllamaバイナリのパスを取得

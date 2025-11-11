@@ -1,6 +1,6 @@
 // OAuth 2.0認証コマンド
 
-use crate::auth::oauth::{OAuthConfig, OAuthToken, start_oauth_flow, exchange_code_for_token, refresh_access_token};
+use crate::auth::oauth::{OAuthConfig, OAuthToken, OAuthFlowStartResult, start_oauth_flow, exchange_code_for_token, refresh_access_token};
 use crate::utils::error::AppError;
 use serde::{Deserialize, Serialize};
 
@@ -52,17 +52,17 @@ fn convert_token(token: OAuthToken) -> OAuthTokenOutput {
 
 /// OAuth 2.0認証フローを開始
 /// 
-/// 認証URLを生成し、ブラウザで開くためのURLを返します。
+/// 認証URLを生成し、ブラウザで開くためのURLとstateを返します。
 /// 
 /// # 引数
 /// * `config` - OAuth設定情報
 /// 
 /// # 戻り値
-/// * 認証URL（文字列）
+/// * 認証URLとstateを含む結果
 #[tauri::command]
 pub async fn start_oauth_flow_command(
     config: OAuthConfigInput,
-) -> Result<String, String> {
+) -> Result<OAuthFlowStartResult, String> {
     let oauth_config = convert_config(config);
     
     start_oauth_flow(&oauth_config)
@@ -80,7 +80,7 @@ pub async fn start_oauth_flow_command(
 /// # 引数
 /// * `config` - OAuth設定情報
 /// * `code` - 認証コード
-/// * `state` - ステート（セキュリティ用）
+/// * `state` - ステート（セキュリティ用、CSRF対策）
 /// 
 /// # 戻り値
 /// * OAuthトークン情報
@@ -88,11 +88,11 @@ pub async fn start_oauth_flow_command(
 pub async fn exchange_oauth_code(
     config: OAuthConfigInput,
     code: String,
-    _state: String,
+    state: String,
 ) -> Result<OAuthTokenOutput, String> {
     let oauth_config = convert_config(config);
     
-    exchange_code_for_token(&oauth_config, &code)
+    exchange_code_for_token(&oauth_config, &code, &state)
         .await
         .map(convert_token)
         .map_err(|e| match e {

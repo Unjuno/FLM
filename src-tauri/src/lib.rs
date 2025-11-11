@@ -6,6 +6,7 @@ mod database;
 mod ollama;
 mod auth;
 mod auth_proxy;
+#[macro_use]
 pub mod utils;
 pub mod engines;
 pub mod plugins;
@@ -23,6 +24,7 @@ use commands::suggestions;
 use commands::remote_sync;
 use commands::oauth;
 use commands::updater;
+use commands::model_converter;
 // Plugin, scheduler, and model_sharing modules are used in invoke_handler!
 // use commands::plugin;
 // use commands::scheduler;
@@ -32,43 +34,6 @@ use tauri::Manager;
 use lazy_static::lazy_static;
 use std::sync::{Mutex, atomic::{AtomicBool, Ordering}};
 use tokio::runtime::Runtime;
-
-/// デバッグビルドでのみログを出力するマクロ
-#[cfg(debug_assertions)]
-macro_rules! debug_log {
-    ($($arg:tt)*) => {
-        eprintln!("[DEBUG] {}", format!($($arg)*));
-    };
-}
-
-#[cfg(not(debug_assertions))]
-macro_rules! debug_log {
-    ($($arg:tt)*) => {};
-}
-
-/// 警告ログを出力するマクロ（常に出力）
-macro_rules! warn_log {
-    ($($arg:tt)*) => {
-        eprintln!("[WARN] {}", format!($($arg)*));
-    };
-}
-
-/// エラーログを出力するマクロ（常に出力）
-macro_rules! error_log {
-    ($($arg:tt)*) => {
-        eprintln!("[ERROR] {}", format!($($arg)*));
-    };
-}
-
-/// アプリケーション情報取得コマンド
-#[tauri::command]
-fn get_app_info() -> AppInfo {
-    AppInfo {
-        name: "FLM".to_string(),
-        version: "1.0.0".to_string(),
-        description: "Local LLM API Management Tool".to_string(),
-    }
-}
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct AppInfo {
@@ -319,7 +284,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             greet,
-            get_app_info,
+            commands::get_app_info,
             commands::ollama::detect_ollama,
             commands::ollama::download_ollama,
             commands::ollama::start_ollama,
@@ -343,6 +308,7 @@ pub fn run() {
             api::download_model,
             api::delete_model,
             api::get_installed_models,
+            model_converter::convert_model,
             api::save_request_log,
             api::get_request_logs,
             api::save_error_log,

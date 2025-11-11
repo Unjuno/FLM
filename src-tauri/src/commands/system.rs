@@ -776,17 +776,27 @@ pub async fn detect_security_block() -> Result<SecurityBlockDetection, String> {
             Ok(client) => client,
             Err(_) => {
                 // HTTPクライアント作成に失敗した場合、バックエンドは応答していないと見なす
-                return Ok(SecurityBlockDetection {
-                    backend_responding: false,
-                    port_1420_listening,
-                    #[cfg(windows)]
-                    process_running,
-                    #[cfg(not(windows))]
-                    process_running: true,
-                    likely_blocked: false,
-                    issues,
-                    recommendations,
-                });
+                #[cfg(windows)]
+                {
+                    return Ok(SecurityBlockDetection {
+                        backend_responding: false,
+                        port_1420_listening,
+                        process_running,
+                        likely_blocked: false,
+                        issues,
+                        recommendations,
+                    });
+                }
+                #[cfg(not(windows))]
+                {
+                    return Ok(SecurityBlockDetection {
+                        backend_responding: false,
+                        port_1420_listening,
+                        likely_blocked: false,
+                        issues,
+                        recommendations,
+                    });
+                }
             }
         };
         
@@ -856,15 +866,27 @@ pub async fn detect_security_block() -> Result<SecurityBlockDetection, String> {
         recommendations.push("タスクマネージャーで flm.exe や node.exe のプロセスを確認し、必要に応じて強制終了してください。".to_string());
     }
     
-    Ok(SecurityBlockDetection {
-        backend_responding,
-        port_1420_listening,
-        #[cfg(windows)]
-        process_running,
-        likely_blocked,
-        issues,
-        recommendations,
-    })
+    #[cfg(windows)]
+    {
+        Ok(SecurityBlockDetection {
+            backend_responding,
+            port_1420_listening,
+            process_running,
+            likely_blocked,
+            issues,
+            recommendations,
+        })
+    }
+    #[cfg(not(windows))]
+    {
+        Ok(SecurityBlockDetection {
+            backend_responding,
+            port_1420_listening,
+            likely_blocked,
+            issues,
+            recommendations,
+        })
+    }
 }
 
 /// ネットワーク診断結果
