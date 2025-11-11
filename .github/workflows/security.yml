@@ -30,20 +30,36 @@ jobs:
         run: npm ci
       
       - name: Run npm audit
+        run: npm audit --audit-level=high
+        continue-on-error: false
+      
+      - name: Run npm audit (moderate and low)
         run: npm audit --audit-level=moderate
         continue-on-error: true
+        if: always()
       
       - name: Setup Rust
         uses: dtolnay/rust-toolchain@stable
       
+      - name: Cache cargo-audit
+        uses: actions/cache@v4
+        with:
+          path: ~/.cargo/bin
+          key: ${{ runner.os }}-cargo-audit-${{ hashFiles('**/Cargo.lock') }}
+          restore-keys: |
+            ${{ runner.os }}-cargo-audit-
+      
       - name: Install cargo-audit
-        run: cargo install cargo-audit --locked
+        run: |
+          if ! command -v cargo-audit &> /dev/null; then
+            cargo install cargo-audit --locked
+          fi
       
       - name: Run cargo audit
         working-directory: src-tauri
         run: cargo audit
-        continue-on-error: true
+        continue-on-error: false
       
       - name: Run security tests
         run: npm run test:security
-        continue-on-error: true
+        continue-on-error: false

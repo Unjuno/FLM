@@ -36,6 +36,30 @@ jobs:
       - name: Run tests with coverage
         run: npm run test:coverage
 
+      - name: Check coverage threshold
+        run: |
+          if [ -f coverage/lcov.info ]; then
+            # カバレッジ閾値チェック（80%以上）
+            # lcov.infoから総行数とカバーされた行数を抽出
+            TOTAL_LINES=$(awk '/^LF:/ {sum += $2} END {print sum+0}' coverage/lcov.info)
+            HIT_LINES=$(awk '/^LH:/ {sum += $2} END {print sum+0}' coverage/lcov.info)
+            if [ "$TOTAL_LINES" != "0" ] && [ -n "$TOTAL_LINES" ]; then
+              COVERAGE=$(awk "BEGIN {printf \"%.2f\", ($HIT_LINES / $TOTAL_LINES) * 100}")
+              echo "Coverage: ${COVERAGE}% (${HIT_LINES}/${TOTAL_LINES} lines)"
+              # awkで数値比較（80未満なら失敗）
+              if awk "BEGIN {exit ($COVERAGE < 80) ? 1 : 0}"; then
+                echo "✅ Coverage meets threshold (${COVERAGE}%)"
+              else
+                echo "❌ Coverage is below 80% threshold (${COVERAGE}%)"
+                exit 1
+              fi
+            else
+              echo "⚠️ Could not parse coverage data, skipping threshold check"
+            fi
+          else
+            echo "⚠️ Coverage file not found, skipping threshold check"
+          fi
+
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
         if: always()
@@ -73,13 +97,9 @@ jobs:
         working-directory: src-tauri
         run: cargo fmt -- --check
 
-      - name: Build Rust project (for Clippy)
-        working-directory: src-tauri
-        run: cargo build
-
       - name: Run Clippy
         working-directory: src-tauri
-        run: cargo clippy -- -D warnings
+        run: cargo clippy --all-targets -- -D warnings
 
       - name: Build Rust project (release)
         working-directory: src-tauri
@@ -87,4 +107,4 @@ jobs:
 
       - name: Run Rust tests
         working-directory: src-tauri
-        run: cargo test
+        run: cargo test --release
