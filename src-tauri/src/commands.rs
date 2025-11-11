@@ -1,22 +1,22 @@
 // Tauri IPCコマンド定義
 
-pub mod ollama;
-pub mod api;
-pub mod database;
-pub mod performance;
-pub mod settings;
 pub mod alerts;
+pub mod api;
 pub mod backup;
+pub mod database;
 pub mod engine;
-pub mod system;
-pub mod port;
-pub mod suggestions;
-pub mod remote_sync;
-pub mod plugin;
-pub mod scheduler;
-pub mod model_sharing;
 pub mod model_converter;
+pub mod model_sharing;
 pub mod oauth;
+pub mod ollama;
+pub mod performance;
+pub mod plugin;
+pub mod port;
+pub mod remote_sync;
+pub mod scheduler;
+pub mod settings;
+pub mod suggestions;
+pub mod system;
 pub mod updater;
 
 use crate::AppInfo;
@@ -36,4 +36,3 @@ pub fn get_app_info() -> AppInfo {
         description: env!("CARGO_PKG_DESCRIPTION").to_string(),
     }
 }
-

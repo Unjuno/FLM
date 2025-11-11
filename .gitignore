@@ -57,3 +57,16 @@ test-results.txt
 *.check_output*.txt
 src-tauri/check_output*.txt
 
+# Backup files
+*.bak
+*.backup
+*~
+
+# Temporary scripts
+fix_*.cjs
+fix_*.js
+tmp_*.py
+
+# Unknown files
+ersjunnyDesktopFLLM
+

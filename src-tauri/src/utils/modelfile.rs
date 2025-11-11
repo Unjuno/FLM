@@ -8,48 +8,48 @@ use serde::{Deserialize, Serialize};
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ModelfileConfig {
     pub model_name: String,
-    pub base_model: Option<String>, // ベースモデル（FROM句）
+    pub base_model: Option<String>,    // ベースモデル（FROM句）
     pub system_prompt: Option<String>, // SYSTEMプロンプト
-    pub template: Option<String>, // テンプレート
-    pub parameters: Option<String>, // パラメータ（temperature, top_p等）
-    pub adapter_path: Option<String>, // アダプターパス
-    pub license: Option<String>, // ライセンス情報
+    pub template: Option<String>,      // テンプレート
+    pub parameters: Option<String>,    // パラメータ（temperature, top_p等）
+    pub adapter_path: Option<String>,  // アダプターパス
+    pub license: Option<String>,       // ライセンス情報
 }
 
 /// Modelfileを生成
 pub fn generate_modelfile(config: &ModelfileConfig) -> String {
     let mut modelfile = String::new();
-    
+
     // FROM句
     if let Some(base_model) = &config.base_model {
         modelfile.push_str(&format!("FROM {}\n", base_model));
     }
-    
+
     // SYSTEMプロンプト
     if let Some(system_prompt) = &config.system_prompt {
         modelfile.push_str(&format!("SYSTEM \"\"\"\n{}\n\"\"\"\n", system_prompt));
     }
-    
+
     // テンプレート
     if let Some(template) = &config.template {
         modelfile.push_str(&format!("TEMPLATE \"\"\"\n{}\n\"\"\"\n", template));
     }
-    
+
     // パラメータ
     if let Some(parameters) = &config.parameters {
         modelfile.push_str(&format!("PARAMETER {}\n", parameters));
     }
-    
+
     // アダプター
     if let Some(adapter_path) = &config.adapter_path {
         modelfile.push_str(&format!("ADAPTER {}\n", adapter_path));
     }
-    
+
     // ライセンス
     if let Some(license) = &config.license {
         modelfile.push_str(&format!("LICENSE \"\"\"\n{}\n\"\"\"\n", license));
     }
-    
+
     modelfile
 }
 
@@ -64,18 +64,18 @@ pub fn parse_modelfile(modelfile_content: &str) -> Result<ModelfileConfig, AppEr
         adapter_path: None,
         license: None,
     };
-    
+
     let lines: Vec<&str> = modelfile_content.lines().collect();
     let mut i = 0;
-    
+
     while i < lines.len() {
         let line = lines[i].trim();
-        
+
         if line.is_empty() || line.starts_with('#') {
             i += 1;
             continue;
         }
-        
+
         if line.starts_with("FROM ") {
             config.base_model = Some(line[5..].trim().to_string());
         } else if line.starts_with("SYSTEM ") {
@@ -123,9 +123,9 @@ pub fn parse_modelfile(modelfile_content: &str) -> Result<ModelfileConfig, AppEr
             }
             config.license = Some(license.trim().to_string());
         }
-        
+
         i += 1;
     }
-    
+
     Ok(config)
 }

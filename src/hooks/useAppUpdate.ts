@@ -113,13 +113,15 @@ export function useAppUpdate(options?: {
    * アップデートのインストール
    */
   const installUpdate = useCallback(async () => {
+    let unlisten: (() => void) | null = null;
+    
     try {
       setInstalling(true);
       setError(null);
       setProgress(null);
 
       // 進捗イベントをリッスン
-      const unlisten = await listen<UpdateProgress>('app_update_progress', (event) => {
+      unlisten = await listen<UpdateProgress>('app_update_progress', (event) => {
         if (event.payload) {
           setProgress(event.payload);
         }
@@ -128,13 +130,19 @@ export function useAppUpdate(options?: {
       // アップデートをインストール
       await safeInvoke('install_app_update');
 
-      // イベントリスナーを解除
-      unlisten();
-
       // インストール完了後、アプリケーションが再起動される
+      // 再起動前に状態をリセット（再起動が失敗した場合に備える）
+      setInstalling(false);
+      setProgress(null);
     } catch (err) {
       setError(err instanceof Error ? err.message : 'アップデートのインストールに失敗しました');
       setInstalling(false);
+      setProgress(null);
+    } finally {
+      // イベントリスナーを必ず解除（成功・失敗に関わらず）
+      if (unlisten) {
+        unlisten();
+      }
     }
   }, []);
 

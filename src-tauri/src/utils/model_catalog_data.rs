@@ -6,7 +6,7 @@ use crate::database::models::ModelCatalog;
 /// 主要なOllamaモデルの詳細情報を取得
 pub fn get_predefined_model_catalog() -> Vec<ModelCatalog> {
     let now = chrono::Utc::now();
-    
+
     vec![
         // Llama 3 シリーズ
         ModelCatalog {
@@ -1111,5 +1111,3 @@ pub fn get_predefined_model_catalog() -> Vec<ModelCatalog> {
         },
     ]
 }
-
-

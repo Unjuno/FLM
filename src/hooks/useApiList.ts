@@ -44,8 +44,9 @@ export const useApiList = () => {
 
   /**
    * API一覧を取得
+   * @param force 強制更新フラグ（trueの場合、クールダウンチェックをスキップ）
    */
-  const loadApis = useCallback(async () => {
+  const loadApis = useCallback(async (force: boolean = false) => {
     if (!isMounted()) return;
     
     // 既にローディング中の場合はスキップ
@@ -53,13 +54,16 @@ export const useApiList = () => {
       return;
     }
     
-    // 最後のリクエストから一定時間経過していない場合はスキップ
-    const now = Date.now();
-    const timeSinceLastRequest = now - lastRequestTimeRef.current;
-    if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
-      return;
+    // 強制更新でない場合、最後のリクエストから一定時間経過していない場合はスキップ
+    if (!force) {
+      const now = Date.now();
+      const timeSinceLastRequest = now - lastRequestTimeRef.current;
+      if (timeSinceLastRequest < MIN_REQUEST_INTERVAL) {
+        return;
+      }
     }
     
+    const now = Date.now();
     isLoadingRef.current = true;
     lastRequestTimeRef.current = now;
     
@@ -181,7 +185,7 @@ export const useApiList = () => {
 
   /**
    * キャッシュをクリアしてAPI一覧を再読み込み
-   * 明示的なリフレッシュのため、最小間隔チェックは緩和
+   * 明示的なリフレッシュのため、クールダウンチェックをスキップ
    */
   const refreshApis = useCallback(async () => {
     // 既にローディング中の場合はスキップ（明示的なリフレッシュでも重複を防ぐ）
@@ -189,7 +193,8 @@ export const useApiList = () => {
       return;
     }
     clearInvokeCache('list_apis');
-    await loadApis();
+    // 強制更新フラグを有効にして、クールダウンチェックをスキップ
+    await loadApis(true);
   }, [loadApis]);
 
   return {

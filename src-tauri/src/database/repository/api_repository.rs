@@ -1,8 +1,8 @@
 // API Repository
 
-use rusqlite::{Connection, params, Error as RusqliteError, types::Type};
+use crate::database::{models::Api, models::ApiStatus, DatabaseError};
 use chrono::{DateTime, Utc};
-use crate::database::{DatabaseError, models::Api, models::ApiStatus};
+use rusqlite::{params, types::Type, Connection, Error as RusqliteError};
 
 /// APIリポジトリ
 pub struct ApiRepository;
@@ -14,9 +14,9 @@ impl ApiRepository {
         let mut stmt = conn.prepare(
             "SELECT id, name, model, port, enable_auth, status, 
              COALESCE(engine_type, 'ollama'), engine_config, created_at, updated_at 
-             FROM apis ORDER BY created_at DESC"
+             FROM apis ORDER BY created_at DESC",
         )?;
-        
+
         let api_iter = stmt.query_map([], |row| {
             Ok(Api {
                 id: row.get(0)?,
@@ -28,31 +28,35 @@ impl ApiRepository {
                 engine_type: row.get::<_, Option<String>>(6)?,
                 engine_config: row.get::<_, Option<String>>(7)?,
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
-                    .map_err(|_| RusqliteError::InvalidColumnType(8, "created_at".to_string(), Type::Text))?
+                    .map_err(|_| {
+                        RusqliteError::InvalidColumnType(8, "created_at".to_string(), Type::Text)
+                    })?
                     .with_timezone(&Utc),
                 updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
-                    .map_err(|_| RusqliteError::InvalidColumnType(9, "updated_at".to_string(), Type::Text))?
+                    .map_err(|_| {
+                        RusqliteError::InvalidColumnType(9, "updated_at".to_string(), Type::Text)
+                    })?
                     .with_timezone(&Utc),
             })
         })?;
-        
+
         let mut apis = Vec::new();
         for api in api_iter {
             apis.push(api?);
         }
-        
+
         Ok(apis)
     }
-    
+
     /// IDでAPIを取得
     #[allow(dead_code)]
     pub fn find_by_id(conn: &Connection, id: &str) -> Result<Option<Api>, DatabaseError> {
         let mut stmt = conn.prepare(
             "SELECT id, name, model, port, enable_auth, status, 
              COALESCE(engine_type, 'ollama'), engine_config, created_at, updated_at 
-             FROM apis WHERE id = ?"
+             FROM apis WHERE id = ?",
         )?;
-        
+
         let api_result = stmt.query_row(params![id], |row| {
             Ok(Api {
                 id: row.get(0)?,
@@ -64,30 +68,34 @@ impl ApiRepository {
                 engine_type: row.get::<_, Option<String>>(6)?,
                 engine_config: row.get::<_, Option<String>>(7)?,
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
-                    .map_err(|_| RusqliteError::InvalidColumnType(8, "created_at".to_string(), Type::Text))?
+                    .map_err(|_| {
+                        RusqliteError::InvalidColumnType(8, "created_at".to_string(), Type::Text)
+                    })?
                     .with_timezone(&Utc),
                 updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
-                    .map_err(|_| RusqliteError::InvalidColumnType(9, "updated_at".to_string(), Type::Text))?
+                    .map_err(|_| {
+                        RusqliteError::InvalidColumnType(9, "updated_at".to_string(), Type::Text)
+                    })?
                     .with_timezone(&Utc),
             })
         });
-        
+
         match api_result {
             Ok(api) => Ok(Some(api)),
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(e) => Err(DatabaseError::from(e)),
         }
     }
-    
+
     /// 名前でAPIを取得
     #[allow(dead_code)]
     pub fn find_by_name(conn: &Connection, name: &str) -> Result<Option<Api>, DatabaseError> {
         let mut stmt = conn.prepare(
             "SELECT id, name, model, port, enable_auth, status, 
              COALESCE(engine_type, 'ollama'), engine_config, created_at, updated_at 
-             FROM apis WHERE name = ?"
+             FROM apis WHERE name = ?",
         )?;
-        
+
         let api_result = stmt.query_row(params![name], |row| {
             Ok(Api {
                 id: row.get(0)?,
@@ -99,30 +107,34 @@ impl ApiRepository {
                 engine_type: row.get::<_, Option<String>>(6)?,
                 engine_config: row.get::<_, Option<String>>(7)?,
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
-                    .map_err(|_| RusqliteError::InvalidColumnType(8, "created_at".to_string(), Type::Text))?
+                    .map_err(|_| {
+                        RusqliteError::InvalidColumnType(8, "created_at".to_string(), Type::Text)
+                    })?
                     .with_timezone(&Utc),
                 updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
-                    .map_err(|_| RusqliteError::InvalidColumnType(9, "updated_at".to_string(), Type::Text))?
+                    .map_err(|_| {
+                        RusqliteError::InvalidColumnType(9, "updated_at".to_string(), Type::Text)
+                    })?
                     .with_timezone(&Utc),
             })
         });
-        
+
         match api_result {
             Ok(api) => Ok(Some(api)),
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(e) => Err(DatabaseError::from(e)),
         }
     }
-    
+
     /// ポート番号でAPIを取得
     #[allow(dead_code)]
     pub fn find_by_port(conn: &Connection, port: u16) -> Result<Option<Api>, DatabaseError> {
         let mut stmt = conn.prepare(
             "SELECT id, name, model, port, enable_auth, status, 
              COALESCE(engine_type, 'ollama'), engine_config, created_at, updated_at 
-             FROM apis WHERE port = ?"
+             FROM apis WHERE port = ?",
         )?;
-        
+
         let api_result = stmt.query_row(params![port], |row| {
             Ok(Api {
                 id: row.get(0)?,
@@ -134,21 +146,25 @@ impl ApiRepository {
                 engine_type: row.get::<_, Option<String>>(6)?,
                 engine_config: row.get::<_, Option<String>>(7)?,
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
-                    .map_err(|_| RusqliteError::InvalidColumnType(8, "created_at".to_string(), Type::Text))?
+                    .map_err(|_| {
+                        RusqliteError::InvalidColumnType(8, "created_at".to_string(), Type::Text)
+                    })?
                     .with_timezone(&Utc),
                 updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
-                    .map_err(|_| RusqliteError::InvalidColumnType(9, "updated_at".to_string(), Type::Text))?
+                    .map_err(|_| {
+                        RusqliteError::InvalidColumnType(9, "updated_at".to_string(), Type::Text)
+                    })?
                     .with_timezone(&Utc),
             })
         });
-        
+
         match api_result {
             Ok(api) => Ok(Some(api)),
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(e) => Err(DatabaseError::from(e)),
         }
     }
-    
+
     /// ステータスでAPIを取得
     #[allow(dead_code)]
     pub fn find_by_status(conn: &Connection, status: ApiStatus) -> Result<Vec<Api>, DatabaseError> {
@@ -156,9 +172,9 @@ impl ApiRepository {
         let mut stmt = conn.prepare(
             "SELECT id, name, model, port, enable_auth, status, 
              COALESCE(engine_type, 'ollama'), engine_config, created_at, updated_at 
-             FROM apis WHERE status = ? ORDER BY created_at DESC"
+             FROM apis WHERE status = ? ORDER BY created_at DESC",
         )?;
-        
+
         let api_iter = stmt.query_map(params![status_str], |row| {
             Ok(Api {
                 id: row.get(0)?,
@@ -170,22 +186,26 @@ impl ApiRepository {
                 engine_type: row.get::<_, Option<String>>(6)?,
                 engine_config: row.get::<_, Option<String>>(7)?,
                 created_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(8)?)
-                    .map_err(|_| RusqliteError::InvalidColumnType(8, "created_at".to_string(), Type::Text))?
+                    .map_err(|_| {
+                        RusqliteError::InvalidColumnType(8, "created_at".to_string(), Type::Text)
+                    })?
                     .with_timezone(&Utc),
                 updated_at: DateTime::parse_from_rfc3339(&row.get::<_, String>(9)?)
-                    .map_err(|_| RusqliteError::InvalidColumnType(9, "updated_at".to_string(), Type::Text))?
+                    .map_err(|_| {
+                        RusqliteError::InvalidColumnType(9, "updated_at".to_string(), Type::Text)
+                    })?
                     .with_timezone(&Utc),
             })
         })?;
-        
+
         let mut apis = Vec::new();
         for api in api_iter {
             apis.push(api?);
         }
-        
+
         Ok(apis)
     }
-    
+
     /// APIを作成
     #[allow(dead_code)]
     pub fn create(conn: &Connection, api: &Api) -> Result<(), DatabaseError> {
@@ -193,7 +213,7 @@ impl ApiRepository {
         let updated_at = api.updated_at.to_rfc3339();
         let status_str = api.status.as_str();
         let engine_type = api.engine_type.as_deref().unwrap_or("ollama");
-        
+
         conn.execute(
             "INSERT INTO apis (id, name, model, port, enable_auth, status, engine_type, engine_config, created_at, updated_at) 
              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -210,7 +230,7 @@ impl ApiRepository {
                 updated_at
             ],
         )?;
-        
+
         Ok(())
     }
 
@@ -225,14 +245,14 @@ impl ApiRepository {
 
         Ok(())
     }
-    
+
     /// APIを更新
     #[allow(dead_code)]
     pub fn update(conn: &Connection, api: &Api) -> Result<(), DatabaseError> {
         let updated_at = Utc::now().to_rfc3339();
         let status_str = api.status.as_str();
         let engine_type = api.engine_type.as_deref().unwrap_or("ollama");
-        
+
         conn.execute(
             "UPDATE apis SET name = ?, model = ?, port = ?, enable_auth = ?, status = ?, engine_type = ?, engine_config = ?, updated_at = ? WHERE id = ?",
             params![
@@ -247,24 +267,28 @@ impl ApiRepository {
                 api.id
             ],
         )?;
-        
+
         Ok(())
     }
-    
+
     /// APIステータスを更新
     #[allow(dead_code)]
-    pub fn update_status(conn: &Connection, id: &str, status: ApiStatus) -> Result<(), DatabaseError> {
+    pub fn update_status(
+        conn: &Connection,
+        id: &str,
+        status: ApiStatus,
+    ) -> Result<(), DatabaseError> {
         let updated_at = Utc::now().to_rfc3339();
         let status_str = status.as_str();
-        
+
         conn.execute(
             "UPDATE apis SET status = ?, updated_at = ? WHERE id = ?",
             params![status_str, updated_at, id],
         )?;
-        
+
         Ok(())
     }
-    
+
     /// APIを削除
     #[allow(dead_code)]
     pub fn delete(conn: &Connection, id: &str) -> Result<(), DatabaseError> {
@@ -272,5 +296,3 @@ impl ApiRepository {
         Ok(())
     }
 }
-
-

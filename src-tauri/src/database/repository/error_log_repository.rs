@@ -1,9 +1,9 @@
 // Error Log Repository
 // エラーログのデータアクセス層
 
-use rusqlite::{Connection, Row, params};
-use chrono::Utc;
 use crate::database::DatabaseError;
+use chrono::Utc;
+use rusqlite::{params, Connection, Row};
 
 /// エラーログエンティティ
 #[derive(Debug, Clone)]
@@ -74,11 +74,9 @@ impl<'a> ErrorLogRepository<'a> {
         let mut stmt = self.conn.prepare(
             "SELECT id, error_category, error_message, error_stack, context, source, api_id, user_agent, created_at FROM error_logs WHERE id = ?1"
         )?;
-        
-        let mut rows = stmt.query_map(params![id], |row| {
-            ErrorLog::from_row(row)
-        })?;
-        
+
+        let mut rows = stmt.query_map(params![id], |row| ErrorLog::from_row(row))?;
+
         match rows.next() {
             Some(row) => Ok(Some(row?)),
             None => Ok(None),
@@ -130,7 +128,10 @@ impl<'a> ErrorLogRepository<'a> {
         }
 
         let mut stmt = self.conn.prepare(&query)?;
-        let params_refs: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
+        let params_refs: Vec<&dyn rusqlite::ToSql> = params_vec
+            .iter()
+            .map(|p| p as &dyn rusqlite::ToSql)
+            .collect();
         let rows = stmt.query_map(rusqlite::params_from_iter(params_refs.iter()), |row| {
             ErrorLog::from_row(row)
         })?;
@@ -176,11 +177,13 @@ impl<'a> ErrorLogRepository<'a> {
         }
 
         let mut stmt = self.conn.prepare(&query)?;
-        let params_refs: Vec<&dyn rusqlite::ToSql> = params_vec.iter().map(|p| p as &dyn rusqlite::ToSql).collect();
-        let count: i64 = stmt.query_row(
-            rusqlite::params_from_iter(params_refs.iter()),
-            |row| row.get(0),
-        )?;
+        let params_refs: Vec<&dyn rusqlite::ToSql> = params_vec
+            .iter()
+            .map(|p| p as &dyn rusqlite::ToSql)
+            .collect();
+        let count: i64 = stmt.query_row(rusqlite::params_from_iter(params_refs.iter()), |row| {
+            row.get(0)
+        })?;
 
         Ok(count)
     }
@@ -201,4 +204,3 @@ impl<'a> ErrorLogRepository<'a> {
         Ok(deleted)
     }
 }
-

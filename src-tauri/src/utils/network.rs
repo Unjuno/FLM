@@ -15,13 +15,13 @@ pub fn get_local_ip_address() -> Option<String> {
                 return Some(ip.clone());
             }
         }
-        
+
         // プライベートIPがない場合は最初のIPv4を返す
         if let Some(first_ip) = interfaces.first() {
             return Some(first_ip.clone());
         }
     }
-    
+
     None
 }
 
@@ -29,13 +29,12 @@ pub fn get_local_ip_address() -> Option<String> {
 #[cfg(target_os = "windows")]
 fn get_network_interfaces() -> Result<Vec<String>, Box<dyn std::error::Error>> {
     use std::process::Command;
-    
-    let output = Command::new("ipconfig")
-        .output()?;
-    
+
+    let output = Command::new("ipconfig").output()?;
+
     let output_str = String::from_utf8_lossy(&output.stdout);
     let mut ips = Vec::new();
-    
+
     for line in output_str.lines() {
         if line.contains("IPv4") || line.contains("IPv4 アドレス") {
             if let Some(ip_str) = line.split(':').nth(1) {
@@ -46,29 +45,25 @@ fn get_network_interfaces() -> Result<Vec<String>, Box<dyn std::error::Error>> {
             }
         }
     }
-    
+
     Ok(ips)
 }
 
 #[cfg(not(target_os = "windows"))]
 fn get_network_interfaces() -> Result<Vec<String>, Box<dyn std::error::Error>> {
     use std::process::Command;
-    
+
     // Linux/macOSでifconfigまたはipコマンドを使用
     let output = if cfg!(target_os = "linux") {
-        Command::new("ip")
-            .arg("addr")
-            .arg("show")
-            .output()?
+        Command::new("ip").arg("addr").arg("show").output()?
     } else {
         // macOS
-        Command::new("ifconfig")
-            .output()?
+        Command::new("ifconfig").output()?
     };
-    
+
     let output_str = String::from_utf8_lossy(&output.stdout);
     let mut ips = Vec::new();
-    
+
     for line in output_str.lines() {
         if line.contains("inet ") && !line.contains("127.0.0.1") {
             let parts: Vec<&str> = line.split_whitespace().collect();
@@ -87,7 +82,7 @@ fn get_network_interfaces() -> Result<Vec<String>, Box<dyn std::error::Error>> {
             }
         }
     }
-    
+
     Ok(ips)
 }
 
@@ -95,34 +90,47 @@ fn get_network_interfaces() -> Result<Vec<String>, Box<dyn std::error::Error>> {
 fn is_private_ip(ip_str: &str) -> bool {
     if let Ok(ip) = ip_str.parse::<Ipv4Addr>() {
         let octets = ip.octets();
-        
+
         // 192.168.x.x
         if octets[0] == 192 && octets[1] == 168 {
             return true;
         }
-        
+
         // 10.x.x.x
         if octets[0] == 10 {
             return true;
         }
-        
+
         // 172.16.x.x - 172.31.x.x
         if octets[0] == 172 && octets[1] >= 16 && octets[1] <= 31 {
             return true;
         }
     }
-    
+
     false
 }
 
 /// エンドポイントURLを生成（HTTP/HTTPS、ローカルIPとlocalhostの両方を含む）
 pub fn format_endpoint_url(port: u16, api_id: Option<&str>) -> String {
     let local_ip = get_local_ip_address();
-    let has_https = api_id.map(|id| crate::utils::certificate::certificate_exists(id)).unwrap_or(false);
-    
+    let has_https = api_id
+        .map(|id| crate::utils::certificate::certificate_exists(id))
+        .unwrap_or(false);
+
     let protocol = if has_https { "https" } else { "http" };
-    let https_port = if has_https { port + 1 } else { port };
-    
+    let https_port = if has_https {
+        match port.checked_add(1) {
+            Some(value) => value,
+            None => {
+                return format!(
+                    "{protocol}://localhost:{port} (HTTPSポートを算出できませんでした)"
+                );
+            }
+        }
+    } else {
+        port
+    };
+
     if let Some(ip) = local_ip {
         if has_https {
             format!("{protocol}://localhost:{https_port} または {protocol}://{ip}:{https_port} (HTTP→HTTPS自動リダイレクト: http://localhost:{port})")
@@ -141,10 +149,17 @@ pub fn format_endpoint_url(port: u16, api_id: Option<&str>) -> String {
 /// エンドポイントURL（ローカルIPのみ）を生成
 pub fn format_external_endpoint_url(port: u16, api_id: Option<&str>) -> Option<String> {
     let local_ip = get_local_ip_address()?;
-    let has_https = api_id.map(|id| crate::utils::certificate::certificate_exists(id)).unwrap_or(false);
+    let has_https = api_id
+        .map(|id| crate::utils::certificate::certificate_exists(id))
+        .unwrap_or(false);
     let protocol = if has_https { "https" } else { "http" };
-    let https_port = if has_https { port + 1 } else { port };
+    let https_port = if has_https {
+        match port.checked_add(1) {
+            Some(value) => value,
+            None => return None,
+        }
+    } else {
+        port
+    };
     Some(format!("{protocol}://{local_ip}:{https_port}"))
 }
-
-

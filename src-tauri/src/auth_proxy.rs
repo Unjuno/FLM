@@ -2,8 +2,8 @@
 // 認証エージェント (AUTH) 実装
 // 認証プロキシサーバーの起動・停止管理
 
-use std::process::Stdio;
 use serde::{Deserialize, Serialize};
+use std::process::Stdio;
 use tokio::process::Command as AsyncCommand;
 
 use crate::utils::error::AppError;
@@ -18,19 +18,14 @@ pub struct AuthProxyProcess {
 /// 認証プロキシサーバーのパスとNode.jsコマンドを取得
 fn get_auth_proxy_command() -> Result<(String, Vec<String>), AppError> {
     // Node.jsコマンドを取得
-    let node_command = if cfg!(windows) {
-        "node.exe"
-    } else {
-        "node"
-    };
+    let node_command = if cfg!(windows) { "node.exe" } else { "node" };
 
     // 認証プロキシサーバーのパスを取得
     // 複数の可能なパスを試す（開発環境と本番環境の両方に対応）
-    let current_dir = std::env::current_dir()
-        .map_err(|e| AppError::AuthError {
-            message: format!("現在のディレクトリ取得エラー: {}", e),
-            source_detail: None,
-        })?;
+    let current_dir = std::env::current_dir().map_err(|e| AppError::AuthError {
+        message: format!("現在のディレクトリ取得エラー: {}", e),
+        source_detail: None,
+    })?;
 
     // 可能なパス候補をリストアップ
     let mut possible_paths: Vec<std::path::PathBuf> = vec![
@@ -39,7 +34,7 @@ fn get_auth_proxy_command() -> Result<(String, Vec<String>), AppError> {
         // 開発環境: src-tauriディレクトリから実行される場合
         current_dir.join("../src/backend/auth/server.ts"),
     ];
-    
+
     // 本番環境: 実行ファイルの場所から相対パスを追加
     if let Ok(exe) = std::env::current_exe() {
         if let Some(exe_dir) = exe.parent() {
@@ -51,17 +46,21 @@ fn get_auth_proxy_command() -> Result<(String, Vec<String>), AppError> {
     }
 
     // 最初に見つかった有効なパスを使用
-    let dev_path = possible_paths
-        .into_iter()
-        .find(|path| path.exists());
+    let dev_path = possible_paths.into_iter().find(|path| path.exists());
 
     let dev_path = match dev_path {
         Some(path) => path,
         None => {
             // すべてのパス候補を試したが、見つからなかった場合
             let tried_paths: Vec<String> = vec![
-                current_dir.join("src/backend/auth/server.ts").display().to_string(),
-                current_dir.join("../src/backend/auth/server.ts").display().to_string(),
+                current_dir
+                    .join("src/backend/auth/server.ts")
+                    .display()
+                    .to_string(),
+                current_dir
+                    .join("../src/backend/auth/server.ts")
+                    .display()
+                    .to_string(),
             ];
             return Err(AppError::AuthError {
                 message: format!(
@@ -75,18 +74,16 @@ fn get_auth_proxy_command() -> Result<(String, Vec<String>), AppError> {
             });
         }
     };
-    
+
     // Node.jsコマンドの存在確認
     use std::process::Command;
-    let node_check = Command::new(&node_command)
-        .arg("--version")
-        .output();
-    
+    let node_check = Command::new(&node_command).arg("--version").output();
+
     match node_check {
         Ok(output) if output.status.success() => {
             let version = String::from_utf8_lossy(&output.stdout);
             eprintln!("[INFO] Node.jsが見つかりました: {}", version.trim());
-        },
+        }
         _ => {
             return Err(AppError::AuthError {
                 message: format!("Node.jsが見つかりません。Node.jsをインストールしてから再度お試しください。コマンド: {}", node_command),
@@ -94,22 +91,18 @@ fn get_auth_proxy_command() -> Result<(String, Vec<String>), AppError> {
             });
         }
     }
-    
+
     // TypeScriptファイルを実行するため、Node.jsの--loaderオプションを使用
     // Node.js 20.6.0以降では、--importオプションでtsxを使用可能
     // または、npx tsxを使用
     // まず、npx tsxを試す
-    let npx_command = if cfg!(windows) {
-        "npx.cmd"
-    } else {
-        "npx"
-    };
-    
+    let npx_command = if cfg!(windows) { "npx.cmd" } else { "npx" };
+
     // npx tsxが利用可能か確認
     let tsx_check = Command::new(npx_command)
         .args(&["tsx", "--version"])
         .output();
-    
+
     let (command, args) = match tsx_check {
         Ok(output) if output.status.success() => {
             // tsxが利用可能な場合
@@ -118,7 +111,7 @@ fn get_auth_proxy_command() -> Result<(String, Vec<String>), AppError> {
                 npx_command.to_string(),
                 vec!["tsx".to_string(), dev_path.to_string_lossy().to_string()],
             )
-        },
+        }
         _ => {
             // tsxが利用できない場合、npx経由でtsxを実行（初回実行時に自動インストールされる）
             eprintln!("[INFO] tsxが見つかりません。npx経由でtsxを実行します（初回実行時に自動インストールされます）。");
@@ -128,7 +121,7 @@ fn get_auth_proxy_command() -> Result<(String, Vec<String>), AppError> {
             )
         }
     };
-    
+
     Ok((command, args))
 }
 
@@ -139,6 +132,7 @@ pub async fn start_auth_proxy(
     engine_base_url: Option<String>,
     api_id: Option<String>,
     engine_type: Option<String>,
+    auth_required: bool,
 ) -> Result<AuthProxyProcess, AppError> {
     // 既に起動しているか確認
     if check_proxy_running(port).await {
@@ -153,9 +147,42 @@ pub async fn start_auth_proxy(
 
     // 環境変数を設定
     let mut env_vars = std::collections::HashMap::new();
-    // NODE_ENVをdevelopmentに設定（CORS設定のため）
-    // Tauriアプリケーションはローカル環境で動作するため、開発環境として扱う
-    env_vars.insert("NODE_ENV".to_string(), "development".to_string());
+    // NODE_ENVは環境に応じて設定（明示指定があれば優先）
+    let node_env = std::env::var("FLM_PROXY_NODE_ENV")
+        .or_else(|_| std::env::var("NODE_ENV"))
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| {
+            if cfg!(debug_assertions) {
+                "development".to_string()
+            } else {
+                "production".to_string()
+            }
+        });
+    env_vars.insert("NODE_ENV".to_string(), node_env);
+
+    // CORSで許可するオリジン（未指定の場合は開発/本番で適切なデフォルトを設定）
+    let allowed_origins = std::env::var("FLM_PROXY_ALLOWED_ORIGINS")
+        .or_else(|_| std::env::var("ALLOWED_ORIGINS"))
+        .ok()
+        .filter(|value| !value.trim().is_empty())
+        .unwrap_or_else(|| {
+            if cfg!(debug_assertions) {
+                "http://localhost:1420,tauri://localhost".to_string()
+            } else {
+                "tauri://localhost".to_string()
+            }
+        });
+    env_vars.insert("ALLOWED_ORIGINS".to_string(), allowed_origins);
+
+    env_vars.insert(
+        "AUTH_REQUIRED".to_string(),
+        if auth_required {
+            "1".to_string()
+        } else {
+            "0".to_string()
+        },
+    );
     env_vars.insert("PORT".to_string(), port.to_string());
     if let Some(ref url) = engine_base_url {
         env_vars.insert("ENGINE_BASE_URL".to_string(), url.clone());
@@ -201,13 +228,16 @@ pub async fn start_auth_proxy(
         if check_proxy_running(port).await {
             return Ok(AuthProxyProcess { pid, port });
         }
-        
+
         // プロセスの状態を確認
         if let Ok(Some(status)) = child.try_wait() {
             // プロセスが既に終了している場合
             let exit_code = status.code().unwrap_or(-1);
             let error_msg = if !error_output.is_empty() {
-                format!("認証プロキシの起動に失敗しました（終了コード: {}）。エラー出力: {}", exit_code, error_output)
+                format!(
+                    "認証プロキシの起動に失敗しました（終了コード: {}）。エラー出力: {}",
+                    exit_code, error_output
+                )
             } else {
                 format!("認証プロキシの起動に失敗しました（終了コード: {}）。Node.jsがインストールされているか、サーバーファイル（src/backend/auth/server.ts）が存在するか確認してください。", exit_code)
             };
@@ -239,15 +269,26 @@ pub async fn start_auth_proxy(
 }
 
 /// 認証プロキシが起動しているか確認
+///
+/// 注意: 認証プロキシはHTTPポートでリダイレクト（301）を返し、
+/// HTTPSポート（port+1）で実際のサービスを提供します。
+/// そのため、HTTPSポートの/healthエンドポイントを直接チェックします。
 pub async fn check_proxy_running(port: u16) -> bool {
-    let client = match crate::utils::http_client::create_http_client_short_timeout() {
+    // HTTPSポート（port+1）の/healthエンドポイントをチェック
+    // 自己署名証明書を使用しているため、証明書検証を無効化したクライアントを使用
+    let client = match crate::utils::http_client::create_http_client_allow_insecure() {
         Ok(client) => client,
         Err(_) => return false,
     };
-    let url = format!("http://localhost:{}", port);
-    
+    let https_port = port + 1;
+    let url = format!("https://localhost:{}/health", https_port);
+
     match client.get(&url).send().await {
-        Ok(response) => response.status().is_success(),
+        Ok(response) => {
+            // 200 OKまたは301リダイレクト（HTTPポートへのアクセス時）を成功とみなす
+            let status = response.status();
+            status.is_success() || status.as_u16() == 301
+        }
         Err(_) => false,
     }
 }
@@ -265,7 +306,7 @@ pub async fn stop_auth_proxy_by_port(port: u16) -> Result<(), AppError> {
                 message: format!("netstatコマンド実行エラー: {}", e),
                 source_detail: None,
             })?;
-        
+
         if output.status.success() {
             let stdout = String::from_utf8_lossy(&output.stdout);
             // netstatの出力からポートとPIDを抽出
@@ -284,7 +325,7 @@ pub async fn stop_auth_proxy_by_port(port: u16) -> Result<(), AppError> {
             }
         }
     }
-    
+
     #[cfg(not(windows))]
     {
         use std::process::Command;
@@ -296,7 +337,7 @@ pub async fn stop_auth_proxy_by_port(port: u16) -> Result<(), AppError> {
                 message: format!("lsofコマンド実行エラー: {}", e),
                 source_detail: None,
             })?;
-        
+
         if output.status.success() {
             let pid_str = String::from_utf8_lossy(&output.stdout);
             if let Ok(pid) = pid_str.trim().parse::<u32>() {
@@ -304,7 +345,7 @@ pub async fn stop_auth_proxy_by_port(port: u16) -> Result<(), AppError> {
             }
         }
     }
-    
+
     Ok(())
 }
 
@@ -321,11 +362,12 @@ pub async fn stop_auth_proxy(pid: u32) -> Result<(), AppError> {
                 message: format!("プロセス停止エラー: {}", e),
                 source_detail: None,
             })?;
-        
+
         if !output.status.success() {
             // プロセスが既に終了している場合も正常終了とみなす
             let stderr = String::from_utf8_lossy(&output.stderr);
-            if !stderr.contains("プロセスが見つかりません") && !stderr.contains("not found") {
+            if !stderr.contains("プロセスが見つかりません") && !stderr.contains("not found")
+            {
                 return Err(AppError::AuthError {
                     message: format!("プロセス停止に失敗しました: PID {}", pid),
                     source_detail: None,
@@ -333,7 +375,7 @@ pub async fn stop_auth_proxy(pid: u32) -> Result<(), AppError> {
             }
         }
     }
-    
+
     #[cfg(not(windows))]
     {
         use std::process::Command;
@@ -344,20 +386,20 @@ pub async fn stop_auth_proxy(pid: u32) -> Result<(), AppError> {
                 message: format!("プロセス停止エラー: {}", e),
                 source_detail: None,
             })?;
-        
+
         if !output.status.success() {
             // プロセスが既に終了している場合も正常終了とみなす
             return Ok(());
         }
     }
-    
+
     Ok(())
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     /// ポート番号の検証テスト
     #[test]
     fn test_port_validation() {
@@ -365,12 +407,12 @@ mod tests {
         assert!((1024..=65535).contains(&8080));
         assert!((1024..=65535).contains(&3000));
         assert!((1024..=65535).contains(&1420));
-        
+
         // 無効なポート番号（範囲外）
         assert!(!(1024..=65535).contains(&1023));
         assert!(!(1024..=65535).contains(&65536));
     }
-    
+
     /// AuthProxyProcessの検証テスト
     #[test]
     fn test_auth_proxy_process_validation() {
@@ -378,23 +420,29 @@ mod tests {
             pid: 12345,
             port: 8080,
         };
-        
+
         assert_eq!(process.pid, 12345);
         assert_eq!(process.port, 8080);
         assert!((1024..=65535).contains(&process.port));
     }
-    
+
     /// 環境変数の検証テスト
     #[test]
     fn test_environment_variables() {
         let mut env_vars = std::collections::HashMap::new();
         env_vars.insert("PORT".to_string(), "8080".to_string());
-        env_vars.insert("ENGINE_BASE_URL".to_string(), "http://localhost:11434".to_string());
+        env_vars.insert(
+            "ENGINE_BASE_URL".to_string(),
+            "http://localhost:11434".to_string(),
+        );
         env_vars.insert("API_ID".to_string(), "test-api-id".to_string());
         env_vars.insert("ENGINE_TYPE".to_string(), "ollama".to_string());
-        
+
         assert_eq!(env_vars.get("PORT"), Some(&"8080".to_string()));
-        assert_eq!(env_vars.get("ENGINE_BASE_URL"), Some(&"http://localhost:11434".to_string()));
+        assert_eq!(
+            env_vars.get("ENGINE_BASE_URL"),
+            Some(&"http://localhost:11434".to_string())
+        );
         assert_eq!(env_vars.get("API_ID"), Some(&"test-api-id".to_string()));
         assert_eq!(env_vars.get("ENGINE_TYPE"), Some(&"ollama".to_string()));
     }

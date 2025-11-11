@@ -33,11 +33,16 @@ export const useApiDeletion = ({ deleteApi, openDialog }: UseApiDeletionOptions)
           return;
         }
 
+        // モデル名がある場合、二段階確認を行う
+        // 注意: 実際にはモデルは削除されず、APIのみが削除されます
         const showModelDialog = () =>
           openDialog({
             message: t('apiList.messages.deleteModelQuestion', { modelName }),
             onConfirm: executeDelete,
-            onCancel: executeDelete,
+            // キャンセル時は削除を中断（何もしない）
+            onCancel: () => {
+              // 削除をキャンセル - 何も実行しない
+            },
           });
 
         if (typeof queueMicrotask === 'function') {

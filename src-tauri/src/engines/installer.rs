@@ -1,23 +1,23 @@
 // Engine Installer Module
 // 各エンジンの自動インストール機能
 
-use crate::utils::error::AppError;
 use crate::database::connection::get_app_data_dir;
-use std::path::PathBuf;
+use crate::utils::error::AppError;
+use serde::{Deserialize, Serialize};
 use std::fs;
+use std::path::PathBuf;
 use std::process::Command;
 use tokio::process::Command as AsyncCommand;
-use serde::{Deserialize, Serialize};
 
 /// ダウンロード進捗情報
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct EngineDownloadProgress {
-    pub status: String,             // "downloading" | "extracting" | "installing" | "completed" | "error"
-    pub progress: f64,              // 0.0 - 100.0
-    pub downloaded_bytes: u64,      // ダウンロード済みバイト数
-    pub total_bytes: u64,           // 総バイト数
-    pub speed_bytes_per_sec: f64,   // ダウンロード速度（バイト/秒）
-    pub message: Option<String>,    // ステータスメッセージ
+    pub status: String, // "downloading" | "extracting" | "installing" | "completed" | "error"
+    pub progress: f64,  // 0.0 - 100.0
+    pub downloaded_bytes: u64, // ダウンロード済みバイト数
+    pub total_bytes: u64, // 総バイト数
+    pub speed_bytes_per_sec: f64, // ダウンロード速度（バイト/秒）
+    pub message: Option<String>, // ステータスメッセージ
 }
 
 /// LM Studioのインストール
@@ -38,11 +38,10 @@ where
     let download_url = get_lm_studio_download_url().await?;
 
     // アプリデータディレクトリを取得
-    let app_data_dir = get_app_data_dir()
-        .map_err(|e| AppError::IoError {
-            message: format!("アプリデータディレクトリ取得エラー: {}", e),
-            source_detail: None,
-        })?;
+    let app_data_dir = get_app_data_dir().map_err(|e| AppError::IoError {
+        message: format!("アプリデータディレクトリ取得エラー: {}", e),
+        source_detail: None,
+    })?;
 
     let installer_dir = app_data_dir.join("lm_studio_installer");
     fs::create_dir_all(&installer_dir).map_err(|e| AppError::IoError {
@@ -50,7 +49,10 @@ where
         source_detail: None,
     })?;
 
-    let file_name = download_url.split('/').last().unwrap_or("lm_studio_installer");
+    let file_name = download_url
+        .split('/')
+        .last()
+        .unwrap_or("lm_studio_installer");
     let download_file = installer_dir.join(file_name);
 
     // ダウンロード実行
@@ -103,7 +105,8 @@ where
             .map_err(|e| AppError::IoError {
                 message: format!("ファイル情報取得エラー: {}", e),
                 source_detail: None,
-            })?.permissions();
+            })?
+            .permissions();
         perms.set_mode(0o755);
         fs::set_permissions(&download_file, perms).map_err(|e| AppError::IoError {
             message: format!("実行権限設定エラー: {}", e),
@@ -131,17 +134,17 @@ async fn get_lm_studio_download_url() -> Result<String, AppError> {
     {
         Ok("https://releases.lmstudio.ai/windows/latest".to_string())
     }
-    
+
     #[cfg(target_os = "macos")]
     {
         Ok("https://releases.lmstudio.ai/macos/latest".to_string())
     }
-    
+
     #[cfg(target_os = "linux")]
     {
         Ok("https://releases.lmstudio.ai/linux/latest".to_string())
     }
-    
+
     #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
     {
         Err(AppError::ApiError {
@@ -173,7 +176,8 @@ where
         "python"
     } else {
         return Err(AppError::ApiError {
-            message: "Pythonがインストールされていません。先にPythonをインストールしてください。".to_string(),
+            message: "Pythonがインストールされていません。先にPythonをインストールしてください。"
+                .to_string(),
             code: "PYTHON_NOT_FOUND".to_string(),
             source_detail: None,
         });
@@ -194,7 +198,10 @@ where
 
     if !output.status.success() {
         return Err(AppError::ProcessError {
-            message: format!("vLLMインストール失敗: {}", String::from_utf8_lossy(&output.stderr)),
+            message: format!(
+                "vLLMインストール失敗: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ),
             source_detail: None,
         });
     }
@@ -229,11 +236,10 @@ where
     let download_url = get_llama_cpp_download_url().await?;
 
     // アプリデータディレクトリを取得
-    let app_data_dir = get_app_data_dir()
-        .map_err(|e| AppError::IoError {
-            message: format!("アプリデータディレクトリ取得エラー: {}", e),
-            source_detail: None,
-        })?;
+    let app_data_dir = get_app_data_dir().map_err(|e| AppError::IoError {
+        message: format!("アプリデータディレクトリ取得エラー: {}", e),
+        source_detail: None,
+    })?;
 
     let llama_cpp_dir = app_data_dir.join("llama_cpp");
     fs::create_dir_all(&llama_cpp_dir).map_err(|e| AppError::IoError {
@@ -244,7 +250,7 @@ where
     // ダウンロードファイルのパス
     #[cfg(target_os = "windows")]
     let download_file = llama_cpp_dir.join("llama-server.exe");
-    
+
     #[cfg(not(target_os = "windows"))]
     let download_file = llama_cpp_dir.join("llama-server");
 
@@ -259,7 +265,8 @@ where
             .map_err(|e| AppError::IoError {
                 message: format!("ファイル情報取得エラー: {}", e),
                 source_detail: None,
-            })?.permissions();
+            })?
+            .permissions();
         perms.set_mode(0o755);
         fs::set_permissions(&download_file, perms).map_err(|e| AppError::IoError {
             message: format!("実行権限設定エラー: {}", e),
@@ -302,15 +309,15 @@ async fn get_llama_cpp_download_url() -> Result<String, AppError> {
         });
     }
 
-    let json: serde_json::Value = response.json().await
-        .map_err(|e| AppError::ApiError {
-            message: format!("JSON解析エラー: {}", e),
-            code: "JSON_ERROR".to_string(),
-            source_detail: None,
-        })?;
+    let json: serde_json::Value = response.json().await.map_err(|e| AppError::ApiError {
+        message: format!("JSON解析エラー: {}", e),
+        code: "JSON_ERROR".to_string(),
+        source_detail: None,
+    })?;
 
     // アセットからプラットフォームに応じたファイルを選択
-    let assets = json["assets"].as_array()
+    let assets = json["assets"]
+        .as_array()
         .ok_or_else(|| AppError::ApiError {
             message: "リリース情報にアセットが見つかりません".to_string(),
             code: "ASSET_NOT_FOUND".to_string(),
@@ -324,7 +331,8 @@ async fn get_llama_cpp_download_url() -> Result<String, AppError> {
     #[cfg(target_os = "linux")]
     let platform_ext = ".AppImage";
 
-    let download_url = assets.iter()
+    let download_url = assets
+        .iter()
         .find_map(|asset| {
             let url = asset["browser_download_url"].as_str()?;
             if url.ends_with(platform_ext) {
@@ -334,7 +342,10 @@ async fn get_llama_cpp_download_url() -> Result<String, AppError> {
             }
         })
         .ok_or_else(|| AppError::ApiError {
-            message: format!("プラットフォーム用のアセットが見つかりません: {}", platform_ext),
+            message: format!(
+                "プラットフォーム用のアセットが見つかりません: {}",
+                platform_ext
+            ),
             code: "PLATFORM_ASSET_NOT_FOUND".to_string(),
             source_detail: None,
         })?;
@@ -352,7 +363,10 @@ where
     F: FnMut(EngineDownloadProgress) -> Result<(), AppError>,
 {
     let client = crate::utils::http_client::create_http_client_long_timeout()?;
-    let mut response = client.get(url).send().await
+    let mut response = client
+        .get(url)
+        .send()
+        .await
         .map_err(|e| AppError::ApiError {
             message: format!("ダウンロード開始エラー: {}", e),
             code: "DOWNLOAD_ERROR".to_string(),
@@ -368,7 +382,8 @@ where
     }
 
     let total_bytes = response.content_length().unwrap_or(0);
-    let mut file = tokio::fs::File::create(file_path).await
+    let mut file = tokio::fs::File::create(file_path)
+        .await
         .map_err(|e| AppError::IoError {
             message: format!("ファイル作成エラー: {}", e),
             source_detail: None,
@@ -378,13 +393,13 @@ where
     let start_time = std::time::Instant::now();
 
     use tokio::io::AsyncWriteExt;
-    while let Some(chunk) = response.chunk().await
-        .map_err(|e| AppError::ApiError {
-            message: format!("ダウンロード中のエラー: {}", e),
-            code: "DOWNLOAD_CHUNK_ERROR".to_string(),
-            source_detail: None,
-        })? {
-        file.write_all(&chunk).await
+    while let Some(chunk) = response.chunk().await.map_err(|e| AppError::ApiError {
+        message: format!("ダウンロード中のエラー: {}", e),
+        code: "DOWNLOAD_CHUNK_ERROR".to_string(),
+        source_detail: None,
+    })? {
+        file.write_all(&chunk)
+            .await
             .map_err(|e| AppError::IoError {
                 message: format!("ファイル書き込みエラー: {}", e),
                 source_detail: None,

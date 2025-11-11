@@ -57,5 +57,3 @@ pub struct EngineConfigData {
     pub executable_path: Option<String>,
     pub is_default: bool,
 }
-
-

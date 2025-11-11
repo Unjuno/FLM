@@ -3,6 +3,7 @@
 import { invoke as tauriInvoke } from '@tauri-apps/api/core';
 import { parseError, logError, ErrorCategory } from './errorHandler';
 import { logger } from './logger';
+import { isDev as isDevEnvironment } from './env';
 
 interface FallbackInvokeSuccess<T> {
   result: T;
@@ -79,7 +80,7 @@ export function isTauriAvailable(): boolean {
   // まず、インポートしたinvoke関数が利用可能かチェック（最も重要）
   const invokeIsFunction = typeof tauriInvoke === 'function';
   if (!invokeIsFunction) {
-    if (process.env.NODE_ENV === 'development') {
+    if (isDevEnvironment()) {
       console.warn('[isTauriAvailable] tauriInvoke が関数ではありません:', typeof tauriInvoke);
     }
     return false;
@@ -88,27 +89,32 @@ export function isTauriAvailable(): boolean {
   // windowが存在するかチェック
   const hasWindow = typeof window !== 'undefined';
   if (!hasWindow) {
-    if (process.env.NODE_ENV === 'development') {
+    if (isDevEnvironment()) {
       console.warn('[isTauriAvailable] window が undefined です');
     }
     return false;
   }
   
-  // window.__TAURI__の存在をチェック（withGlobalTauri: trueの場合に利用可能）
+  // window.__TAURI__またはwindow.__TAURI_IPC__の存在をチェック（Tauri環境の必須条件）
+  // Tauri 2.xでは__TAURI_IPC__も使用される可能性があるため、両方をチェック
   const hasTauriGlobal = '__TAURI__' in window;
-  if (hasTauriGlobal) {
-    const tauriGlobalDefined = typeof window.__TAURI__ !== 'undefined';
-    if (tauriGlobalDefined && process.env.NODE_ENV === 'development') {
-      console.log('[isTauriAvailable] ✓ Tauri環境が利用可能です（window.__TAURI__ も利用可能）');
+  const hasTauriIpc = '__TAURI_IPC__' in window;
+
+  if (!hasTauriGlobal && !hasTauriIpc) {
+    // window.__TAURI__もwindow.__TAURI_IPC__も存在しない場合、ブラウザ環境と判断
+    if (isDevEnvironment()) {
+      console.debug('[isTauriAvailable] window.__TAURI__ と window.__TAURI_IPC__ が存在しません。ブラウザ環境と判断します。');
     }
-  } else if (process.env.NODE_ENV === 'development') {
-    // window.__TAURI__がなくても、インポートしたinvoke関数が動作する可能性があるため、警告のみ
-    console.debug('[isTauriAvailable] window.__TAURI__ は存在しませんが、インポートしたinvoke関数を使用します');
+    return false;
   }
-  
-  // invoke関数が利用可能であれば、Tauri環境として認識
-  if (process.env.NODE_ENV === 'development') {
-    console.log('[isTauriAvailable] ✓ Tauri環境が利用可能です（invoke関数を使用）');
+
+  // Tauri環境が利用可能
+  if (isDevEnvironment()) {
+    if (hasTauriGlobal) {
+      console.log('[isTauriAvailable] ✓ Tauri環境が利用可能です（window.__TAURI__ が利用可能）');
+    } else if (hasTauriIpc) {
+      console.log('[isTauriAvailable] ✓ Tauri環境が利用可能です（window.__TAURI_IPC__ が利用可能）');
+    }
   }
   return true;
 }
@@ -165,7 +171,7 @@ export function clearInvokeCache(cmd?: string): void {
 // デバッグモードが有効かどうかを判定
 function isDebugMode(): boolean {
   return (
-    process.env.NODE_ENV === 'development' ||
+    isDevEnvironment() ||
     process.env.FLM_DEBUG === '1' ||
     process.env.FLM_DEBUG === 'true' ||
     (typeof window !== 'undefined' && (window as unknown as { FLM_DEBUG?: string }).FLM_DEBUG === '1')
@@ -176,10 +182,10 @@ export async function safeInvoke<T = unknown>(
   cmd: string,
   args?: Record<string, unknown>
 ): Promise<T> {
-  const isDev = isDebugMode();
+  const debugLoggingEnabled = isDebugMode();
   
   // 開発環境またはデバッグモードのみログ出力
-  if (isDev) {
+  if (debugLoggingEnabled) {
     // eslint-disable-next-line no-console
     console.log(
       `[safeInvoke] コマンド呼び出し: ${cmd}`,
@@ -198,7 +204,7 @@ export async function safeInvoke<T = unknown>(
       cached.accessCount++;
       cached.lastAccess = now;
       
-      if (isDev) {
+      if (debugLoggingEnabled) {
         // eslint-disable-next-line no-console
         console.log(`[safeInvoke] キャッシュから取得: ${cmd} (アクセス回数: ${cached.accessCount})`);
       }
@@ -212,70 +218,77 @@ export async function safeInvoke<T = unknown>(
   }
 
   const isAvailable = isTauriAvailable();
-  if (isDev) {
+  if (debugLoggingEnabled) {
     // eslint-disable-next-line no-console
     console.log(`[safeInvoke] Tauri環境チェック結果: ${isAvailable}`);
   }
 
   if (isAvailable) {
     try {
-      if (isDev) {
+      if (debugLoggingEnabled) {
         // eslint-disable-next-line no-console
         console.log(`[safeInvoke] invoke実行中: ${cmd}`);
       }
       
       // タイムアウト付きでIPC呼び出しを実行
+      let timeoutId: ReturnType<typeof setTimeout> | undefined;
       const timeoutPromise = new Promise<never>((_, reject) => {
-        setTimeout(() => {
+        timeoutId = setTimeout(() => {
           reject(new Error(`IPC呼び出しがタイムアウトしました: ${cmd} (${IPC_TIMEOUT_MS}ms)`));
         }, IPC_TIMEOUT_MS);
       });
       
-      const result = await Promise.race([
-        tauriInvoke<T>(cmd, args),
-        timeoutPromise,
-      ]);
-      
-      // キャッシュに保存（読み取り専用コマンドのみ）
-      if (CACHEABLE_COMMANDS.has(cmd)) {
-        const cacheKey = args ? `${cmd}:${JSON.stringify(args)}` : cmd;
-        const now = Date.now();
+      try {
+        const result = await Promise.race([
+          tauriInvoke<T>(cmd, args),
+          timeoutPromise,
+        ]);
         
-        // キャッシュサイズ制限: LRU方式で古いエントリを削除
-        if (invokeCache.size >= MAX_CACHE_SIZE) {
-          // 最も古いアクセス時刻のエントリを削除
-          let oldestKey: string | null = null;
-          let oldestAccess = Infinity;
+        // キャッシュに保存（読み取り専用コマンドのみ）
+        if (CACHEABLE_COMMANDS.has(cmd)) {
+          const cacheKey = args ? `${cmd}:${JSON.stringify(args)}` : cmd;
+          const now = Date.now();
           
-          for (const [key, entry] of invokeCache.entries()) {
-            if (entry.lastAccess < oldestAccess) {
-              oldestAccess = entry.lastAccess;
-              oldestKey = key;
+          // キャッシュサイズ制限: LRU方式で古いエントリを削除
+          if (invokeCache.size >= MAX_CACHE_SIZE) {
+            // 最も古いアクセス時刻のエントリを削除
+            let oldestKey: string | null = null;
+            let oldestAccess = Infinity;
+            
+            for (const [key, entry] of invokeCache.entries()) {
+              if (entry.lastAccess < oldestAccess) {
+                oldestAccess = entry.lastAccess;
+                oldestKey = key;
+              }
+            }
+            
+            if (oldestKey) {
+              invokeCache.delete(oldestKey);
+              if (debugLoggingEnabled) {
+                // eslint-disable-next-line no-console
+                console.log(`[safeInvoke] キャッシュエントリを削除: ${oldestKey}`);
+              }
             }
           }
           
-          if (oldestKey) {
-            invokeCache.delete(oldestKey);
-            if (isDev) {
-              // eslint-disable-next-line no-console
-              console.log(`[safeInvoke] キャッシュエントリを削除: ${oldestKey}`);
-            }
-          }
+          invokeCache.set(cacheKey, {
+            data: result,
+            timestamp: now,
+            accessCount: 1,
+            lastAccess: now,
+          });
         }
         
-        invokeCache.set(cacheKey, {
-          data: result,
-          timestamp: now,
-          accessCount: 1,
-          lastAccess: now,
-        });
+        if (debugLoggingEnabled) {
+          // eslint-disable-next-line no-console
+          console.log(`[safeInvoke] コマンド成功: ${cmd}`, result);
+        }
+        return result;
+      } finally {
+        if (typeof timeoutId !== 'undefined') {
+          clearTimeout(timeoutId);
+        }
       }
-      
-      if (isDev) {
-        // eslint-disable-next-line no-console
-        console.log(`[safeInvoke] コマンド成功: ${cmd}`, result);
-      }
-      return result;
     } catch (error) {
       // eslint-disable-next-line no-console
       console.error(`[safeInvoke] ✗ コマンドエラー: ${cmd}`, error);
@@ -302,7 +315,7 @@ export async function safeInvoke<T = unknown>(
       
       const errorInfo = parseError(error, errorCategory);
       logError(errorInfo, `safeInvoke:${cmd}`);
-      if (isDev) {
+      if (debugLoggingEnabled) {
         // eslint-disable-next-line no-console
         console.error(`[safeInvoke] エラー情報:`, errorInfo);
         // eslint-disable-next-line no-console
@@ -310,7 +323,8 @@ export async function safeInvoke<T = unknown>(
       }
       
       // 開発環境では元のエラーメッセージも含める
-      const finalMessage = isDev && originalMessage !== errorInfo.message
+      const finalMessage =
+        debugLoggingEnabled && originalMessage !== errorInfo.message
         ? `${errorInfo.message} (詳細: ${originalMessage})`
         : errorInfo.message;
       
@@ -375,14 +389,7 @@ export async function safeInvoke<T = unknown>(
  */
 export function checkTauriEnvironment(featureName: string = 'この機能'): void {
   if (!isTauriAvailable()) {
-    // 開発環境の判定: テスト環境とVite環境の両方で動作するようにprocess.envを使用
-    // 注: Vite環境ではimport.meta.env.DEVが利用可能だが、Jest環境ではパースエラーになるため
-    // process.env.NODE_ENVを使用（Viteは自動的にprocess.envを設定する）
-    const isDev =
-      process.env.NODE_ENV === 'development' ||
-      process.env.NODE_ENV !== 'production';
-
-    if (typeof window !== 'undefined' && isDev) {
+    if (typeof window !== 'undefined' && isDevEnvironment()) {
       logger.warn(
         `${featureName}を使用するには、Tauriアプリケーションとして起動する必要があります。`,
         'tauri'

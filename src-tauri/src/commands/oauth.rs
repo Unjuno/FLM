@@ -1,6 +1,9 @@
 // OAuth 2.0認証コマンド
 
-use crate::auth::oauth::{OAuthConfig, OAuthToken, OAuthFlowStartResult, start_oauth_flow, exchange_code_for_token, refresh_access_token};
+use crate::auth::oauth::{
+    exchange_code_for_token, refresh_access_token, start_oauth_flow, OAuthConfig,
+    OAuthFlowStartResult, OAuthToken,
+};
 use crate::utils::error::AppError;
 use serde::{Deserialize, Serialize};
 
@@ -51,12 +54,12 @@ fn convert_token(token: OAuthToken) -> OAuthTokenOutput {
 }
 
 /// OAuth 2.0認証フローを開始
-/// 
+///
 /// 認証URLを生成し、ブラウザで開くためのURLとstateを返します。
-/// 
+///
 /// # 引数
 /// * `config` - OAuth設定情報
-/// 
+///
 /// # 戻り値
 /// * 認証URLとstateを含む結果
 #[tauri::command]
@@ -64,24 +67,22 @@ pub async fn start_oauth_flow_command(
     config: OAuthConfigInput,
 ) -> Result<OAuthFlowStartResult, String> {
     let oauth_config = convert_config(config);
-    
-    start_oauth_flow(&oauth_config)
-        .await
-        .map_err(|e| match e {
-            AppError::ApiError { message, .. } => message,
-            _ => format!("OAuth認証フローの開始に失敗しました: {}", e),
-        })
+
+    start_oauth_flow(&oauth_config).await.map_err(|e| match e {
+        AppError::ApiError { message, .. } => message,
+        _ => format!("OAuth認証フローの開始に失敗しました: {}", e),
+    })
 }
 
 /// OAuth認証コードをトークンに交換
-/// 
+///
 /// 認証フローで取得した認証コードをアクセストークンに交換します。
-/// 
+///
 /// # 引数
 /// * `config` - OAuth設定情報
 /// * `code` - 認証コード
 /// * `state` - ステート（セキュリティ用、CSRF対策）
-/// 
+///
 /// # 戻り値
 /// * OAuthトークン情報
 #[tauri::command]
@@ -91,7 +92,7 @@ pub async fn exchange_oauth_code(
     state: String,
 ) -> Result<OAuthTokenOutput, String> {
     let oauth_config = convert_config(config);
-    
+
     exchange_code_for_token(&oauth_config, &code, &state)
         .await
         .map(convert_token)
@@ -102,13 +103,13 @@ pub async fn exchange_oauth_code(
 }
 
 /// OAuthリフレッシュトークンでアクセストークンを更新
-/// 
+///
 /// リフレッシュトークンを使用して新しいアクセストークンを取得します。
-/// 
+///
 /// # 引数
 /// * `config` - OAuth設定情報
 /// * `refresh_token` - リフレッシュトークン
-/// 
+///
 /// # 戻り値
 /// * 新しいOAuthトークン情報
 #[tauri::command]
@@ -117,7 +118,7 @@ pub async fn refresh_oauth_token(
     refresh_token: String,
 ) -> Result<OAuthTokenOutput, String> {
     let oauth_config = convert_config(config);
-    
+
     refresh_access_token(&oauth_config, &refresh_token)
         .await
         .map(convert_token)
@@ -126,5 +127,3 @@ pub async fn refresh_oauth_token(
             _ => format!("トークンリフレッシュに失敗しました: {}", e),
         })
 }
-
-

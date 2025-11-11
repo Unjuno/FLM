@@ -36,6 +36,253 @@ interface ModelInfo {
   modified_at?: string;
 }
 
+const FALLBACK_MODELS: ReadonlyArray<ModelInfo> = [
+  {
+    name: 'llama3:8b',
+    description: '高性能な汎用チャットモデル（Meta製）',
+    size: 4649132864,
+    parameters: 8000000000,
+    category: 'chat',
+    recommended: true,
+  },
+  {
+    name: 'llama3:70b',
+    description: '超大規模汎用チャットモデル（高精度版）',
+    size: 40724254720,
+    parameters: 70000000000,
+    category: 'chat',
+    recommended: true,
+  },
+  {
+    name: 'llama3.1:8b',
+    description: 'Llama 3.1の改良版（最新モデル）',
+    size: 4800000000,
+    parameters: 8000000000,
+    category: 'chat',
+    recommended: true,
+  },
+  {
+    name: 'llama3.1:70b',
+    description: 'Llama 3.1の大規模版',
+    size: 40800000000,
+    parameters: 70000000000,
+    category: 'chat',
+    recommended: true,
+  },
+  {
+    name: 'llama3.2:1b',
+    description: '軽量で高速なLlama 3.2モデル',
+    size: 1200000000,
+    parameters: 1000000000,
+    category: 'chat',
+    recommended: false,
+  },
+  {
+    name: 'llama3.2:3b',
+    description: 'バランス型Llama 3.2モデル',
+    size: 2400000000,
+    parameters: 3000000000,
+    category: 'chat',
+    recommended: true,
+  },
+  {
+    name: 'codellama:7b',
+    description: 'コード生成に特化したモデル',
+    size: 3858733056,
+    parameters: 7000000000,
+    category: 'code',
+    recommended: true,
+  },
+  {
+    name: 'codellama:13b',
+    description: '大規模コード生成モデル',
+    size: 7318691840,
+    parameters: 13000000000,
+    category: 'code',
+    recommended: true,
+  },
+  {
+    name: 'codellama:34b',
+    description: '超大規模コード生成モデル',
+    size: 19200000000,
+    parameters: 34000000000,
+    category: 'code',
+    recommended: false,
+  },
+  {
+    name: 'mistral:7b',
+    description: '効率的な多目的モデル',
+    size: 4117237760,
+    parameters: 7000000000,
+    category: 'chat',
+    recommended: true,
+  },
+  {
+    name: 'mistral:8x7b',
+    description: 'Mixture of Expertsモデル（高性能）',
+    size: 47000000000,
+    parameters: 56000000000,
+    category: 'chat',
+    recommended: true,
+  },
+  {
+    name: 'phi3:mini',
+    description: 'Microsoft製の軽量高性能モデル',
+    size: 2300000000,
+    parameters: 3800000000,
+    category: 'chat',
+    recommended: true,
+  },
+  {
+    name: 'phi3:medium',
+    description: 'Microsoft製の中規模モデル',
+    size: 7800000000,
+    parameters: 14000000000,
+    category: 'chat',
+    recommended: false,
+  },
+  {
+    name: 'gemma:2b',
+    description: 'Google製の軽量モデル',
+    size: 1600000000,
+    parameters: 2000000000,
+    category: 'chat',
+    recommended: false,
+  },
+  {
+    name: 'gemma:7b',
+    description: 'Google製の中規模モデル',
+    size: 5100000000,
+    parameters: 7000000000,
+    category: 'chat',
+    recommended: true,
+  },
+  {
+    name: 'neural-chat:7b',
+    description: '会話に最適化されたモデル',
+    size: 4200000000,
+    parameters: 7000000000,
+    category: 'chat',
+    recommended: false,
+  },
+  {
+    name: 'starling-lm:7b',
+    description: 'OpenAIフォーマット対応モデル',
+    size: 4300000000,
+    parameters: 7000000000,
+    category: 'chat',
+    recommended: false,
+  },
+  {
+    name: 'openchat:7b',
+    description: 'オープンソースチャットモデル',
+    size: 4100000000,
+    parameters: 7000000000,
+    category: 'chat',
+    recommended: false,
+  },
+  {
+    name: 'dolphin-mixtral:8x7b',
+    description: 'ファインチューニング済みMixtral',
+    size: 47000000000,
+    parameters: 56000000000,
+    category: 'chat',
+    recommended: false,
+  },
+  {
+    name: 'qwen:7b',
+    description: 'Alibaba製の高性能モデル',
+    size: 4600000000,
+    parameters: 7000000000,
+    category: 'chat',
+    recommended: false,
+  },
+  {
+    name: 'qwen:14b',
+    description: 'Alibaba製の大規模モデル',
+    size: 9000000000,
+    parameters: 14000000000,
+    category: 'chat',
+    recommended: false,
+  },
+  {
+    name: 'tinyllama:1.1b',
+    description: '最小サイズの軽量モデル',
+    size: 637000000,
+    parameters: 1100000000,
+    category: 'chat',
+    recommended: false,
+  },
+  {
+    name: 'nous-hermes:13b',
+    description: '推論に優れたモデル',
+    size: 7400000000,
+    parameters: 13000000000,
+    category: 'chat',
+    recommended: false,
+  },
+  {
+    name: 'wizardcoder:13b',
+    description: 'コード生成特化モデル',
+    size: 7300000000,
+    parameters: 13000000000,
+    category: 'code',
+    recommended: false,
+  },
+  {
+    name: 'deepseek-coder:6.7b',
+    description: 'コード生成に特化した中国製モデル',
+    size: 3900000000,
+    parameters: 6700000000,
+    category: 'code',
+    recommended: false,
+  },
+  {
+    name: 'starcoder:15b',
+    description: '大規模コード生成モデル',
+    size: 31000000000,
+    parameters: 15000000000,
+    category: 'code',
+    recommended: false,
+  },
+  {
+    name: 'orca-mini:3b',
+    description: '軽量会話モデル',
+    size: 2000000000,
+    parameters: 3000000000,
+    category: 'chat',
+    recommended: false,
+  },
+  {
+    name: 'vicuna:13b',
+    description: 'オープンソースチャットモデル',
+    size: 7300000000,
+    parameters: 13000000000,
+    category: 'chat',
+    recommended: false,
+  },
+  {
+    name: 'falcon:7b',
+    description: 'Abu Dhabi製の高性能モデル',
+    size: 3900000000,
+    parameters: 7000000000,
+    category: 'chat',
+    recommended: false,
+  },
+  {
+    name: 'falcon:40b',
+    description: 'Abu Dhabi製の超大規模モデル',
+    size: 22000000000,
+    parameters: 40000000000,
+    category: 'chat',
+    recommended: false,
+  },
+];
+
+function createFallbackModels(): ModelInfo[] {
+  return FALLBACK_MODELS.map(model => ({ ...model }));
+}
+
 /**
  * モデル検索コンポーネント
  */
@@ -72,8 +319,63 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
   >('downloading');
   const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
 
+  const categoryOptions = useMemo(
+    () => [
+      { value: 'all', label: t('modelSearch.filters.options.category.all') },
+      { value: 'chat', label: t('modelSearch.filters.options.category.chat') },
+      { value: 'code', label: t('modelSearch.filters.options.category.code') },
+      {
+        value: 'translation',
+        label: t('modelSearch.filters.options.category.translation'),
+      },
+      {
+        value: 'summarization',
+        label: t('modelSearch.filters.options.category.summarization'),
+      },
+      { value: 'qa', label: t('modelSearch.filters.options.category.qa') },
+      { value: 'other', label: t('modelSearch.filters.options.category.other') },
+    ],
+    [t]
+  );
+
+  const sizeFilterOptions = useMemo(
+    () => [
+      { value: 'all', label: t('modelSearch.filters.options.size.all') },
+      { value: 'small', label: t('modelSearch.filters.options.size.small') },
+      { value: 'medium', label: t('modelSearch.filters.options.size.medium') },
+      { value: 'large', label: t('modelSearch.filters.options.size.large') },
+    ],
+    [t]
+  );
+
+  const useCaseOptions = useMemo(
+    () => [
+      { value: 'all', label: t('modelSearch.filters.options.useCase.all') },
+      {
+        value: 'general',
+        label: t('modelSearch.filters.options.useCase.general'),
+      },
+      {
+        value: 'specialized',
+        label: t('modelSearch.filters.options.useCase.specialized'),
+      },
+    ],
+    [t]
+  );
+
+  const sortOptions = useMemo(
+    () => [
+      { value: 'popular', label: t('modelSearch.filters.options.sort.popular') },
+      { value: 'size', label: t('modelSearch.filters.options.sort.size') },
+      { value: 'name', label: t('modelSearch.filters.options.sort.name') },
+      { value: 'newest', label: t('modelSearch.filters.options.sort.newest') },
+    ],
+    [t]
+  );
+
   // 仮想スクロール用のref
   const parentRef = useRef<HTMLDivElement>(null);
+  const virtualScrollInnerRef = useRef<HTMLDivElement | null>(null);
 
   // モデル一覧を取得（useCallbackでメモ化）
   const loadModels = useCallback(async () => {
@@ -113,248 +415,7 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
           setModels(convertedModels);
         } else {
           // データベースが空の場合は暫定実装を使用
-          setModels([
-            {
-              name: 'llama3:8b',
-              description: '高性能な汎用チャットモデル（Meta製）',
-              size: 4649132864,
-              parameters: 8000000000,
-              category: 'chat',
-              recommended: true,
-            },
-            {
-              name: 'llama3:70b',
-              description: '超大規模汎用チャットモデル（高精度版）',
-              size: 40724254720,
-              parameters: 70000000000,
-              category: 'chat',
-              recommended: true,
-            },
-            {
-              name: 'llama3.1:8b',
-              description: 'Llama 3.1の改良版（最新モデル）',
-              size: 4800000000,
-              parameters: 8000000000,
-              category: 'chat',
-              recommended: true,
-            },
-            {
-              name: 'llama3.1:70b',
-              description: 'Llama 3.1の大規模版',
-              size: 40800000000,
-              parameters: 70000000000,
-              category: 'chat',
-              recommended: true,
-            },
-            {
-              name: 'llama3.2:1b',
-              description: '軽量で高速なLlama 3.2モデル',
-              size: 1200000000,
-              parameters: 1000000000,
-              category: 'chat',
-              recommended: false,
-            },
-            {
-              name: 'llama3.2:3b',
-              description: 'バランス型Llama 3.2モデル',
-              size: 2400000000,
-              parameters: 3000000000,
-              category: 'chat',
-              recommended: true,
-            },
-            {
-              name: 'codellama:7b',
-              description: 'コード生成に特化したモデル',
-              size: 3858733056,
-              parameters: 7000000000,
-              category: 'code',
-              recommended: true,
-            },
-            {
-              name: 'codellama:13b',
-              description: '大規模コード生成モデル',
-              size: 7318691840,
-              parameters: 13000000000,
-              category: 'code',
-              recommended: true,
-            },
-            {
-              name: 'codellama:34b',
-              description: '超大規模コード生成モデル',
-              size: 19200000000,
-              parameters: 34000000000,
-              category: 'code',
-              recommended: false,
-            },
-            {
-              name: 'mistral:7b',
-              description: '効率的な多目的モデル',
-              size: 4117237760,
-              parameters: 7000000000,
-              category: 'chat',
-              recommended: true,
-            },
-            {
-              name: 'mistral:8x7b',
-              description: 'Mixture of Expertsモデル（高性能）',
-              size: 47000000000,
-              parameters: 56000000000,
-              category: 'chat',
-              recommended: true,
-            },
-            {
-              name: 'phi3:mini',
-              description: 'Microsoft製の軽量高性能モデル',
-              size: 2300000000,
-              parameters: 3800000000,
-              category: 'chat',
-              recommended: true,
-            },
-            {
-              name: 'phi3:medium',
-              description: 'Microsoft製の中規模モデル',
-              size: 7800000000,
-              parameters: 14000000000,
-              category: 'chat',
-              recommended: false,
-            },
-            {
-              name: 'gemma:2b',
-              description: 'Google製の軽量モデル',
-              size: 1600000000,
-              parameters: 2000000000,
-              category: 'chat',
-              recommended: false,
-            },
-            {
-              name: 'gemma:7b',
-              description: 'Google製の中規模モデル',
-              size: 5100000000,
-              parameters: 7000000000,
-              category: 'chat',
-              recommended: true,
-            },
-            {
-              name: 'neural-chat:7b',
-              description: '会話に最適化されたモデル',
-              size: 4200000000,
-              parameters: 7000000000,
-              category: 'chat',
-              recommended: false,
-            },
-            {
-              name: 'starling-lm:7b',
-              description: 'OpenAIフォーマット対応モデル',
-              size: 4300000000,
-              parameters: 7000000000,
-              category: 'chat',
-              recommended: false,
-            },
-            {
-              name: 'openchat:7b',
-              description: 'オープンソースチャットモデル',
-              size: 4100000000,
-              parameters: 7000000000,
-              category: 'chat',
-              recommended: false,
-            },
-            {
-              name: 'dolphin-mixtral:8x7b',
-              description: 'ファインチューニング済みMixtral',
-              size: 47000000000,
-              parameters: 56000000000,
-              category: 'chat',
-              recommended: false,
-            },
-            {
-              name: 'qwen:7b',
-              description: 'Alibaba製の高性能モデル',
-              size: 4600000000,
-              parameters: 7000000000,
-              category: 'chat',
-              recommended: false,
-            },
-            {
-              name: 'qwen:14b',
-              description: 'Alibaba製の大規模モデル',
-              size: 9000000000,
-              parameters: 14000000000,
-              category: 'chat',
-              recommended: false,
-            },
-            {
-              name: 'tinyllama:1.1b',
-              description: '最小サイズの軽量モデル',
-              size: 637000000,
-              parameters: 1100000000,
-              category: 'chat',
-              recommended: false,
-            },
-            {
-              name: 'nous-hermes:13b',
-              description: '推論に優れたモデル',
-              size: 7400000000,
-              parameters: 13000000000,
-              category: 'chat',
-              recommended: false,
-            },
-            {
-              name: 'wizardcoder:13b',
-              description: 'コード生成特化モデル',
-              size: 7300000000,
-              parameters: 13000000000,
-              category: 'code',
-              recommended: false,
-            },
-            {
-              name: 'deepseek-coder:6.7b',
-              description: 'コード生成に特化した中国製モデル',
-              size: 3900000000,
-              parameters: 6700000000,
-              category: 'code',
-              recommended: false,
-            },
-            {
-              name: 'starcoder:15b',
-              description: '大規模コード生成モデル',
-              size: 31000000000,
-              parameters: 15000000000,
-              category: 'code',
-              recommended: false,
-            },
-            {
-              name: 'orca-mini:3b',
-              description: '軽量会話モデル',
-              size: 2000000000,
-              parameters: 3000000000,
-              category: 'chat',
-              recommended: false,
-            },
-            {
-              name: 'vicuna:13b',
-              description: 'オープンソースチャットモデル',
-              size: 7300000000,
-              parameters: 13000000000,
-              category: 'chat',
-              recommended: false,
-            },
-            {
-              name: 'falcon:7b',
-              description: 'Abu Dhabi製の高性能モデル',
-              size: 3900000000,
-              parameters: 7000000000,
-              category: 'chat',
-              recommended: false,
-            },
-            {
-              name: 'falcon:40b',
-              description: 'Abu Dhabi製の超大規模モデル',
-              size: 22000000000,
-              parameters: 40000000000,
-              category: 'chat',
-              recommended: false,
-            },
-          ]);
+          setModels(createFallbackModels());
         }
       } catch (catalogErr) {
         const { isDev } = await import('../../utils/env');
@@ -373,248 +434,7 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
             );
           }
         }
-        setModels([
-          {
-            name: 'llama3:8b',
-            description: '高性能な汎用チャットモデル（Meta製）',
-            size: 4649132864,
-            parameters: 8000000000,
-            category: 'chat',
-            recommended: true,
-          },
-          {
-            name: 'llama3:70b',
-            description: '超大規模汎用チャットモデル（高精度版）',
-            size: 40724254720,
-            parameters: 70000000000,
-            category: 'chat',
-            recommended: true,
-          },
-          {
-            name: 'llama3.1:8b',
-            description: 'Llama 3.1の改良版（最新モデル）',
-            size: 4800000000,
-            parameters: 8000000000,
-            category: 'chat',
-            recommended: true,
-          },
-          {
-            name: 'llama3.1:70b',
-            description: 'Llama 3.1の大規模版',
-            size: 40800000000,
-            parameters: 70000000000,
-            category: 'chat',
-            recommended: true,
-          },
-          {
-            name: 'llama3.2:1b',
-            description: '軽量で高速なLlama 3.2モデル',
-            size: 1200000000,
-            parameters: 1000000000,
-            category: 'chat',
-            recommended: false,
-          },
-          {
-            name: 'llama3.2:3b',
-            description: 'バランス型Llama 3.2モデル',
-            size: 2400000000,
-            parameters: 3000000000,
-            category: 'chat',
-            recommended: true,
-          },
-          {
-            name: 'codellama:7b',
-            description: 'コード生成に特化したモデル',
-            size: 3858733056,
-            parameters: 7000000000,
-            category: 'code',
-            recommended: true,
-          },
-          {
-            name: 'codellama:13b',
-            description: '大規模コード生成モデル',
-            size: 7318691840,
-            parameters: 13000000000,
-            category: 'code',
-            recommended: true,
-          },
-          {
-            name: 'codellama:34b',
-            description: '超大規模コード生成モデル',
-            size: 19200000000,
-            parameters: 34000000000,
-            category: 'code',
-            recommended: false,
-          },
-          {
-            name: 'mistral:7b',
-            description: '効率的な多目的モデル',
-            size: 4117237760,
-            parameters: 7000000000,
-            category: 'chat',
-            recommended: true,
-          },
-          {
-            name: 'mistral:8x7b',
-            description: 'Mixture of Expertsモデル（高性能）',
-            size: 47000000000,
-            parameters: 56000000000,
-            category: 'chat',
-            recommended: true,
-          },
-          {
-            name: 'phi3:mini',
-            description: 'Microsoft製の軽量高性能モデル',
-            size: 2300000000,
-            parameters: 3800000000,
-            category: 'chat',
-            recommended: true,
-          },
-          {
-            name: 'phi3:medium',
-            description: 'Microsoft製の中規模モデル',
-            size: 7800000000,
-            parameters: 14000000000,
-            category: 'chat',
-            recommended: false,
-          },
-          {
-            name: 'gemma:2b',
-            description: 'Google製の軽量モデル',
-            size: 1600000000,
-            parameters: 2000000000,
-            category: 'chat',
-            recommended: false,
-          },
-          {
-            name: 'gemma:7b',
-            description: 'Google製の中規模モデル',
-            size: 5100000000,
-            parameters: 7000000000,
-            category: 'chat',
-            recommended: true,
-          },
-          {
-            name: 'neural-chat:7b',
-            description: '会話に最適化されたモデル',
-            size: 4200000000,
-            parameters: 7000000000,
-            category: 'chat',
-            recommended: false,
-          },
-          {
-            name: 'starling-lm:7b',
-            description: 'OpenAIフォーマット対応モデル',
-            size: 4300000000,
-            parameters: 7000000000,
-            category: 'chat',
-            recommended: false,
-          },
-          {
-            name: 'openchat:7b',
-            description: 'オープンソースチャットモデル',
-            size: 4100000000,
-            parameters: 7000000000,
-            category: 'chat',
-            recommended: false,
-          },
-          {
-            name: 'dolphin-mixtral:8x7b',
-            description: 'ファインチューニング済みMixtral',
-            size: 47000000000,
-            parameters: 56000000000,
-            category: 'chat',
-            recommended: false,
-          },
-          {
-            name: 'qwen:7b',
-            description: 'Alibaba製の高性能モデル',
-            size: 4600000000,
-            parameters: 7000000000,
-            category: 'chat',
-            recommended: false,
-          },
-          {
-            name: 'qwen:14b',
-            description: 'Alibaba製の大規模モデル',
-            size: 9000000000,
-            parameters: 14000000000,
-            category: 'chat',
-            recommended: false,
-          },
-          {
-            name: 'tinyllama:1.1b',
-            description: '最小サイズの軽量モデル',
-            size: 637000000,
-            parameters: 1100000000,
-            category: 'chat',
-            recommended: false,
-          },
-          {
-            name: 'nous-hermes:13b',
-            description: '推論に優れたモデル',
-            size: 7400000000,
-            parameters: 13000000000,
-            category: 'chat',
-            recommended: false,
-          },
-          {
-            name: 'wizardcoder:13b',
-            description: 'コード生成特化モデル',
-            size: 7300000000,
-            parameters: 13000000000,
-            category: 'code',
-            recommended: false,
-          },
-          {
-            name: 'deepseek-coder:6.7b',
-            description: 'コード生成に特化した中国製モデル',
-            size: 3900000000,
-            parameters: 6700000000,
-            category: 'code',
-            recommended: false,
-          },
-          {
-            name: 'starcoder:15b',
-            description: '大規模コード生成モデル',
-            size: 31000000000,
-            parameters: 15000000000,
-            category: 'code',
-            recommended: false,
-          },
-          {
-            name: 'orca-mini:3b',
-            description: '軽量会話モデル',
-            size: 2000000000,
-            parameters: 3000000000,
-            category: 'chat',
-            recommended: false,
-          },
-          {
-            name: 'vicuna:13b',
-            description: 'オープンソースチャットモデル',
-            size: 7300000000,
-            parameters: 13000000000,
-            category: 'chat',
-            recommended: false,
-          },
-          {
-            name: 'falcon:7b',
-            description: 'Abu Dhabi製の高性能モデル',
-            size: 3900000000,
-            parameters: 7000000000,
-            category: 'chat',
-            recommended: false,
-          },
-          {
-            name: 'falcon:40b',
-            description: 'Abu Dhabi製の超大規模モデル',
-            size: 22000000000,
-            parameters: 40000000000,
-            category: 'chat',
-            recommended: false,
-          },
-        ]);
+        setModels(createFallbackModels());
       }
     } catch (err) {
       setError(extractErrorMessage(err, 'モデル一覧の取得に失敗しました'));
@@ -746,22 +566,35 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
     enabled: shouldUseVirtualScroll,
   });
 
+  useEffect(() => {
+    const innerElement = virtualScrollInnerRef.current;
+
+    if (shouldUseVirtualScroll && innerElement) {
+      innerElement.style.height = `${rowVirtualizer.getTotalSize()}px`;
+    } else if (innerElement) {
+      innerElement.style.height = '';
+    }
+  }, [shouldUseVirtualScroll, rowVirtualizer, filteredModels.length]);
+
   const downloadAbortControllerRef = useRef<AbortController | null>(null);
   const unsubscribeProgressRef = useRef<(() => void) | null>(null);
   const pausedModelRef = useRef<ModelInfo | null>(null);
 
   // カテゴリ表示名を取得
-  const getCategoryLabel = useCallback((category: string): string => {
-    const categoryLabels: Record<string, string> = {
-      chat: 'チャット',
-      code: 'コード生成',
-      translation: '翻訳',
-      summarization: '要約',
-      qa: '質問応答',
-      other: 'その他',
-    };
-    return categoryLabels[category] || 'その他';
-  }, []);
+  const getCategoryLabel = useCallback(
+    (category: string): string => {
+      const categoryLabels: Record<string, string> = {
+        chat: t('modelSearch.categories.chat'),
+        code: t('modelSearch.categories.code'),
+        translation: t('modelSearch.categories.translation'),
+        summarization: t('modelSearch.categories.summarization'),
+        qa: t('modelSearch.categories.qa'),
+        other: t('modelSearch.categories.other'),
+      };
+      return categoryLabels[category] || t('modelSearch.categories.other');
+    },
+    [t]
+  );
 
   // モデルダウンロード開始（useCallbackでメモ化）
   const handleDownload = useCallback(
@@ -975,6 +808,20 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
       unsubscribeProgressRef.current();
       unsubscribeProgressRef.current = null;
     }
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (unsubscribeProgressRef.current) {
+        unsubscribeProgressRef.current();
+        unsubscribeProgressRef.current = null;
+      }
+      if (downloadAbortControllerRef.current) {
+        downloadAbortControllerRef.current.abort();
+        downloadAbortControllerRef.current = null;
+      }
+      pausedModelRef.current = null;
+    };
   }, []);
 
   if (loading) {

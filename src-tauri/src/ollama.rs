@@ -1,20 +1,20 @@
 // Ollama Integration Module
 
+use crate::database::connection::get_app_data_dir;
+use crate::utils::error::AppError;
 use serde::{Deserialize, Serialize};
+use std::fs;
 use std::net::TcpListener;
 use std::path::{Path, PathBuf};
 use std::process::Command;
-use std::fs;
-use crate::utils::error::AppError;
-use crate::database::connection::get_app_data_dir;
 
 /// Ollama検出結果
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct OllamaDetectionResult {
-    pub installed: bool,           // システムパス上にOllamaが存在するか
-    pub running: bool,              // Ollamaプロセスが実行中か
-    pub portable: bool,             // ポータブル版が存在するか
-    pub version: Option<String>,    // バージョン情報（存在する場合）
+    pub installed: bool,               // システムパス上にOllamaが存在するか
+    pub running: bool,                 // Ollamaプロセスが実行中か
+    pub portable: bool,                // ポータブル版が存在するか
+    pub version: Option<String>,       // バージョン情報（存在する場合）
     pub portable_path: Option<String>, // ポータブル版のパス（存在する場合）
     pub system_path: Option<String>,   // システムパス上のOllamaのパス（存在する場合）
 }
@@ -22,12 +22,12 @@ pub struct OllamaDetectionResult {
 /// ダウンロード進捗情報
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct DownloadProgress {
-    pub status: String,             // "downloading" | "extracting" | "completed" | "error"
-    pub progress: f64,              // 0.0 - 100.0
-    pub downloaded_bytes: u64,      // ダウンロード済みバイト数
-    pub total_bytes: u64,           // 総バイト数
-    pub speed_bytes_per_sec: f64,   // ダウンロード速度（バイト/秒）
-    pub message: Option<String>,    // ステータスメッセージ
+    pub status: String,        // "downloading" | "extracting" | "completed" | "error"
+    pub progress: f64,         // 0.0 - 100.0
+    pub downloaded_bytes: u64, // ダウンロード済みバイト数
+    pub total_bytes: u64,      // 総バイト数
+    pub speed_bytes_per_sec: f64, // ダウンロード速度（バイト/秒）
+    pub message: Option<String>, // ステータスメッセージ
 }
 
 fn default_ollama_host() -> String {
@@ -268,19 +268,18 @@ pub async fn detect_ollama() -> Result<OllamaDetectionResult, AppError> {
 async fn detect_ollama_in_path() -> Result<Option<String>, AppError> {
     #[cfg(target_os = "windows")]
     {
-        let output = Command::new("where")
-            .arg("ollama")
-            .output()
-            .map_err(|e| AppError::OllamaError {
-                message: format!("whereコマンド実行エラー:  {}", e),
-            
-            source_detail: None,
-})?;
+        let output =
+            Command::new("where")
+                .arg("ollama")
+                .output()
+                .map_err(|e| AppError::OllamaError {
+                    message: format!("whereコマンド実行エラー:  {}", e),
+
+                    source_detail: None,
+                })?;
 
         if output.status.success() {
-            let path = String::from_utf8_lossy(&output.stdout)
-                .trim()
-                .to_string();
+            let path = String::from_utf8_lossy(&output.stdout).trim().to_string();
             if !path.is_empty() {
                 return Ok(Some(path));
             }
@@ -295,10 +294,7 @@ pub async fn check_ollama_running() -> Result<bool, AppError> {
     let client = crate::utils::http_client::create_http_client_short_timeout()?;
     let base_url = current_ollama_base_url();
     let url = format!("{}/api/version", base_url.trim_end_matches('/'));
-    let response = client
-        .get(&url)
-        .send()
-        .await;
+    let response = client.get(&url).send().await;
 
     match response {
         Ok(resp) => Ok(resp.status().is_success()),
@@ -327,11 +323,10 @@ async fn get_ollama_version_from_api() -> Result<String, AppError> {
         });
     }
 
-    let json: serde_json::Value = response.json().await
-        .map_err(|e| AppError::OllamaError {
-            message: format!("JSON解析エラー: {}", e),
-            source_detail: None,
-        })?;
+    let json: serde_json::Value = response.json().await.map_err(|e| AppError::OllamaError {
+        message: format!("JSON解析エラー: {}", e),
+        source_detail: None,
+    })?;
 
     let version = json
         .get("version")
@@ -370,24 +365,30 @@ async fn get_ollama_version(ollama_path: &str) -> Result<String, AppError> {
 pub async fn check_ollama_update_available() -> Result<(bool, Option<String>, String), AppError> {
     // 現在のバージョンを取得
     let current_version = if let Some(path) = get_ollama_executable_path_from_env().await {
-        get_ollama_version(&path).await.map_err(|e| {
-            eprintln!("[WARN] Ollamaのバージョン取得に失敗しました (パス: {}): {}", path, e);
-            e
-        }).ok()
+        get_ollama_version(&path)
+            .await
+            .map_err(|e| {
+                eprintln!(
+                    "[WARN] Ollamaのバージョン取得に失敗しました (パス: {}): {}",
+                    path, e
+                );
+                e
+            })
+            .ok()
     } else {
         None
     };
-    
+
     // 最新バージョンを取得
     let latest_version = get_latest_ollama_version().await?;
-    
+
     // バージョン比較（簡易実装）
     let is_newer_available = if let Some(current) = &current_version {
         current != &latest_version
     } else {
         true // 現在のバージョンが取得できない場合はアップデート可能とみなす
     };
-    
+
     Ok((is_newer_available, current_version, latest_version))
 }
 
@@ -396,7 +397,7 @@ async fn get_ollama_executable_path_from_env() -> Option<String> {
     if let Ok(path) = std::env::var("OLLAMA_PATH") {
         return Some(path);
     }
-    
+
     // システムパスから検索
     #[cfg(target_os = "windows")]
     {
@@ -408,7 +409,7 @@ async fn get_ollama_executable_path_from_env() -> Option<String> {
             }
         }
     }
-    
+
     #[cfg(not(target_os = "windows"))]
     {
         if let Ok(output) = Command::new("which").arg("ollama").output() {
@@ -419,21 +420,20 @@ async fn get_ollama_executable_path_from_env() -> Option<String> {
             }
         }
     }
-    
+
     None
 }
 
 /// アプリデータディレクトリ内のポータブル版Ollamaを検出
 async fn detect_portable_ollama_in_app_data() -> Result<Option<String>, AppError> {
-    let app_data_dir = get_app_data_dir()
-        .map_err(|e| AppError::IoError {
-            message: format!("アプリデータディレクトリ取得エラー: {}", e),
-            source_detail: None,
-        })?;
-    
+    let app_data_dir = get_app_data_dir().map_err(|e| AppError::IoError {
+        message: format!("アプリデータディレクトリ取得エラー: {}", e),
+        source_detail: None,
+    })?;
+
     let ollama_dir = app_data_dir.join("ollama");
     let ollama_path = get_ollama_executable_path(&ollama_dir);
-    
+
     if ollama_path.exists() {
         Ok(Some(ollama_path.to_string_lossy().to_string()))
     } else {
@@ -484,13 +484,10 @@ async fn get_latest_ollama_download_url() -> Result<(String, String), AppError> 
         });
     }
 
-    let json: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|e| AppError::OllamaError {
-            message: format!("JSON解析エラー: {}", e),
-            source_detail: None,
-        })?;
+    let json: serde_json::Value = response.json().await.map_err(|e| AppError::OllamaError {
+        message: format!("JSON解析エラー: {}", e),
+        source_detail: None,
+    })?;
 
     // Windows用のアセットを探す
     let assets = json
@@ -555,13 +552,10 @@ pub async fn get_latest_ollama_version() -> Result<String, AppError> {
         });
     }
 
-    let json: serde_json::Value = response
-        .json()
-        .await
-        .map_err(|e| AppError::OllamaError {
-            message: format!("JSON解析エラー: {}", e),
-            source_detail: None,
-        })?;
+    let json: serde_json::Value = response.json().await.map_err(|e| AppError::OllamaError {
+        message: format!("JSON解析エラー: {}", e),
+        source_detail: None,
+    })?;
 
     let version = json
         .get("tag_name")
@@ -599,34 +593,36 @@ where
     F: FnMut(DownloadProgress) -> Result<(), AppError>,
 {
     let (download_url, _version) = get_latest_ollama_download_url().await?;
-    
-    let app_data_dir = get_app_data_dir()
-        .map_err(|e| AppError::IoError {
-            message: format!("アプリデータディレクトリ取得エラー: {}", e),
-            source_detail: None,
-        })?;
-    
+
+    let app_data_dir = get_app_data_dir().map_err(|e| AppError::IoError {
+        message: format!("アプリデータディレクトリ取得エラー: {}", e),
+        source_detail: None,
+    })?;
+
     let ollama_dir = app_data_dir.join("ollama");
     fs::create_dir_all(&ollama_dir).map_err(|e| AppError::IoError {
         message: format!("Ollamaディレクトリ作成エラー: {}", e),
         source_detail: None,
     })?;
-    
+
     #[cfg(target_os = "windows")]
     let download_file = ollama_dir.join("ollama.exe");
-    
+
     #[cfg(not(target_os = "windows"))]
     let download_file = ollama_dir.join("ollama");
-    
+
     // ダウンロード実行
     let client = crate::utils::http_client::create_http_client_long_timeout()?;
-    let mut response = client.get(&download_url).send().await
+    let mut response = client
+        .get(&download_url)
+        .send()
+        .await
         .map_err(|e| AppError::ApiError {
             message: format!("ダウンロード開始エラー: {}", e),
             code: "DOWNLOAD_ERROR".to_string(),
             source_detail: None,
         })?;
-    
+
     if !response.status().is_success() {
         return Err(AppError::ApiError {
             message: format!("ダウンロードエラー: HTTP {}", response.status()),
@@ -634,30 +630,32 @@ where
             source_detail: None,
         });
     }
-    
+
     let total_bytes = response.content_length().unwrap_or(0);
-    let mut file = tokio::fs::File::create(&download_file).await
-        .map_err(|e| AppError::IoError {
-            message: format!("ファイル作成エラー: {}", e),
-            source_detail: None,
-        })?;
-    
+    let mut file =
+        tokio::fs::File::create(&download_file)
+            .await
+            .map_err(|e| AppError::IoError {
+                message: format!("ファイル作成エラー: {}", e),
+                source_detail: None,
+            })?;
+
     let mut downloaded: u64 = 0;
     let start_time = std::time::Instant::now();
-    
+
     use tokio::io::AsyncWriteExt;
-    while let Some(chunk) = response.chunk().await
-        .map_err(|e| AppError::ApiError {
-            message: format!("ダウンロード中のエラー: {}", e),
-            code: "DOWNLOAD_CHUNK_ERROR".to_string(),
-            source_detail: None,
-        })? {
-        file.write_all(&chunk).await
+    while let Some(chunk) = response.chunk().await.map_err(|e| AppError::ApiError {
+        message: format!("ダウンロード中のエラー: {}", e),
+        code: "DOWNLOAD_CHUNK_ERROR".to_string(),
+        source_detail: None,
+    })? {
+        file.write_all(&chunk)
+            .await
             .map_err(|e| AppError::IoError {
                 message: format!("ファイル書き込みエラー: {}", e),
                 source_detail: None,
             })?;
-        
+
         downloaded += chunk.len() as u64;
         let elapsed = start_time.elapsed().as_secs_f64();
         let speed = if elapsed > 0.0 {
@@ -670,7 +668,7 @@ where
         } else {
             0.0
         };
-        
+
         progress_callback(DownloadProgress {
             status: "downloading".to_string(),
             progress,
@@ -680,7 +678,7 @@ where
             message: None,
         })?;
     }
-    
+
     // 実行権限を設定（Unix系OS）
     #[cfg(unix)]
     {
@@ -689,14 +687,15 @@ where
             .map_err(|e| AppError::IoError {
                 message: format!("ファイル情報取得エラー: {}", e),
                 source_detail: None,
-            })?.permissions();
+            })?
+            .permissions();
         perms.set_mode(0o755);
         fs::set_permissions(&download_file, perms).map_err(|e| AppError::IoError {
             message: format!("実行権限設定エラー: {}", e),
             source_detail: None,
         })?;
     }
-    
+
     progress_callback(DownloadProgress {
         status: "completed".to_string(),
         progress: 100.0,
@@ -705,14 +704,14 @@ where
         speed_bytes_per_sec: 0.0,
         message: Some("Ollamaのダウンロードが完了しました".to_string()),
     })?;
-    
+
     Ok(download_file.to_string_lossy().to_string())
 }
 
 /// Ollamaを起動
 pub async fn start_ollama(ollama_path: Option<String>) -> Result<u32, AppError> {
     use crate::utils::bundled_ollama;
-    
+
     // Ollama実行可能ファイルのパスを決定
     let executable_path = if let Some(path) = ollama_path {
         path
@@ -722,7 +721,8 @@ pub async fn start_ollama(ollama_path: Option<String>) -> Result<u32, AppError> 
             bundled_path.to_string_lossy().to_string()
         } else {
             // システムパスから検索
-            get_ollama_executable_path_from_env().await
+            get_ollama_executable_path_from_env()
+                .await
                 .unwrap_or_else(|| "ollama".to_string())
         }
     };
@@ -765,30 +765,30 @@ pub async fn start_ollama(ollama_path: Option<String>) -> Result<u32, AppError> 
 
     update_ollama_host_env(&final_host, final_port);
     let ollama_host_env = format!("{}:{}", final_host, final_port);
-    
+
     // Ollamaプロセスを起動
     let mut cmd = Command::new(&executable_path);
     cmd.stdin(std::process::Stdio::null());
     cmd.stdout(std::process::Stdio::null());
     cmd.stderr(std::process::Stdio::null());
     cmd.env("OLLAMA_HOST", &ollama_host_env);
-    
+
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
         cmd.creation_flags(0x08000000); // CREATE_NO_WINDOW
     }
-    
+
     let mut child = cmd.spawn().map_err(|e| AppError::OllamaError {
         message: format!("Ollamaプロセスの起動に失敗しました: {}", e),
         source_detail: Some(format!("実行パス: {}", executable_path)),
     })?;
-    
+
     let pid = child.id();
-    
+
     // プロセスが正常に起動したか確認（少し待機してから）
     tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-    
+
     // プロセスがまだ実行中か確認
     if let Ok(Some(status)) = child.try_wait() {
         // プロセスが既に終了している場合
@@ -797,10 +797,10 @@ pub async fn start_ollama(ollama_path: Option<String>) -> Result<u32, AppError> 
             source_detail: Some(format!("PID: {}, 終了コード: {:?}", pid, status.code())),
         });
     }
-    
+
     // プロセスをバックグラウンドで実行（所有権を放棄）
     drop(child);
-    
+
     // APIが応答するか確認（最大5秒待機）
     let mut check_error_logged = false;
     for _ in 0..10 {
@@ -808,7 +808,7 @@ pub async fn start_ollama(ollama_path: Option<String>) -> Result<u32, AppError> 
             Ok(true) => return Ok(pid),
             Ok(false) => {
                 // まだ起動していない、続行
-            },
+            }
             Err(e) => {
                 if !check_error_logged {
                     eprintln!("[WARN] Ollamaの起動確認中にエラーが発生しました: {}", e);
@@ -818,7 +818,7 @@ pub async fn start_ollama(ollama_path: Option<String>) -> Result<u32, AppError> 
         }
         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
     }
-    
+
     // APIが応答しない場合でも、プロセスは起動している可能性があるため、PIDを返す
     Ok(pid)
 }

@@ -1,38 +1,41 @@
+mod auth;
+mod auth_proxy;
 /// アプリケーション メインライブラリ
-/// 
+///
 /// このモジュールはTauriアプリケーションのエントリーポイントです。
 mod commands;
 mod database;
 mod ollama;
-mod auth;
-mod auth_proxy;
 #[macro_use]
 pub mod utils;
 pub mod engines;
 pub mod plugins;
 
-use commands::{greet, api};
-use commands::database as db_commands;
-use commands::performance;
-use commands::settings;
 use commands::alerts;
 use commands::backup;
+use commands::database as db_commands;
 use commands::engine;
-use commands::system;
-use commands::port;
-use commands::suggestions;
-use commands::remote_sync;
-use commands::oauth;
-use commands::updater;
 use commands::model_converter;
+use commands::oauth;
+use commands::performance;
+use commands::port;
+use commands::remote_sync;
+use commands::settings;
+use commands::suggestions;
+use commands::system;
+use commands::updater;
+use commands::{api, greet, get_app_info};
 // Plugin, scheduler, and model_sharing modules are used in invoke_handler!
 // use commands::plugin;
 // use commands::scheduler;
 // use commands::model_sharing;
-use serde::{Deserialize, Serialize};
-use tauri::Manager;
 use lazy_static::lazy_static;
-use std::sync::{Mutex, atomic::{AtomicBool, Ordering}};
+use serde::{Deserialize, Serialize};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Mutex,
+};
+use tauri::Manager;
 use tokio::runtime::Runtime;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -52,7 +55,7 @@ static SHUTDOWN_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     debug_log!("=== アプリケーション起動開始 ===");
-    
+
     // グローバルなTokioランタイムを初期化
     // 注意: Tauri 2.xでは非同期コマンドが自動的にTokioランタイムを使用するため、
     // グローバルランタイムは将来的に削除予定です
@@ -86,23 +89,25 @@ pub fn run() {
             }
         }
     }
-    
+
     // データベースを初期化
     debug_log!("データベース初期化を開始します...");
     match database::init_database() {
         Ok(_) => {
             debug_log!("データベースの初期化が完了しました");
-        },
+        }
         Err(e) => {
             warn_log!("データベース初期化エラー: {}", e);
             debug_log!("エラー詳細: {:?}", e);
-            warn_log!("警告: データベース初期化に失敗しましたが、アプリケーションは起動を続行します");
+            warn_log!(
+                "警告: データベース初期化に失敗しましたが、アプリケーションは起動を続行します"
+            );
             warn_log!("注意: データベース機能が正常に動作しない可能性があります");
             // アプリケーションは継続して起動します（データベースエラーは後で処理可能）
             // ユーザーには、初回データベースアクセス時にエラーメッセージが表示されます
         }
     }
-    
+
     debug_log!("Tauriビルダーを初期化します...");
     tauri::Builder::default()
         .plugin(tauri_plugin_opener::init())
@@ -284,7 +289,7 @@ pub fn run() {
         })
         .invoke_handler(tauri::generate_handler![
             greet,
-            commands::get_app_info,
+            get_app_info,
             commands::ollama::detect_ollama,
             commands::ollama::download_ollama,
             commands::ollama::start_ollama,
@@ -411,8 +416,6 @@ pub fn run() {
             error_log!("プロセスを終了します...");
             std::process::exit(1);
         });
-    
+
     debug_log!("=== アプリケーション起動完了 ===");
 }
-
-

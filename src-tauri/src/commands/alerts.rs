@@ -1,10 +1,12 @@
 // アラート検出・通知コマンド
 
-use serde::{Deserialize, Serialize};
 use crate::database::connection::get_connection;
-use crate::database::repository::{PerformanceMetricRepository, UserSettingRepository, AlertHistoryRepository};
 use crate::database::models::AlertHistory;
+use crate::database::repository::{
+    AlertHistoryRepository, PerformanceMetricRepository, UserSettingRepository,
+};
 use chrono::Utc;
+use serde::{Deserialize, Serialize};
 use uuid::Uuid;
 
 /// アラート設定
@@ -40,44 +42,49 @@ pub async fn get_alert_settings(api_id: Option<String>) -> Result<AlertSettings,
     let conn = get_connection().map_err(|_| {
         "データの読み込みに失敗しました。アプリを再起動して再度お試しください。".to_string()
     })?;
-    
+
     let settings_repo = UserSettingRepository::new(&conn);
-    
+
     // 設定キーのプレフィックス
     let prefix = if let Some(id) = &api_id {
         format!("alert_{}_", id)
     } else {
         "alert_global_".to_string()
     };
-    
+
     // 各設定を取得
-    let response_time_threshold = settings_repo.get(&format!("{}response_time", prefix))
+    let response_time_threshold = settings_repo
+        .get(&format!("{}response_time", prefix))
         .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
         .and_then(|v| v.parse::<f64>().ok());
-    
-    let error_rate_threshold = settings_repo.get(&format!("{}error_rate", prefix))
+
+    let error_rate_threshold = settings_repo
+        .get(&format!("{}error_rate", prefix))
         .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
         .and_then(|v| v.parse::<f64>().ok());
-    
-    let cpu_usage_threshold = settings_repo.get(&format!("{}cpu_usage", prefix))
+
+    let cpu_usage_threshold = settings_repo
+        .get(&format!("{}cpu_usage", prefix))
         .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
         .and_then(|v| v.parse::<f64>().ok());
-    
-    let memory_usage_threshold = settings_repo.get(&format!("{}memory_usage", prefix))
+
+    let memory_usage_threshold = settings_repo
+        .get(&format!("{}memory_usage", prefix))
         .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
         .and_then(|v| v.parse::<f64>().ok());
-    
-    let notifications_enabled = settings_repo.get(&format!("{}notifications_enabled", prefix))
+
+    let notifications_enabled = settings_repo
+        .get(&format!("{}notifications_enabled", prefix))
         .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
         .and_then(|v| v.parse::<bool>().ok());
-    
+
     Ok(AlertSettings {
         api_id,
         response_time_threshold: response_time_threshold.or(Some(5000.0)), // デフォルト: 5秒
-        error_rate_threshold: error_rate_threshold.or(Some(0.1)), // デフォルト: 10%
-        cpu_usage_threshold: cpu_usage_threshold.or(Some(80.0)), // デフォルト: 80%
-        memory_usage_threshold: memory_usage_threshold.or(Some(80.0)), // デフォルト: 80%
-        notifications_enabled: notifications_enabled.or(Some(true)), // デフォルト: 有効
+        error_rate_threshold: error_rate_threshold.or(Some(0.1)),          // デフォルト: 10%
+        cpu_usage_threshold: cpu_usage_threshold.or(Some(80.0)),           // デフォルト: 80%
+        memory_usage_threshold: memory_usage_threshold.or(Some(80.0)),     // デフォルト: 80%
+        notifications_enabled: notifications_enabled.or(Some(true)),       // デフォルト: 有効
     })
 }
 
@@ -87,47 +94,50 @@ pub async fn update_alert_settings(settings: AlertSettings) -> Result<(), String
     let conn = get_connection().map_err(|_| {
         "データの保存に失敗しました。アプリを再起動して再度お試しください。".to_string()
     })?;
-    
+
     let settings_repo = UserSettingRepository::new(&conn);
-    
+
     // 設定キーのプレフィックス
     let prefix = if let Some(id) = &settings.api_id {
         format!("alert_{}_", id)
     } else {
         "alert_global_".to_string()
     };
-    
+
     // 各設定を保存
     if let Some(threshold) = settings.response_time_threshold {
-        settings_repo.set(&format!("{}response_time", prefix), &threshold.to_string()).map_err(|e| {
-            format!("レスポンス時間閾値の保存に失敗しました: {}", e)
-        })?;
+        settings_repo
+            .set(&format!("{}response_time", prefix), &threshold.to_string())
+            .map_err(|e| format!("レスポンス時間閾値の保存に失敗しました: {}", e))?;
     }
-    
+
     if let Some(threshold) = settings.error_rate_threshold {
-        settings_repo.set(&format!("{}error_rate", prefix), &threshold.to_string()).map_err(|e| {
-            format!("エラー率閾値の保存に失敗しました: {}", e)
-        })?;
+        settings_repo
+            .set(&format!("{}error_rate", prefix), &threshold.to_string())
+            .map_err(|e| format!("エラー率閾値の保存に失敗しました: {}", e))?;
     }
-    
+
     if let Some(threshold) = settings.cpu_usage_threshold {
-        settings_repo.set(&format!("{}cpu_usage", prefix), &threshold.to_string()).map_err(|e| {
-            format!("CPU使用率閾値の保存に失敗しました: {}", e)
-        })?;
+        settings_repo
+            .set(&format!("{}cpu_usage", prefix), &threshold.to_string())
+            .map_err(|e| format!("CPU使用率閾値の保存に失敗しました: {}", e))?;
     }
-    
+
     if let Some(threshold) = settings.memory_usage_threshold {
-        settings_repo.set(&format!("{}memory_usage", prefix), &threshold.to_string()).map_err(|e| {
-            format!("メモリ使用率閾値の保存に失敗しました: {}", e)
-        })?;
+        settings_repo
+            .set(&format!("{}memory_usage", prefix), &threshold.to_string())
+            .map_err(|e| format!("メモリ使用率閾値の保存に失敗しました: {}", e))?;
     }
-    
+
     if let Some(enabled) = settings.notifications_enabled {
-        settings_repo.set(&format!("{}notifications_enabled", prefix), &enabled.to_string()).map_err(|e| {
-            format!("通知設定の保存に失敗しました: {}", e)
-        })?;
+        settings_repo
+            .set(
+                &format!("{}notifications_enabled", prefix),
+                &enabled.to_string(),
+            )
+            .map_err(|e| format!("通知設定の保存に失敗しました: {}", e))?;
     }
-    
+
     Ok(())
 }
 
@@ -157,34 +167,44 @@ pub async fn check_performance_alerts(api_id: String) -> Result<Vec<DetectedAler
     let conn = get_connection().map_err(|_| {
         "データの読み込みに失敗しました。アプリを再起動して再度お試しください。".to_string()
     })?;
-    
+
     // アラート設定を取得（API固有設定を優先、なければグローバル設定）
     let api_settings = get_alert_settings(Some(api_id.clone())).await?;
     let global_settings = get_alert_settings(None).await?;
-    
+
     // API固有設定がない場合はグローバル設定を使用
     let settings = AlertSettings {
-        response_time_threshold: api_settings.response_time_threshold.or(global_settings.response_time_threshold),
-        error_rate_threshold: api_settings.error_rate_threshold.or(global_settings.error_rate_threshold),
-        cpu_usage_threshold: api_settings.cpu_usage_threshold.or(global_settings.cpu_usage_threshold),
-        memory_usage_threshold: api_settings.memory_usage_threshold.or(global_settings.memory_usage_threshold),
-        notifications_enabled: api_settings.notifications_enabled.or(global_settings.notifications_enabled),
+        response_time_threshold: api_settings
+            .response_time_threshold
+            .or(global_settings.response_time_threshold),
+        error_rate_threshold: api_settings
+            .error_rate_threshold
+            .or(global_settings.error_rate_threshold),
+        cpu_usage_threshold: api_settings
+            .cpu_usage_threshold
+            .or(global_settings.cpu_usage_threshold),
+        memory_usage_threshold: api_settings
+            .memory_usage_threshold
+            .or(global_settings.memory_usage_threshold),
+        notifications_enabled: api_settings
+            .notifications_enabled
+            .or(global_settings.notifications_enabled),
         api_id: Some(api_id.clone()),
     };
-    
+
     // 通知が無効の場合は早期リターン
     if !settings.notifications_enabled.unwrap_or(true) {
         return Ok(vec![]);
     }
-    
+
     let metric_repo = PerformanceMetricRepository::new(&conn);
-    
+
     // 直近1時間のメトリクスを取得
     let one_hour_ago = Utc::now() - chrono::Duration::hours(1);
     let start_date = Some(one_hour_ago.to_rfc3339());
-    
+
     let mut alerts = Vec::new();
-    
+
     // レスポンス時間をチェック
     if let Some(threshold) = settings.response_time_threshold {
         if let Ok(metrics) = metric_repo.find_by_api_id_and_range(
@@ -213,7 +233,7 @@ pub async fn check_performance_alerts(api_id: String) -> Result<Vec<DetectedAler
             }
         }
     }
-    
+
     // エラー率をチェック
     if let Some(threshold) = settings.error_rate_threshold {
         if let Ok(metrics) = metric_repo.find_by_api_id_and_range(
@@ -232,7 +252,8 @@ pub async fn check_performance_alerts(api_id: String) -> Result<Vec<DetectedAler
                         timestamp: Utc::now().to_rfc3339(),
                         message: format!(
                             "エラー率が閾値を超過しました: {:.2}% (閾値: {:.2}%)",
-                            latest.value * 100.0, threshold * 100.0
+                            latest.value * 100.0,
+                            threshold * 100.0
                         ),
                     };
                     save_alert_to_history(&conn, &alert);
@@ -241,7 +262,7 @@ pub async fn check_performance_alerts(api_id: String) -> Result<Vec<DetectedAler
             }
         }
     }
-    
+
     // CPU使用率をチェック
     if let Some(threshold) = settings.cpu_usage_threshold {
         if let Ok(metrics) = metric_repo.find_by_api_id_and_range(
@@ -269,7 +290,7 @@ pub async fn check_performance_alerts(api_id: String) -> Result<Vec<DetectedAler
             }
         }
     }
-    
+
     // メモリ使用率をチェック
     if let Some(threshold) = settings.memory_usage_threshold {
         if let Ok(metrics) = metric_repo.find_by_api_id_and_range(
@@ -297,7 +318,7 @@ pub async fn check_performance_alerts(api_id: String) -> Result<Vec<DetectedAler
             }
         }
     }
-    
+
     Ok(alerts)
 }
 
@@ -324,25 +345,28 @@ pub struct AlertHistoryInfo {
 
 /// アラート履歴を取得
 #[tauri::command]
-pub async fn get_alert_history(request: GetAlertHistoryRequest) -> Result<Vec<AlertHistoryInfo>, String> {
+pub async fn get_alert_history(
+    request: GetAlertHistoryRequest,
+) -> Result<Vec<AlertHistoryInfo>, String> {
     let conn = get_connection().map_err(|_| {
         "データの読み込みに失敗しました。アプリを再起動して再度お試しください。".to_string()
     })?;
-    
+
     let history_repo = AlertHistoryRepository::new(&conn);
-    
+
     let alerts = if let Some(api_id) = request.api_id {
-        history_repo.find_by_api_id(&api_id, request.limit).map_err(|e| {
-            format!("アラート履歴の取得に失敗しました: {}", e)
-        })?
+        history_repo
+            .find_by_api_id(&api_id, request.limit)
+            .map_err(|e| format!("アラート履歴の取得に失敗しました: {}", e))?
     } else {
-        history_repo.find_all(request.unresolved_only.unwrap_or(false), request.limit).map_err(|e| {
-            format!("アラート履歴の取得に失敗しました: {}", e)
-        })?
+        history_repo
+            .find_all(request.unresolved_only.unwrap_or(false), request.limit)
+            .map_err(|e| format!("アラート履歴の取得に失敗しました: {}", e))?
     };
-    
-    let result: Vec<AlertHistoryInfo> = alerts.into_iter().map(|alert| {
-        AlertHistoryInfo {
+
+    let result: Vec<AlertHistoryInfo> = alerts
+        .into_iter()
+        .map(|alert| AlertHistoryInfo {
             id: alert.id,
             api_id: alert.api_id,
             alert_type: alert.alert_type,
@@ -351,9 +375,9 @@ pub async fn get_alert_history(request: GetAlertHistoryRequest) -> Result<Vec<Al
             message: alert.message,
             timestamp: alert.timestamp.to_rfc3339(),
             resolved_at: alert.resolved_at.map(|dt| dt.to_rfc3339()),
-        }
-    }).collect();
-    
+        })
+        .collect();
+
     Ok(result)
 }
 
@@ -363,12 +387,12 @@ pub async fn resolve_alert(alert_id: String) -> Result<(), String> {
     let conn = get_connection().map_err(|_| {
         "データの保存に失敗しました。アプリを再起動して再度お試しください。".to_string()
     })?;
-    
+
     let history_repo = AlertHistoryRepository::new(&conn);
-    history_repo.mark_resolved(&alert_id).map_err(|e| {
-        format!("アラートの解決に失敗しました: {}", e)
-    })?;
-    
+    history_repo
+        .mark_resolved(&alert_id)
+        .map_err(|e| format!("アラートの解決に失敗しました: {}", e))?;
+
     Ok(())
 }
 
@@ -378,17 +402,15 @@ pub async fn resolve_alerts(alert_ids: Vec<String>) -> Result<usize, String> {
     let conn = get_connection().map_err(|_| {
         "データの保存に失敗しました。アプリを再起動して再度お試しください。".to_string()
     })?;
-    
+
     let history_repo = AlertHistoryRepository::new(&conn);
     let mut resolved_count = 0;
-    
+
     for alert_id in alert_ids {
         if history_repo.mark_resolved(&alert_id).is_ok() {
             resolved_count += 1;
         }
     }
-    
+
     Ok(resolved_count)
 }
-
-

@@ -6,7 +6,7 @@ import http from 'http';
 import fs from 'fs';
 import path from 'path';
 import os from 'os';
-import cors from 'cors';
+import cors, { CorsOptions } from 'cors';
 import { generateApiKey, validateApiKey } from './keygen.js';
 import { createProxyMiddleware } from './proxy.js';
 import {
@@ -29,6 +29,7 @@ import {
   rateLimitMiddlewareRedis,
 } from './rate-limit-redis.js';
 import { validateEnvironmentVariables } from './env-validation.js';
+import { evaluateCorsOrigin } from './cors-utils.js';
 
 // 環境変数の検証を実行
 validateEnvironmentVariables();
@@ -318,57 +319,21 @@ function getCertificatePaths(): { certPath: string; keyPath: string } | null {
   return null;
 }
 
-/**
- * CORS設定
- * 環境変数 ALLOWED_ORIGINS で許可オリジンを指定可能
- * 例: ALLOWED_ORIGINS=https://example.com,https://app.example.com
- * 未設定の場合、開発環境ではすべてのオリジンを許可、本番環境では空配列（すべて拒否）
- */
-/**
- * 許可されたオリジンを取得
- * 本番環境では明示的な設定を推奨
- */
-const getAllowedOrigins = (): string[] | string => {
-  // NODE_ENVのデフォルト設定（未設定の場合はproductionと見なす）
-  const nodeEnv = process.env.NODE_ENV || 'production';
-  
-  const allowedOriginsEnv = process.env.ALLOWED_ORIGINS;
-  
-  if (allowedOriginsEnv) {
-    // 環境変数で指定されたオリジンのリストを返す
-    const origins = allowedOriginsEnv.split(',').map(origin => origin.trim()).filter(origin => origin.length > 0);
-    if (origins.length > 0) {
-      return origins;
+const corsOptions: CorsOptions = {
+  origin: (origin, callback) => {
+    const decision = evaluateCorsOrigin(origin);
+    if (decision.allowed) {
+      callback(null, decision.value ?? true);
+    } else {
+      callback(null, false);
     }
-  }
-  
-  // 環境変数が未設定の場合
-  if (nodeEnv === 'development') {
-    // 開発環境ではすべてのオリジンを許可（ワイルドカード）
-    // 警告: 本番環境では使用しないこと
-    if (process.env.NODE_ENV === undefined) {
-      console.warn('[SECURITY] NODE_ENVが設定されていません。デフォルトでproductionモードとして動作します。');
-    }
-    return '*';
-  }
-  
-  // 本番環境では空配列（すべて拒否）- 明示的に設定することを推奨
-  if (allowedOriginsEnv === undefined) {
-    console.warn('[SECURITY] ALLOWED_ORIGINSが設定されていません。CORSリクエストはすべて拒否されます。');
-    console.warn('[SECURITY] 本番環境では、ALLOWED_ORIGINS環境変数を明示的に設定してください。');
-    console.warn('[SECURITY] 例: ALLOWED_ORIGINS=https://example.com,https://app.example.com');
-  }
-  return [];
+  },
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
-app.use(
-  cors({
-    origin: getAllowedOrigins(),
-    credentials: true,
-    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
-  })
-);
+app.use(cors(corsOptions));
 
 // セキュリティヘッダーの設定（厳格化）
 app.use((req: Request, res: Response, next: NextFunction) => {
@@ -508,9 +473,17 @@ const requestLogMiddleware = async (
     }
   }
 
-  // レスポンスの終了を監視
-  const originalSend = res.send;
-  res.send = function (body?: string | object | Buffer) {
+  // レスポンス完了時のログ・メトリクス記録関数
+  // この関数は、res.send()とres.on('finish')の両方から呼び出される
+  // ストリーミングレスポンス（res.write/res.end）にも対応するため
+  let logged = false; // 重複記録を防ぐフラグ
+  const logRequestAndMetrics = () => {
+    // 既に記録済みの場合はスキップ（res.sendとres.on('finish')の両方から呼ばれる可能性があるため）
+    if (logged) {
+      return;
+    }
+    logged = true;
+
     const responseTime = Date.now() - startTime;
     const status = res.statusCode;
     const errorMessage = status >= 400 ? `HTTP ${status}` : null;
@@ -554,9 +527,28 @@ const requestLogMiddleware = async (
         }
       });
     }
+  };
 
+  // res.send()のフック（通常のレスポンス用）
+  const originalSend = res.send;
+  res.send = function (body?: string | object | Buffer) {
+    logRequestAndMetrics();
     return originalSend.call(this, body);
   };
+
+  // res.on('finish')イベントのフック（ストリーミングレスポンス用）
+  // express-http-proxyはres.write/res.endを使用するため、finishイベントで検知
+  res.once('finish', () => {
+    logRequestAndMetrics();
+  });
+
+  // res.on('close')イベントのフック（接続が閉じられた場合のフォールバック）
+  // finishイベントが発火しない場合（クライアントが接続を切断した場合など）にも記録
+  res.once('close', () => {
+    if (!logged) {
+      logRequestAndMetrics();
+    }
+  });
 
   next();
 };
@@ -575,13 +567,15 @@ interface MetricBuffer {
 // メトリクスバッファ（API ID + メトリクスタイプごとに保存）
 const metricBuffers: Map<string, MetricBuffer> = new Map();
 
-// CPU使用率計算用の前回のCPU使用時間とタイムスタンプ（API IDごとに保存）
+// CPU使用率計算用の前回のCPU使用時間とタイムスタンプ
+// 注意: CPU使用率はプロセス全体の値なので、APIごとに分離せず、プロセス全体として1つの値として管理
 interface CpuUsageState {
   lastCpuUsage: NodeJS.CpuUsage;
   lastTimestamp: number;
 }
 
-const cpuUsageStates: Map<string, CpuUsageState> = new Map();
+// プロセス全体のCPU使用率状態（APIごとではなく、プロセス全体で1つ）
+let globalCpuUsageState: CpuUsageState | null = null;
 
 // メトリクスバッファのキーを生成
 function getMetricBufferKey(apiId: string, metricType: string): string {
@@ -607,17 +601,16 @@ async function collectPerformanceMetrics(
     
     const now = Date.now();
 
-    // CPU使用率を計算（時間間隔での差分を使用）
+    // CPU使用率を計算（プロセス全体の値として計算）
+    // 注意: CPU使用率はプロセス全体の値なので、APIごとに分離せず、プロセス全体として1つの値を使用
     let cpuUsagePercent = 0.0;
     const currentCpuUsage = process.cpuUsage?.() || { user: 0, system: 0 };
-    const cpuStateKey = `${apiId}:cpu_state`;
-    const cpuState = cpuUsageStates.get(cpuStateKey);
 
-    if (cpuState) {
-      // 前回からの差分を計算（初回はcpuStateがないため、CPU使用率は0%になる）
-      const deltaTime = now - cpuState.lastTimestamp;
-      const deltaUser = currentCpuUsage.user - cpuState.lastCpuUsage.user;
-      const deltaSystem = currentCpuUsage.system - cpuState.lastCpuUsage.system;
+    if (globalCpuUsageState) {
+      // 前回からの差分を計算（初回はglobalCpuUsageStateがないため、CPU使用率は0%になる）
+      const deltaTime = now - globalCpuUsageState.lastTimestamp;
+      const deltaUser = currentCpuUsage.user - globalCpuUsageState.lastCpuUsage.user;
+      const deltaSystem = currentCpuUsage.system - globalCpuUsageState.lastCpuUsage.system;
       const deltaTotal =
         (deltaUser + deltaSystem) / FORMATTING.MICROSECONDS_PER_MS; // マイクロ秒をミリ秒に変換
 
@@ -635,14 +628,14 @@ async function collectPerformanceMetrics(
         );
       }
     }
-    // 注意: 初回リクエスト時はcpuStateがないため、cpuUsagePercent = 0.0 のまま
+    // 注意: 初回リクエスト時はglobalCpuUsageStateがないため、cpuUsagePercent = 0.0 のまま
     // 2回目以降のリクエストからCPU使用率が正しく計算される
 
-    // CPU状態を更新
-    cpuUsageStates.set(cpuStateKey, {
+    // CPU状態を更新（プロセス全体として1つの値）
+    globalCpuUsageState = {
       lastCpuUsage: currentCpuUsage,
       lastTimestamp: now,
-    });
+    };
 
     // メモリ使用量と使用率を取得
     const memoryUsage = process.memoryUsage?.() || {

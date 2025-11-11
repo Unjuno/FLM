@@ -1,9 +1,9 @@
+use crate::utils::error::AppError;
 /// アップデート機能のコマンド
-/// 
+///
 /// アプリケーション本体の自動アップデート機能を提供します。
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager};
-use crate::utils::error::AppError;
 
 /// アップデートチェック結果
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -26,14 +26,14 @@ pub struct UpdateProgress {
 }
 
 /// アップデートチェック
-/// 
+///
 /// 最新バージョンが利用可能かどうかを確認します。
 #[tauri::command]
 pub async fn check_app_update(app: AppHandle) -> Result<UpdateCheckResult, AppError> {
     use tauri_plugin_updater::Updater;
-    
+
     let current_version = env!("CARGO_PKG_VERSION").to_string();
-    
+
     // アップデーターを取得（Tauri 2.xではappから直接取得）
     let updater = match app.try_state::<Updater>() {
         Some(updater) => updater.inner(),
@@ -45,7 +45,7 @@ pub async fn check_app_update(app: AppHandle) -> Result<UpdateCheckResult, AppEr
             });
         }
     };
-    
+
     // アップデートをチェック
     match updater.check().await {
         Ok(update) => {
@@ -69,25 +69,21 @@ pub async fn check_app_update(app: AppHandle) -> Result<UpdateCheckResult, AppEr
                 })
             }
         }
-        Err(e) => {
-            Err(AppError::ApiError {
-                message: format!("アップデートチェックに失敗しました: {}", e),
-                code: "UPDATE_CHECK_ERROR".to_string(),
-                source_detail: None,
-            })
-        }
+        Err(e) => Err(AppError::ApiError {
+            message: format!("アップデートチェックに失敗しました: {}", e),
+            code: "UPDATE_CHECK_ERROR".to_string(),
+            source_detail: None,
+        }),
     }
 }
 
 /// アップデートのダウンロードとインストール
-/// 
+///
 /// アップデートをダウンロードし、インストールを実行します。
 #[tauri::command]
-pub async fn install_app_update(
-    app: AppHandle,
-) -> Result<(), AppError> {
+pub async fn install_app_update(app: AppHandle) -> Result<(), AppError> {
     use tauri_plugin_updater::Updater;
-    
+
     // アップデーターを取得（Tauri 2.xではappから直接取得）
     let updater = match app.try_state::<Updater>() {
         Some(updater) => updater.inner(),
@@ -99,7 +95,7 @@ pub async fn install_app_update(
             });
         }
     };
-    
+
     // アップデートをチェック
     let update = match updater.check().await {
         Ok(Some(update)) => update,
@@ -118,45 +114,53 @@ pub async fn install_app_update(
             });
         }
     };
-    
+
     // ダウンロードとインストールを実行
     // 注意: Tauri 2.xの`tauri-plugin-updater`では、進捗イベントはプラグインが自動的に発行します
     // フロントエンドで`app_update_progress`イベントをリッスンすることで進捗を取得できます
-    update.download_and_install(
-        |chunk_length, content_length| {
-            // 進捗コールバック
-            // content_lengthはOption<u64>、chunk_lengthはusize
-            let total_bytes = content_length.unwrap_or(0);
-            let progress = if total_bytes > 0 {
-                (chunk_length as f64 / total_bytes as f64) * 100.0
-            } else {
-                0.0
-            };
-            
-            let progress_info = UpdateProgress {
-                status: "downloading".to_string(),
-                progress,
-                downloaded_bytes: chunk_length as u64,
-                total_bytes,
-                message: Some("アップデートをダウンロード中...".to_string()),
-            };
-            
-            if let Err(e) = app.emit("app_update_progress", &progress_info) {
-                eprintln!("[WARN] アプリ更新進捗イベントの送信に失敗しました: {}", e);
-            }
-        },
-        || {
-            // インストール開始時のコールバック
-            if let Err(e) = app.emit("app_update_installed", ()) {
-                eprintln!("[WARN] アプリ更新インストール完了イベントの送信に失敗しました: {}", e);
-            }
-        },
-    ).await.map_err(|e| AppError::ApiError {
-        message: format!("アップデートのダウンロードとインストールに失敗しました: {}", e),
-        code: "UPDATE_INSTALL_ERROR".to_string(),
-        source_detail: None,
-    })?;
-    
+    update
+        .download_and_install(
+            |chunk_length, content_length| {
+                // 進捗コールバック
+                // content_lengthはOption<u64>、chunk_lengthはusize
+                let total_bytes = content_length.unwrap_or(0);
+                let progress = if total_bytes > 0 {
+                    (chunk_length as f64 / total_bytes as f64) * 100.0
+                } else {
+                    0.0
+                };
+
+                let progress_info = UpdateProgress {
+                    status: "downloading".to_string(),
+                    progress,
+                    downloaded_bytes: chunk_length as u64,
+                    total_bytes,
+                    message: Some("アップデートをダウンロード中...".to_string()),
+                };
+
+                if let Err(e) = app.emit("app_update_progress", &progress_info) {
+                    eprintln!("[WARN] アプリ更新進捗イベントの送信に失敗しました: {}", e);
+                }
+            },
+            || {
+                // インストール開始時のコールバック
+                if let Err(e) = app.emit("app_update_installed", ()) {
+                    eprintln!(
+                        "[WARN] アプリ更新インストール完了イベントの送信に失敗しました: {}",
+                        e
+                    );
+                }
+            },
+        )
+        .await
+        .map_err(|e| AppError::ApiError {
+            message: format!(
+                "アップデートのダウンロードとインストールに失敗しました: {}",
+                e
+            ),
+            code: "UPDATE_INSTALL_ERROR".to_string(),
+            source_detail: None,
+        })?;
+
     Ok(())
 }
-

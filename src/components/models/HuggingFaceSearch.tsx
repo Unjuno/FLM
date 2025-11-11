@@ -143,9 +143,9 @@ export const HuggingFaceSearch: React.FC = () => {
       // 必要に応じてGGUF形式に変換
       try {
         await safeInvoke('convert_model', {
-          sourcePath: modelId,
-          targetName: modelId.replace(/\//g, '_'),
-          outputFormat: 'gguf',
+          source_path: modelId,
+          target_name: modelId.replace(/\//g, '_'),
+          output_format: 'gguf',
           quantization: 'Q4_K_M',
         });
         showSuccess(`モデル "${modelId}" の変換が完了しました`);

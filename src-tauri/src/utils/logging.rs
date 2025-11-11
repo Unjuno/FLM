@@ -8,10 +8,10 @@ use regex::Regex;
 lazy_static! {
     static ref WINDOWS_USER_PATH_REGEX: Regex = Regex::new(r"(?i)(C:\\Users\\)[^\\]+")
         .expect("Windowsユーザーパス正規表現のコンパイルに失敗");
-    static ref UNIX_HOME_PATH_REGEX: Regex = Regex::new(r"(/home/)[^/]+")
-        .expect("Unixホームパス正規表現のコンパイルに失敗");
-    static ref TILDE_PATH_REGEX: Regex = Regex::new(r"(~/)[^/]+")
-        .expect("チルダパス正規表現のコンパイルに失敗");
+    static ref UNIX_HOME_PATH_REGEX: Regex =
+        Regex::new(r"(/home/)[^/]+").expect("Unixホームパス正規表現のコンパイルに失敗");
+    static ref TILDE_PATH_REGEX: Regex =
+        Regex::new(r"(~/)[^/]+").expect("チルダパス正規表現のコンパイルに失敗");
 }
 
 /// ログレベル
@@ -32,20 +32,20 @@ pub fn mask_file_path(path: &str) -> String {
         let masked = WINDOWS_USER_PATH_REGEX.replace_all(path, "$1***");
         return masked.to_string();
     }
-    
+
     // Unix/Linux/macOSパスのマスク処理
     if path.starts_with('/') {
         // /home/username/.local -> /home/***/.local
         let masked = UNIX_HOME_PATH_REGEX.replace_all(path, "$1***");
         return masked.to_string();
     }
-    
+
     // ~/username/.local -> ~/***/.local
     if path.starts_with("~/") {
         let masked = TILDE_PATH_REGEX.replace_all(path, "$1***");
         return masked.to_string();
     }
-    
+
     // その他のパスはそのまま返す（マスクできない）
     path.to_string()
 }
@@ -56,7 +56,7 @@ pub fn mask_env_var_value(value: &str) -> String {
     if value.contains("\\") || value.contains("/") || value.contains("~") {
         return mask_file_path(value);
     }
-    
+
     // その他の環境変数の値はそのまま返す
     value.to_string()
 }
@@ -69,7 +69,7 @@ pub fn should_log(level: LogLevel) -> bool {
         // 開発環境ではすべてのログを出力
         return true;
     }
-    
+
     #[cfg(not(debug_assertions))]
     {
         // 本番環境ではWarnとErrorのみ出力
@@ -146,4 +146,3 @@ macro_rules! log_pid {
         }
     }};
 }
-

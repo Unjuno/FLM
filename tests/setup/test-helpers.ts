@@ -137,10 +137,11 @@ export const waitForApiStop = async (
  */
 export function handleTauriAppNotRunningError(error: unknown): boolean {
   const errorMessage = error instanceof Error ? error.message : String(error);
-  if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
-    console.warn('Tauriアプリが起動していないため、このテストをスキップします');
-    expect(errorMessage).toContain('Tauriアプリケーションが起動していません');
-    return true;
+  if (errorMessage.includes('Tauriアプリケーションが起動していません')) {       
+    console.error('Tauriアプリが起動していないため、テストを継続できません');
+    throw new Error(
+      'Tauriアプリケーションが起動していません。テストを実行する前に `npm run tauri dev` でアプリを起動してください。'
+    );
   }
   return false;
 }

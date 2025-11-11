@@ -9,10 +9,13 @@ use std::path::PathBuf;
 /// 証明書ディレクトリのパスを取得
 pub fn get_cert_dir() -> Result<PathBuf, AppError> {
     let app_data_dir = get_app_data_dir().map_err(|e| AppError::IoError {
-        message: format!("アプリケーションデータディレクトリの取得に失敗しました: {}", e),
+        message: format!(
+            "アプリケーションデータディレクトリの取得に失敗しました: {}",
+            e
+        ),
         source_detail: None,
     })?;
-    
+
     Ok(app_data_dir.join("certificates"))
 }
 

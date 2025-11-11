@@ -1,9 +1,12 @@
 // Security Repository
 // APIセキュリティ設定とレート制限追跡のリポジトリ
 
-use crate::database::{DatabaseError, models::{ApiSecuritySettings, RateLimitTracking}};
+use crate::database::{
+    models::{ApiSecuritySettings, RateLimitTracking},
+    DatabaseError,
+};
 use chrono::{DateTime, Utc};
-use rusqlite::{Connection, params};
+use rusqlite::{params, Connection};
 
 pub struct ApiSecuritySettingsRepository;
 
@@ -12,16 +15,19 @@ impl ApiSecuritySettingsRepository {
     pub fn new() -> Self {
         ApiSecuritySettingsRepository
     }
-    
+
     /// API IDでセキュリティ設定を取得
-    pub fn find_by_api_id(conn: &Connection, api_id: &str) -> Result<Option<ApiSecuritySettings>, DatabaseError> {
+    pub fn find_by_api_id(
+        conn: &Connection,
+        api_id: &str,
+    ) -> Result<Option<ApiSecuritySettings>, DatabaseError> {
         let mut stmt = conn.prepare(
             "SELECT api_id, ip_whitelist, rate_limit_enabled, rate_limit_requests, 
              rate_limit_window_seconds, key_rotation_enabled, key_rotation_interval_days, 
              created_at, updated_at 
-             FROM api_security_settings WHERE api_id = ?"
+             FROM api_security_settings WHERE api_id = ?",
         )?;
-        
+
         let mut rows = stmt.query_map(params![api_id], |row| {
             Ok(ApiSecuritySettings {
                 api_id: row.get(0)?,
@@ -31,20 +37,36 @@ impl ApiSecuritySettingsRepository {
                 rate_limit_window_seconds: row.get(4)?,
                 key_rotation_enabled: row.get::<_, i32>(5)? != 0,
                 key_rotation_interval_days: row.get(6)?,
-                created_at: row.get::<_, String>(7)?.parse::<DateTime<Utc>>()
-                    .map_err(|e| rusqlite::Error::InvalidColumnType(7, format!("DateTime parse error: {}", e), rusqlite::types::Type::Text))?,
-                updated_at: row.get::<_, String>(8)?.parse::<DateTime<Utc>>()
-                    .map_err(|e| rusqlite::Error::InvalidColumnType(8, format!("DateTime parse error: {}", e), rusqlite::types::Type::Text))?,
+                created_at: row
+                    .get::<_, String>(7)?
+                    .parse::<DateTime<Utc>>()
+                    .map_err(|e| {
+                        rusqlite::Error::InvalidColumnType(
+                            7,
+                            format!("DateTime parse error: {}", e),
+                            rusqlite::types::Type::Text,
+                        )
+                    })?,
+                updated_at: row
+                    .get::<_, String>(8)?
+                    .parse::<DateTime<Utc>>()
+                    .map_err(|e| {
+                        rusqlite::Error::InvalidColumnType(
+                            8,
+                            format!("DateTime parse error: {}", e),
+                            rusqlite::types::Type::Text,
+                        )
+                    })?,
             })
         })?;
-        
+
         match rows.next() {
             Some(Ok(settings)) => Ok(Some(settings)),
             Some(Err(e)) => Err(DatabaseError::QueryFailed(e.to_string())),
             None => Ok(None),
         }
     }
-    
+
     /// セキュリティ設定を作成
     #[allow(dead_code)]
     pub fn create(conn: &Connection, settings: &ApiSecuritySettings) -> Result<(), DatabaseError> {
@@ -68,7 +90,7 @@ impl ApiSecuritySettingsRepository {
         )?;
         Ok(())
     }
-    
+
     /// セキュリティ設定を更新
     pub fn update(conn: &Connection, settings: &ApiSecuritySettings) -> Result<(), DatabaseError> {
         conn.execute(
@@ -99,7 +121,7 @@ impl RateLimitTrackingRepository {
     pub fn new() -> Self {
         RateLimitTrackingRepository
     }
-    
+
     /// API ID、識別子、時間窓でレート制限追跡を取得
     pub fn find_by_api_and_identifier(
         conn: &Connection,
@@ -110,9 +132,9 @@ impl RateLimitTrackingRepository {
         let mut stmt = conn.prepare(
             "SELECT id, api_id, identifier, request_count, window_start, created_at 
              FROM rate_limit_tracking 
-             WHERE api_id = ? AND identifier = ? AND window_start = ?"
+             WHERE api_id = ? AND identifier = ? AND window_start = ?",
         )?;
-        
+
         let mut rows = stmt.query_map(
             params![api_id, identifier, window_start.to_rfc3339()],
             |row| {
@@ -121,21 +143,36 @@ impl RateLimitTrackingRepository {
                     api_id: row.get(1)?,
                     identifier: row.get(2)?,
                     request_count: row.get(3)?,
-                    window_start: row.get::<_, String>(4)?.parse::<DateTime<Utc>>()
-                        .map_err(|e| rusqlite::Error::InvalidColumnType(4, format!("DateTime parse error: {}", e), rusqlite::types::Type::Text))?,
-                    created_at: row.get::<_, String>(5)?.parse::<DateTime<Utc>>()
-                        .map_err(|e| rusqlite::Error::InvalidColumnType(5, format!("DateTime parse error: {}", e), rusqlite::types::Type::Text))?,
+                    window_start: row.get::<_, String>(4)?.parse::<DateTime<Utc>>().map_err(
+                        |e| {
+                            rusqlite::Error::InvalidColumnType(
+                                4,
+                                format!("DateTime parse error: {}", e),
+                                rusqlite::types::Type::Text,
+                            )
+                        },
+                    )?,
+                    created_at: row
+                        .get::<_, String>(5)?
+                        .parse::<DateTime<Utc>>()
+                        .map_err(|e| {
+                            rusqlite::Error::InvalidColumnType(
+                                5,
+                                format!("DateTime parse error: {}", e),
+                                rusqlite::types::Type::Text,
+                            )
+                        })?,
                 })
             },
         )?;
-        
+
         match rows.next() {
             Some(Ok(tracking)) => Ok(Some(tracking)),
             Some(Err(e)) => Err(DatabaseError::QueryFailed(e.to_string())),
             None => Ok(None),
         }
     }
-    
+
     /// レート制限追跡を作成
     pub fn create(
         conn: &Connection,
@@ -145,7 +182,7 @@ impl RateLimitTrackingRepository {
     ) -> Result<RateLimitTracking, DatabaseError> {
         let id = uuid::Uuid::new_v4().to_string();
         let now = Utc::now();
-        
+
         conn.execute(
             "INSERT INTO rate_limit_tracking 
              (id, api_id, identifier, request_count, window_start, created_at) 
@@ -158,7 +195,7 @@ impl RateLimitTrackingRepository {
                 now.to_rfc3339(),
             ],
         )?;
-        
+
         Ok(RateLimitTracking {
             id,
             api_id: api_id.to_string(),
@@ -168,7 +205,7 @@ impl RateLimitTrackingRepository {
             created_at: now,
         })
     }
-    
+
     /// レート制限追跡を更新
     pub fn update(conn: &Connection, tracking: &RateLimitTracking) -> Result<(), DatabaseError> {
         conn.execute(
@@ -180,5 +217,3 @@ impl RateLimitTrackingRepository {
         Ok(())
     }
 }
-
-

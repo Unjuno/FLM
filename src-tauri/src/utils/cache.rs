@@ -5,8 +5,8 @@ use crate::utils::error::AppError;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-use tokio::sync::RwLock;
 use std::time::{Duration, SystemTime};
+use tokio::sync::RwLock;
 
 /// キャッシュエントリ
 #[derive(Debug, Clone)]
@@ -24,7 +24,7 @@ impl<T> CacheEntry<T> {
             ttl,
         }
     }
-    
+
     fn is_expired(&self) -> bool {
         self.timestamp
             .elapsed()
@@ -54,36 +54,36 @@ impl ModelListCache {
             default_ttl: Duration::from_secs(default_ttl_seconds),
         }
     }
-    
+
     /// キャッシュからモデル一覧を取得
     pub async fn get(&self) -> Option<Vec<ModelInfo>> {
         let cache_guard = self.cache.read().await;
-        
+
         if let Some(entry) = cache_guard.as_ref() {
             if !entry.is_expired() {
                 return Some(entry.data.clone());
             }
         }
-        
+
         None
     }
-    
+
     /// キャッシュにモデル一覧を保存
     pub async fn set(&self, models: Vec<ModelInfo>) {
         let mut cache_guard = self.cache.write().await;
         *cache_guard = Some(CacheEntry::new(models, self.default_ttl));
     }
-    
+
     /// キャッシュを無効化
     pub async fn invalidate(&self) {
         let mut cache_guard = self.cache.write().await;
         *cache_guard = None;
     }
-    
+
     /// キャッシュが有効かチェック
     pub async fn is_valid(&self) -> bool {
         let cache_guard = self.cache.read().await;
-        
+
         if let Some(entry) = cache_guard.as_ref() {
             !entry.is_expired()
         } else {
@@ -117,38 +117,38 @@ impl ApiConfigCache {
             default_ttl: Duration::from_secs(default_ttl_seconds),
         }
     }
-    
+
     /// キャッシュからAPI設定を取得
     pub async fn get(&self, api_id: &str) -> Option<ApiConfig> {
         let cache_guard = self.cache.read().await;
-        
+
         if let Some(entry) = cache_guard.get(api_id) {
             if !entry.is_expired() {
                 return Some(entry.data.clone());
             }
         }
-        
+
         None
     }
-    
+
     /// キャッシュにAPI設定を保存
     pub async fn set(&self, api_id: String, config: ApiConfig) {
         let mut cache_guard = self.cache.write().await;
         cache_guard.insert(api_id, CacheEntry::new(config, self.default_ttl));
     }
-    
+
     /// キャッシュからAPI設定を削除
     pub async fn invalidate(&self, api_id: &str) {
         let mut cache_guard = self.cache.write().await;
         cache_guard.remove(api_id);
     }
-    
+
     /// すべてのキャッシュをクリア
     pub async fn clear(&self) {
         let mut cache_guard = self.cache.write().await;
         cache_guard.clear();
     }
-    
+
     /// 期限切れのエントリを削除
     pub async fn cleanup_expired(&self) {
         let mut cache_guard = self.cache.write().await;
@@ -170,17 +170,15 @@ pub fn init_caches() {
 /// 定期的なキャッシュクリーンアップを開始
 pub async fn start_cache_cleanup() -> Result<(), AppError> {
     let cache = API_CONFIG_CACHE.clone();
-    
+
     tokio::spawn(async move {
         let mut interval = tokio::time::interval(Duration::from_secs(300)); // 5分ごと
-        
+
         loop {
             interval.tick().await;
             cache.cleanup_expired().await;
         }
     });
-    
+
     Ok(())
 }
-
-

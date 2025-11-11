@@ -3,6 +3,7 @@
 import { Request, Response } from 'express';
 import { IncomingMessage } from 'http';
 import proxy from 'express-http-proxy';
+import { evaluateCorsOrigin } from './cors-utils.js';
 
 interface ProxyConfig {
   transformRequest?: (req: Request) => Request;
@@ -31,48 +32,19 @@ export function createProxyMiddleware(targetUrl: string, config?: ProxyConfig) {
       headers: OutgoingHttpHeaders,
       userReq: Request
     ): OutgoingHttpHeaders => {
-      // CORSヘッダーを追加（環境変数で制御）
-      const getAllowedOrigin = (): string => {
-        const allowedOriginsEnv = process.env.ALLOWED_ORIGINS;
-        const requestOrigin = userReq.headers.origin;
-        
-        if (allowedOriginsEnv) {
-          // 環境変数で指定されたオリジンのリストから一致するものを返す
-          const allowedOrigins = allowedOriginsEnv
-            .split(',')
-            .map(origin => origin.trim());
-          
-          if (requestOrigin && allowedOrigins.includes(requestOrigin)) {
-            return requestOrigin;
-          }
-          
-          // 一致しない場合は空文字列（CORSエラー）
-          return '';
+      const originHeader = userReq.headers.origin;
+      const decision = evaluateCorsOrigin(originHeader);
+      if (decision.allowed) {
+        if (decision.value) {
+          headers['Access-Control-Allow-Origin'] = decision.value;
+          headers['Access-Control-Allow-Credentials'] = 'true';
+        } else if (originHeader) {
+          headers['Access-Control-Allow-Origin'] = originHeader;
+          headers['Access-Control-Allow-Credentials'] = 'true';
         }
-        
-        // 環境変数が未設定の場合
-        if (process.env.NODE_ENV === 'development') {
-          // 開発環境ではリクエストのオリジンをそのまま返す
-          // 注意: credentials: trueとワイルドカード（'*'）は併用できないため、
-          // requestOriginがない場合は空文字列を返す（CORSエラー）
-          return requestOrigin || '';
-        }
-        
-        // 本番環境では空文字列（CORSエラー）- 明示的に設定することを推奨
-        return '';
-      };
-      
-      const allowedOrigin = getAllowedOrigin();
-      if (allowedOrigin) {
-        headers['Access-Control-Allow-Origin'] = allowedOrigin;
         headers['Access-Control-Allow-Methods'] =
           'GET, POST, PUT, DELETE, OPTIONS';
         headers['Access-Control-Allow-Headers'] = 'Content-Type, Authorization';
-        // credentials: trueは、ワイルドカード（'*'）でない場合のみ設定可能
-        // allowedOriginが空文字列でない場合のみ設定
-        if (allowedOrigin !== '*') {
-          headers['Access-Control-Allow-Credentials'] = 'true';
-        }
       }
       
       return headers;

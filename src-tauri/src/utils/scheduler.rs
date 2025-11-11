@@ -2,12 +2,12 @@
 // 定期タスク実行機能（モデルカタログの定期更新、自動バックアップ等）
 
 use crate::utils::error::AppError;
+use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use std::sync::Arc;
-use tokio::sync::Mutex;
 use std::fs;
 use std::path::PathBuf;
-use once_cell::sync::Lazy;
+use std::sync::Arc;
+use tokio::sync::Mutex;
 
 /// スケジュール設定
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -22,12 +22,12 @@ pub struct ScheduleConfig {
 /// タスクタイプ
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
 pub enum TaskType {
-    UpdateModelCatalog,  // モデルカタログ更新
-    AutoBackup,          // 自動バックアップ
-    SyncSettings,        // 設定同期
-    CleanupLogs,         // ログクリーンアップ
-    CertificateRenewal,  // 証明書更新
-    ApiKeyRotation,      // APIキーローテーション
+    UpdateModelCatalog, // モデルカタログ更新
+    AutoBackup,         // 自動バックアップ
+    SyncSettings,       // 設定同期
+    CleanupLogs,        // ログクリーンアップ
+    CertificateRenewal, // 証明書更新
+    ApiKeyRotation,     // APIキーローテーション
 }
 
 /// スケジューラー
@@ -41,7 +41,7 @@ impl Scheduler {
             tasks: Arc::new(Mutex::new(Vec::new())),
         }
     }
-    
+
     /// タスクを追加
     pub async fn add_task(&self, config: ScheduleConfig) -> Result<(), AppError> {
         let mut tasks = self.tasks.lock().await;
@@ -52,9 +52,8 @@ impl Scheduler {
 
 /// スケジュールタスクを追加（便利関数）
 /// グローバルスケジューラーインスタンスを使用
-static GLOBAL_SCHEDULER: Lazy<Arc<Mutex<Scheduler>>> = Lazy::new(|| {
-    Arc::new(Mutex::new(Scheduler::new()))
-});
+static GLOBAL_SCHEDULER: Lazy<Arc<Mutex<Scheduler>>> =
+    Lazy::new(|| Arc::new(Mutex::new(Scheduler::new())));
 
 pub async fn add_schedule_task(
     _task_id: &str,
@@ -69,11 +68,11 @@ pub async fn add_schedule_task(
         last_run: None,
         next_run: None,
     };
-    
+
     // グローバルスケジューラーにタスクを追加
     let scheduler = GLOBAL_SCHEDULER.lock().await;
     scheduler.add_task(config).await?;
-    
+
     Ok(())
 }
 
@@ -82,7 +81,7 @@ impl Scheduler {
     pub async fn start_task(&self, task_type: TaskType) -> Result<(), AppError> {
         let tasks = self.tasks.lock().await;
         let task = tasks.iter().find(|t| t.task_type == task_type);
-        
+
         if let Some(task) = task {
             if !task.enabled {
                 return Err(AppError::ApiError {
@@ -91,24 +90,24 @@ impl Scheduler {
                     source_detail: None,
                 });
             }
-            
+
             match task.task_type {
                 TaskType::UpdateModelCatalog => {
                     // モデルカタログ更新を実行
                     use crate::database::connection::get_connection;
                     use crate::database::repository::ModelCatalogRepository;
                     use crate::utils::model_catalog_data::get_predefined_model_catalog;
-                    
+
                     let updated_count = tokio::task::spawn_blocking(|| {
                         let conn = get_connection().map_err(|e| AppError::DatabaseError {
                             message: format!("データベース接続エラー: {}", e),
                             source_detail: None,
                         })?;
-                        
+
                         let catalog_repo = ModelCatalogRepository::new(&conn);
                         let predefined_models = get_predefined_model_catalog();
                         let mut updated_count = 0u32;
-                        
+
                         for model in predefined_models {
                             match catalog_repo.upsert(&model) {
                                 Ok(_) => updated_count += 1,
@@ -117,66 +116,74 @@ impl Scheduler {
                                 }
                             }
                         }
-                        
+
                         Ok::<u32, AppError>(updated_count)
-                    }).await.map_err(|e| AppError::ProcessError {
+                    })
+                    .await
+                    .map_err(|e| AppError::ProcessError {
                         message: format!("タスク実行エラー: {}", e),
                         source_detail: None,
                     })??;
-                    
+
                     eprintln!("モデルカタログ更新完了: {}件更新", updated_count);
-                },
+                }
                 TaskType::AutoBackup => {
                     // 自動バックアップを実行
-                    use crate::database::connection::get_app_data_dir;
                     use crate::commands::backup::create_backup;
+                    use crate::database::connection::get_app_data_dir;
                     use chrono::Utc;
-                    
+
                     let app_data_dir = get_app_data_dir().map_err(|e| AppError::IoError {
                         message: format!("アプリデータディレクトリ取得エラー: {}", e),
                         source_detail: None,
                     })?;
-                    
+
                     let backup_dir = app_data_dir.join("backups");
                     std::fs::create_dir_all(&backup_dir).map_err(|e| AppError::IoError {
                         message: format!("バックアップディレクトリ作成エラー: {}", e),
                         source_detail: None,
                     })?;
-                    
+
                     // バックアップファイル名を生成（タイムスタンプ付き）
                     let timestamp = Utc::now().format("%Y%m%d_%H%M%S");
                     let backup_filename = format!("auto_backup_{}.json", timestamp);
                     let backup_path = backup_dir.join(&backup_filename);
-                    
+
                     // 自動バックアップは暗号化を有効にする（デフォルトパスワードを使用）
                     // セキュリティのため、自動バックアップは常に暗号化される
-                    let default_password = "auto_backup_default_password_change_in_settings".to_string();
-                    
+                    let default_password =
+                        "auto_backup_default_password_change_in_settings".to_string();
+
                     // バックアップを作成（暗号化有効）
                     match create_backup(
                         backup_path.to_string_lossy().to_string(),
                         Some(true), // 暗号化を有効にする
                         Some(default_password.clone()),
-                    ).await {
+                    )
+                    .await
+                    {
                         Ok(_) => {
-                            eprintln!("[INFO] 自動バックアップが正常に作成されました: {}", backup_path.display());
+                            eprintln!(
+                                "[INFO] 自動バックアップが正常に作成されました: {}",
+                                backup_path.display()
+                            );
                         }
                         Err(e) => {
                             eprintln!("[ERROR] 自動バックアップの作成に失敗しました: {}", e);
                             // エラーが発生しても処理を続行（他のタスクに影響を与えないため）
                         }
                     }
-                    
+
                     // 古いバックアップを削除（最新10個を保持）
                     cleanup_old_backups(&backup_dir).await;
-                },
+                }
                 TaskType::SyncSettings => {
                     // 設定同期を実行
                     // 実際の実装では、ユーザー設定から同期設定を取得して実行
                     // 現在は簡易実装として、設定データをエクスポートしてローカルファイルに保存
-                    use crate::utils::remote_sync;
                     use crate::database::connection::get_app_data_dir;
-                    
+                    use crate::utils::remote_sync;
+
                     // 設定データをエクスポート
                     match remote_sync::export_settings_for_remote().await {
                         Ok(settings_data) => {
@@ -210,14 +217,16 @@ impl Scheduler {
                             eprintln!("[WARN] 設定データのエクスポートに失敗しました: {}", e);
                         }
                     }
-                },
+                }
                 TaskType::CleanupLogs => {
                     // ログクリーンアップを実行
                     use crate::database::connection::get_connection;
-                    use crate::database::repository::{RequestLogRepository, UserSettingRepository};
+                    use crate::database::repository::{
+                        RequestLogRepository, UserSettingRepository,
+                    };
+                    use chrono::{Duration, Utc};
                     use rusqlite::params;
-                    use chrono::{Utc, Duration};
-                    
+
                     // データベース操作をブロッキングタスクで実行
                     let _deleted_count = tokio::task::spawn_blocking(|| {
                         let conn = get_connection().map_err(|e| AppError::DatabaseError {
@@ -288,7 +297,7 @@ impl Scheduler {
                         message: format!("タスク実行エラー: {}", e),
                         source_detail: None,
                     })?;
-                },
+                }
                 TaskType::CertificateRenewal => {
                     // 証明書更新を実行
                     // 注意: FLMではHTTPSが常に有効（HTTPは使用不可）のため、
@@ -296,43 +305,45 @@ impl Scheduler {
                     use crate::database::connection::get_connection;
                     use crate::database::repository::ApiRepository;
                     use crate::utils::certificate::certificate_exists;
-                    
+
                     // データベース操作をブロッキングタスクで実行
                     let api_list = tokio::task::spawn_blocking(|| {
                         let conn = get_connection().map_err(|e| AppError::DatabaseError {
                             message: format!("データベース接続エラー: {}", e),
                             source_detail: None,
                         })?;
-                        
+
                         let api_repo = ApiRepository::new(&conn);
                         api_repo.find_all().map_err(|e| AppError::DatabaseError {
                             message: format!("API一覧取得エラー: {}", e),
                             source_detail: None,
                         })
-                    }).await.map_err(|e| AppError::ProcessError {
+                    })
+                    .await
+                    .map_err(|e| AppError::ProcessError {
                         message: format!("証明書更新タスク実行エラー: {}", e),
                         source_detail: None,
                     })??;
-                    
+
                     let mut renewed_count = 0u32;
                     let mut checked_count = 0u32;
-                    
+
                     // 各APIの証明書を確認
                     for api in api_list {
                         checked_count += 1;
-                        
+
                         // 証明書の存在を確認
                         if certificate_exists(&api.id) {
                             // 証明書が存在する場合、有効期限をチェック
                             // 注意: 現在の実装では、証明書の有効期限チェックは簡易版です
                             // 実際の証明書パースと有効期限の確認は将来の拡張で実装予定
                             // ここでは証明書の存在確認のみを行います
-                            
+
                             // 証明書ファイルの最終更新日時を確認（簡易的な有効期限チェック）
                             use crate::utils::certificate::get_cert_file_path;
                             use std::fs;
                             use std::time::SystemTime;
-                            
+
                             if let Ok(cert_path) = get_cert_file_path(&api.id) {
                                 if let Ok(metadata) = fs::metadata(&cert_path) {
                                     if let Ok(modified) = metadata.modified() {
@@ -341,7 +352,7 @@ impl Scheduler {
                                         match SystemTime::now().duration_since(modified) {
                                             Ok(cert_age) => {
                                                 let days_old = cert_age.as_secs() / 86400;
-                                                
+
                                                 if days_old >= 60 {
                                                     eprintln!("[INFO] 証明書更新を推奨します: API ID={}, 証明書の経過日数={}日", api.id, days_old);
                                                     renewed_count += 1;
@@ -358,42 +369,50 @@ impl Scheduler {
                         } else {
                             // 証明書が存在しない場合は警告を出力
                             // 注意: FLMではHTTPSが必須のため、証明書がないAPIは起動できません
-                            eprintln!("[WARN] 証明書が見つかりません: API ID={}, 名前={}", api.id, api.name);
+                            eprintln!(
+                                "[WARN] 証明書が見つかりません: API ID={}, 名前={}",
+                                api.id, api.name
+                            );
                         }
                     }
-                    
+
                     if renewed_count > 0 {
                         eprintln!("[INFO] 証明書更新タスク完了: {}件の証明書が更新推奨です（確認したAPI数: {}件）", renewed_count, checked_count);
                     } else if checked_count > 0 {
                         eprintln!("[INFO] 証明書更新タスク完了: すべての証明書が有効です（確認したAPI数: {}件）", checked_count);
                     }
-                },
+                }
                 TaskType::ApiKeyRotation => {
                     // APIキーローテーションを実行
-                    use crate::database::connection::get_connection;
-                    use crate::database::repository::{ApiRepository, security_repository::ApiSecuritySettingsRepository, ApiKeyRepository};
                     use crate::commands::api::regenerate_api_key;
-                    use chrono::{Utc, Duration};
-                    
+                    use crate::database::connection::get_connection;
+                    use crate::database::repository::{
+                        security_repository::ApiSecuritySettingsRepository, ApiKeyRepository,
+                        ApiRepository,
+                    };
+                    use chrono::{Duration, Utc};
+
                     // データベース操作をブロッキングタスクで実行
                     let api_list = tokio::task::spawn_blocking(|| {
                         let conn = get_connection().map_err(|e| AppError::DatabaseError {
                             message: format!("データベース接続エラー: {}", e),
                             source_detail: None,
                         })?;
-                        
+
                         let api_repo = ApiRepository::new(&conn);
                         api_repo.find_all().map_err(|e| AppError::DatabaseError {
                             message: format!("API一覧取得エラー: {}", e),
                             source_detail: None,
                         })
-                    }).await.map_err(|e| AppError::ProcessError {
+                    })
+                    .await
+                    .map_err(|e| AppError::ProcessError {
                         message: format!("APIキーローテーションタスク実行エラー: {}", e),
                         source_detail: None,
                     })??;
-                    
+
                     let mut rotated_count = 0u32;
-                    
+
                     // 各APIのキーローテーション設定を確認
                     for api in api_list {
                         // 認証が有効なAPIのみ処理
@@ -402,21 +421,24 @@ impl Scheduler {
                             let settings_result = tokio::task::spawn_blocking({
                                 let api_id = api.id.clone();
                                 move || {
-                                    let conn = get_connection().map_err(|e| AppError::DatabaseError {
-                                        message: format!("データベース接続エラー: {}", e),
-                                        source_detail: None,
-                                    })?;
+                                    let conn =
+                                        get_connection().map_err(|e| AppError::DatabaseError {
+                                            message: format!("データベース接続エラー: {}", e),
+                                            source_detail: None,
+                                        })?;
                                     ApiSecuritySettingsRepository::find_by_api_id(&conn, &api_id)
                                         .map_err(|e| AppError::DatabaseError {
                                             message: format!("セキュリティ設定取得エラー: {}", e),
                                             source_detail: None,
                                         })
                                 }
-                            }).await.map_err(|e| AppError::ProcessError {
+                            })
+                            .await
+                            .map_err(|e| AppError::ProcessError {
                                 message: format!("タスク実行エラー: {}", e),
                                 source_detail: None,
                             })?;
-                            
+
                             match settings_result {
                                 Ok(Some(settings)) => {
                                     // キーローテーションが有効な場合のみ処理
@@ -425,29 +447,43 @@ impl Scheduler {
                                         let key_updated_result = tokio::task::spawn_blocking({
                                             let api_id = api.id.clone();
                                             move || {
-                                                let conn = get_connection().map_err(|e| AppError::DatabaseError {
-                                                    message: format!("データベース接続エラー: {}", e),
-                                                    source_detail: None,
+                                                let conn = get_connection().map_err(|e| {
+                                                    AppError::DatabaseError {
+                                                        message: format!(
+                                                            "データベース接続エラー: {}",
+                                                            e
+                                                        ),
+                                                        source_detail: None,
+                                                    }
                                                 })?;
                                                 let key_repo = ApiKeyRepository::new(&conn);
-                                                key_repo.find_by_api_id(&api_id)
-                                                    .map_err(|e| AppError::DatabaseError {
-                                                        message: format!("APIキー取得エラー: {}", e),
+                                                key_repo.find_by_api_id(&api_id).map_err(|e| {
+                                                    AppError::DatabaseError {
+                                                        message: format!(
+                                                            "APIキー取得エラー: {}",
+                                                            e
+                                                        ),
                                                         source_detail: None,
-                                                    })
+                                                    }
+                                                })
                                             }
-                                        }).await.map_err(|e| AppError::ProcessError {
+                                        })
+                                        .await
+                                        .map_err(|e| AppError::ProcessError {
                                             message: format!("タスク実行エラー: {}", e),
                                             source_detail: None,
                                         })?;
-                                        
+
                                         // ローテーションが必要かチェック
                                         let should_rotate = match key_updated_result {
                                             Ok(Some(key_data)) => {
-                                                let rotation_interval = Duration::days(settings.key_rotation_interval_days as i64);
+                                                let rotation_interval = Duration::days(
+                                                    settings.key_rotation_interval_days as i64,
+                                                );
                                                 let last_updated = key_data.updated_at;
                                                 let now = Utc::now();
-                                                now.signed_duration_since(last_updated) >= rotation_interval
+                                                now.signed_duration_since(last_updated)
+                                                    >= rotation_interval
                                             }
                                             Ok(None) => {
                                                 // APIキーが存在しない場合はローテーション不要
@@ -458,7 +494,7 @@ impl Scheduler {
                                                 false
                                             }
                                         };
-                                        
+
                                         if should_rotate {
                                             // APIキーを再生成（非同期で実行）
                                             match regenerate_api_key(api.id.clone()).await {
@@ -482,23 +518,23 @@ impl Scheduler {
                             }
                         }
                     }
-                    
+
                     if rotated_count > 0 {
                         eprintln!("[INFO] APIキーローテーションタスク完了: {}件のAPIキーがローテーションされました", rotated_count);
                     }
-                },
+                }
             }
         }
-        
+
         Ok(())
     }
-    
+
     /// タスク一覧を取得
     pub async fn get_tasks(&self) -> Vec<ScheduleConfig> {
         let tasks = self.tasks.lock().await;
         tasks.clone()
     }
-    
+
     /// タスクを更新
     pub async fn update_task(
         &self,
@@ -507,7 +543,7 @@ impl Scheduler {
         interval_seconds: Option<u64>,
     ) -> Result<(), AppError> {
         let mut tasks = self.tasks.lock().await;
-        
+
         if let Some(task) = tasks.iter_mut().find(|t| t.task_type == task_type) {
             if let Some(enabled) = enabled {
                 task.enabled = enabled;
@@ -524,11 +560,11 @@ impl Scheduler {
             })
         }
     }
-    
+
     /// タスクを停止（無効化）
     pub async fn stop_task(&self, task_type: TaskType) -> Result<(), AppError> {
         let mut tasks = self.tasks.lock().await;
-        
+
         if let Some(task) = tasks.iter_mut().find(|t| t.task_type == task_type) {
             task.enabled = false;
             Ok(())
@@ -546,7 +582,7 @@ impl Scheduler {
 async fn cleanup_old_backups(backup_dir: &PathBuf) {
     if let Ok(entries) = fs::read_dir(backup_dir) {
         let mut backup_files: Vec<(PathBuf, std::time::SystemTime)> = Vec::new();
-        
+
         for entry in entries.flatten() {
             if let Ok(metadata) = entry.metadata() {
                 if metadata.is_file() {
@@ -560,10 +596,10 @@ async fn cleanup_old_backups(backup_dir: &PathBuf) {
                 }
             }
         }
-        
+
         // 更新日時でソート（新しい順）
         backup_files.sort_by(|a, b| b.1.cmp(&a.1));
-        
+
         // 最新10個を保持し、それ以外を削除
         const KEEP_COUNT: usize = 10;
         if backup_files.len() > KEEP_COUNT {

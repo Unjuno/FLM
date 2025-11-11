@@ -13,6 +13,7 @@ import type {
   NotificationType,
   NotificationAction,
 } from '../components/common/Notification';
+import { Notification as NotificationComponent } from '../components/common/Notification';
 
 /**
  * 通知コンテキストの値
@@ -223,11 +224,6 @@ const NotificationContainer: React.FC<NotificationContainerProps> = ({
     </div>
   );
 };
-
-/**
- * 通知アイテムコンポーネント（Notificationをインポート）
- */
-import { Notification as NotificationComponent } from '../components/common/Notification';
 
 interface NotificationItemProps {
   notification: NotificationItem;

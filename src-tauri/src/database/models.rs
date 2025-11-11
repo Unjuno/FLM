@@ -1,8 +1,8 @@
 // Database Models Module
 // データモデル定義
 
-use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
+use serde::{Deserialize, Serialize};
 
 /// API設定情報
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -35,7 +35,7 @@ impl ApiStatus {
             ApiStatus::Error => "error",
         }
     }
-    
+
     pub fn from_str(s: &str) -> Self {
         match s {
             "running" => ApiStatus::Running,
@@ -110,7 +110,7 @@ impl ModelCategory {
             ModelCategory::Other => "other",
         }
     }
-    
+
     pub fn from(s: &str) -> Self {
         match s {
             "chat" => ModelCategory::Chat,
@@ -200,7 +200,7 @@ pub struct AlertHistory {
 pub struct OAuthToken {
     pub id: String,
     pub api_id: String,
-    pub access_token: String, // 暗号化して保存
+    pub access_token: String,          // 暗号化して保存
     pub refresh_token: Option<String>, // 暗号化して保存
     pub token_type: String,
     pub expires_at: Option<String>,

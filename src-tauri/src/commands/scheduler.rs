@@ -1,16 +1,15 @@
 // Scheduler Commands
 // スケジューラー機能のTauri IPCコマンド
 
-use crate::utils::scheduler::{ScheduleConfig, TaskType, Scheduler};
 use crate::utils::error::AppError;
+use crate::utils::scheduler::{ScheduleConfig, Scheduler, TaskType};
+use once_cell::sync::Lazy;
 use std::sync::Arc;
 use tokio::sync::Mutex;
-use once_cell::sync::Lazy;
 
 /// グローバルスケジューラーインスタンス
-static GLOBAL_SCHEDULER: Lazy<Arc<Mutex<Scheduler>>> = Lazy::new(|| {
-    Arc::new(Mutex::new(Scheduler::new()))
-});
+static GLOBAL_SCHEDULER: Lazy<Arc<Mutex<Scheduler>>> =
+    Lazy::new(|| Arc::new(Mutex::new(Scheduler::new())));
 
 /// スケジュールタスクを追加
 #[tauri::command]
@@ -27,15 +26,19 @@ pub async fn add_schedule_task(
         "CleanupLogs" => TaskType::CleanupLogs,
         "CertificateRenewal" => TaskType::CertificateRenewal,
         "ApiKeyRotation" => TaskType::ApiKeyRotation,
-        _ => return Err(AppError::ApiError {
-            message: format!("未知のタスクタイプ:  {}", task_type),
-            code: "INVALID_TASK_TYPE".to_string(),
-            source_detail: None,
-        }),
+        _ => {
+            return Err(AppError::ApiError {
+                message: format!("未知のタスクタイプ:  {}", task_type),
+                code: "INVALID_TASK_TYPE".to_string(),
+                source_detail: None,
+            })
+        }
     };
-    
+
     let scheduler = GLOBAL_SCHEDULER.lock().await;
-    scheduler.update_task(task_type_enum, Some(true), Some(interval_seconds)).await
+    scheduler
+        .update_task(task_type_enum, Some(true), Some(interval_seconds))
+        .await
 }
 
 /// スケジュールタスクを削除
@@ -49,13 +52,15 @@ pub async fn delete_schedule_task(task_type: String) -> Result<(), AppError> {
         "CleanupLogs" => TaskType::CleanupLogs,
         "CertificateRenewal" => TaskType::CertificateRenewal,
         "ApiKeyRotation" => TaskType::ApiKeyRotation,
-        _ => return Err(AppError::ApiError {
-            message: format!("未知のタスクタイプ:  {}", task_type),
-            code: "INVALID_TASK_TYPE".to_string(),
-            source_detail: None,
-        }),
+        _ => {
+            return Err(AppError::ApiError {
+                message: format!("未知のタスクタイプ:  {}", task_type),
+                code: "INVALID_TASK_TYPE".to_string(),
+                source_detail: None,
+            })
+        }
     };
-    
+
     let scheduler = GLOBAL_SCHEDULER.lock().await;
     // タスクを無効化（削除）するため、stop_taskを呼ぶ
     scheduler.stop_task(task_type_enum).await
@@ -71,13 +76,15 @@ pub async fn stop_schedule_task(task_type: String) -> Result<(), AppError> {
         "CleanupLogs" => TaskType::CleanupLogs,
         "CertificateRenewal" => TaskType::CertificateRenewal,
         "ApiKeyRotation" => TaskType::ApiKeyRotation,
-        _ => return Err(AppError::ApiError {
-            message: format!("未知のタスクタイプ:  {}", task_type),
-            code: "INVALID_TASK_TYPE".to_string(),
-            source_detail: None,
-        }),
+        _ => {
+            return Err(AppError::ApiError {
+                message: format!("未知のタスクタイプ:  {}", task_type),
+                code: "INVALID_TASK_TYPE".to_string(),
+                source_detail: None,
+            })
+        }
     };
-    
+
     let scheduler = GLOBAL_SCHEDULER.lock().await;
     scheduler.stop_task(task_type_enum).await
 }
@@ -103,15 +110,19 @@ pub async fn update_schedule_task(
         "CleanupLogs" => TaskType::CleanupLogs,
         "CertificateRenewal" => TaskType::CertificateRenewal,
         "ApiKeyRotation" => TaskType::ApiKeyRotation,
-        _ => return Err(AppError::ApiError {
-            message: format!("未知のタスクタイプ: {}", task_type),
-            code: "INVALID_TASK_TYPE".to_string(),
-            source_detail: None,
-        }),
+        _ => {
+            return Err(AppError::ApiError {
+                message: format!("未知のタスクタイプ: {}", task_type),
+                code: "INVALID_TASK_TYPE".to_string(),
+                source_detail: None,
+            })
+        }
     };
-    
+
     let scheduler = GLOBAL_SCHEDULER.lock().await;
-    scheduler.update_task(task_type_enum, enabled, interval_seconds).await
+    scheduler
+        .update_task(task_type_enum, enabled, interval_seconds)
+        .await
 }
 
 /// スケジュールタスクを開始
@@ -124,13 +135,15 @@ pub async fn start_schedule_task(task_type: String) -> Result<(), AppError> {
         "CleanupLogs" => TaskType::CleanupLogs,
         "CertificateRenewal" => TaskType::CertificateRenewal,
         "ApiKeyRotation" => TaskType::ApiKeyRotation,
-        _ => return Err(AppError::ApiError {
-            message: format!("未知のタスクタイプ: {}", task_type),
-            code: "INVALID_TASK_TYPE".to_string(),
-            source_detail: None,
-        }),
+        _ => {
+            return Err(AppError::ApiError {
+                message: format!("未知のタスクタイプ: {}", task_type),
+                code: "INVALID_TASK_TYPE".to_string(),
+                source_detail: None,
+            })
+        }
     };
-    
+
     let scheduler = GLOBAL_SCHEDULER.lock().await;
     scheduler.start_task(task_type_enum).await
 }
@@ -141,31 +154,31 @@ pub async fn update_model_catalog() -> Result<u32, AppError> {
     use crate::database::connection::get_connection;
     use crate::database::repository::ModelCatalogRepository;
     use crate::utils::model_catalog_data::get_predefined_model_catalog;
-    
+
     // データベース操作をブロッキングタスクで実行
     let updated_count = tokio::task::spawn_blocking(|| {
         let conn = get_connection().map_err(|e| AppError::DatabaseError {
             message: format!("データベース接続エラー: {}", e),
             source_detail: None,
         })?;
-        
+
         let catalog_data = get_predefined_model_catalog();
         let repo = ModelCatalogRepository::new(&conn);
         let mut updated_count = 0u32;
-        
+
         for model in catalog_data {
             if repo.upsert(&model).is_ok() {
                 updated_count += 1;
             }
         }
-        
+
         Ok::<u32, AppError>(updated_count)
-    }).await.map_err(|e| AppError::ProcessError {
+    })
+    .await
+    .map_err(|e| AppError::ProcessError {
         message: format!("タスク実行エラー: {}", e),
         source_detail: None,
     })??;
-    
+
     Ok(updated_count)
 }
-
-

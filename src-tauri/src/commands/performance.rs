@@ -1,12 +1,11 @@
-
 // パフォーマンス監視コマンド
 // バックエンドエージェント実装（F007）
 
-use serde::{Deserialize, Serialize};
+use crate::database::connection::get_connection;
 use crate::database::models::PerformanceMetric;
 use crate::database::repository::PerformanceMetricRepository;
-use crate::database::connection::get_connection;
 use chrono::Utc;
+use serde::{Deserialize, Serialize};
 
 /// パフォーマンスメトリクス記録リクエスト
 #[derive(Debug, Serialize, Deserialize)]
@@ -18,22 +17,31 @@ pub struct RecordPerformanceMetricRequest {
 
 /// パフォーマンスメトリクス記録コマンド
 #[tauri::command]
-pub async fn record_performance_metric(request: RecordPerformanceMetricRequest) -> Result<(), String> {
+pub async fn record_performance_metric(
+    request: RecordPerformanceMetricRequest,
+) -> Result<(), String> {
     // バリデーション
-    let valid_types = ["request_count", "avg_response_time", "error_rate", "cpu_usage", "memory_usage", "token_usage"];
+    let valid_types = [
+        "request_count",
+        "avg_response_time",
+        "error_rate",
+        "cpu_usage",
+        "memory_usage",
+        "token_usage",
+    ];
     if !valid_types.contains(&request.metric_type.as_str()) {
         return Err(format!(
             "無効なメトリクスタイプです。有効なタイプ: {}",
             valid_types.join(", ")
         ));
     }
-    
+
     let conn = get_connection().map_err(|_| {
         "データの保存に失敗しました。アプリを再起動して再度お試しください。".to_string()
     })?;
-    
+
     let metric_repo = PerformanceMetricRepository::new(&conn);
-    
+
     let metric = PerformanceMetric {
         id: 0, // AUTOINCREMENTのため0
         api_id: request.api_id,
@@ -41,11 +49,12 @@ pub async fn record_performance_metric(request: RecordPerformanceMetricRequest) 
         value: request.value,
         timestamp: Utc::now(),
     };
-    
+
     metric_repo.create(&metric).map_err(|_| {
-        "パフォーマンスメトリクスの保存に失敗しました。アプリを再起動して再度お試しください。".to_string()
+        "パフォーマンスメトリクスの保存に失敗しました。アプリを再起動して再度お試しください。"
+            .to_string()
     })?;
-    
+
     Ok(())
 }
 
@@ -70,23 +79,28 @@ pub struct PerformanceMetricInfo {
 
 /// パフォーマンスメトリクス取得コマンド
 #[tauri::command]
-pub async fn get_performance_metrics(request: GetPerformanceMetricsRequest) -> Result<Vec<PerformanceMetricInfo>, String> {
+pub async fn get_performance_metrics(
+    request: GetPerformanceMetricsRequest,
+) -> Result<Vec<PerformanceMetricInfo>, String> {
     let conn = get_connection().map_err(|_| {
         "データの読み込みに失敗しました。アプリを再起動して再度お試しください。".to_string()
     })?;
-    
+
     let metric_repo = PerformanceMetricRepository::new(&conn);
-    
+
     let metrics = if let Some(metric_type) = &request.metric_type {
-        metric_repo.find_by_api_id_and_type(&request.api_id, metric_type, None).map_err(|_| {
-            "指定されたメトリクスを取得できませんでした。アプリを再起動して再度お試しください。".to_string()
-        })?
+        metric_repo
+            .find_by_api_id_and_type(&request.api_id, metric_type, None)
+            .map_err(|_| {
+                "指定されたメトリクスを取得できませんでした。アプリを再起動して再度お試しください。"
+                    .to_string()
+            })?
     } else {
         metric_repo.find_by_api_id(&request.api_id, None).map_err(|_| {
             "指定されたAPIのメトリクスを取得できませんでした。アプリを再起動して再度お試しください。".to_string()
         })?
     };
-    
+
     // 日時範囲でデータベースクエリから取得
     let filtered_metrics = if request.start_date.is_some() || request.end_date.is_some() {
         metric_repo.find_by_api_id_and_range(
@@ -100,17 +114,18 @@ pub async fn get_performance_metrics(request: GetPerformanceMetricsRequest) -> R
     } else {
         metrics
     };
-    
-    let result: Vec<PerformanceMetricInfo> = filtered_metrics.into_iter().map(|metric| {
-        PerformanceMetricInfo {
+
+    let result: Vec<PerformanceMetricInfo> = filtered_metrics
+        .into_iter()
+        .map(|metric| PerformanceMetricInfo {
             id: metric.id,
             api_id: metric.api_id,
             metric_type: metric.metric_type,
             value: metric.value,
             timestamp: metric.timestamp.to_rfc3339(),
-        }
-    }).collect();
-    
+        })
+        .collect();
+
     Ok(result)
 }
 
@@ -136,7 +151,9 @@ pub struct PerformanceSummary {
 
 /// パフォーマンスサマリー取得コマンド
 #[tauri::command]
-pub async fn get_performance_summary(request: GetPerformanceSummaryRequest) -> Result<PerformanceSummary, String> {
+pub async fn get_performance_summary(
+    request: GetPerformanceSummaryRequest,
+) -> Result<PerformanceSummary, String> {
     // 期間を計算
     let duration = match request.period.as_str() {
         "1h" => chrono::Duration::hours(1),
@@ -144,34 +161,60 @@ pub async fn get_performance_summary(request: GetPerformanceSummaryRequest) -> R
         "7d" => chrono::Duration::days(7),
         _ => return Err("無効な期間です。有効な期間: 1h, 24h, 7d".to_string()),
     };
-    
+
     let start_date = (Utc::now() - duration).to_rfc3339();
-    
+
     let conn = get_connection().map_err(|_| {
         "データの読み込みに失敗しました。アプリを再起動して再度お試しください。".to_string()
     })?;
-    
+
     let metric_repo = PerformanceMetricRepository::new(&conn);
-    
+
     // 各メトリクスタイプのデータを取得（期間範囲でフィルタリング）
-    let response_time_metrics = metric_repo.find_by_api_id_and_range(&request.api_id, Some(&start_date), None, Some("avg_response_time"))
+    let response_time_metrics = metric_repo
+        .find_by_api_id_and_range(
+            &request.api_id,
+            Some(&start_date),
+            None,
+            Some("avg_response_time"),
+        )
         .map_err(|_| "レスポンス時間メトリクスの取得に失敗しました".to_string())?;
-    
-    let request_count_metrics = metric_repo.find_by_api_id_and_range(&request.api_id, Some(&start_date), None, Some("request_count"))
+
+    let request_count_metrics = metric_repo
+        .find_by_api_id_and_range(
+            &request.api_id,
+            Some(&start_date),
+            None,
+            Some("request_count"),
+        )
         .map_err(|_| "リクエスト数メトリクスの取得に失敗しました".to_string())?;
-    
-    let error_rate_metrics = metric_repo.find_by_api_id_and_range(&request.api_id, Some(&start_date), None, Some("error_rate"))
+
+    let error_rate_metrics = metric_repo
+        .find_by_api_id_and_range(&request.api_id, Some(&start_date), None, Some("error_rate"))
         .map_err(|_| "エラー率メトリクスの取得に失敗しました".to_string())?;
-    
-    let cpu_metrics = metric_repo.find_by_api_id_and_range(&request.api_id, Some(&start_date), None, Some("cpu_usage"))
+
+    let cpu_metrics = metric_repo
+        .find_by_api_id_and_range(&request.api_id, Some(&start_date), None, Some("cpu_usage"))
         .map_err(|_| "CPU使用率メトリクスの取得に失敗しました".to_string())?;
-    
-    let memory_metrics = metric_repo.find_by_api_id_and_range(&request.api_id, Some(&start_date), None, Some("memory_usage"))
+
+    let memory_metrics = metric_repo
+        .find_by_api_id_and_range(
+            &request.api_id,
+            Some(&start_date),
+            None,
+            Some("memory_usage"),
+        )
         .map_err(|_| "メモリ使用量メトリクスの取得に失敗しました".to_string())?;
-    
-    let token_usage_metrics = metric_repo.find_by_api_id_and_range(&request.api_id, Some(&start_date), None, Some("token_usage"))
+
+    let token_usage_metrics = metric_repo
+        .find_by_api_id_and_range(
+            &request.api_id,
+            Some(&start_date),
+            None,
+            Some("token_usage"),
+        )
         .map_err(|_| "トークン使用量メトリクスの取得に失敗しました".to_string())?;
-    
+
     // 期間で既にフィルタリング済みなのでそのまま使用
     let filtered_response_time: Vec<_> = response_time_metrics;
     let filtered_request_count: Vec<_> = request_count_metrics;
@@ -179,7 +222,7 @@ pub async fn get_performance_summary(request: GetPerformanceSummaryRequest) -> R
     let filtered_cpu: Vec<_> = cpu_metrics;
     let filtered_memory: Vec<_> = memory_metrics;
     let filtered_token_usage: Vec<_> = token_usage_metrics;
-    
+
     // 統計を計算
     let avg_response_time = if !filtered_response_time.is_empty() {
         let len = filtered_response_time.len() as f64;
@@ -187,48 +230,46 @@ pub async fn get_performance_summary(request: GetPerformanceSummaryRequest) -> R
     } else {
         0.0
     };
-    
-    let max_response_time = filtered_response_time.iter()
+
+    let max_response_time = filtered_response_time
+        .iter()
         .map(|m| m.value)
         .fold(0.0, f64::max);
-    
+
     let min_response_time = if !filtered_response_time.is_empty() {
-        filtered_response_time.iter()
+        filtered_response_time
+            .iter()
             .map(|m| m.value)
             .fold(f64::INFINITY, f64::min)
     } else {
         0.0
     };
-    
-    let request_count: i64 = filtered_request_count.iter()
-        .map(|m| m.value as i64)
-        .sum();
-    
+
+    let request_count: i64 = filtered_request_count.iter().map(|m| m.value as i64).sum();
+
     let error_rate = if !filtered_error_rate.is_empty() {
         let len: f64 = filtered_error_rate.len() as f64;
         filtered_error_rate.iter().map(|m| m.value).sum::<f64>() / len
     } else {
         0.0
     };
-    
+
     let avg_cpu_usage = if !filtered_cpu.is_empty() {
         let len: f64 = filtered_cpu.len() as f64;
         filtered_cpu.iter().map(|m| m.value).sum::<f64>() / len
     } else {
         0.0
     };
-    
+
     let avg_memory_usage = if !filtered_memory.is_empty() {
         let len: f64 = filtered_memory.len() as f64;
         filtered_memory.iter().map(|m| m.value).sum::<f64>() / len
     } else {
         0.0
     };
-    
-    let total_token_usage: i64 = filtered_token_usage.iter()
-        .map(|m| m.value as i64)
-        .sum();
-    
+
+    let total_token_usage: i64 = filtered_token_usage.iter().map(|m| m.value as i64).sum();
+
     Ok(PerformanceSummary {
         avg_response_time,
         max_response_time,
@@ -240,5 +281,3 @@ pub async fn get_performance_summary(request: GetPerformanceSummaryRequest) -> R
         total_token_usage,
     })
 }
-
-

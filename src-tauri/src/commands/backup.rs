@@ -1,13 +1,13 @@
 // バックアップ・復元コマンド
 // バックエンドエージェント実装（F019: データ管理・バックアップ強化）
 
-use serde::{Deserialize, Serialize};
 use crate::database::connection::get_connection;
 use crate::database::DatabaseError;
+use chrono::Utc;
 use rusqlite::Connection;
+use serde::{Deserialize, Serialize};
 use std::fs;
 use std::path::Path;
-use chrono::Utc;
 
 /// バックアップデータ構造
 #[derive(Debug, Serialize, Deserialize)]
@@ -103,17 +103,16 @@ pub async fn create_backup(
     password: Option<String>,
 ) -> Result<BackupResponse, String> {
     // データベース接続を取得
-    let conn = get_connection().map_err(|e| {
-        format!("データベース接続エラー: {}", e)
-    })?;
-    
+    let conn = get_connection().map_err(|e| format!("データベース接続エラー: {}", e))?;
+
     // 暗号化設定を取得（指定されていない場合は設定から取得）
     let should_encrypt = if let Some(enc) = encrypt {
         enc
     } else {
         use crate::database::repository::UserSettingRepository;
         let settings_repo = UserSettingRepository::new(&conn);
-        settings_repo.get("backup_encrypt_by_default")
+        settings_repo
+            .get("backup_encrypt_by_default")
             .ok()
             .flatten()
             .and_then(|v| v.parse::<bool>().ok())
@@ -124,19 +123,24 @@ pub async fn create_backup(
     let backup_data = tokio::task::spawn_blocking({
         move || {
             // API情報を取得
-            let apis = get_apis(&conn).map_err(|e| format!("API情報の取得に失敗しました: {}", e))?;
-            
+            let apis =
+                get_apis(&conn).map_err(|e| format!("API情報の取得に失敗しました: {}", e))?;
+
             // APIキー情報を取得（暗号化されたキーのみ）
-            let api_keys = get_api_keys(&conn).map_err(|e| format!("APIキー情報の取得に失敗しました: {}", e))?;
-            
+            let api_keys = get_api_keys(&conn)
+                .map_err(|e| format!("APIキー情報の取得に失敗しました: {}", e))?;
+
             // インストール済みモデル情報を取得
-            let installed_models = get_installed_models(&conn).map_err(|e| format!("モデル情報の取得に失敗しました: {}", e))?;
-            
+            let installed_models = get_installed_models(&conn)
+                .map_err(|e| format!("モデル情報の取得に失敗しました: {}", e))?;
+
             // リクエストログを取得（最新1000件まで）
-            let request_logs = get_request_logs(&conn, 1000).map_err(|e| format!("ログ情報の取得に失敗しました: {}", e))?;
-            
+            let request_logs = get_request_logs(&conn, 1000)
+                .map_err(|e| format!("ログ情報の取得に失敗しました: {}", e))?;
+
             // アラート履歴を取得（最新1000件まで）
-            let alert_history = get_alert_history(&conn, 1000).map_err(|e| format!("アラート履歴情報の取得に失敗しました: {}", e))?;
+            let alert_history = get_alert_history(&conn, 1000)
+                .map_err(|e| format!("アラート履歴情報の取得に失敗しました: {}", e))?;
 
             Ok::<BackupData, String>(BackupData {
                 version: "1.0".to_string(),
@@ -148,19 +152,19 @@ pub async fn create_backup(
                 alert_history,
             })
         }
-    }).await.map_err(|e| format!("データベース操作エラー: {}", e))??;
+    })
+    .await
+    .map_err(|e| format!("データベース操作エラー: {}", e))??;
 
     // JSON形式でシリアライズ
-    let json_data: String = serde_json::to_string_pretty(&backup_data).map_err(|e| {
-        format!("JSONシリアライズエラー: {}", e)
-    })?;
+    let json_data: String = serde_json::to_string_pretty(&backup_data)
+        .map_err(|e| format!("JSONシリアライズエラー: {}", e))?;
 
     // 暗号化処理
     let final_data = if should_encrypt {
         if let Some(pwd) = password {
-            encrypt_backup_data(&json_data, &pwd).map_err(|e| {
-                format!("バックアップデータの暗号化に失敗しました: {}", e)
-            })?
+            encrypt_backup_data(&json_data, &pwd)
+                .map_err(|e| format!("バックアップデータの暗号化に失敗しました: {}", e))?
         } else {
             return Err("暗号化が有効ですが、パスワードが指定されていません。".to_string());
         }
@@ -196,30 +200,31 @@ fn encrypt_backup_data(data: &str, password: &str) -> Result<String, String> {
         aead::{Aead, AeadCore, KeyInit, OsRng},
         Aes256Gcm,
     };
-    use sha2::{Sha256, Digest};
-    use base64::{Engine as _, engine::general_purpose::STANDARD};
-    
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
+    use sha2::{Digest, Sha256};
+
     // パスワードから32バイトのキーを生成（SHA-256）
     let mut hasher = Sha256::new();
     hasher.update(password.as_bytes());
     let key_bytes = hasher.finalize();
-    
+
     // AES-256-GCMで暗号化
     let cipher = Aes256Gcm::new_from_slice(&key_bytes)
         .map_err(|e| format!("暗号化キーの生成に失敗しました: {}", e))?;
-    
+
     // Nonceを生成
     let nonce = Aes256Gcm::generate_nonce(&mut OsRng);
-    
+
     // 暗号化
-    let ciphertext = cipher.encrypt(&nonce, data.as_bytes().as_ref())
+    let ciphertext = cipher
+        .encrypt(&nonce, data.as_bytes().as_ref())
         .map_err(|e| format!("暗号化エラー: {}", e))?;
-    
+
     // Nonceと暗号文を結合してBase64エンコード
     let nonce_bytes: &[u8] = nonce.as_ref();
     let mut combined = nonce_bytes.to_vec();
     combined.extend_from_slice(&ciphertext);
-    
+
     Ok(STANDARD.encode(&combined))
 }
 
@@ -236,9 +241,8 @@ pub async fn restore_backup(
     }
 
     // ファイルを読み込む
-    let encrypted_data = fs::read_to_string(&backup_path).map_err(|e| {
-        format!("ファイル読み込みエラー: {}", e)
-    })?;
+    let encrypted_data =
+        fs::read_to_string(&backup_path).map_err(|e| format!("ファイル読み込みエラー: {}", e))?;
 
     // 暗号化されているかどうかを判定（Base64エンコードされたデータかどうか）
     // 簡易的な判定：Base64デコードが成功し、かつパスワードが提供されている場合は復号化を試みる
@@ -284,97 +288,101 @@ fn decrypt_backup_data(encrypted_data: &str, password: &str) -> Result<String, S
         aead::{Aead, KeyInit},
         Aes256Gcm, Nonce,
     };
-    use sha2::{Sha256, Digest};
-    use base64::{Engine as _, engine::general_purpose::STANDARD};
-    
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
+    use sha2::{Digest, Sha256};
+
     // Base64デコード
-    let combined = STANDARD.decode(encrypted_data)
+    let combined = STANDARD
+        .decode(encrypted_data)
         .map_err(|e| format!("Base64デコードエラー: {}", e))?;
-    
+
     // Nonce（12バイト）と暗号文を分離
     if combined.len() < 12 {
         return Err("暗号化データが不正です".to_string());
     }
-    
+
     let nonce_bytes = &combined[0..12];
     let ciphertext = &combined[12..];
-    
+
     // Nonceを作成（12バイトの配列から作成）
-    let nonce_array: [u8; 12] = nonce_bytes.try_into()
+    let nonce_array: [u8; 12] = nonce_bytes
+        .try_into()
         .map_err(|_| "Nonceの長さが不正です")?;
     #[allow(deprecated)] // aes-gcm 0.10では非推奨だが、依存関係のバージョンアップは中長期改善項目
     let nonce = Nonce::from_slice(&nonce_array);
-    
+
     // パスワードから32バイトのキーを生成（SHA-256）
     let mut hasher = Sha256::new();
     hasher.update(password.as_bytes());
     let key_bytes = hasher.finalize();
-    
+
     // AES-256-GCMで復号化
     let cipher = Aes256Gcm::new_from_slice(&key_bytes)
         .map_err(|e| format!("復号化キーの生成に失敗しました: {}", e))?;
-    
-    let plaintext = cipher.decrypt(nonce, ciphertext.as_ref())
+
+    let plaintext = cipher
+        .decrypt(nonce, ciphertext.as_ref())
         .map_err(|e| format!("復号化エラー: {}", e))?;
-    
-    String::from_utf8(plaintext)
-        .map_err(|e| format!("UTF-8変換エラー: {}", e))
+
+    String::from_utf8(plaintext).map_err(|e| format!("UTF-8変換エラー: {}", e))
 }
 
 /// JSONデータから復元する共通関数
 async fn restore_from_json(json_data: String) -> Result<RestoreResponse, String> {
-
     // JSONをパース
-    let backup_data: BackupData = serde_json::from_str(&json_data).map_err(|e| {
-        format!("JSON解析エラー: {}", e)
-    })?;
+    let backup_data: BackupData =
+        serde_json::from_str(&json_data).map_err(|e| format!("JSON解析エラー: {}", e))?;
 
     // バージョン確認（将来的にバージョン互換性チェックを追加可能）
     if backup_data.version != "1.0" {
-        return Err(format!("サポートされていないバックアップバージョンです: {}", backup_data.version));
+        return Err(format!(
+            "サポートされていないバックアップバージョンです: {}",
+            backup_data.version
+        ));
     }
 
     // データベース接続を取得
-    let conn = get_connection().map_err(|e| {
-        format!("データベース接続エラー: {}", e)
-    })?;
+    let conn = get_connection().map_err(|e| format!("データベース接続エラー: {}", e))?;
 
     // トランザクション内で復元処理を実行
-    let restore_result = tokio::task::spawn_blocking(move || -> Result<RestoreResponse, DatabaseError> {
-        let mut conn = conn; // クロージャ内でmutableとして扱う
-        let tx = conn.transaction().map_err(|e| {
-            DatabaseError::QueryFailed(format!("トランザクション開始エラー: {}", e))
-        })?;
+    let restore_result =
+        tokio::task::spawn_blocking(move || -> Result<RestoreResponse, DatabaseError> {
+            let mut conn = conn; // クロージャ内でmutableとして扱う
+            let tx = conn.transaction().map_err(|e| {
+                DatabaseError::QueryFailed(format!("トランザクション開始エラー: {}", e))
+            })?;
 
-        // API設定を復元
-        let api_count = restore_apis(&tx, &backup_data.apis)?;
-        
-        // APIキーを復元
-        let api_key_count = restore_api_keys(&tx, &backup_data.api_keys)?;
-        
-        // インストール済みモデルを復元
-        let model_count = restore_installed_models(&tx, &backup_data.installed_models)?;
-        
-        // リクエストログを復元
-        let log_count = restore_request_logs(&tx, &backup_data.request_logs)?;
-        
-        // アラート履歴を復元
-        let alert_history_count = restore_alert_history(&tx, &backup_data.alert_history)?;
+            // API設定を復元
+            let api_count = restore_apis(&tx, &backup_data.apis)?;
 
-        // コミット
-        tx.commit().map_err(|e| {
-            DatabaseError::QueryFailed(format!("トランザクションコミットエラー: {}", e))
-        })?;
+            // APIキーを復元
+            let api_key_count = restore_api_keys(&tx, &backup_data.api_keys)?;
 
-        Ok(RestoreResponse {
-            api_count,
-            api_key_count,
-            model_count,
-            log_count,
-            alert_history_count,
+            // インストール済みモデルを復元
+            let model_count = restore_installed_models(&tx, &backup_data.installed_models)?;
+
+            // リクエストログを復元
+            let log_count = restore_request_logs(&tx, &backup_data.request_logs)?;
+
+            // アラート履歴を復元
+            let alert_history_count = restore_alert_history(&tx, &backup_data.alert_history)?;
+
+            // コミット
+            tx.commit().map_err(|e| {
+                DatabaseError::QueryFailed(format!("トランザクションコミットエラー: {}", e))
+            })?;
+
+            Ok(RestoreResponse {
+                api_count,
+                api_key_count,
+                model_count,
+                log_count,
+                alert_history_count,
+            })
         })
-    }).await.map_err(|e| format!("データベース操作エラー: {}", e))?
-    .map_err(|e| format!("復元エラー: {}", e))?;
+        .await
+        .map_err(|e| format!("データベース操作エラー: {}", e))?
+        .map_err(|e| format!("復元エラー: {}", e))?;
 
     Ok(restore_result)
 }
@@ -393,42 +401,45 @@ pub struct RestoreResponse {
 
 fn get_apis(conn: &Connection) -> Result<Vec<ApiBackupData>, DatabaseError> {
     let mut stmt = conn.prepare(
-        "SELECT id, name, model, port, enable_auth, status, created_at, updated_at FROM apis"
+        "SELECT id, name, model, port, enable_auth, status, created_at, updated_at FROM apis",
     )?;
 
-    let apis = stmt.query_map([], |row| {
-        Ok(ApiBackupData {
-            id: row.get(0)?,
-            name: row.get(1)?,
-            model: row.get(2)?,
-            port: row.get(3)?,
-            enable_auth: row.get(4)?,
-            status: row.get(5)?,
-            created_at: row.get(6)?,
-            updated_at: row.get(7)?,
-        })
-    })?.collect::<Result<Vec<_>, _>>()?;
+    let apis = stmt
+        .query_map([], |row| {
+            Ok(ApiBackupData {
+                id: row.get(0)?,
+                name: row.get(1)?,
+                model: row.get(2)?,
+                port: row.get(3)?,
+                enable_auth: row.get(4)?,
+                status: row.get(5)?,
+                created_at: row.get(6)?,
+                updated_at: row.get(7)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(apis)
 }
 
 fn get_api_keys(conn: &Connection) -> Result<Vec<ApiKeyBackupData>, DatabaseError> {
-    use base64::{Engine as _, engine::general_purpose::STANDARD};
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
 
-    let mut stmt = conn.prepare(
-        "SELECT api_id, key_hash, encrypted_key, created_at, updated_at FROM api_keys"
-    )?;
+    let mut stmt = conn
+        .prepare("SELECT api_id, key_hash, encrypted_key, created_at, updated_at FROM api_keys")?;
 
-    let api_keys = stmt.query_map([], |row| {
-        let encrypted_key_bytes: Vec<u8> = row.get(2)?;
-        Ok(ApiKeyBackupData {
-            api_id: row.get(0)?,
-            key_hash: row.get(1)?,
-            encrypted_key: STANDARD.encode(&encrypted_key_bytes),
-            created_at: row.get(3)?,
-            updated_at: row.get(4)?,
-        })
-    })?.collect::<Result<Vec<_>, _>>()?;
+    let api_keys = stmt
+        .query_map([], |row| {
+            let encrypted_key_bytes: Vec<u8> = row.get(2)?;
+            Ok(ApiKeyBackupData {
+                api_id: row.get(0)?,
+                key_hash: row.get(1)?,
+                encrypted_key: STANDARD.encode(&encrypted_key_bytes),
+                created_at: row.get(3)?,
+                updated_at: row.get(4)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(api_keys)
 }
@@ -438,21 +449,26 @@ fn get_installed_models(conn: &Connection) -> Result<Vec<InstalledModelBackupDat
         "SELECT name, size, parameters, installed_at, last_used_at, usage_count FROM installed_models"
     )?;
 
-    let models = stmt.query_map([], |row| {
-        Ok(InstalledModelBackupData {
-            name: row.get(0)?,
-            size: row.get(1)?,
-            parameters: row.get(2)?,
-            installed_at: row.get(3)?,
-            last_used_at: row.get(4)?,
-            usage_count: row.get(5)?,
-        })
-    })?.collect::<Result<Vec<_>, _>>()?;
+    let models = stmt
+        .query_map([], |row| {
+            Ok(InstalledModelBackupData {
+                name: row.get(0)?,
+                size: row.get(1)?,
+                parameters: row.get(2)?,
+                installed_at: row.get(3)?,
+                last_used_at: row.get(4)?,
+                usage_count: row.get(5)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(models)
 }
 
-fn get_request_logs(conn: &Connection, limit: i32) -> Result<Vec<RequestLogBackupData>, DatabaseError> {
+fn get_request_logs(
+    conn: &Connection,
+    limit: i32,
+) -> Result<Vec<RequestLogBackupData>, DatabaseError> {
     let mut stmt = conn.prepare(
         "SELECT id, api_id, method, path, request_body, response_status, response_time_ms, error_message, created_at 
          FROM request_logs 
@@ -460,58 +476,65 @@ fn get_request_logs(conn: &Connection, limit: i32) -> Result<Vec<RequestLogBacku
          LIMIT ?"
     )?;
 
-    let logs = stmt.query_map([limit], |row| {
-        Ok(RequestLogBackupData {
-            id: row.get(0)?,
-            api_id: row.get(1)?,
-            method: row.get(2)?,
-            path: row.get(3)?,
-            request_body: row.get(4)?,
-            response_status: row.get(5)?,
-            response_time_ms: row.get(6)?,
-            error_message: row.get(7)?,
-            created_at: row.get(8)?,
-        })
-    })?.collect::<Result<Vec<_>, _>>()?;
+    let logs = stmt
+        .query_map([limit], |row| {
+            Ok(RequestLogBackupData {
+                id: row.get(0)?,
+                api_id: row.get(1)?,
+                method: row.get(2)?,
+                path: row.get(3)?,
+                request_body: row.get(4)?,
+                response_status: row.get(5)?,
+                response_time_ms: row.get(6)?,
+                error_message: row.get(7)?,
+                created_at: row.get(8)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(logs)
 }
 
-fn get_alert_history(conn: &Connection, limit: i32) -> Result<Vec<AlertHistoryBackupData>, DatabaseError> {
+fn get_alert_history(
+    conn: &Connection,
+    limit: i32,
+) -> Result<Vec<AlertHistoryBackupData>, DatabaseError> {
     let mut stmt = conn.prepare(
         "SELECT id, api_id, alert_type, current_value, threshold, message, timestamp, resolved_at 
          FROM alert_history 
          ORDER BY timestamp DESC 
-         LIMIT ?"
+         LIMIT ?",
     )?;
 
-    let alerts = stmt.query_map([limit], |row| {
-        Ok(AlertHistoryBackupData {
-            id: row.get(0)?,
-            api_id: row.get(1)?,
-            alert_type: row.get(2)?,
-            current_value: row.get(3)?,
-            threshold: row.get(4)?,
-            message: row.get(5)?,
-            timestamp: row.get(6)?,
-            resolved_at: row.get(7)?,
-        })
-    })?.collect::<Result<Vec<_>, _>>()?;
+    let alerts = stmt
+        .query_map([limit], |row| {
+            Ok(AlertHistoryBackupData {
+                id: row.get(0)?,
+                api_id: row.get(1)?,
+                alert_type: row.get(2)?,
+                current_value: row.get(3)?,
+                threshold: row.get(4)?,
+                message: row.get(5)?,
+                timestamp: row.get(6)?,
+                resolved_at: row.get(7)?,
+            })
+        })?
+        .collect::<Result<Vec<_>, _>>()?;
 
     Ok(alerts)
 }
 
 // データ復元関数
 
-fn restore_apis(tx: &rusqlite::Transaction, apis: &[ApiBackupData]) -> Result<usize, DatabaseError> {
+fn restore_apis(
+    tx: &rusqlite::Transaction,
+    apis: &[ApiBackupData],
+) -> Result<usize, DatabaseError> {
     let mut count = 0;
-    
+
     for api in apis {
         // 既存のAPIを削除（同じIDの場合）
-        tx.execute(
-            "DELETE FROM apis WHERE id = ?",
-            [&api.id],
-        )?;
+        tx.execute("DELETE FROM apis WHERE id = ?", [&api.id])?;
 
         // APIを挿入
         tx.execute(
@@ -534,22 +557,22 @@ fn restore_apis(tx: &rusqlite::Transaction, apis: &[ApiBackupData]) -> Result<us
     Ok(count)
 }
 
-fn restore_api_keys(tx: &rusqlite::Transaction, api_keys: &[ApiKeyBackupData]) -> Result<usize, DatabaseError> {
-    use base64::{Engine as _, engine::general_purpose::STANDARD};
+fn restore_api_keys(
+    tx: &rusqlite::Transaction,
+    api_keys: &[ApiKeyBackupData],
+) -> Result<usize, DatabaseError> {
+    use base64::{engine::general_purpose::STANDARD, Engine as _};
 
     let mut count = 0;
 
     for api_key in api_keys {
         // 既存のAPIキーを削除（同じAPI IDの場合）
-        tx.execute(
-            "DELETE FROM api_keys WHERE api_id = ?",
-            [&api_key.api_id],
-        )?;
+        tx.execute("DELETE FROM api_keys WHERE api_id = ?", [&api_key.api_id])?;
 
         // Base64デコード
-        let encrypted_key_bytes = STANDARD.decode(&api_key.encrypted_key).map_err(|e| {
-            DatabaseError::InvalidData(format!("Base64デコードエラー: {}", e))
-        })?;
+        let encrypted_key_bytes = STANDARD
+            .decode(&api_key.encrypted_key)
+            .map_err(|e| DatabaseError::InvalidData(format!("Base64デコードエラー: {}", e)))?;
 
         // APIキーを挿入
         tx.execute(
@@ -569,15 +592,15 @@ fn restore_api_keys(tx: &rusqlite::Transaction, api_keys: &[ApiKeyBackupData]) -
     Ok(count)
 }
 
-fn restore_installed_models(tx: &rusqlite::Transaction, models: &[InstalledModelBackupData]) -> Result<usize, DatabaseError> {
+fn restore_installed_models(
+    tx: &rusqlite::Transaction,
+    models: &[InstalledModelBackupData],
+) -> Result<usize, DatabaseError> {
     let mut count = 0;
 
     for model in models {
         // 既存のモデルを削除（同じ名前の場合）
-        tx.execute(
-            "DELETE FROM installed_models WHERE name = ?",
-            [&model.name],
-        )?;
+        tx.execute("DELETE FROM installed_models WHERE name = ?", [&model.name])?;
 
         // モデルを挿入
         tx.execute(
@@ -598,15 +621,15 @@ fn restore_installed_models(tx: &rusqlite::Transaction, models: &[InstalledModel
     Ok(count)
 }
 
-fn restore_request_logs(tx: &rusqlite::Transaction, logs: &[RequestLogBackupData]) -> Result<usize, DatabaseError> {
+fn restore_request_logs(
+    tx: &rusqlite::Transaction,
+    logs: &[RequestLogBackupData],
+) -> Result<usize, DatabaseError> {
     let mut count = 0;
 
     for log in logs {
         // 既存のログを削除（同じIDの場合）
-        tx.execute(
-            "DELETE FROM request_logs WHERE id = ?",
-            [&log.id],
-        )?;
+        tx.execute("DELETE FROM request_logs WHERE id = ?", [&log.id])?;
 
         // ログを挿入
         tx.execute(
@@ -630,15 +653,15 @@ fn restore_request_logs(tx: &rusqlite::Transaction, logs: &[RequestLogBackupData
     Ok(count)
 }
 
-fn restore_alert_history(tx: &rusqlite::Transaction, alerts: &[AlertHistoryBackupData]) -> Result<usize, DatabaseError> {
+fn restore_alert_history(
+    tx: &rusqlite::Transaction,
+    alerts: &[AlertHistoryBackupData],
+) -> Result<usize, DatabaseError> {
     let mut count = 0;
 
     for alert in alerts {
         // 既存のアラート履歴を削除（同じIDの場合）
-        tx.execute(
-            "DELETE FROM alert_history WHERE id = ?",
-            [&alert.id],
-        )?;
+        tx.execute("DELETE FROM alert_history WHERE id = ?", [&alert.id])?;
 
         // アラート履歴を挿入
         tx.execute(
@@ -660,5 +683,3 @@ fn restore_alert_history(tx: &rusqlite::Transaction, alerts: &[AlertHistoryBacku
 
     Ok(count)
 }
-
-

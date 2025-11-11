@@ -11,9 +11,9 @@
 // プラグインには `flm_plugin_execute`（必須）および `flm_plugin_free_string`（推奨）をエクスポートする必要があります。
 // 今後、プラグイン開発者向けの高機能APIを追加予定です。
 
-use serde::{Deserialize, Serialize};
 use crate::utils::error::AppError;
 use libloading::{Library, Symbol};
+use serde::{Deserialize, Serialize};
 use std::ffi::{CStr, CString};
 use std::os::raw::c_char;
 use std::path::Path;
@@ -59,11 +59,11 @@ pub struct PluginInfo {
 /// プラグインタイプ
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum PluginType {
-    Engine,      // エンジンプラグイン
-    Model,      // モデル管理プラグイン
-    Auth,       // 認証プラグイン
-    Logging,    // ログプラグイン
-    Custom,     // カスタムプラグイン
+    Engine,  // エンジンプラグイン
+    Model,   // モデル管理プラグイン
+    Auth,    // 認証プラグイン
+    Logging, // ログプラグイン
+    Custom,  // カスタムプラグイン
 }
 
 /// プラグイン実行コンテキスト
@@ -91,32 +91,46 @@ type PluginExecuteFn = unsafe extern "C" fn(*const c_char) -> *mut c_char;
 type PluginFreeStringFn = unsafe extern "C" fn(*mut c_char);
 
 /// プラグインの権限をチェック
-fn check_plugin_permissions(
-    plugin: &PluginInfo,
-    required_permission: &str,
-) -> Result<(), String> {
+fn check_plugin_permissions(plugin: &PluginInfo, required_permission: &str) -> Result<(), String> {
     match required_permission {
         "database_read" | "database_write" => {
             if plugin.permissions.database_access == "none" {
-                return Err(format!("プラグイン '{}' にはデータベースアクセス権限がありません", plugin.name));
+                return Err(format!(
+                    "プラグイン '{}' にはデータベースアクセス権限がありません",
+                    plugin.name
+                ));
             }
-            if required_permission == "database_write" && plugin.permissions.database_access != "write" {
-                return Err(format!("プラグイン '{}' にはデータベース書き込み権限がありません", plugin.name));
+            if required_permission == "database_write"
+                && plugin.permissions.database_access != "write"
+            {
+                return Err(format!(
+                    "プラグイン '{}' にはデータベース書き込み権限がありません",
+                    plugin.name
+                ));
             }
         }
         "network" => {
             if plugin.permissions.network_access != "allow" {
-                return Err(format!("プラグイン '{}' には外部通信権限がありません", plugin.name));
+                return Err(format!(
+                    "プラグイン '{}' には外部通信権限がありません",
+                    plugin.name
+                ));
             }
         }
         "api_key" => {
             if plugin.permissions.api_key_access != "allow" {
-                return Err(format!("プラグイン '{}' にはAPIキーアクセス権限がありません", plugin.name));
+                return Err(format!(
+                    "プラグイン '{}' にはAPIキーアクセス権限がありません",
+                    plugin.name
+                ));
             }
         }
         "filesystem" => {
             if plugin.permissions.filesystem_access != "allow" {
-                return Err(format!("プラグイン '{}' にはファイルシステムアクセス権限がありません", plugin.name));
+                return Err(format!(
+                    "プラグイン '{}' にはファイルシステムアクセス権限がありません",
+                    plugin.name
+                ));
             }
         }
         _ => {
@@ -127,19 +141,16 @@ fn check_plugin_permissions(
 }
 
 /// プラグインを実行
-/// 
+///
 /// **現在の実装**: プラグインタイプに応じた基本的な実行処理を実装
 /// 実際の動的ライブラリのロードと実行は未実装です。
-/// 
+///
 /// **将来の実装予定**:
 /// - 動的ライブラリ（.dylib, .so, .dll）のロード
 /// - プラグイン関数の呼び出し
 /// - プラグインAPIの提供
 /// - プラグインのサンドボックス化
-pub async fn execute_plugin(
-    plugin: &PluginInfo,
-    context: &PluginContext,
-) -> PluginExecutionResult {
+pub async fn execute_plugin(plugin: &PluginInfo, context: &PluginContext) -> PluginExecutionResult {
     if !plugin.enabled {
         return PluginExecutionResult {
             success: false,
@@ -151,7 +162,7 @@ pub async fn execute_plugin(
     // プラグインタイプに応じた権限チェック
     let required_permission = match plugin.plugin_type {
         PluginType::Logging => "database_write", // ログプラグインはデータベース書き込み権限が必要
-        PluginType::Auth => "api_key", // 認証プラグインはAPIキーアクセス権限が必要
+        PluginType::Auth => "api_key",           // 認証プラグインはAPIキーアクセス権限が必要
         _ => "", // その他のプラグインタイプは権限チェックなし（将来拡張可能）
     };
 
@@ -186,11 +197,17 @@ fn dynamic_execution_error(plugin: &PluginInfo, message: String) -> PluginExecut
     PluginExecutionResult {
         success: false,
         output: None,
-        error: Some(format!("プラグイン '{}' の実行に失敗しました: {}", plugin.name, message)),
+        error: Some(format!(
+            "プラグイン '{}' の実行に失敗しました: {}",
+            plugin.name, message
+        )),
     }
 }
 
-fn execute_dynamic_plugin(plugin: &PluginInfo, context: &PluginContext) -> Result<PluginExecutionResult, AppError> {
+fn execute_dynamic_plugin(
+    plugin: &PluginInfo,
+    context: &PluginContext,
+) -> Result<PluginExecutionResult, AppError> {
     let library_path = get_library_path(plugin).ok_or_else(|| AppError::ProcessError {
         message: "プラグインライブラリのパスが設定されていません".to_string(),
         source_detail: Some(plugin.id.clone()),
@@ -204,10 +221,16 @@ fn execute_dynamic_plugin(plugin: &PluginInfo, context: &PluginContext) -> Resul
         });
     }
 
-    let payload = serde_json::to_string(&PluginExecutionPayload { plugin, context }).map_err(|e| AppError::ProcessError {
-        message: format!("プラグイン実行コンテキストのシリアライズに失敗しました: {}", e),
-        source_detail: Some(plugin.id.clone()),
-    })?;
+    let payload =
+        serde_json::to_string(&PluginExecutionPayload { plugin, context }).map_err(|e| {
+            AppError::ProcessError {
+                message: format!(
+                    "プラグイン実行コンテキストのシリアライズに失敗しました: {}",
+                    e
+                ),
+                source_detail: Some(plugin.id.clone()),
+            }
+        })?;
 
     let payload_cstring = CString::new(payload).map_err(|e| AppError::ProcessError {
         message: format!("プラグイン実行データのエンコードに失敗しました: {}", e),
@@ -220,10 +243,16 @@ fn execute_dynamic_plugin(plugin: &PluginInfo, context: &PluginContext) -> Resul
             source_detail: Some(path.display().to_string()),
         })?;
 
-        let execute_fn: Symbol<PluginExecuteFn> = library.get(b"flm_plugin_execute\0").map_err(|e| AppError::ProcessError {
-            message: format!("プラグイン実行関数 'flm_plugin_execute' の取得に失敗しました: {}", e),
-            source_detail: Some(path.display().to_string()),
-        })?;
+        let execute_fn: Symbol<PluginExecuteFn> =
+            library
+                .get(b"flm_plugin_execute\0")
+                .map_err(|e| AppError::ProcessError {
+                    message: format!(
+                        "プラグイン実行関数 'flm_plugin_execute' の取得に失敗しました: {}",
+                        e
+                    ),
+                    source_detail: Some(path.display().to_string()),
+                })?;
 
         let result_ptr = execute_fn(payload_cstring.as_ptr());
         if result_ptr.is_null() {
@@ -236,7 +265,8 @@ fn execute_dynamic_plugin(plugin: &PluginInfo, context: &PluginContext) -> Resul
         let result_cstr = CStr::from_ptr(result_ptr);
         let result_string = result_cstr.to_string_lossy().into_owned();
 
-        if let Ok(free_fn) = library.get::<Symbol<PluginFreeStringFn>>(b"flm_plugin_free_string\0") {
+        if let Ok(free_fn) = library.get::<Symbol<PluginFreeStringFn>>(b"flm_plugin_free_string\0")
+        {
             free_fn(result_ptr);
         } else {
             eprintln!("[WARN] プラグイン '{}' に解放関数 'flm_plugin_free_string' が見つかりません。戻り値のメモリを解放できない可能性があります。", plugin.name);
@@ -269,10 +299,13 @@ async fn execute_engine_plugin(
                 return PluginExecutionResult {
                     success: false,
                     output: None,
-                    error: Some(format!("プラグインライブラリが見つかりません: {}", library_path_str)),
+                    error: Some(format!(
+                        "プラグインライブラリが見つかりません: {}",
+                        library_path_str
+                    )),
                 };
             }
-            
+
             // 将来的に動的ライブラリをロードする処理を実装予定
             // 現在は未実装のため、エラーを返す
             return PluginExecutionResult {
@@ -282,7 +315,7 @@ async fn execute_engine_plugin(
             };
         }
     }
-    
+
     // ライブラリパスが指定されていない場合は、基本的な処理のみ実行
     PluginExecutionResult {
         success: true,
@@ -298,14 +331,14 @@ impl PluginManager {
     /// プラグインを登録（データベースに保存）
     pub async fn register_plugin(plugin: PluginInfo) -> Result<(), AppError> {
         use crate::database::connection::get_connection;
-        use rusqlite::params;
         use chrono::Utc;
-        
+        use rusqlite::params;
+
         let conn = get_connection().map_err(|e| AppError::DatabaseError {
             message: format!("データベース接続エラー:  {}", e),
             source_detail: None,
         })?;
-        
+
         let now = Utc::now().to_rfc3339();
         let plugin_type_str = match plugin.plugin_type {
             PluginType::Engine => "engine",
@@ -314,12 +347,13 @@ impl PluginManager {
             PluginType::Logging => "logging",
             PluginType::Custom => "custom",
         };
-        
-        let permissions_json = serde_json::to_string(&plugin.permissions).map_err(|e| AppError::DatabaseError {
-            message: format!("権限情報のシリアライズエラー: {}", e),
-            source_detail: None,
-        })?;
-        
+
+        let permissions_json =
+            serde_json::to_string(&plugin.permissions).map_err(|e| AppError::DatabaseError {
+                message: format!("権限情報のシリアライズエラー: {}", e),
+                source_detail: None,
+            })?;
+
         conn.execute(
             r#"
             INSERT OR REPLACE INTO plugins 
@@ -343,26 +377,26 @@ impl PluginManager {
             message: format!("プラグイン登録エラー: {}", e),
             source_detail: None,
         })?;
-        
+
         Ok(())
     }
-    
+
     /// プラグインを取得（データベースから）
     pub async fn get_plugin(id: &str) -> Result<Option<PluginInfo>, AppError> {
         use crate::database::connection::get_connection;
-        
+
         let conn = get_connection().map_err(|e| AppError::DatabaseError {
             message: format!("データベース接続エラー:  {}", e),
             source_detail: None,
         })?;
-        
+
         let mut stmt = conn.prepare(
             "SELECT id, name, version, author, description, enabled, plugin_type, library_path, permissions FROM plugins WHERE id = ?1"
         ).map_err(|e| AppError::DatabaseError {
             message: format!("SQL準備エラー: {}", e),
             source_detail: None,
         })?;
-        
+
         use rusqlite::params;
         let result = stmt.query_row(params![id], |row| {
             let plugin_type_str: String = row.get(6)?;
@@ -374,17 +408,20 @@ impl PluginManager {
                 "custom" => PluginType::Custom,
                 _ => PluginType::Custom,
             };
-            
+
             let permissions_json: Option<String> = row.get(8)?;
             let permissions = if let Some(json) = permissions_json {
                 serde_json::from_str(&json).unwrap_or_else(|e| {
-                    eprintln!("[WARN] プラグイン権限JSONのパースエラー: {} (JSON: {})", e, json);
+                    eprintln!(
+                        "[WARN] プラグイン権限JSONのパースエラー: {} (JSON: {})",
+                        e, json
+                    );
                     PluginPermissions::default()
                 })
             } else {
                 PluginPermissions::default()
             };
-            
+
             Ok(PluginInfo {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -397,7 +434,7 @@ impl PluginManager {
                 permissions,
             })
         });
-        
+
         match result {
             Ok(plugin) => Ok(Some(plugin)),
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
@@ -407,16 +444,16 @@ impl PluginManager {
             }),
         }
     }
-    
+
     /// すべてのプラグインを取得（データベースから）
     pub async fn get_all_plugins() -> Result<Vec<PluginInfo>, AppError> {
         use crate::database::connection::get_connection;
-        
+
         let conn = get_connection().map_err(|e| AppError::DatabaseError {
             message: format!("データベース接続エラー: {}", e),
             source_detail: None,
         })?;
-        
+
         // テーブルの存在確認
         let table_exists: bool = conn
             .query_row(
@@ -425,12 +462,12 @@ impl PluginManager {
                 |row| Ok(row.get::<_, i32>(0)? > 0),
             )
             .unwrap_or(false);
-        
+
         if !table_exists {
             // テーブルが存在しない場合は空の配列を返す
             return Ok(Vec::new());
         }
-        
+
         let mut stmt = match conn.prepare(
             "SELECT id, name, version, author, description, enabled, plugin_type, library_path, permissions, created_at, updated_at FROM plugins ORDER BY name"
         ) {
@@ -442,7 +479,7 @@ impl PluginManager {
                 return Ok(Vec::new());
             }
         };
-        
+
         let plugins_iter = match stmt.query_map([], |row| {
             let plugin_type_str: String = row.get(6)?;
             let plugin_type = match plugin_type_str.as_str() {
@@ -453,17 +490,20 @@ impl PluginManager {
                 "custom" => PluginType::Custom,
                 _ => PluginType::Custom,
             };
-            
+
             let permissions_json: Option<String> = row.get(8)?;
             let permissions = if let Some(json) = permissions_json {
                 serde_json::from_str(&json).unwrap_or_else(|e| {
-                    eprintln!("[WARN] プラグイン権限JSONのパースエラー: {} (JSON: {})", e, json);
+                    eprintln!(
+                        "[WARN] プラグイン権限JSONのパースエラー: {} (JSON: {})",
+                        e, json
+                    );
                     PluginPermissions::default()
                 })
             } else {
                 PluginPermissions::default()
             };
-            
+
             Ok(PluginInfo {
                 id: row.get(0)?,
                 name: row.get(1)?,
@@ -482,7 +522,7 @@ impl PluginManager {
                 return Ok(Vec::new());
             }
         };
-        
+
         let mut plugins = Vec::new();
         for plugin_result in plugins_iter {
             match plugin_result {
@@ -493,89 +533,96 @@ impl PluginManager {
                 }
             }
         }
-        
+
         Ok(plugins)
     }
-    
+
     /// 有効なプラグインを取得（データベースから）
     pub async fn get_enabled_plugins() -> Result<Vec<PluginInfo>, AppError> {
         use crate::database::connection::get_connection;
-        
+
         let conn = get_connection().map_err(|e| AppError::DatabaseError {
             message: format!("データベース接続エラー:  {}", e),
             source_detail: None,
         })?;
-        
+
         let mut stmt = conn.prepare(
             "SELECT id, name, version, author, description, enabled, plugin_type, library_path, permissions FROM plugins WHERE enabled = 1 ORDER BY name"
         ).map_err(|e| AppError::DatabaseError {
             message: format!("SQL準備エラー: {}", e),
             source_detail: None,
         })?;
-        
-        let plugins_iter = stmt.query_map([], |row| {
-            let plugin_type_str: String = row.get(6)?;
-            let plugin_type = match plugin_type_str.as_str() {
-                "engine" => PluginType::Engine,
-                "model" => PluginType::Model,
-                "auth" => PluginType::Auth,
-                "logging" => PluginType::Logging,
-                "custom" => PluginType::Custom,
-                _ => PluginType::Custom,
-            };
-            
-            let permissions_json: Option<String> = row.get(8)?;
-            let permissions = if let Some(json) = permissions_json {
-                serde_json::from_str(&json).unwrap_or_else(|e| {
-                    eprintln!("[WARN] プラグイン権限JSONのパースエラー: {} (JSON: {})", e, json);
+
+        let plugins_iter = stmt
+            .query_map([], |row| {
+                let plugin_type_str: String = row.get(6)?;
+                let plugin_type = match plugin_type_str.as_str() {
+                    "engine" => PluginType::Engine,
+                    "model" => PluginType::Model,
+                    "auth" => PluginType::Auth,
+                    "logging" => PluginType::Logging,
+                    "custom" => PluginType::Custom,
+                    _ => PluginType::Custom,
+                };
+
+                let permissions_json: Option<String> = row.get(8)?;
+                let permissions = if let Some(json) = permissions_json {
+                    serde_json::from_str(&json).unwrap_or_else(|e| {
+                        eprintln!(
+                            "[WARN] プラグイン権限JSONのパースエラー: {} (JSON: {})",
+                            e, json
+                        );
+                        PluginPermissions::default()
+                    })
+                } else {
                     PluginPermissions::default()
+                };
+
+                Ok(PluginInfo {
+                    id: row.get(0)?,
+                    name: row.get(1)?,
+                    version: row.get(2)?,
+                    author: row.get(3)?,
+                    description: row.get(4)?,
+                    enabled: row.get::<_, i32>(5)? != 0,
+                    plugin_type,
+                    library_path: row.get(7)?,
+                    permissions,
                 })
-            } else {
-                PluginPermissions::default()
-            };
-            
-            Ok(PluginInfo {
-                id: row.get(0)?,
-                name: row.get(1)?,
-                version: row.get(2)?,
-                author: row.get(3)?,
-                description: row.get(4)?,
-                enabled: row.get::<_, i32>(5)? != 0,
-                plugin_type,
-                library_path: row.get(7)?,
-                permissions,
             })
-        }).map_err(|e| AppError::DatabaseError {
-            message: format!("プラグイン取得エラー: {}", e),
-            source_detail: None,
-        })?;
-        
+            .map_err(|e| AppError::DatabaseError {
+                message: format!("プラグイン取得エラー: {}", e),
+                source_detail: None,
+            })?;
+
         let mut plugins = Vec::new();
         for plugin_result in plugins_iter {
             plugins.push(plugin_result?);
         }
-        
+
         Ok(plugins)
     }
-    
+
     /// プラグインを有効化/無効化（データベースを更新）
     pub async fn set_plugin_enabled(id: &str, enabled: bool) -> Result<(), AppError> {
         use crate::database::connection::get_connection;
-        
+
         let conn = get_connection().map_err(|e| AppError::DatabaseError {
             message: format!("データベース接続エラー: {}", e),
             source_detail: None,
         })?;
-        
+
         use rusqlite::params;
-        let rows_affected = conn.execute(
-            "UPDATE plugins SET enabled = ?1 WHERE id = ?2",
-            params![if enabled { 1 } else { 0 }, id],
-        ).map_err(|e| AppError::DatabaseError {
-            message: format!("プラグイン更新エラー: {}", e),
-            source_detail: None,
-        })?;
-        
+        let rows_affected = conn
+            .execute(
+                "UPDATE plugins SET enabled = ?1 WHERE id = ?2",
+                params![if enabled { 1 } else { 0 }, id],
+            )
+            .map_err(|e| AppError::DatabaseError {
+                message: format!("プラグイン更新エラー: {}", e),
+                source_detail: None,
+            })?;
+
         if rows_affected == 0 {
             return Err(AppError::ApiError {
                 message: format!("プラグイン '{}' が見つかりません", id),
@@ -583,28 +630,27 @@ impl PluginManager {
                 source_detail: None,
             });
         }
-        
+
         Ok(())
     }
-    
+
     /// プラグインを削除
     pub async fn unregister_plugin(id: &str) -> Result<(), AppError> {
         use crate::database::connection::get_connection;
-        
+
         let conn = get_connection().map_err(|e| AppError::DatabaseError {
             message: format!("データベース接続エラー: {}", e),
             source_detail: None,
         })?;
-        
+
         use rusqlite::params;
-        let rows_affected = conn.execute(
-            "DELETE FROM plugins WHERE id = ?1",
-            params![id],
-        ).map_err(|e| AppError::DatabaseError {
-            message: format!("プラグイン削除エラー: {}", e),
-            source_detail: None,
-        })?;
-        
+        let rows_affected = conn
+            .execute("DELETE FROM plugins WHERE id = ?1", params![id])
+            .map_err(|e| AppError::DatabaseError {
+                message: format!("プラグイン削除エラー: {}", e),
+                source_detail: None,
+            })?;
+
         if rows_affected == 0 {
             return Err(AppError::ApiError {
                 message: format!("プラグイン '{}' が見つかりません", id),
@@ -612,10 +658,10 @@ impl PluginManager {
                 source_detail: None,
             });
         }
-        
+
         Ok(())
     }
-    
+
     /// プラグインの権限を更新
     pub async fn update_plugin_permissions(
         id: &str,
@@ -623,27 +669,30 @@ impl PluginManager {
     ) -> Result<(), AppError> {
         use crate::database::connection::get_connection;
         use chrono::Utc;
-        
+
         let conn = get_connection().map_err(|e| AppError::DatabaseError {
             message: format!("データベース接続エラー: {}", e),
             source_detail: None,
         })?;
-        
-        let permissions_json = serde_json::to_string(permissions).map_err(|e| AppError::DatabaseError {
-            message: format!("権限情報のシリアライズエラー: {}", e),
-            source_detail: None,
-        })?;
-        
+
+        let permissions_json =
+            serde_json::to_string(permissions).map_err(|e| AppError::DatabaseError {
+                message: format!("権限情報のシリアライズエラー: {}", e),
+                source_detail: None,
+            })?;
+
         let now = Utc::now().to_rfc3339();
         use rusqlite::params;
-        let rows_affected = conn.execute(
-            "UPDATE plugins SET permissions = ?1, updated_at = ?2 WHERE id = ?3",
-            params![permissions_json, now, id],
-        ).map_err(|e| AppError::DatabaseError {
-            message: format!("プラグイン権限更新エラー: {}", e),
-            source_detail: None,
-        })?;
-        
+        let rows_affected = conn
+            .execute(
+                "UPDATE plugins SET permissions = ?1, updated_at = ?2 WHERE id = ?3",
+                params![permissions_json, now, id],
+            )
+            .map_err(|e| AppError::DatabaseError {
+                message: format!("プラグイン権限更新エラー: {}", e),
+                source_detail: None,
+            })?;
+
         if rows_affected == 0 {
             return Err(AppError::ApiError {
                 message: format!("プラグイン '{}' が見つかりません", id),
@@ -651,7 +700,7 @@ impl PluginManager {
                 source_detail: None,
             });
         }
-        
+
         Ok(())
     }
 }
@@ -664,7 +713,10 @@ async fn execute_model_plugin(
     if let Some(path) = get_library_path(plugin) {
         let library_path = Path::new(path);
         if !library_path.exists() {
-            return dynamic_execution_error(plugin, format!("プラグインライブラリが見つかりません: {}", path));
+            return dynamic_execution_error(
+                plugin,
+                format!("プラグインライブラリが見つかりません: {}", path),
+            );
         }
 
         match execute_dynamic_plugin(plugin, context) {
@@ -672,7 +724,7 @@ async fn execute_model_plugin(
             Err(e) => return dynamic_execution_error(plugin, format!("{}", e)),
         }
     }
-    
+
     // ライブラリパスが指定されていない場合は、基本的な処理のみ実行
     PluginExecutionResult {
         success: true,
@@ -689,7 +741,10 @@ async fn execute_auth_plugin(
     if let Some(path) = get_library_path(plugin) {
         let library_path = Path::new(path);
         if !library_path.exists() {
-            return dynamic_execution_error(plugin, format!("プラグインライブラリが見つかりません: {}", path));
+            return dynamic_execution_error(
+                plugin,
+                format!("プラグインライブラリが見つかりません: {}", path),
+            );
         }
 
         match execute_dynamic_plugin(plugin, context) {
@@ -697,11 +752,14 @@ async fn execute_auth_plugin(
             Err(e) => return dynamic_execution_error(plugin, format!("{}", e)),
         }
     }
-    
+
     // ライブラリパスが指定されていない場合は、基本的な処理のみ実行
     PluginExecutionResult {
         success: true,
-        output: Some(format!("認証プラグイン '{}' が実行されました（ライブラリパス未指定のため、基本処理のみ実行）", plugin.name)),
+        output: Some(format!(
+            "認証プラグイン '{}' が実行されました（ライブラリパス未指定のため、基本処理のみ実行）",
+            plugin.name
+        )),
         error: None,
     }
 }
@@ -714,7 +772,10 @@ async fn execute_logging_plugin(
     if let Some(path) = get_library_path(plugin) {
         let library_path = Path::new(path);
         if !library_path.exists() {
-            return dynamic_execution_error(plugin, format!("プラグインライブラリが見つかりません: {}", path));
+            return dynamic_execution_error(
+                plugin,
+                format!("プラグインライブラリが見つかりません: {}", path),
+            );
         }
 
         match execute_dynamic_plugin(plugin, context) {
@@ -722,11 +783,14 @@ async fn execute_logging_plugin(
             Err(e) => return dynamic_execution_error(plugin, format!("{}", e)),
         }
     }
-    
+
     // ライブラリパスが指定されていない場合は、基本的な処理のみ実行
     PluginExecutionResult {
         success: true,
-        output: Some(format!("ログプラグイン '{}' が実行されました（ライブラリパス未指定のため、基本処理のみ実行）", plugin.name)),
+        output: Some(format!(
+            "ログプラグイン '{}' が実行されました（ライブラリパス未指定のため、基本処理のみ実行）",
+            plugin.name
+        )),
         error: None,
     }
 }
@@ -739,7 +803,10 @@ async fn execute_custom_plugin(
     if let Some(path) = get_library_path(plugin) {
         let library_path = Path::new(path);
         if !library_path.exists() {
-            return dynamic_execution_error(plugin, format!("プラグインライブラリが見つかりません: {}", path));
+            return dynamic_execution_error(
+                plugin,
+                format!("プラグインライブラリが見つかりません: {}", path),
+            );
         }
 
         match execute_dynamic_plugin(plugin, context) {
@@ -747,7 +814,7 @@ async fn execute_custom_plugin(
             Err(e) => return dynamic_execution_error(plugin, format!("{}", e)),
         }
     }
-    
+
     // コンテキストデータのシリアライズを試みる
     let context_str = match serde_json::to_string(&context.data) {
         Ok(s) => s,
@@ -755,11 +822,14 @@ async fn execute_custom_plugin(
             return PluginExecutionResult {
                 success: false,
                 output: None,
-                error: Some(format!("コンテキストデータのシリアライズに失敗しました: {}", e)),
+                error: Some(format!(
+                    "コンテキストデータのシリアライズに失敗しました: {}",
+                    e
+                )),
             };
         }
     };
-    
+
     // ライブラリパスが指定されていない場合は、基本的な処理のみ実行
     PluginExecutionResult {
         success: true,
@@ -770,5 +840,3 @@ async fn execute_custom_plugin(
         error: None,
     }
 }
-
-

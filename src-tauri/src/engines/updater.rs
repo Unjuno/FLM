@@ -17,12 +17,12 @@ pub async fn check_lm_studio_update() -> Result<EngineUpdateCheck, AppError> {
     // LM Studioのバージョン取得は困難なため、インストール状態を確認して判断
     // 実際の実装では、LM Studioの公式APIから最新バージョンを取得する必要がある
     use crate::engines::manager::EngineManager;
-    
+
     // LM Studioがインストールされているか確認
     let manager = EngineManager::new();
     let detection_result = manager.detect_engine("lm_studio").await?;
     let is_installed = detection_result.installed;
-    
+
     if !is_installed {
         // インストールされていない場合は、アップデート不要
         return Ok(EngineUpdateCheck {
@@ -31,7 +31,7 @@ pub async fn check_lm_studio_update() -> Result<EngineUpdateCheck, AppError> {
             latest_version: "latest".to_string(),
         });
     }
-    
+
     // インストールされているが、バージョン取得が困難なため、
     // アップデート可能と表示（ユーザーが手動で確認できるように）
     Ok(EngineUpdateCheck {
@@ -55,17 +55,17 @@ where
 pub async fn check_vllm_update() -> Result<EngineUpdateCheck, AppError> {
     // vLLMの現在のバージョンを取得
     let current_version = get_vllm_version().await.ok();
-    
+
     // 最新版を取得（pip show vllmで取得可能）
     let latest_version = get_latest_vllm_version().await?;
-    
+
     // バージョン比較
     let update_available = if let Some(current) = &current_version {
         current != &latest_version
     } else {
         true // バージョンが取得できない場合はアップデート可能と見なす
     };
-    
+
     Ok(EngineUpdateCheck {
         update_available,
         current_version,
@@ -78,7 +78,6 @@ pub async fn update_vllm<F>(mut progress_callback: F) -> Result<String, AppError
 where
     F: FnMut(crate::engines::installer::EngineDownloadProgress) -> Result<(), AppError>,
 {
-    
     progress_callback(crate::engines::installer::EngineDownloadProgress {
         status: "installing".to_string(),
         progress: 0.0,
@@ -116,10 +115,13 @@ where
             message: format!("vLLMアップデートエラー: {}", e),
             source_detail: None,
         })?;
-    
+
     if !output.status.success() {
         return Err(AppError::ProcessError {
-            message: format!("vLLMアップデートエラー: {}", String::from_utf8_lossy(&output.stderr)),
+            message: format!(
+                "vLLMアップデートエラー: {}",
+                String::from_utf8_lossy(&output.stderr)
+            ),
             source_detail: None,
         });
     }
@@ -140,12 +142,12 @@ where
 pub async fn check_llama_cpp_update() -> Result<EngineUpdateCheck, AppError> {
     // llama.cppの現在のバージョンを取得（実装が困難なため、インストール状態を確認して判断）
     use crate::engines::manager::EngineManager;
-    
+
     // llama.cppがインストールされているか確認
     let manager = EngineManager::new();
     let detection_result = manager.detect_engine("llama_cpp").await?;
     let is_installed = detection_result.installed;
-    
+
     if !is_installed {
         // インストールされていない場合は、アップデート不要
         return Ok(EngineUpdateCheck {
@@ -154,7 +156,7 @@ pub async fn check_llama_cpp_update() -> Result<EngineUpdateCheck, AppError> {
             latest_version: "latest".to_string(),
         });
     }
-    
+
     // インストールされているが、バージョン取得が困難なため、
     // アップデート可能と表示（ユーザーが手動で確認できるように）
     Ok(EngineUpdateCheck {
@@ -178,7 +180,7 @@ where
 async fn get_vllm_version() -> Result<String, AppError> {
     use std::process::Command;
     use tokio::process::Command as AsyncCommand;
-    
+
     let python_cmd = if Command::new("python3").output().is_ok() {
         "python3"
     } else if Command::new("python").output().is_ok() {
@@ -279,5 +281,3 @@ async fn get_latest_vllm_version() -> Result<String, AppError> {
 
     Ok(version)
 }
-
-

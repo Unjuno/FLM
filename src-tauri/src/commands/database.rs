@@ -1,10 +1,10 @@
 // Database Commands
 // データベース関連のIPCコマンド
-// 
+//
 // フェーズ4: データベースエージェント (DB) 実装
 
-use serde::{Deserialize, Serialize};
 use crate::database::integrity::{check_integrity, fix_integrity_issues};
+use serde::{Deserialize, Serialize};
 
 /// データベース整合性チェック結果（フロントエンドに返す用）
 #[derive(Debug, Serialize, Deserialize)]
@@ -27,11 +27,11 @@ pub struct IntegrityCheckSummaryResponse {
 /// データベースの整合性をチェックし、問題があれば報告します
 #[tauri::command]
 pub async fn check_database_integrity() -> Result<IntegrityCheckSummaryResponse, String> {
-    let summary = check_integrity().map_err(|e| {
-        format!("データベース整合性チェックエラー: {}", e)
-    })?;
-    
-    let checks = summary.checks
+    let summary =
+        check_integrity().map_err(|e| format!("データベース整合性チェックエラー: {}", e))?;
+
+    let checks = summary
+        .checks
         .into_iter()
         .map(|check| IntegrityCheckResultResponse {
             check_name: check.check_name,
@@ -40,7 +40,7 @@ pub async fn check_database_integrity() -> Result<IntegrityCheckSummaryResponse,
             issues: check.issues,
         })
         .collect();
-    
+
     Ok(IntegrityCheckSummaryResponse {
         checks,
         is_valid: summary.is_valid,
@@ -52,11 +52,11 @@ pub async fn check_database_integrity() -> Result<IntegrityCheckSummaryResponse,
 /// 安全に修正できる問題を自動的に修正します
 #[tauri::command]
 pub async fn fix_database_integrity() -> Result<IntegrityCheckSummaryResponse, String> {
-    let summary = fix_integrity_issues().map_err(|e| {
-        format!("データベース整合性修正エラー: {}", e)
-    })?;
-    
-    let checks = summary.checks
+    let summary =
+        fix_integrity_issues().map_err(|e| format!("データベース整合性修正エラー: {}", e))?;
+
+    let checks = summary
+        .checks
         .into_iter()
         .map(|check| IntegrityCheckResultResponse {
             check_name: check.check_name,
@@ -65,12 +65,10 @@ pub async fn fix_database_integrity() -> Result<IntegrityCheckSummaryResponse, S
             issues: check.issues,
         })
         .collect();
-    
+
     Ok(IntegrityCheckSummaryResponse {
         checks,
         is_valid: summary.is_valid,
         total_issues: summary.total_issues,
     })
 }
-
-

@@ -1,14 +1,14 @@
 // Engine Manager
 // エンジンの統一管理を行うマネージャー
 
-use std::collections::HashMap;
-use crate::utils::error::AppError;
-use super::traits::LLMEngine;
-use super::models::{EngineDetectionResult, EngineConfig, ModelInfo};
-use super::ollama::OllamaEngine;
-use super::lm_studio::LMStudioEngine;
-use super::vllm::VLLMEngine;
 use super::llama_cpp::LlamaCppEngine;
+use super::lm_studio::LMStudioEngine;
+use super::models::{EngineConfig, EngineDetectionResult, ModelInfo};
+use super::ollama::OllamaEngine;
+use super::traits::LLMEngine;
+use super::vllm::VLLMEngine;
+use crate::utils::error::AppError;
+use std::collections::HashMap;
 
 pub struct EngineManager {
     engines: HashMap<String, String>, // エンジンタイプ名のみを保存（dyn互換性の問題を回避）
@@ -17,27 +17,27 @@ pub struct EngineManager {
 impl EngineManager {
     pub fn new() -> Self {
         let mut engines = HashMap::new();
-        
+
         // 各エンジンタイプを登録
         engines.insert("ollama".to_string(), "ollama".to_string());
         engines.insert("lm_studio".to_string(), "lm_studio".to_string());
         engines.insert("vllm".to_string(), "vllm".to_string());
         engines.insert("llama_cpp".to_string(), "llama_cpp".to_string());
-        
+
         EngineManager { engines }
     }
-    
+
     /// 利用可能なエンジンタイプのリストを取得
     pub fn get_available_engine_types(&self) -> Vec<String> {
         self.engines.keys().cloned().collect()
     }
-    
+
     /// すべてのエンジンを検出
     pub async fn detect_all_engines(&self) -> Vec<EngineDetectionResult> {
         let mut results = Vec::new();
-        
+
         let engine_types = vec!["ollama", "lm_studio", "vllm", "llama_cpp"];
-        
+
         for engine_type in engine_types {
             match self.detect_engine(engine_type).await {
                 Ok(result) => results.push(result),
@@ -55,12 +55,15 @@ impl EngineManager {
                 }
             }
         }
-        
+
         results
     }
-    
+
     /// エンジンを検出
-    pub async fn detect_engine(&self, engine_type: &str) -> Result<EngineDetectionResult, AppError> {
+    pub async fn detect_engine(
+        &self,
+        engine_type: &str,
+    ) -> Result<EngineDetectionResult, AppError> {
         match engine_type {
             "ollama" => {
                 let engine = OllamaEngine::new();
@@ -82,12 +85,16 @@ impl EngineManager {
                 message: format!("不明なエンジンタイプ: {}", engine_type),
                 code: "UNKNOWN_ENGINE".to_string(),
                 source_detail: None,
-            })
+            }),
         }
     }
-    
+
     /// エンジンを起動
-    pub async fn start_engine(&self, engine_type: &str, config: Option<EngineConfig>) -> Result<u32, AppError> {
+    pub async fn start_engine(
+        &self,
+        engine_type: &str,
+        config: Option<EngineConfig>,
+    ) -> Result<u32, AppError> {
         let default_port = match engine_type {
             "ollama" => 11434,
             "lm_studio" => 1234,
@@ -102,7 +109,7 @@ impl EngineManager {
                 });
             }
         };
-        
+
         let config = config.unwrap_or_else(|| {
             eprintln!("[DEBUG] デフォルト設定を使用");
             EngineConfig {
@@ -113,10 +120,12 @@ impl EngineManager {
                 auto_detect: true,
             }
         });
-        
-        eprintln!("[DEBUG] エンジン設定: エンジンタイプ={}, ベースURL={:?}, ポート={:?}, 自動検出={}", 
-            config.engine_type, config.base_url, config.port, config.auto_detect);
-        
+
+        eprintln!(
+            "[DEBUG] エンジン設定: エンジンタイプ={}, ベースURL={:?}, ポート={:?}, 自動検出={}",
+            config.engine_type, config.base_url, config.port, config.auto_detect
+        );
+
         let result = match engine_type {
             "ollama" => {
                 eprintln!("[DEBUG] Ollamaエンジンを起動します");
@@ -147,14 +156,17 @@ impl EngineManager {
                 })
             }
         };
-        
+
         if let Err(e) = &result {
-            eprintln!("[ERROR] エンジンの起動に失敗: エンジンタイプ={}, エラー={:?}", engine_type, e);
+            eprintln!(
+                "[ERROR] エンジンの起動に失敗: エンジンタイプ={}, エラー={:?}",
+                engine_type, e
+            );
         }
-        
+
         result
     }
-    
+
     /// エンジンを停止
     pub async fn stop_engine(&self, engine_type: &str) -> Result<(), AppError> {
         match engine_type {
@@ -178,10 +190,10 @@ impl EngineManager {
                 message: format!("不明なエンジンタイプ:  {}", engine_type),
                 code: "UNKNOWN_ENGINE".to_string(),
                 source_detail: None,
-            })
+            }),
         }
     }
-    
+
     /// エンジンのベースURLを取得
     pub fn get_engine_base_url(&self, engine_type: &str) -> String {
         match engine_type {
@@ -192,7 +204,7 @@ impl EngineManager {
             _ => OllamaEngine::new().get_base_url(), // デフォルト
         }
     }
-    
+
     /// エンジンの実行状態を確認
     pub async fn is_engine_running(&self, engine_type: &str) -> Result<bool, AppError> {
         match engine_type {
@@ -216,10 +228,10 @@ impl EngineManager {
                 message: format!("不明なエンジンタイプ: {}", engine_type),
                 code: "UNKNOWN_ENGINE".to_string(),
                 source_detail: None,
-            })
+            }),
         }
     }
-    
+
     /// エンジンのモデル一覧を取得
     pub async fn get_engine_models(&self, engine_type: &str) -> Result<Vec<ModelInfo>, AppError> {
         match engine_type {
@@ -243,10 +255,10 @@ impl EngineManager {
                 message: format!("不明なエンジンタイプ: {}", engine_type),
                 code: "UNKNOWN_ENGINE".to_string(),
                 source_detail: None,
-            })
+            }),
         }
     }
-    
+
     // 注意: `get_engine`メソッドは削除されました。
     // asyncトレイトは`dyn`互換性がないため、直接エンジンインスタンスを作成する方法を使用してください。
     // 例: `OllamaEngine::new()` など
@@ -257,5 +269,3 @@ impl Default for EngineManager {
         Self::new()
     }
 }
-
-

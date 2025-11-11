@@ -74,7 +74,10 @@ export const OAuthSettings: React.FC = () => {
       setSaving(true);
       setError(null);
 
-      const url = await safeInvoke<string>('start_oauth_flow_command', {
+      const result = await safeInvoke<{
+        auth_url: string;
+        state: string;
+      }>('start_oauth_flow_command', {
         config: {
           client_id: config.client_id,
           client_secret: config.client_secret,
@@ -85,11 +88,12 @@ export const OAuthSettings: React.FC = () => {
         },
       });
 
-      setAuthUrl(url);
+      setAuthUrl(result.auth_url);
+      setAuthState(result.state); // stateを保存（CSRF対策）
       showSuccess('認証URLを生成しました。ブラウザで開きます');
 
       // ブラウザで認証URLを開く
-      window.open(url, '_blank');
+      window.open(result.auth_url, '_blank');
     } catch (err) {
       showError(
         err instanceof Error

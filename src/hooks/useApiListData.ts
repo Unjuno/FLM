@@ -37,7 +37,7 @@ export const useApiListData = () => {
     toggleApiStatus,
     deleteApi,
     setError: setOperationError,
-  } = useApiOperations(loadApis);
+  } = useApiOperations(refreshApis);
   const {
     selectedApiIds,
     selectedCount,

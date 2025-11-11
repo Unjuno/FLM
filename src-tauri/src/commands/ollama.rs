@@ -5,8 +5,8 @@
 use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter};
 
+use crate::ollama::{self, current_ollama_host_port, OllamaDetectionResult};
 use crate::utils::error::AppError;
-use crate::ollama::{self, OllamaDetectionResult, current_ollama_host_port};
 // ログマクロをインポート
 use crate::{debug_log, error_log, log_pid};
 
@@ -41,7 +41,7 @@ impl From<OllamaDetectionResult> for OllamaStatus {
 }
 
 /// Ollamaの検出・状態確認
-/// 
+///
 /// システムパス上、実行中のプロセス、ポータブル版の順に検出を試みます
 #[tauri::command]
 pub async fn detect_ollama() -> Result<OllamaStatus, AppError> {
@@ -49,10 +49,12 @@ pub async fn detect_ollama() -> Result<OllamaStatus, AppError> {
     let result = match ollama::detect_ollama().await {
         Ok(r) => {
             eprintln!("✓ Ollama検出が成功しました");
-            eprintln!("検出結果: installed={}, running={}, portable={:?}", 
-                     r.installed, r.running, r.portable);
+            eprintln!(
+                "検出結果: installed={}, running={}, portable={:?}",
+                r.installed, r.running, r.portable
+            );
             r
-        },
+        }
         Err(e) => {
             eprintln!("✗ Ollama検出が失敗しました: {e:?}");
             return Err(e);
@@ -64,7 +66,7 @@ pub async fn detect_ollama() -> Result<OllamaStatus, AppError> {
 }
 
 /// Ollamaの自動ダウンロード
-/// 
+///
 /// GitHub Releases APIから最新版を取得し、ダウンロードします
 /// 進捗はイベント経由で送信されます
 #[tauri::command]
@@ -73,15 +75,19 @@ pub async fn download_ollama(
     _platform: Option<String>,
 ) -> Result<String, AppError> {
     let app_handle = app.clone();
-    
+
     let path = ollama::download_ollama(move |progress| {
         // 進捗をイベントとして送信
         if let Err(e) = app_handle.emit("ollama_download_progress", &progress) {
-            eprintln!("[WARN] Ollamaダウンロード進捗イベントの送信に失敗しました: {}", e);
+            eprintln!(
+                "[WARN] Ollamaダウンロード進捗イベントの送信に失敗しました: {}",
+                e
+            );
         }
         Ok(())
-    }).await?;
-    
+    })
+    .await?;
+
     Ok(path)
 }
 
@@ -96,7 +102,7 @@ pub async fn start_ollama(ollama_path: Option<String>) -> Result<u32, AppError> 
         Ok(pid) => {
             log_pid!(pid, "✓ Ollama起動が成功しました (PID: {})");
             pid
-        },
+        }
         Err(e) => {
             error_log!("✗ Ollama起動が失敗しました: {:?}", e);
             error_log!("エラー詳細: {}", e);
@@ -134,8 +140,9 @@ pub async fn check_ollama_health() -> Result<OllamaHealthStatus, AppError> {
 /// 現在のバージョンと最新版を比較して、アップデートが利用可能かチェック
 #[tauri::command]
 pub async fn check_ollama_update() -> Result<OllamaUpdateCheck, AppError> {
-    let (is_newer_available, current_version, latest_version) = ollama::check_ollama_update_available().await?;
-    
+    let (is_newer_available, current_version, latest_version) =
+        ollama::check_ollama_update_available().await?;
+
     Ok(OllamaUpdateCheck {
         update_available: is_newer_available,
         current_version,
@@ -154,9 +161,7 @@ pub struct OllamaUpdateCheck {
 /// Ollamaのアップデート実行
 /// 既存のOllamaを停止し、最新版をダウンロードして更新します
 #[tauri::command]
-pub async fn update_ollama(
-    app: AppHandle,
-) -> Result<String, AppError> {
+pub async fn update_ollama(app: AppHandle) -> Result<String, AppError> {
     // 1. 既存のOllamaを停止
     let was_running = ollama::check_ollama_running().await.unwrap_or_else(|e| {
         eprintln!("[WARN] Ollamaの実行状態確認に失敗しました: {}", e);
@@ -176,7 +181,8 @@ pub async fn update_ollama(
             eprintln!("[WARN] Ollama更新進捗イベントの送信に失敗しました: {}", e);
         }
         Ok(())
-    }).await?;
+    })
+    .await?;
 
     // 3. 更新前のバックアップ（オプション、将来実装）
     // 現在は既存のファイルを上書きするため、バックアップは実装していない
@@ -193,7 +199,7 @@ pub async fn update_ollama(
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     /// OllamaStatusの構造体テスト
     #[test]
     fn test_ollama_status_struct() {
@@ -205,14 +211,14 @@ mod tests {
             portable_path: Some("/path/to/ollama".to_string()),
             system_path: None,
         };
-        
+
         assert!(status.installed);
         assert!(!status.running);
         assert!(status.portable);
         assert_eq!(status.version, Some("0.1.0".to_string()));
         assert_eq!(status.portable_path, Some("/path/to/ollama".to_string()));
     }
-    
+
     /// OllamaHealthStatusの構造体テスト
     #[test]
     fn test_ollama_health_status_struct() {
@@ -220,11 +226,11 @@ mod tests {
             running: true,
             port_available: true,
         };
-        
+
         assert!(health.running);
         assert!(health.port_available);
     }
-    
+
     /// OllamaStatusの境界値テスト
     #[test]
     fn test_ollama_status_boundaries() {
@@ -239,7 +245,7 @@ mod tests {
         };
         assert!(!not_installed.installed);
         assert!(!not_installed.running);
-        
+
         // 実行中の状態
         let running = OllamaStatus {
             installed: true,
@@ -253,4 +259,3 @@ mod tests {
         assert!(running.running);
     }
 }
-

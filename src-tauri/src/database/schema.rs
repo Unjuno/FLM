@@ -2,8 +2,8 @@
 // データベースエージェント実装
 // SQLiteスキーマの作成と管理を行います
 
-use rusqlite::{Connection, params};
 use crate::database::DatabaseError;
+use rusqlite::{params, Connection};
 
 /// データベーススキーマを作成
 /// DATABASE_SCHEMA.sqlに基づいて全てのテーブル、インデックス、ビューを作成します
@@ -29,23 +29,23 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "#,
         [],
     )?;
-    
+
     // APIs テーブルのインデックス
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_apis_status ON apis(status)",
         [],
     )?;
-    
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_apis_created_at ON apis(created_at)",
         [],
     )?;
-    
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_apis_engine_type ON apis(engine_type)",
         [],
     )?;
-    
+
     // API Keys テーブル
     conn.execute(
         r#"
@@ -61,13 +61,13 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "#,
         [],
     )?;
-    
+
     // API Keys テーブルのインデックス
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_api_keys_api_id ON api_keys(api_id)",
         [],
     )?;
-    
+
     // Models Catalog テーブル
     conn.execute(
         r#"
@@ -88,18 +88,18 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "#,
         [],
     )?;
-    
+
     // Models Catalog テーブルのインデックス
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_models_catalog_category ON models_catalog(category)",
         [],
     )?;
-    
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_models_catalog_recommended ON models_catalog(recommended)",
         [],
     )?;
-    
+
     // Installed Models テーブル
     conn.execute(
         r#"
@@ -115,18 +115,18 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "#,
         [],
     )?;
-    
+
     // Installed Models テーブルのインデックス
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_installed_models_last_used ON installed_models(last_used_at)",
         [],
     )?;
-    
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_installed_models_usage_count ON installed_models(usage_count)",
         [],
     )?;
-    
+
     // User Settings テーブル
     conn.execute(
         r#"
@@ -138,7 +138,7 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "#,
         [],
     )?;
-    
+
     // Request Logs テーブル（F006の基盤）
     conn.execute(
         r#"
@@ -157,36 +157,36 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "#,
         [],
     )?;
-    
+
     // Request Logs テーブルのインデックス
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_request_logs_api_id ON request_logs(api_id)",
         [],
     )?;
-    
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_request_logs_created_at ON request_logs(created_at)",
         [],
     )?;
-    
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_request_logs_api_created ON request_logs(api_id, created_at)",
         [],
     )?;
-    
+
     // フィルタ機能で使用されるインデックス（BE-006-03で追加）
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_request_logs_response_status ON request_logs(response_status)",
         [],
     )?;
-    
+
     // パス検索用のインデックス（LIKE検索では限定的だが、存在することでクエリプランナーの選択肢が増える）
     // 注意: LIKE '%pattern%'では通常インデックスは使用されないが、前方一致の場合に有効
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_request_logs_path ON request_logs(path)",
         [],
     )?;
-    
+
     // Performance Metrics テーブル（F007の基盤）
     conn.execute(
         r#"
@@ -201,23 +201,23 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "#,
         [],
     )?;
-    
+
     // Performance Metrics テーブルのインデックス
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_performance_metrics_api_id ON performance_metrics(api_id)",
         [],
     )?;
-    
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_performance_metrics_timestamp ON performance_metrics(timestamp)",
         [],
     )?;
-    
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_performance_metrics_api_type_timestamp ON performance_metrics(api_id, metric_type, timestamp)",
         [],
     )?;
-    
+
     // Alert History テーブル（F012の基盤）
     conn.execute(
         r#"
@@ -236,18 +236,18 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "#,
         [],
     )?;
-    
+
     // Alert History テーブルのインデックス
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_alert_history_api_id ON alert_history(api_id)",
         [],
     )?;
-    
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_alert_history_timestamp ON alert_history(timestamp)",
         [],
     )?;
-    
+
     // Engine Configs テーブル（マルチエンジン対応）
     conn.execute(
         r#"
@@ -265,23 +265,23 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "#,
         [],
     )?;
-    
+
     // Engine Configs テーブルのインデックス
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_engine_configs_type ON engine_configs(engine_type)",
         [],
     )?;
-    
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_engine_configs_default ON engine_configs(is_default)",
         [],
     )?;
-    
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_alert_history_api_timestamp ON alert_history(api_id, timestamp)",
         [],
     )?;
-    
+
     // Error Logs テーブル（エラーログ永続化）
     conn.execute(
         r#"
@@ -300,28 +300,28 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "#,
         [],
     )?;
-    
+
     // Error Logs テーブルのインデックス
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_error_logs_category ON error_logs(error_category)",
         [],
     )?;
-    
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_error_logs_created_at ON error_logs(created_at)",
         [],
     )?;
-    
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_error_logs_api_id ON error_logs(api_id)",
         [],
     )?;
-    
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_error_logs_category_created ON error_logs(error_category, created_at)",
         [],
     )?;
-    
+
     // API Security Settings テーブル（セキュリティ強化機能）
     conn.execute(
         r#"
@@ -340,13 +340,13 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "#,
         [],
     )?;
-    
+
     // API Security Settings テーブルのインデックス
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_api_security_settings_api_id ON api_security_settings(api_id)",
         [],
     )?;
-    
+
     // Rate Limit Tracking テーブル（レート制限の追跡用）
     conn.execute(
         r#"
@@ -363,23 +363,23 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "#,
         [],
     )?;
-    
+
     // Rate Limit Tracking テーブルのインデックス
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_rate_limit_tracking_api_id ON rate_limit_tracking(api_id)",
         [],
     )?;
-    
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_rate_limit_tracking_identifier ON rate_limit_tracking(identifier)",
         [],
     )?;
-    
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_rate_limit_tracking_window ON rate_limit_tracking(api_id, identifier, window_start)",
         [],
     )?;
-    
+
     // OAuth2 Tokens テーブル（v2.0: OAuth2認証対応）
     conn.execute(
         r#"
@@ -399,23 +399,22 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "#,
         [],
     )?;
-    
+
     // OAuth2 Tokens テーブルのインデックス
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_oauth_tokens_api_id ON oauth_tokens(api_id)",
         [],
     )?;
-    
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_oauth_tokens_access_token ON oauth_tokens(access_token)",
         [],
     )?;
-    
+
     conn.execute(
         "CREATE INDEX IF NOT EXISTS idx_oauth_tokens_expires_at ON oauth_tokens(expires_at)",
         [],
     )?;
-
 
     // Audit Logs テーブル（v2.0: 監査ログ機能）
     conn.execute(
@@ -484,12 +483,9 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "#,
         [],
     )?;
-    
+
     // 既存のテーブルにpermissionsカラムを追加（マイグレーション）
-    let _ = conn.execute(
-        "ALTER TABLE plugins ADD COLUMN permissions TEXT",
-        [],
-    );
+    let _ = conn.execute("ALTER TABLE plugins ADD COLUMN permissions TEXT", []);
 
     // Plugins テーブルのインデックス
     conn.execute(
@@ -540,7 +536,6 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "CREATE INDEX IF NOT EXISTS idx_shared_models_created_at ON shared_models(created_at)",
         [],
     )?;
-
 
     // Comments テーブル
     conn.execute(
@@ -622,7 +617,7 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "#,
         [],
     )?;
-    
+
     // API Details ビュー（読み取り専用）
     conn.execute(
         r#"
@@ -643,7 +638,7 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "#,
         [],
     )?;
-    
+
     // デフォルト設定値を挿入
     let now = chrono::Utc::now().to_rfc3339();
     conn.execute(
@@ -656,7 +651,7 @@ pub fn create_schema(conn: &Connection) -> Result<(), DatabaseError> {
         "#,
         params![now],
     )?;
-    
+
     Ok(())
 }
 
@@ -677,11 +672,11 @@ pub fn get_schema_version(conn: &Connection) -> Result<i32, DatabaseError> {
             |row| row.get(0),
         )
         .unwrap_or(false);
-    
+
     if !table_exists {
         return Ok(0);
     }
-    
+
     // 最新のマイグレーション番号を取得
     let version: i32 = conn
         .query_row(
@@ -690,6 +685,6 @@ pub fn get_schema_version(conn: &Connection) -> Result<i32, DatabaseError> {
             |row| row.get(0),
         )
         .unwrap_or(0);
-    
+
     Ok(version)
 }

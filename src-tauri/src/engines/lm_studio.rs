@@ -1,14 +1,10 @@
-
-
-
-
 // LM Studio Engine Implementation
 // LM StudioエンジンのLLMEngineトレイト実装
 
-use crate::database::connection::get_connection;
-use crate::utils::error::AppError;
 use super::models::{EngineConfig, EngineDetectionResult, ModelInfo};
 use super::traits::LLMEngine;
+use crate::database::connection::get_connection;
+use crate::utils::error::AppError;
 use chrono::Utc;
 use dirs::home_dir;
 use rusqlite::{params, OptionalExtension};
@@ -26,7 +22,7 @@ impl LMStudioEngine {
     pub fn new() -> Self {
         LMStudioEngine
     }
-    
+
     /// LM Studio APIからバージョンを取得
     async fn get_version_from_api() -> Result<String, AppError> {
         let client = crate::utils::http_client::create_http_client_short_timeout()?;
@@ -39,7 +35,7 @@ impl LMStudioEngine {
                 code: "CONNECTION_ERROR".to_string(),
                 source_detail: None,
             })?;
-        
+
         if !response.status().is_success() {
             return Err(AppError::ApiError {
                 message: format!("LM Studio APIエラー: HTTP {}", response.status()),
@@ -47,11 +43,11 @@ impl LMStudioEngine {
                 source_detail: None,
             });
         }
-        
+
         // バージョン情報はレスポンスから取得できないため、デフォルト値を返す
         Ok("unknown".to_string())
     }
-    
+
     /// LM Studioのパスを検出
     async fn detect_lm_studio_path() -> Option<String> {
         let mut candidates: Vec<PathBuf> = Vec::new();
@@ -79,8 +75,7 @@ impl LMStudioEngine {
 
             for root in possible_roots {
                 candidates.push(
-                    root
-                        .join("Programs")
+                    root.join("Programs")
                         .join("LM Studio")
                         .join("LM Studio.exe"),
                 );
@@ -90,8 +85,7 @@ impl LMStudioEngine {
             // ユーザーがカスタムフォルダに入れるケース
             if let Some(home) = home_dir() {
                 candidates.push(
-                    home
-                        .join("AppData")
+                    home.join("AppData")
                         .join("Local")
                         .join("Programs")
                         .join("LM Studio")
@@ -127,8 +121,7 @@ impl LMStudioEngine {
                     candidates.push(home.join(name));
                     candidates.push(home.join(".local").join("bin").join(name));
                     candidates.push(
-                        home
-                            .join(".local")
+                        home.join(".local")
                             .join("share")
                             .join("LM Studio")
                             .join(name),
@@ -252,7 +245,10 @@ impl LMStudioEngine {
     }
 
     fn is_local_host(host: &str) -> bool {
-        matches!(host.to_lowercase().as_str(), "localhost" | "127.0.0.1" | "0.0.0.0")
+        matches!(
+            host.to_lowercase().as_str(),
+            "localhost" | "127.0.0.1" | "0.0.0.0"
+        )
     }
 
     fn normalize_local_host(host: &str) -> String {
@@ -318,11 +314,7 @@ impl LMStudioEngine {
             .strip_prefix("http://")
             .or_else(|| trimmed.strip_prefix("https://"))
             .unwrap_or(trimmed);
-        let authority = without_scheme
-            .split('/')
-            .next()
-            .unwrap_or("")
-            .trim();
+        let authority = without_scheme.split('/').next().unwrap_or("").trim();
 
         if authority.is_empty() {
             return ("127.0.0.1".to_string(), fallback_port);
@@ -529,12 +521,13 @@ impl LMStudioEngine {
     async fn launch_process(executable_path: &str) -> Result<u32, AppError> {
         #[cfg(target_os = "windows")]
         {
-            let mut child = AsyncCommand::new(executable_path)
-                .spawn()
-                .map_err(|e| AppError::ProcessError {
-                    message: format!("LM Studio起動エラー: {}", e),
-                    source_detail: Some(format!("path={}", executable_path)),
-                })?;
+            let mut child =
+                AsyncCommand::new(executable_path)
+                    .spawn()
+                    .map_err(|e| AppError::ProcessError {
+                        message: format!("LM Studio起動エラー: {}", e),
+                        source_detail: Some(format!("path={}", executable_path)),
+                    })?;
             let pid = child.id().unwrap_or(0);
             tokio::spawn(async move {
                 if let Err(e) = child.wait().await {
@@ -550,15 +543,15 @@ impl LMStudioEngine {
             if app_path.extension().map_or(false, |ext| ext == "app") {
                 let binary_path = app_path.join("Contents").join("MacOS").join("LM Studio");
                 if binary_path.exists() {
-                    let mut child = AsyncCommand::new(&binary_path)
-                        .spawn()
-                        .map_err(|e| AppError::ProcessError {
+                    let mut child = AsyncCommand::new(&binary_path).spawn().map_err(|e| {
+                        AppError::ProcessError {
                             message: format!("LM Studioバイナリ起動エラー: {}", e),
                             source_detail: Some(format!(
                                 "binary_path={}",
                                 binary_path.to_string_lossy()
                             )),
-                        })?;
+                        }
+                    })?;
                     let pid = child.id().unwrap_or(0);
                     tokio::spawn(async move {
                         if let Err(e) = child.wait().await {
@@ -573,10 +566,7 @@ impl LMStudioEngine {
                         .spawn()
                         .map_err(|e| AppError::ProcessError {
                             message: format!("LM Studioアプリ起動エラー: {}", e),
-                            source_detail: Some(format!(
-                                "app_path={}",
-                                app_path.to_string_lossy()
-                            )),
+                            source_detail: Some(format!("app_path={}", app_path.to_string_lossy())),
                         })?;
                     let pid = child.id().unwrap_or(0);
                     tokio::spawn(async move {
@@ -587,12 +577,12 @@ impl LMStudioEngine {
                     return Ok(pid);
                 }
             } else {
-                let mut child = AsyncCommand::new(executable_path)
-                    .spawn()
-                    .map_err(|e| AppError::ProcessError {
+                let mut child = AsyncCommand::new(executable_path).spawn().map_err(|e| {
+                    AppError::ProcessError {
                         message: format!("LM Studio起動エラー: {}", e),
                         source_detail: Some(format!("path={}", executable_path)),
-                    })?;
+                    }
+                })?;
                 let pid = child.id().unwrap_or(0);
                 tokio::spawn(async move {
                     if let Err(e) = child.wait().await {
@@ -607,12 +597,13 @@ impl LMStudioEngine {
         {
             // AppImageやバイナリを直接実行
             let path = std::path::Path::new(executable_path);
-            let mut child = AsyncCommand::new(path)
-                .spawn()
-                .map_err(|e| AppError::ProcessError {
-                    message: format!("LM Studio起動エラー: {}", e),
-                    source_detail: Some(format!("path={}", executable_path)),
-                })?;
+            let mut child =
+                AsyncCommand::new(path)
+                    .spawn()
+                    .map_err(|e| AppError::ProcessError {
+                        message: format!("LM Studio起動エラー: {}", e),
+                        source_detail: Some(format!("path={}", executable_path)),
+                    })?;
             let pid = child.id().unwrap_or(0);
             tokio::spawn(async move {
                 if let Err(e) = child.wait().await {
@@ -624,7 +615,8 @@ impl LMStudioEngine {
 
         #[allow(unreachable_code)]
         Err(AppError::ProcessError {
-            message: "このプラットフォームではLM Studioの自動起動がサポートされていません。".to_string(),
+            message: "このプラットフォームではLM Studioの自動起動がサポートされていません。"
+                .to_string(),
             source_detail: None,
         })
     }
@@ -651,23 +643,23 @@ impl LLMEngine for LMStudioEngine {
     fn name(&self) -> &str {
         "LM Studio"
     }
-    
+
     fn engine_type(&self) -> &str {
         "lm_studio"
     }
-    
+
     async fn detect(&self) -> Result<EngineDetectionResult, AppError> {
         let path = Self::detect_lm_studio_path().await;
         let installed = path.is_some();
         let running = self.is_running().await.unwrap_or(false);
-        
+
         // バージョン取得: LM Studio APIから取得を試みる
         let version = if running {
             Self::get_version_from_api().await.ok()
         } else {
             None
         };
-        
+
         Ok(EngineDetectionResult {
             engine_type: "lm_studio".to_string(),
             installed,
@@ -684,10 +676,10 @@ impl LLMEngine for LMStudioEngine {
             portable: None,
         })
     }
-    
+
     // 注意: get_version_from_apiはLLMEngineトレイトに定義されていないため削除
     // 必要に応じて、将来的にトレイトに追加するか、別の関数として実装
-    
+
     async fn start(&self, config: &EngineConfig) -> Result<u32, AppError> {
         let default_port = config.port.unwrap_or_else(|| self.default_port());
         let base_url_raw = config
@@ -807,23 +799,23 @@ impl LLMEngine for LMStudioEngine {
 
         Ok(pid)
     }
-    
+
     fn get_base_url(&self) -> String {
         "http://localhost:1234".to_string()
     }
-    
+
     fn default_port(&self) -> u16 {
         1234
     }
-    
+
     fn supports_openai_compatible_api(&self) -> bool {
         true
     }
-    
+
     async fn is_running(&self) -> Result<bool, AppError> {
         Self::check_health("http://localhost:1234").await
     }
-    
+
     async fn get_models(&self) -> Result<Vec<ModelInfo>, AppError> {
         let client = crate::utils::http_client::create_http_client()?;
         let response = client
@@ -835,7 +827,7 @@ impl LLMEngine for LMStudioEngine {
                 code: "API_ERROR".to_string(),
                 source_detail: None,
             })?;
-        
+
         if !response.status().is_success() {
             return Err(AppError::ApiError {
                 message: format!("LM Studio APIエラー: {}", response.status()),
@@ -843,13 +835,13 @@ impl LLMEngine for LMStudioEngine {
                 source_detail: None,
             });
         }
-        
+
         let data: serde_json::Value = response.json().await.map_err(|e| AppError::ApiError {
             message: format!("JSON解析エラー: {}", e),
             code: "JSON_ERROR".to_string(),
             source_detail: None,
         })?;
-        
+
         let models = data["data"]
             .as_array()
             .ok_or_else(|| AppError::ModelError {
@@ -867,10 +859,10 @@ impl LLMEngine for LMStudioEngine {
                 })
             })
             .collect();
-        
+
         Ok(models)
     }
-    
+
     async fn stop(&self) -> Result<(), AppError> {
         // LM Studioは手動で停止する必要がある
         // 自動停止はサポートしていない
@@ -888,5 +880,3 @@ fn extract_parameter_size(model_name: &str) -> Option<String> {
     }
     None
 }
-
-
