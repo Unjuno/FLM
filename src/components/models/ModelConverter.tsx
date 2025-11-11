@@ -92,12 +92,10 @@ export const ModelConverter: React.FC = () => {
 
           // 変換実行
           const path = await safeInvoke<string>('convert_model', {
-            config: {
-              source_path: sourcePath,
-              target_name: targetName,
-              quantization: quantization || null,
-              output_format: outputFormat,
-            },
+            source_path: sourcePath,
+            target_name: targetName,
+            quantization: quantization || null,
+            output_format: outputFormat,
           });
 
           // イベントリスナーを解除
@@ -132,32 +130,51 @@ export const ModelConverter: React.FC = () => {
    */
   const handleSelectFile = async () => {
     try {
-      // IPCコマンドでファイル選択ダイアログを開く
-      const selectedPath = await safeInvoke<string | null>('open_file_dialog', {
-        filters: [
-          {
-            name: 'モデルファイル',
-            extensions: [
-              'gguf',
-              'ggml',
-              'bin',
-              'pt',
-              'onnx',
-              'safetensors',
-              'pth',
-              'ckpt',
-            ],
-          },
-        ],
-      });
+      // @tauri-apps/plugin-dialog を使用してファイル選択ダイアログを開く
+      // プラグインが利用できない場合は手動入力にフォールバック
+      try {
+        const dialogModule = await import(
+          /* @vite-ignore */ '@tauri-apps/plugin-dialog'
+        );
+        const { open } = dialogModule;
+        const selectedPath = await open({
+          filters: [
+            {
+              name: 'モデルファイル',
+              extensions: [
+                'gguf',
+                'ggml',
+                'bin',
+                'pt',
+                'onnx',
+                'safetensors',
+                'pth',
+                'ckpt',
+              ],
+            },
+          ],
+        });
 
-      if (selectedPath) {
-        setSourcePath(selectedPath);
-        showSuccess('ファイルを選択しました');
+        if (selectedPath && typeof selectedPath === 'string') {
+          setSourcePath(selectedPath);
+          showSuccess('ファイルを選択しました');
+        } else if (Array.isArray(selectedPath) && selectedPath.length > 0) {
+          setSourcePath(selectedPath[0]);
+          showSuccess('ファイルを選択しました');
+        }
+      } catch (dialogErr) {
+        // プラグインが利用できない場合は手動入力にフォールバック
+        logger.warn(
+          'ファイル選択ダイアログプラグインが利用できません',
+          String(dialogErr),
+          'ModelConverter'
+        );
+        showError(
+          'ファイル選択ダイアログが利用できません。手動でパスを入力してください。'
+        );
       }
     } catch (err) {
       // エラーは静かに処理（手動入力にフォールバック）
-      // eslint-disable-next-line no-console
       logger.warn('ファイル選択ダイアログが利用できません', String(err), 'ModelConverter');
       showError(
         'ファイル選択ダイアログが利用できません。手動でパスを入力してください。'

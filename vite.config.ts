@@ -12,6 +12,9 @@ export default defineConfig(async () => ({
       "@": path.resolve(__dirname, "./src"),
     },
   },
+  optimizeDeps: {
+    exclude: ["@tauri-apps/plugin-dialog"],
+  },
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
@@ -40,6 +43,7 @@ export default defineConfig(async () => ({
     chunkSizeWarningLimit: 500,
     // ロールアップの最適化オプション
     rollupOptions: {
+      external: ["@tauri-apps/plugin-dialog"],
       output: {
         // チャンクの手動分割（大きなライブラリを分離）
         manualChunks: {

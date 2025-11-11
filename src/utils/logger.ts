@@ -1,5 +1,7 @@
 // logger - 統一ロガーユーティリティ
 
+import { isDev } from './env';
+
 /**
  * ログレベル
  */
@@ -25,23 +27,15 @@ interface LoggerConfig {
 }
 
 /**
- * 開発環境かどうかを判定するヘルパー関数
- */
-function isDevelopment(): boolean {
-  return (
-    process.env.NODE_ENV === 'development' ||
-    process.env.NODE_ENV !== 'production'
-  );
-}
-
-/**
  * デバッグモードが有効かどうかを判定するヘルパー関数
  */
 function isDebugMode(): boolean {
   return (
+    isDev() ||
     process.env.FLM_DEBUG === '1' ||
     process.env.FLM_DEBUG === 'true' ||
-    (typeof window !== 'undefined' && (window as unknown as { FLM_DEBUG?: string }).FLM_DEBUG === '1')
+    (typeof window !== 'undefined' &&
+      (window as unknown as { FLM_DEBUG?: string }).FLM_DEBUG === '1')
   );
 }
 
@@ -49,7 +43,7 @@ function isDebugMode(): boolean {
  * デフォルト設定
  */
 const DEFAULT_CONFIG: LoggerConfig = {
-  minLevel: (isDevelopment() || isDebugMode()) ? LogLevel.DEBUG : LogLevel.ERROR,
+  minLevel: isDebugMode() ? LogLevel.DEBUG : LogLevel.ERROR,
   devOnly: true,
   includeTimestamp: true,
   includeContext: true,
@@ -83,7 +77,7 @@ class Logger {
    */
   private shouldLog(level: LogLevel): boolean {
     // 開発環境のみの設定で、本番環境の場合は出力しない（デバッグモードが有効な場合は除く）
-    if (this.config.devOnly && !isDevelopment() && !isDebugMode()) {
+    if (this.config.devOnly && !isDev() && !isDebugMode()) {
       return false;
     }
 
@@ -234,7 +228,7 @@ class Logger {
     } catch (e) {
       // エラーログの保存に失敗しても、アプリケーションの動作には影響しない
       // デバッグモードの場合のみコンソールに出力
-      if (isDevelopment() || isDebugMode()) {
+      if (isDev() || isDebugMode()) {
         console.debug('[Logger] エラーログのデータベース保存に失敗しました:', e);
       }
     }
@@ -244,7 +238,7 @@ class Logger {
    * グループログ（開発環境のみ）
    */
   group(label: string): void {
-    if (isDevelopment()) {
+    if (isDev()) {
       console.group(label);
     }
   }
@@ -253,7 +247,7 @@ class Logger {
    * グループ終了
    */
   groupEnd(): void {
-    if (isDevelopment()) {
+    if (isDev()) {
       console.groupEnd();
     }
   }
