@@ -8,7 +8,7 @@ import { safeInvoke } from '../utils/tauri';
  */
 export interface ApiStatus {
   id: string;
-  status: 'running' | 'stopped' | 'error';
+  status: 'running' | 'preparing' | 'stopped' | 'error';
 }
 
 /**
@@ -16,12 +16,17 @@ export interface ApiStatus {
  * 定期的にAPIステータスをポーリングして更新します
  */
 export function useApiStatus(apiId: string | null, interval: number = 5000) {
-  const [status, setStatus] = useState<'running' | 'stopped' | 'error' | null>(
+  const [status, setStatus] = useState<'running' | 'preparing' | 'stopped' | 'error' | null>(
     null
   );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isMountedRef = useRef(true);
+  // 最後のリクエスト時刻を追跡するref（連続リクエストを防ぐ）
+  const lastRequestTimeRef = useRef<number>(0);
+  // 最小リクエスト間隔（ミリ秒）- 連続リクエストを防ぐ
+  const MIN_REQUEST_INTERVAL = 3000; // 3秒
+  const minRequestInterval = Math.min(interval, MIN_REQUEST_INTERVAL);
 
   // コンポーネントのアンマウント時にクリーンアップ
   useEffect(() => {
@@ -31,7 +36,9 @@ export function useApiStatus(apiId: string | null, interval: number = 5000) {
     };
   }, []);
 
-  const fetchStatus = useCallback(async () => {
+  const fetchStatus = useCallback(async (options?: { force?: boolean }) => {
+    const force = options?.force ?? false;
+
     if (!isMountedRef.current) return;
 
     if (!apiId) {
@@ -41,9 +48,17 @@ export function useApiStatus(apiId: string | null, interval: number = 5000) {
       return;
     }
 
+    // 最後のリクエストから一定時間経過していない場合はスキップ
+    const now = Date.now();
+    const timeSinceLastRequest = now - lastRequestTimeRef.current;
+    if (!force && timeSinceLastRequest < minRequestInterval) {
+      return;
+    }
+
     try {
       if (!isMountedRef.current) return;
 
+      lastRequestTimeRef.current = now;
       setLoading(true);
       setError(null);
 
@@ -62,10 +77,12 @@ export function useApiStatus(apiId: string | null, interval: number = 5000) {
         const newStatus = (
           api.status === 'running'
             ? 'running'
-            : api.status === 'stopped'
-              ? 'stopped'
-              : 'error'
-        ) as 'running' | 'stopped' | 'error';
+            : api.status === 'preparing'
+              ? 'preparing'
+              : api.status === 'stopped'
+                ? 'stopped'
+                : 'error'
+        ) as 'running' | 'preparing' | 'stopped' | 'error';
         setStatus(newStatus);
       } else {
         setStatus(null);
@@ -81,7 +98,7 @@ export function useApiStatus(apiId: string | null, interval: number = 5000) {
         setLoading(false);
       }
     }
-  }, [apiId]);
+  }, [apiId, minRequestInterval]);
 
   useEffect(() => {
     if (!apiId) {
@@ -89,23 +106,32 @@ export function useApiStatus(apiId: string | null, interval: number = 5000) {
     }
 
     // 初回読み込み
-    fetchStatus();
+    fetchStatus({ force: true });
 
-    // 定期的にポーリング
+    // 定期的にポーリング（ページが非表示の場合はスキップ）
     const timer = setInterval(() => {
-      fetchStatus();
+      if (!document.hidden) {
+        // 最後のリクエストから一定時間経過している場合のみ更新
+        const now = Date.now();
+        const timeSinceLastRequest = now - lastRequestTimeRef.current;
+        if (timeSinceLastRequest >= minRequestInterval) {
+          fetchStatus();
+        }
+      }
     }, interval);
 
     return () => {
       clearInterval(timer);
     };
-  }, [apiId, interval, fetchStatus]);
+  }, [apiId, interval, minRequestInterval, fetchStatus]);
+
+  const refresh = useCallback(() => fetchStatus({ force: true }), [fetchStatus]);
 
   return {
     status,
     loading,
     error,
-    refresh: fetchStatus,
+    refresh,
   };
 }
 
@@ -114,11 +140,16 @@ export function useApiStatus(apiId: string | null, interval: number = 5000) {
  */
 export function useApiStatusList(interval: number = 5000) {
   const [statuses, setStatuses] = useState<
-    Record<string, 'running' | 'stopped' | 'error'>
+    Record<string, 'running' | 'preparing' | 'stopped' | 'error'>
   >({});
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const isMountedRef = useRef(true);
+  // 最後のリクエスト時刻を追跡するref（連続リクエストを防ぐ）
+  const lastRequestTimeRef = useRef<number>(0);
+  // 最小リクエスト間隔（ミリ秒）- 連続リクエストを防ぐ
+  const MIN_REQUEST_INTERVAL = 3000; // 3秒
+  const minRequestInterval = Math.min(interval, MIN_REQUEST_INTERVAL);
 
   // コンポーネントのアンマウント時にクリーンアップ
   useEffect(() => {
@@ -128,12 +159,22 @@ export function useApiStatusList(interval: number = 5000) {
     };
   }, []);
 
-  const fetchStatuses = useCallback(async () => {
+  const fetchStatuses = useCallback(async (options?: { force?: boolean }) => {
+    const force = options?.force ?? false;
+
     if (!isMountedRef.current) return;
+
+    // 最後のリクエストから一定時間経過していない場合はスキップ
+    const now = Date.now();
+    const timeSinceLastRequest = now - lastRequestTimeRef.current;
+    if (!force && timeSinceLastRequest < minRequestInterval) {
+      return;
+    }
 
     try {
       if (!isMountedRef.current) return;
 
+      lastRequestTimeRef.current = now;
       setLoading(true);
       setError(null);
 
@@ -147,15 +188,17 @@ export function useApiStatusList(interval: number = 5000) {
 
       if (!isMountedRef.current) return;
 
-      const newStatuses: Record<string, 'running' | 'stopped' | 'error'> = {};
+      const newStatuses: Record<string, 'running' | 'preparing' | 'stopped' | 'error'> = {};
       apis.forEach(api => {
         newStatuses[api.id] = (
           api.status === 'running'
             ? 'running'
-            : api.status === 'stopped'
-              ? 'stopped'
-              : 'error'
-        ) as 'running' | 'stopped' | 'error';
+            : api.status === 'preparing'
+              ? 'preparing'
+              : api.status === 'stopped'
+                ? 'stopped'
+                : 'error'
+        ) as 'running' | 'preparing' | 'stopped' | 'error';
       });
 
       setStatuses(newStatuses);
@@ -169,26 +212,35 @@ export function useApiStatusList(interval: number = 5000) {
         setLoading(false);
       }
     }
-  }, []);
+  }, [minRequestInterval]);
 
   useEffect(() => {
     // 初回読み込み
-    fetchStatuses();
+    fetchStatuses({ force: true });
 
-    // 定期的にポーリング
+    // 定期的にポーリング（ページが非表示の場合はスキップ）
     const timer = setInterval(() => {
-      fetchStatuses();
+      if (!document.hidden) {
+        // 最後のリクエストから一定時間経過している場合のみ更新
+        const now = Date.now();
+        const timeSinceLastRequest = now - lastRequestTimeRef.current;
+        if (timeSinceLastRequest >= minRequestInterval) {
+          fetchStatuses();
+        }
+      }
     }, interval);
 
     return () => {
       clearInterval(timer);
     };
-  }, [interval, fetchStatuses]);
+  }, [interval, minRequestInterval, fetchStatuses]);
+
+  const refreshStatuses = useCallback(() => fetchStatuses({ force: true }), [fetchStatuses]);
 
   return {
     statuses,
     loading,
     error,
-    refresh: fetchStatuses,
+    refresh: refreshStatuses,
   };
 }

@@ -1,96 +1,74 @@
 // ConfirmDialog - 確認ダイアログコンポーネント
-// 監査レポートの推奨事項に基づき、コードの重複を解消するための共通コンポーネント
 
-import React, { useEffect } from 'react';
-import './ConfirmDialog.css';
+import React, { useCallback, useEffect } from 'react';
 
 /**
- * 確認ダイアログのプロパティ
+ * 確認ダイアログコンポーネントのプロパティ
  */
-export interface ConfirmDialogProps {
-  /** ダイアログが開いているかどうか */
+interface ConfirmDialogProps {
   isOpen: boolean;
-  /** ダイアログのタイトル（デフォルト: '確認'） */
-  title?: string;
-  /** ダイアログのメッセージ */
   message: string;
-  /** 確認ボタンのラベル（デフォルト: '確認'） */
-  confirmLabel?: string;
-  /** キャンセルボタンのラベル（デフォルト: 'キャンセル'） */
-  cancelLabel?: string;
-  /** 確認ボタンの種類（デフォルト: 'primary'） */
-  confirmVariant?: 'primary' | 'danger';
-  /** 確認ボタンがクリックされたときのコールバック */
   onConfirm: () => void;
-  /** キャンセルボタンがクリックされたときのコールバック */
   onCancel: () => void;
-  /** ダイアログを閉じる（ESCキーやオーバーレイクリック時） */
+  title?: string;
+  confirmLabel?: string;
+  cancelLabel?: string;
   onClose?: () => void;
+  confirmVariant?: 'primary' | 'danger';
 }
 
 /**
  * 確認ダイアログコンポーネント
- * 削除や重要な操作の確認に使用します
  */
 export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   isOpen,
-  title = '確認',
   message,
-  confirmLabel = '確認',
-  cancelLabel = 'キャンセル',
-  confirmVariant = 'primary',
   onConfirm,
   onCancel,
   onClose,
+  title = '確認',
+  confirmLabel = '確認',
+  cancelLabel = 'キャンセル',
+  confirmVariant = 'primary',
 }) => {
-  // ESCキーでダイアログを閉じる
+  const handleDialogDismiss = useCallback(() => {
+    if (onClose) {
+      onClose();
+    } else {
+      onCancel();
+    }
+  }, [onClose, onCancel]);
+
   useEffect(() => {
-    if (!isOpen) return;
-
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (onClose) {
-          onClose();
-        } else {
-          onCancel();
-        }
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (isOpen && event.key === 'Escape') {
+        handleDialogDismiss();
       }
     };
 
-    document.addEventListener('keydown', handleEscape);
+    document.addEventListener('keydown', handleKeyDown);
     return () => {
-      document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('keydown', handleKeyDown);
     };
-  }, [isOpen, onCancel, onClose]);
+  }, [handleDialogDismiss, isOpen]);
 
-  // オーバーレイクリックでダイアログを閉じる
-  const handleOverlayClick = (e: React.MouseEvent<HTMLDivElement>) => {
-    if (e.target === e.currentTarget) {
-      if (onClose) {
-        onClose();
-      } else {
-        onCancel();
-      }
+  if (!isOpen) return null;
+
+  const handleConfirmClick = () => {
+    onConfirm();
+    if (onClose) {
+      onClose();
     }
   };
 
-  // キーボードイベントハンドラー（アクセシビリティ対応）
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLDivElement>) => {
-    if (e.key === 'Enter' || e.key === ' ') {
-      e.preventDefault();
-      if (e.target === e.currentTarget) {
-        if (onClose) {
-          onClose();
-        } else {
-          onCancel();
-        }
-      }
+  const handleCancelClick = () => {
+    onCancel();
+    if (onClose) {
+      onClose();
     }
   };
 
-  if (!isOpen) {
-    return null;
-  }
+  const confirmButtonClassName = `confirm-button confirm ${confirmVariant}`;
 
   return (
     <div
@@ -98,25 +76,25 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
       role="dialog"
       aria-modal="true"
       aria-labelledby="confirm-dialog-title"
-      onClick={handleOverlayClick}
-      onKeyDown={handleKeyDown}
-      tabIndex={-1}
     >
-      <div className="confirm-dialog" role="document">
+      <div
+        className="confirm-dialog"
+        role="document"
+      >
         <h3 id="confirm-dialog-title">{title}</h3>
         <p>{message}</p>
         <div className="confirm-dialog-actions">
           <button
             className="confirm-button cancel"
-            onClick={onCancel}
+            onClick={handleCancelClick}
             type="button"
             aria-label={cancelLabel}
           >
             {cancelLabel}
           </button>
           <button
-            className={`confirm-button confirm ${confirmVariant}`}
-            onClick={onConfirm}
+            className={confirmButtonClassName}
+            onClick={handleConfirmClick}
             type="button"
             aria-label={confirmLabel}
           >
@@ -127,4 +105,3 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     </div>
   );
 };
-

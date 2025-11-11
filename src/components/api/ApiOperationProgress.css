@@ -1,0 +1,61 @@
+/* API操作の進捗表示コンポーネントのスタイル */
+
+.api-operation-progress {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background-color: var(--color-bg-secondary, #f5f5f5);
+  border-radius: 4px;
+  font-size: 0.875rem;
+  color: var(--color-text-secondary, #666);
+}
+
+[data-theme="dark"] .api-operation-progress {
+  background-color: var(--color-bg-secondary, #2d3748);
+  color: var(--color-text-secondary, #a0aec0);
+}
+
+.api-operation-progress .progress-bar {
+  flex: 1;
+  height: 4px;
+  background-color: var(--color-border, #ddd);
+  border-radius: 2px;
+  overflow: hidden;
+  position: relative;
+}
+
+[data-theme="dark"] .api-operation-progress .progress-bar {
+  background-color: var(--color-border, #4a5568);
+}
+
+.api-operation-progress .progress-content {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.api-operation-progress .progress-text {
+  white-space: nowrap;
+  font-size: 0.875rem;
+}
+
+.api-operation-progress .progress-fill {
+  height: 100%;
+  width: var(--progress-width, 0%);
+  background-color: var(--color-primary, #007bff);
+  border-radius: 2px;
+  animation: progress-indeterminate 1.5s ease-in-out infinite;
+  transition: width 0.3s ease;
+}
+
+@keyframes progress-indeterminate {
+  0% {
+    transform: translateX(-100%);
+  }
+  50% {
+    transform: translateX(0%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
+}
+
