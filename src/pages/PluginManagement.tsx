@@ -425,8 +425,9 @@ export const PluginManagement: React.FC = () => {
                       <label className="form-label">権限設定</label>
                       <div className="permissions-section">
                         <div className="permission-item">
-                          <label className="permission-label">データベースアクセス</label>
+                          <label htmlFor="new-plugin-db-access" className="permission-label">データベースアクセス</label>
                           <select
+                            id="new-plugin-db-access"
                             className="form-select"
                             value={newPlugin.permissions?.database_access || 'none'}
                             onChange={e =>
@@ -451,8 +452,9 @@ export const PluginManagement: React.FC = () => {
                           </select>
                         </div>
                         <div className="permission-item">
-                          <label className="permission-label">外部通信</label>
+                          <label htmlFor="new-plugin-network-access" className="permission-label">外部通信</label>
                           <select
+                            id="new-plugin-network-access"
                             className="form-select"
                             value={newPlugin.permissions?.network_access || 'deny'}
                             onChange={e =>
@@ -476,8 +478,9 @@ export const PluginManagement: React.FC = () => {
                           </select>
                         </div>
                         <div className="permission-item">
-                          <label className="permission-label">APIキーアクセス</label>
+                          <label htmlFor="new-plugin-api-key-access" className="permission-label">APIキーアクセス</label>
                           <select
+                            id="new-plugin-api-key-access"
                             className="form-select"
                             value={newPlugin.permissions?.api_key_access || 'deny'}
                             onChange={e =>
@@ -501,8 +504,9 @@ export const PluginManagement: React.FC = () => {
                           </select>
                         </div>
                         <div className="permission-item">
-                          <label className="permission-label">ファイルシステムアクセス</label>
+                          <label htmlFor="new-plugin-fs-access" className="permission-label">ファイルシステムアクセス</label>
                           <select
+                            id="new-plugin-fs-access"
                             className="form-select"
                             value={newPlugin.permissions?.filesystem_access || 'deny'}
                             onChange={e =>
@@ -657,8 +661,9 @@ export const PluginManagement: React.FC = () => {
                             {editingPermissions === plugin.id ? (
                               <div className="permissions-edit-form">
                                 <div className="permission-item">
-                                  <label className="permission-label">データベースアクセス</label>
+                                  <label htmlFor={`plugin-${plugin.id}-db-access`} className="permission-label">データベースアクセス</label>
                                   <select
+                                    id={`plugin-${plugin.id}-db-access`}
                                     className="form-select"
                                     value={plugin.permissions?.database_access || 'none'}
                                     onChange={async e => {
@@ -678,8 +683,9 @@ export const PluginManagement: React.FC = () => {
                                   </select>
                                 </div>
                                 <div className="permission-item">
-                                  <label className="permission-label">外部通信</label>
+                                  <label htmlFor={`plugin-${plugin.id}-network-access`} className="permission-label">外部通信</label>
                                   <select
+                                    id={`plugin-${plugin.id}-network-access`}
                                     className="form-select"
                                     value={plugin.permissions?.network_access || 'deny'}
                                     onChange={async e => {
@@ -698,8 +704,9 @@ export const PluginManagement: React.FC = () => {
                                   </select>
                                 </div>
                                 <div className="permission-item">
-                                  <label className="permission-label">APIキーアクセス</label>
+                                  <label htmlFor={`plugin-${plugin.id}-api-key-access`} className="permission-label">APIキーアクセス</label>
                                   <select
+                                    id={`plugin-${plugin.id}-api-key-access`}
                                     className="form-select"
                                     value={plugin.permissions?.api_key_access || 'deny'}
                                     onChange={async e => {
@@ -718,8 +725,9 @@ export const PluginManagement: React.FC = () => {
                                   </select>
                                 </div>
                                 <div className="permission-item">
-                                  <label className="permission-label">ファイルシステムアクセス</label>
+                                  <label htmlFor={`plugin-${plugin.id}-fs-access`} className="permission-label">ファイルシステムアクセス</label>
                                   <select
+                                    id={`plugin-${plugin.id}-fs-access`}
                                     className="form-select"
                                     value={plugin.permissions?.filesystem_access || 'deny'}
                                     onChange={async e => {

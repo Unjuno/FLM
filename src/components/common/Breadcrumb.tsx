@@ -38,7 +38,6 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
   separator = '/',
 }) => {
   const navigate = useNavigate();
-  const location = useLocation();
 
   // 最後の項目かどうかを判定
   const isLastItem = (index: number) => index === items.length - 1;

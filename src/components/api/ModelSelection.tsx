@@ -78,7 +78,6 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
     license?: string | null;
   }>>([]);
   const [loading, setLoading] = useState(true);
-  const [catalogLoading, setCatalogLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
@@ -717,6 +716,16 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
     }
   }, [models, catalogModelsAsOllama, viewMode]);
 
+  // モデル名からカテゴリを取得
+  const getCategoryFromName = useCallback((modelName: string): string => {
+    const name = modelName.toLowerCase();
+    if (name.includes('code') || name.includes('coder')) return 'code';
+    if (name.includes('chat')) return 'chat';
+    if (name.includes('vision') || name.includes('llava')) return 'vision';
+    if (name.includes('audio') || name.includes('whisper')) return 'audio';
+    return 'other';
+  }, []);
+
   // 検索フィルタ（useMemoでメモ化）
   const filteredModels = useMemo(() => {
     let filtered = displayModels;
@@ -753,17 +762,7 @@ export const ModelSelection: React.FC<ModelSelectionProps> = ({
     }
     
     return filtered;
-  }, [displayModels, searchQuery, selectedCategory, selectedSizeFilter]);
-
-  // モデル名からカテゴリを取得
-  const getCategoryFromName = useCallback((modelName: string): string => {
-    const name = modelName.toLowerCase();
-    if (name.includes('code') || name.includes('coder')) return 'code';
-    if (name.includes('chat')) return 'chat';
-    if (name.includes('vision') || name.includes('llava')) return 'vision';
-    if (name.includes('audio') || name.includes('whisper')) return 'audio';
-    return 'other';
-  }, []);
+  }, [displayModels, searchQuery, selectedCategory, selectedSizeFilter, getCategoryFromName]);
 
   // formatSizeはformatBytesユーティリティを使用（メモ化不要）
 

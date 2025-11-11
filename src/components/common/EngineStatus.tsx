@@ -1,6 +1,6 @@
 // EngineStatus - 複数エンジンのステータス表示コンポーネント
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { safeInvoke } from '../../utils/tauri';
 import { logger } from '../../utils/logger';
 import { extractErrorMessage } from '../../utils/errorHandler';

@@ -93,11 +93,9 @@ export const ApiTestSelector: React.FC = () => {
       );
       logger.error(t('apiTestSelector.messages.loadError'), err, 'ApiTestSelector');
     } finally {
-      if (!isMountedRef.current) {
-        return;
+      if (isMountedRef.current) {
+        setLoading(false);
       }
-
-      setLoading(false);
     }
   }, [t]);
 

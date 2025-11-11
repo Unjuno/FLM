@@ -13,6 +13,7 @@ import { ApiDetails } from './pages/ApiDetails';
 // 使用頻度の低いページはLazy Loading（コード分割）
 // エラーハンドリング付きのlazy loadingヘルパー関数
 // 注意: loggerは後でインポートされるため、エラー時はconsole.errorを使用
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
 const lazyLoad = (importFn: () => Promise<{ [key: string]: React.ComponentType<any> }>, componentName: string) => {
   return lazy(() =>
     importFn()
@@ -25,6 +26,7 @@ const lazyLoad = (importFn: () => Promise<{ [key: string]: React.ComponentType<a
       })
       .catch(error => {
         // loggerがまだインポートされていない可能性があるため、console.errorを使用
+        // eslint-disable-next-line no-console
         console.error(`[App] ページの読み込みに失敗しました: ${componentName}`, error);
         // エラーを再スローしてErrorBoundaryでキャッチできるようにする
         throw error;

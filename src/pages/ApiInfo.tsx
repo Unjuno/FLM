@@ -103,10 +103,9 @@ export const ApiInfo: React.FC = () => {
         extractErrorMessage(err, 'API情報の取得に失敗しました')
       );
     } finally {
-      if (!isMountedRef.current) {
-        return;
+      if (isMountedRef.current) {
+        setLoading(false);
       }
-      setLoading(false);
     }
   };
 
@@ -114,25 +113,22 @@ export const ApiInfo: React.FC = () => {
   const copyToClipboard = async (text: string, label: string) => {
     try {
       await navigator.clipboard.writeText(text);
-      if (!isMountedRef.current) {
-        return;
+      if (isMountedRef.current) {
+        setCopied(label);
       }
-      setCopied(label);
       if (copyTimeoutRef.current) {
         clearTimeout(copyTimeoutRef.current);
       }
       copyTimeoutRef.current = setTimeout(() => {
-        if (!isMountedRef.current) {
-          return;
+        if (isMountedRef.current) {
+          setCopied(null);
+          copyTimeoutRef.current = null;
         }
-        setCopied(null);
-        copyTimeoutRef.current = null;
       }, TIMEOUT.COPY_NOTIFICATION);
     } catch (err) {
-      if (!isMountedRef.current) {
-        return;
+      if (isMountedRef.current) {
+        setError('クリップボードへのコピーに失敗しました');
       }
-      setError('クリップボードへのコピーに失敗しました');
     }
   };
 

@@ -9,7 +9,6 @@ import './AppLoading.css';
  */
 export const AppLoading: React.FC = () => {
   const [message, setMessage] = useState('アプリケーションを起動しています...');
-  const [step, setStep] = useState(0);
 
   // 初期化ステップのメッセージ
   const steps = [
@@ -21,16 +20,14 @@ export const AppLoading: React.FC = () => {
 
   // メッセージを順番に表示（ユーザーに進行状況を伝える）
   useEffect(() => {
+    let step = 0;
     const interval = setInterval(() => {
-      setStep((prev) => {
-        const nextStep = (prev + 1) % steps.length;
-        setMessage(steps[nextStep]);
-        return nextStep;
-      });
+      step = (step + 1) % steps.length;
+      setMessage(steps[step]);
     }, 2000); // 2秒ごとにメッセージを変更
 
     return () => clearInterval(interval);
-  }, []);
+  }, [steps]);
 
   return (
     <div className="app-loading">

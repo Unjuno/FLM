@@ -24,7 +24,6 @@ export const LazyImage: React.FC<LazyImageProps> = ({
 }) => {
   const [imageSrc, setImageSrc] = useState<string>(placeholder || '');
   const [isLoaded, setIsLoaded] = useState(false);
-  const [hasError, setHasError] = useState(false);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const observerRef = useRef<IntersectionObserver | null>(null);
   const styleRef = useRef<HTMLImageElement | null>(null);
@@ -71,7 +70,6 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   };
 
   const handleError = () => {
-    setHasError(true);
     if (fallback) {
       setImageSrc(fallback);
     }
