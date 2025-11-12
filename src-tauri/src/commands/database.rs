@@ -3,7 +3,9 @@
 //
 // フェーズ4: データベースエージェント (DB) 実装
 
+use crate::database::connection::get_connection;
 use crate::database::integrity::{check_integrity, fix_integrity_issues};
+use crate::database::migrations::rollback_migration;
 use serde::{Deserialize, Serialize};
 
 /// データベース整合性チェック結果（フロントエンドに返す用）
@@ -71,4 +73,20 @@ pub async fn fix_database_integrity() -> Result<IntegrityCheckSummaryResponse, S
         is_valid: summary.is_valid,
         total_issues: summary.total_issues,
     })
+}
+
+/// マイグレーションのロールバックコマンド
+/// 指定されたバージョンまでマイグレーションをロールバックします
+/// 警告: この操作はデータベースの構造を変更するため、事前にバックアップを推奨します
+#[tauri::command]
+pub async fn rollback_database_migration(target_version: i32) -> Result<String, String> {
+    let mut conn = get_connection().map_err(|e| {
+        format!("データベース接続エラー: {}", e)
+    })?;
+    
+    rollback_migration(&mut conn, target_version).map_err(|e| {
+        format!("マイグレーションのロールバックに失敗しました: {}", e)
+    })?;
+    
+    Ok(format!("マイグレーションをバージョン{}までロールバックしました", target_version))
 }

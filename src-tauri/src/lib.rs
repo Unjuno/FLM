@@ -388,6 +388,7 @@ pub fn run() {
             performance::get_performance_summary,
             db_commands::check_database_integrity,
             db_commands::fix_database_integrity,
+            db_commands::rollback_database_migration,
             settings::get_app_settings,
             settings::update_app_settings,
             alerts::get_alert_settings,

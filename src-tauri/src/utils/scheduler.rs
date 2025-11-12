@@ -578,10 +578,49 @@ impl Scheduler {
     }
 }
 
-/// 古いバックアップファイルを削除（最新N個を保持）
+/// 古いバックアップファイルを削除（設定に基づいて保持期間と保持数を適用）
 async fn cleanup_old_backups(backup_dir: &PathBuf) {
+    use crate::database::connection::get_connection;
+    use crate::database::repository::UserSettingRepository;
+    
+    // データベースから保持設定を取得
+    let (keep_count, retention_days) = tokio::task::spawn_blocking(|| {
+        match get_connection() {
+            Ok(conn) => {
+                let settings_repo = UserSettingRepository::new(&conn);
+                
+                // 保持数を取得（デフォルト: 10個）
+                let keep_count = settings_repo
+                    .get("backup_keep_count")
+                    .ok()
+                    .flatten()
+                    .and_then(|v| v.parse::<usize>().ok())
+                    .unwrap_or(10);
+                
+                // 保持期間を取得（デフォルト: 30日）
+                let retention_days = settings_repo
+                    .get("backup_retention_days")
+                    .ok()
+                    .flatten()
+                    .and_then(|v| v.parse::<u64>().ok())
+                    .unwrap_or(30);
+                
+                Ok::<(usize, u64), String>((keep_count, retention_days))
+            }
+            Err(e) => {
+                eprintln!("[WARN] バックアップ設定の取得に失敗しました: {}。デフォルト値を使用します", e);
+                Ok((10, 30)) // デフォルト値
+            }
+        }
+    })
+    .await
+    .unwrap_or_else(|_| Ok((10, 30)))
+    .unwrap_or((10, 30));
+    
     if let Ok(entries) = fs::read_dir(backup_dir) {
         let mut backup_files: Vec<(PathBuf, std::time::SystemTime)> = Vec::new();
+        let now = std::time::SystemTime::now();
+        let retention_duration = std::time::Duration::from_secs(retention_days * 24 * 3600);
 
         for entry in entries.flatten() {
             if let Ok(metadata) = entry.metadata() {
@@ -600,12 +639,35 @@ async fn cleanup_old_backups(backup_dir: &PathBuf) {
         // 更新日時でソート（新しい順）
         backup_files.sort_by(|a, b| b.1.cmp(&a.1));
 
-        // 最新10個を保持し、それ以外を削除
-        const KEEP_COUNT: usize = 10;
-        if backup_files.len() > KEEP_COUNT {
-            for (path, _) in backup_files.iter().skip(KEEP_COUNT) {
-                let _ = fs::remove_file(path);
+        let mut deleted_count = 0;
+        let mut kept_count = 0;
+
+        for (index, (path, modified)) in backup_files.iter().enumerate() {
+            // 保持期間を超えたファイルを削除
+            if let Ok(age) = now.duration_since(*modified) {
+                if age > retention_duration {
+                    if let Ok(_) = fs::remove_file(path) {
+                        deleted_count += 1;
+                        eprintln!("[INFO] 保持期間を超えたバックアップを削除しました: {:?}", path);
+                    }
+                    continue;
+                }
             }
+            
+            // 保持数を超えたファイルを削除
+            if index >= keep_count {
+                if let Ok(_) = fs::remove_file(path) {
+                    deleted_count += 1;
+                    eprintln!("[INFO] 保持数を超えたバックアップを削除しました: {:?}", path);
+                }
+            } else {
+                kept_count += 1;
+            }
+        }
+        
+        if deleted_count > 0 {
+            eprintln!("[INFO] バックアップクリーンアップ完了: {}個を削除、{}個を保持（保持数: {}、保持期間: {}日）", 
+                deleted_count, kept_count, keep_count, retention_days);
         }
     }
 }

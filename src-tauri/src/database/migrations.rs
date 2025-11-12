@@ -177,6 +177,107 @@ where
     Ok(())
 }
 
+/// マイグレーションをロールバック（指定されたバージョンまで戻す）
+pub fn rollback_migration(conn: &mut Connection, target_version: i32) -> Result<(), DatabaseError> {
+    let current_version = get_current_version(conn)?;
+    
+    if target_version >= current_version {
+        return Err(DatabaseError::MigrationFailed(
+            format!("ロールバック先のバージョン({})は現在のバージョン({})以上です", target_version, current_version)
+        ));
+    }
+    
+    // バックアップを作成（ロールバック前の安全対策）
+    // 注意: 実際の実装では、バックアップ機能を使用することを推奨
+    
+    // 各バージョンを順番にロールバック
+    for version in (target_version + 1..=current_version).rev() {
+        rollback_version(conn, version)?;
+    }
+    
+    Ok(())
+}
+
+/// 特定バージョンのマイグレーションをロールバック
+fn rollback_version(conn: &mut Connection, version: i32) -> Result<(), DatabaseError> {
+    let mut tx = conn.transaction().map_err(|e| {
+        DatabaseError::MigrationFailed(format!("ロールバックの開始に失敗しました: {}", e))
+    })?;
+    
+    match version {
+        3 => {
+            // バージョン3のロールバック: パフォーマンス改善のマイグレーションを元に戻す
+            rollback_performance_indexes(&mut tx)?;
+        }
+        2 => {
+            // バージョン2のロールバック: エンジン対応のマイグレーションを元に戻す
+            rollback_engine_support(&mut tx)?;
+        }
+        1 => {
+            // バージョン1のロールバック: 初回スキーマのロールバックは危険なため、警告のみ
+            return Err(DatabaseError::MigrationFailed(
+                "バージョン1のロールバックはサポートされていません。データベースを再作成してください。".to_string()
+            ));
+        }
+        _ => {
+            return Err(DatabaseError::MigrationFailed(
+                format!("バージョン{}のロールバックはサポートされていません", version)
+            ));
+        }
+    }
+    
+    // マイグレーション履歴から削除
+    tx.execute(
+        "DELETE FROM migrations WHERE version = ?1",
+        [&version.to_string()],
+    )
+    .map_err(|e| DatabaseError::MigrationFailed(format!("マイグレーション履歴の削除に失敗しました: {}", e)))?;
+    
+    tx.commit().map_err(|e| {
+        DatabaseError::MigrationFailed(format!("ロールバックの完了に失敗しました: {}", e))
+    })?;
+    
+    Ok(())
+}
+
+/// パフォーマンス改善のマイグレーション（バージョン3）をロールバック
+fn rollback_performance_indexes(tx: &mut rusqlite::Transaction) -> Result<(), DatabaseError> {
+    // インデックスを削除
+    tx.execute("DROP INDEX IF EXISTS idx_apis_last_used_at", [])
+        .map_err(|e| DatabaseError::MigrationFailed(format!("インデックスの削除に失敗しました: {}", e)))?;
+    
+    tx.execute("DROP INDEX IF EXISTS idx_apis_created_at", [])
+        .map_err(|e| DatabaseError::MigrationFailed(format!("インデックスの削除に失敗しました: {}", e)))?;
+    
+    // last_used_atカラムを削除（SQLiteではALTER TABLE DROP COLUMNが直接サポートされていないため、テーブル再作成が必要）
+    // 注意: この操作は危険なため、実際の実装ではより慎重な処理が必要
+    // ここでは簡易実装として、カラムの削除は行わない（データは残るが、使用されなくなる）
+    
+    Ok(())
+}
+
+/// エンジン対応のマイグレーション（バージョン2）をロールバック
+fn rollback_engine_support(tx: &mut rusqlite::Transaction) -> Result<(), DatabaseError> {
+    // インデックスを削除
+    tx.execute("DROP INDEX IF EXISTS idx_apis_engine_type", [])
+        .map_err(|e| DatabaseError::MigrationFailed(format!("インデックスの削除に失敗しました: {}", e)))?;
+    
+    tx.execute("DROP INDEX IF EXISTS idx_engine_configs_type", [])
+        .map_err(|e| DatabaseError::MigrationFailed(format!("インデックスの削除に失敗しました: {}", e)))?;
+    
+    tx.execute("DROP INDEX IF EXISTS idx_engine_configs_default", [])
+        .map_err(|e| DatabaseError::MigrationFailed(format!("インデックスの削除に失敗しました: {}", e)))?;
+    
+    // engine_configsテーブルを削除
+    tx.execute("DROP TABLE IF EXISTS engine_configs", [])
+        .map_err(|e| DatabaseError::MigrationFailed(format!("テーブルの削除に失敗しました: {}", e)))?;
+    
+    // 注意: engine_typeとengine_configカラムの削除は、SQLiteの制限により直接サポートされていない
+    // 実際の実装では、テーブル再作成が必要になる可能性がある
+    
+    Ok(())
+}
+
 /// マイグレーション履歴を取得
 #[allow(dead_code)] // 将来使用予定（管理機能で使用予定）
 pub fn get_migrations(conn: &Connection) -> Result<Vec<Migration>, DatabaseError> {

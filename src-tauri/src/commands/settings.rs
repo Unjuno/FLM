@@ -33,6 +33,10 @@ pub struct AppSettings {
     pub device_id_enabled: Option<bool>,
     /// バックアップファイルをデフォルトで暗号化するか（true | false、デフォルト: false、プライバシー保護のため有効化推奨）
     pub backup_encrypt_by_default: Option<bool>,
+    /// バックアップ保持数（個数、デフォルト: 10）
+    pub backup_keep_count: Option<u32>,
+    /// バックアップ保持期間（日数、デフォルト: 30）
+    pub backup_retention_days: Option<u32>,
     /// 不完全な機能（開発中）を表示するか（true | false、デフォルト: false、大衆向けのため非表示推奨）
     pub show_incomplete_features: Option<bool>,
 }
@@ -116,6 +120,16 @@ pub async fn get_app_settings() -> Result<AppSettings, String> {
         .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
         .and_then(|v| v.parse::<bool>().ok());
 
+    let backup_keep_count = settings_repo
+        .get("backup_keep_count")
+        .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
+        .and_then(|v| v.parse::<u32>().ok());
+
+    let backup_retention_days = settings_repo
+        .get("backup_retention_days")
+        .map_err(|e| format!("設定の読み込みに失敗しました: {}", e))?
+        .and_then(|v| v.parse::<u32>().ok());
+
     Ok(AppSettings {
         theme,
         language,
@@ -130,6 +144,8 @@ pub async fn get_app_settings() -> Result<AppSettings, String> {
         include_ip_address_in_audit_log: include_ip_address_in_audit_log.or(Some(true)), // デフォルト: 有効（プライバシー保護のため無効化可能）
         device_id_enabled: device_id_enabled.or(Some(true)), // デフォルト: 有効（リモート同期機能で使用、プライバシー保護のため無効化可能）
         backup_encrypt_by_default: backup_encrypt_by_default.or(Some(false)), // デフォルト: 無効（プライバシー保護のため有効化推奨）
+        backup_keep_count: backup_keep_count.or(Some(10)), // デフォルト: 10個
+        backup_retention_days: backup_retention_days.or(Some(30)), // デフォルト: 30日
         show_incomplete_features: show_incomplete_features.or(Some(false)), // デフォルト: 無効（大衆向けのため非表示推奨）
     })
 }
@@ -221,6 +237,18 @@ pub async fn update_app_settings(settings: AppSettings) -> Result<(), String> {
         settings_repo
             .set("show_incomplete_features", &enabled.to_string())
             .map_err(|e| format!("不完全な機能表示設定の保存に失敗しました: {}", e))?;
+    }
+
+    if let Some(count) = settings.backup_keep_count {
+        settings_repo
+            .set("backup_keep_count", &count.to_string())
+            .map_err(|e| format!("バックアップ保持数の保存に失敗しました: {}", e))?;
+    }
+
+    if let Some(days) = settings.backup_retention_days {
+        settings_repo
+            .set("backup_retention_days", &days.to_string())
+            .map_err(|e| format!("バックアップ保持期間の保存に失敗しました: {}", e))?;
     }
 
     Ok(())
