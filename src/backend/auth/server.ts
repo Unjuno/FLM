@@ -30,6 +30,7 @@ import {
 } from './rate-limit-redis.js';
 import { validateEnvironmentVariables } from './env-validation.js';
 import { evaluateCorsOrigin } from './cors-utils.js';
+import { ipWhitelistMiddleware, isIpWhitelistEnabled } from './ip-whitelist.js';
 
 // 環境変数の検証を実行
 validateEnvironmentVariables();
@@ -937,7 +938,37 @@ const authMiddleware = async (
   next();
 };
 
-// ヘルスチェックエンドポイント（認証不要、ログ記録なし）
+const AUTH_REQUIRED = (() => {
+  const raw = process.env.AUTH_REQUIRED;
+  if (!raw) {
+    return true;
+  }
+  const normalized = raw.toLowerCase();
+  return !['0', 'false', 'no'].includes(normalized);
+})();
+
+if (!AUTH_REQUIRED) {
+  console.warn(
+    '[SECURITY] 認証が無効化された状態でプロキシが起動しています。外部公開する場合はネットワークアクセスを厳重に制限してください。'
+  );
+}
+
+const maybeAuthMiddleware: typeof authMiddleware = AUTH_REQUIRED
+  ? authMiddleware
+  : (_req: Request, _res: Response, next: NextFunction) => next();
+
+// IPホワイトリストミドルウェアを適用（認証より前に実行）
+// 注意: ヘルスチェックエンドポイントはIPホワイトリストの対象外
+app.use(async (req: Request, res: Response, next: NextFunction) => {
+  // ヘルスチェックエンドポイントはスキップ
+  if (req.path === '/health') {
+    return next();
+  }
+  // その他のエンドポイントはIPホワイトリストを適用
+  await ipWhitelistMiddleware(req, res, next);
+});
+
+// ヘルスチェックエンドポイント（認証不要、ログ記録なし、IPホワイトリスト対象外）
 app.get('/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', service: 'flm-auth-proxy' });
 });
@@ -975,7 +1006,7 @@ if (ENGINE_TYPE === 'ollama') {
     '/v1/chat/completions',
     requestLogMiddleware,
     rateLimitMiddlewareToUse,
-    authMiddleware,
+    maybeAuthMiddleware,
     createProxyMiddleware(`${ENGINE_BASE_URL}/api/chat`)
   );
 
@@ -984,7 +1015,7 @@ if (ENGINE_TYPE === 'ollama') {
     '/v1/models',
     requestLogMiddleware,
     rateLimitMiddlewareToUse,
-    authMiddleware,
+    maybeAuthMiddleware,
     createProxyMiddleware(`${ENGINE_BASE_URL}/api/tags`, {
       transformRequest: (req: Request) => {
         // Ollamaの /api/tags 形式に変換
@@ -1018,21 +1049,21 @@ if (ENGINE_TYPE === 'ollama') {
     '/api/pull',
     requestLogMiddleware,
     rateLimitMiddlewareToUse,
-    authMiddleware,
+    maybeAuthMiddleware,
     createProxyMiddleware(`${ENGINE_BASE_URL}/api/pull`)
   );
   app.post(
     '/api/delete',
     requestLogMiddleware,
     rateLimitMiddlewareToUse,
-    authMiddleware,
+    maybeAuthMiddleware,
     createProxyMiddleware(`${ENGINE_BASE_URL}/api/delete`)
   );
   app.get(
     '/api/tags',
     requestLogMiddleware,
     rateLimitMiddlewareToUse,
-    authMiddleware,
+    maybeAuthMiddleware,
     createProxyMiddleware(`${ENGINE_BASE_URL}/api/tags`)
   );
 } else {
@@ -1042,7 +1073,7 @@ if (ENGINE_TYPE === 'ollama') {
     '/v1/chat/completions',
     requestLogMiddleware,
     rateLimitMiddlewareToUse,
-    authMiddleware,
+    maybeAuthMiddleware,
     createProxyMiddleware(`${ENGINE_BASE_URL}/v1/chat/completions`)
   );
 
@@ -1050,7 +1081,7 @@ if (ENGINE_TYPE === 'ollama') {
     '/v1/models',
     requestLogMiddleware,
     rateLimitMiddlewareToUse,
-    authMiddleware,
+    maybeAuthMiddleware,
     createProxyMiddleware(`${ENGINE_BASE_URL}/v1/models`)
   );
 
@@ -1194,6 +1225,8 @@ function startServers(certPaths: { certPath: string; keyPath: string }) {
       console.log(
         `HTTPリダイレクトサーバーが起動しました: http://0.0.0.0:${PORT} → https://0.0.0.0:${PORT + 1}`
       );
+      console.warn('⚠️  [セキュリティ警告] HTTPサーバーは外部からアクセス可能です');
+      console.warn('   すべてのHTTPリクエストはHTTPSにリダイレクトされます');
     })
     .on('error', (err: NodeJS.ErrnoException) => {
       console.error(`HTTPリダイレクトサーバー起動エラー:`, err);
@@ -1225,6 +1258,44 @@ function startServers(certPaths: { certPath: string; keyPath: string }) {
         console.log(
           `   自己署名証明書のため、ブラウザで警告が表示されます（正常です）`
         );
+        
+        // 外部公開時のセキュリティ警告
+        console.warn('');
+        console.warn('⚠️  [セキュリティ警告] このサーバーは外部からアクセス可能です');
+        console.warn('   以下のセキュリティ対策を実施してください:');
+        console.warn('   1. ファイアウォールで必要なIPアドレスのみ許可');
+        console.warn('   2. IPホワイトリスト機能の使用（ENABLE_IP_WHITELIST=1, IP_WHITELIST=xxx.xxx.xxx.xxx）');
+        console.warn('   3. APIキー認証が有効になっていることを確認');
+        console.warn('   4. 本番環境ではHTTPS（Let\'s Encrypt証明書）の使用を推奨');
+        console.warn('   5. 定期的なセキュリティアップデートの実施');
+        console.warn('   6. 不要な場合は、localhostのみにバインドすることを検討');
+        
+        // IPホワイトリストの状態を表示
+        if (isIpWhitelistEnabled()) {
+          const whitelist = process.env.IP_WHITELIST || '';
+          console.warn('');
+          console.warn('✅ IPホワイトリストが有効です');
+          if (whitelist) {
+            console.warn(`   許可されたIPアドレス: ${whitelist}`);
+          } else {
+            console.warn('   ⚠️  警告: IPホワイトリストが有効ですが、ホワイトリストが空です');
+            console.warn('   すべてのアクセスが拒否されます。IP_WHITELIST環境変数を設定してください。');
+          }
+        } else {
+          console.warn('');
+          console.warn('⚠️  IPホワイトリストが無効です');
+          console.warn('   外部公開する場合は、ENABLE_IP_WHITELIST=1 を設定してIPホワイトリストを有効化してください');
+        }
+        console.warn('');
+        
+        // 認証が無効な場合の追加警告
+        if (!AUTH_REQUIRED) {
+          console.error('');
+          console.error('🚨 [重大なセキュリティ警告] 認証が無効化されています！');
+          console.error('   外部公開する場合は、必ず認証を有効にしてください。');
+          console.error('   現在の設定では、誰でもAPIにアクセス可能です。');
+          console.error('');
+        }
       })
       .on('error', (err: NodeJS.ErrnoException) => {
         console.error(`HTTPSサーバー起動エラー:`, err);

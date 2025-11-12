@@ -5,6 +5,7 @@ pub mod api;
 pub mod backup;
 pub mod database;
 pub mod engine;
+pub mod ipc_version;
 pub mod model_converter;
 pub mod model_sharing;
 pub mod oauth;

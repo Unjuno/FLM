@@ -190,6 +190,41 @@ export function validateEnvironmentVariables(): void {
     errors.push(rateLimitWindowResult.error);
   }
 
+  // ENABLE_IP_WHITELISTの検証
+  const ipWhitelistEnabledResult = validateBooleanEnv('ENABLE_IP_WHITELIST', false);
+  if (!ipWhitelistEnabledResult.valid && ipWhitelistEnabledResult.error) {
+    errors.push(ipWhitelistEnabledResult.error);
+  }
+
+  // IP_WHITELISTの検証（ENABLE_IP_WHITELISTが有効な場合のみ）
+  if (ipWhitelistEnabledResult.valid && ipWhitelistEnabledResult.value === true) {
+    const ipWhitelistResult = validateStringEnv('IP_WHITELIST');
+    if (!ipWhitelistResult.valid && ipWhitelistResult.error) {
+      errors.push(
+        `IPホワイトリストが有効ですが、${ipWhitelistResult.error}。IP_WHITELIST環境変数を設定してください。`
+      );
+    } else if (ipWhitelistResult.valid && ipWhitelistResult.value) {
+      // IPアドレスの形式を簡易チェック
+      const ipList = (ipWhitelistResult.value as string).split(',');
+      const invalidIps = ipList.filter(ip => {
+        const trimmed = ip.trim();
+        if (!trimmed) return false;
+        // CIDR表記またはIPアドレスの形式チェック
+        if (trimmed.includes('/')) {
+          const [ipPart, prefix] = trimmed.split('/');
+          const prefixNum = parseInt(prefix, 10);
+          return !isValidIpAddress(ipPart) || isNaN(prefixNum) || prefixNum < 0 || prefixNum > 32;
+        }
+        return !isValidIpAddress(trimmed);
+      });
+      if (invalidIps.length > 0) {
+        errors.push(
+          `IP_WHITELISTに無効なIPアドレスが含まれています: ${invalidIps.join(', ')}`
+        );
+      }
+    }
+  }
+
   // エラーがある場合は出力して終了
   if (errors.length > 0) {
     console.error('環境変数の検証エラー:');
@@ -200,5 +235,21 @@ export function validateEnvironmentVariables(): void {
       console.warn('開発環境のため、処理を続行します。');
     }
   }
+}
+
+/**
+ * IPアドレスの形式を簡易チェック
+ * @param ip IPアドレス
+ * @returns 有効な場合true
+ */
+function isValidIpAddress(ip: string): boolean {
+  const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+  if (ipv4Regex.test(ip)) {
+    const parts = ip.split('.').map(Number);
+    return parts.length === 4 && parts.every(part => part >= 0 && part <= 255);
+  }
+  // IPv6の簡易チェック（完全な検証ではない）
+  const ipv6Regex = /^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/;
+  return ipv6Regex.test(ip) || ip === 'localhost' || ip === '::1';
 }
 

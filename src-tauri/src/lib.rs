@@ -15,6 +15,7 @@ use commands::alerts;
 use commands::backup;
 use commands::database as db_commands;
 use commands::engine;
+use commands::ipc_version;
 use commands::model_converter;
 use commands::oauth;
 use commands::performance;
@@ -51,6 +52,59 @@ lazy_static! {
 }
 
 static SHUTDOWN_IN_PROGRESS: AtomicBool = AtomicBool::new(false);
+
+/// 自動バックアップを初期化
+async fn initialize_auto_backup() {
+    use crate::database::connection::get_connection;
+    use crate::database::repository::UserSettingRepository;
+    use crate::utils::scheduler::{add_schedule_task, TaskType};
+    
+    // データベース操作をブロッキングタスクで実行
+    let result = tokio::task::spawn_blocking(|| {
+        match get_connection() {
+            Ok(conn) => {
+                let settings_repo = UserSettingRepository::new(&conn);
+                let enabled = settings_repo
+                    .get("auto_backup_enabled")
+                    .ok()
+                    .flatten()
+                    .and_then(|v| v.parse::<bool>().ok())
+                    .unwrap_or(true); // デフォルト: 有効
+                
+                let interval = settings_repo
+                    .get("auto_backup_interval_hours")
+                    .ok()
+                    .flatten()
+                    .and_then(|v| v.parse::<u64>().ok())
+                    .unwrap_or(24); // デフォルト: 24時間
+                
+                Ok::<(bool, u64), String>((enabled, interval))
+            }
+            Err(e) => Err(format!("データベース接続エラー: {}", e)),
+        }
+    })
+    .await
+    .unwrap_or_else(|e| Err(format!("タスク実行エラー: {}", e)));
+    
+    match result {
+        Ok((enabled, interval_hours)) if enabled => {
+            // 自動バックアップが有効な場合、スケジューラーにタスクを追加
+            let interval_seconds = interval_hours * 3600; // 時間を秒に変換
+            
+            match add_schedule_task("auto_backup", TaskType::AutoBackup, "", interval_seconds).await {
+                Ok(_) => {
+                    debug_log!("自動バックアップを初期化しました（間隔: {}時間）", interval_hours);
+                }
+                Err(e) => {
+                    warn_log!("自動バックアップの初期化に失敗しました: {}", e);
+                }
+            }
+        }
+        _ => {
+            debug_log!("自動バックアップは無効です");
+        }
+    }
+}
 
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
@@ -272,9 +326,14 @@ pub fn run() {
                                     } else {
                                         debug_log!("起動すべき停止状態のAPIはありませんでした");
                                     }
+                                    
+                                    // 自動バックアップの初期化
+                                    initialize_auto_backup().await;
                                 },
                                 Err(e) => {
                                     warn_log!("API一覧の取得に失敗しました: {}. 自動起動をスキップします。", e);
+                                    // エラーが発生しても自動バックアップの初期化を試みる
+                                    initialize_auto_backup().await;
                                 }
                             }
                         });
@@ -400,6 +459,8 @@ pub fn run() {
             api::export_audit_logs,
             updater::check_app_update,
             updater::install_app_update,
+            ipc_version::get_ipc_version,
+            ipc_version::check_ipc_compatibility,
         ])
         .run(tauri::generate_context!())
         .map_err(|e| {

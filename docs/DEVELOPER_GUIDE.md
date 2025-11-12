@@ -1,302 +1,134 @@
 # 開発者ガイド
 
-このガイドは、FLMプロジェクトの開発に参加する開発者向けのドキュメントです。
-
----
+このドキュメントは、FLMプロジェクトの開発者向けガイドです。
 
 ## 目次
 
-1. [アーキテクチャ概要](#アーキテクチャ概要)
-2. [開発環境セットアップ](#開発環境セットアップ)
-3. [プロジェクト構造](#プロジェクト構造)
-4. [開発フロー](#開発フロー)
-5. [コーディング規約](#コーディング規約)
-6. [テスト](#テスト)
-7. [コントリビューション](#コントリビューション)
-
----
-
-## アーキテクチャ概要
-
-### システム構成
-
-FLMは、以下のコンポーネントで構成されています：
-
-```
-┌─────────────────────────────────────┐
-│       フロントエンド (React)        │
-│   - UIコンポーネント                │
-│   - ページ                          │
-│   - カスタムフック                  │
-└──────────────┬──────────────────────┘
-               │ IPC (Tauri)
-┌──────────────▼──────────────────────┐
-│     バックエンド (Rust/Tauri)        │
-│   - IPCコマンド                      │
-│   - データベース管理                │
-│   - エンジン管理                     │
-│   - アプリケーション終了時の         │
-│     クリーンアップ処理              │
-└──────────────┬──────────────────────┘
-               │
-┌──────────────▼──────────────────────┐
-│    認証プロキシ (Express.js)         │
-│   - APIキー検証                      │
-│   - OpenAI互換API                    │
-└──────────────┬──────────────────────┘
-               │ HTTP
-┌──────────────▼──────────────────────┐
-│      LLM実行エンジン                 │
-│   - Ollama / LM Studio / vLLM等      │
-│   - LLM実行                          │
-└─────────────────────────────────────┘
-```
-
-### アプリケーション終了時のクリーンアップ処理
-
-**実装場所**: `src-tauri/src/lib.rs`、`src-tauri/src/commands/api.rs`、`src-tauri/src/commands/settings.rs`
-
-**機能**: アプリケーション終了時に、実行中のすべてのAPIを自動的に停止します（デフォルト動作）。
-
-**処理の流れ**:
-
-1. ユーザーがアプリケーションを閉じる（ウィンドウの×ボタンをクリック）
-2. `WindowEvent::CloseRequested`イベントが発火
-3. ウィンドウの閉鎖を一時的にブロック（`api.prevent_close()`）
-4. 設定を確認（`user_settings`テーブルの`stop_apis_on_exit`キー）
-   - デフォルト値: `true`（アプリ終了時にAPIを停止）
-   - 設定が`false`の場合、クリーンアップ処理をスキップしてウィンドウを閉じる
-5. 設定が`true`の場合、`stop_all_running_apis()`関数を非同期で実行
-   - 実行中のすべてのAPIを取得
-   - 各APIの認証プロキシプロセスを停止
-   - データベースのステータスを「stopped」に更新
-6. クリーンアップ完了（または10秒のタイムアウト）後、ウィンドウを閉じる
-
-**実装詳細**:
-
-- **設定項目**: `stop_apis_on_exit`（Boolean、デフォルト: `true`）
-- **設定場所**: 設定ページ > 「アプリ終了時の動作」セクション
-- **タイムアウト**: 最大10秒（クリーンアップ処理がタイムアウトしてもアプリケーションは終了します）
-- **エラーハンドリング**: 個々のAPI停止処理でエラーが発生しても、他のAPIの停止処理は続行されます
-- **ログ**: クリーンアップ処理の結果は標準エラー出力（`eprintln!`）に記録されます
-- **設定の読み込み**: アプリ終了時にデータベースから設定を読み込み、設定値に応じて動作を決定
-
-**オプション機能**:
-
-- **有効時（デフォルト）**: アプリ終了時にすべてのAPIを自動停止（従来の動作）
-- **無効時**: アプリ終了時もAPIを実行し続ける（アプリを閉じてもAPIは継続実行）
-
-**テスト**: `tests/integration/f003-api-management.test.ts`に統合テストを追加済み
-
-### 主要モジュール
-
-#### フロントエンド (`src/`)
-- **`pages/`**: ページコンポーネント
-- **`components/`**: 再利用可能なUIコンポーネント
-- **`hooks/`**: カスタムフック（IPC通信など）
-- **`types/`**: TypeScript型定義
-
-#### バックエンド (`src-tauri/src/`)
-- **`commands/`**: Tauri IPCコマンド
-- **`database/`**: データベース管理（Repository パターン）
-- **`ollama.rs`**: Ollama管理機能
-- **`auth.rs`**: 認証プロキシ管理
-
-#### 認証プロキシ (`src/backend/auth/`)
-- **`server.ts`**: Express.jsサーバー
-- **`keygen.ts`**: APIキー生成・検証
-- **`database.ts`**: データベース統合
-- **`proxy.ts`**: Ollama APIプロキシ
+1. [開発環境セットアップ](#開発環境セットアップ)
+2. [プロジェクト構造](#プロジェクト構造)
+3. [データベースマイグレーション](#データベースマイグレーション)
+4. [コントリビューションガイド](#コントリビューションガイド)
 
 ---
 
 ## 開発環境セットアップ
 
-詳細は [開発環境セットアップガイド](./DEVELOPMENT_SETUP.md) を参照してください。
-
-### 必要な環境
-
-- **Node.js**: 18.x以上
-- **Rust**: 最新安定版
-- **npm**: またはyarn
-- **Git**: バージョン管理
-
-### セットアップ手順
-
-1. **リポジトリのクローン**
-   ```bash
-   git clone https://github.com/your-repo/FLM.git
-   cd FLM
-   ```
-
-2. **依存関係のインストール**
-   ```bash
-   npm install
-   ```
-
-3. **開発サーバーの起動**
-   ```bash
-   npm run tauri dev
-   ```
+詳細は [開発環境セットアップ](./DEVELOPMENT_SETUP.md) を参照してください。
 
 ---
 
 ## プロジェクト構造
 
-詳細は [プロジェクト構造ドキュメント](./PROJECT_STRUCTURE.md) を参照してください。
-
-### ディレクトリ構成
-
-```
-FLM/
-├── src/                    # フロントエンド
-│   ├── pages/             # ページコンポーネント
-│   ├── components/        # UIコンポーネント
-│   ├── hooks/             # カスタムフック
-│   ├── types/              # TypeScript型定義
-│   └── backend/           # 認証プロキシ
-│       └── auth/          # 認証プロキシ実装
-│
-├── src-tauri/             # Tauriバックエンド
-│   ├── src/
-│   │   ├── commands/      # IPCコマンド
-│   │   ├── database/      # データベース
-│   │   ├── ollama.rs      # Ollama管理
-│   │   └── auth.rs        # 認証プロキシ管理
-│   └── Cargo.toml
-│
-├── tests/                  # テスト
-│   ├── unit/              # 単体テスト
-│   ├── integration/      # 統合テスト
-│   ├── e2e/               # E2Eテスト
-│   └── performance/       # パフォーマンステスト
-│
-├── docs/                   # ドキュメント
-├── DOCKS/                  # 設計ドキュメント
-└── package.json
-```
+詳細は [プロジェクト構造](./PROJECT_STRUCTURE.md) を参照してください。
 
 ---
 
-## 開発フロー
+## データベースマイグレーション
 
-### 1. ブランチ戦略
+### 概要
 
-- **`main`**: 本番環境用ブランチ
-- **`develop`**: 開発用ブランチ
-- **`feature/***`**: 機能追加用ブランチ
-- **`bugfix/***`**: バグ修正用ブランチ
+FLMでは、データベーススキーマの変更をマイグレーションシステムで管理しています。
 
-### 2. 開発手順
+### マイグレーションファイル
 
-1. **ブランチを作成**
-   ```bash
-   git checkout -b feature/new-feature
-   ```
+マイグレーションは `src-tauri/src/database/migrations.rs` で定義されています。
 
-2. **実装・テスト**
-   - 機能を実装
-   - テストを作成・実行
+### マイグレーションの実行
 
-3. **コミット**
-   ```bash
-   git add .
-   git commit -m "feat: add new feature"
-   ```
+マイグレーションは、アプリケーション起動時に自動的に実行されます：
 
-4. **プッシュ・プルリクエスト**
-   ```bash
-   git push origin feature/new-feature
-   ```
-
-### 3. コードレビュー
-
-- プルリクエストを作成
-- コードレビューを受ける
-- フィードバックを反映
-
----
-
-## コーディング規約
-
-### TypeScript/React
-
-- **命名規則**: 
-  - コンポーネント: PascalCase（例: `ApiList.tsx`）
-  - 関数・変数: camelCase（例: `handleClick`）
-  - 定数: UPPER_SNAKE_CASE（例: `MAX_RETRY_COUNT`）
-
-- **型定義**: すべての関数に型を定義
-- **インポート**: アルファベット順に整理
-
-### Rust
-
-- **命名規則**: 
-  - 関数・変数: snake_case（例: `create_api`）
-  - 構造体: PascalCase（例: `ApiCreateConfig`）
-
-- **エラーハンドリング**: `Result<T, E>`を使用
-- **ドキュメント**: 公開関数にはdocコメントを追加
-
-### エラーメッセージ
-
-- **非開発者向け**: 専門用語を避け、わかりやすい表現を使用
-- **具体的な指示**: 問題を解決するための具体的な手順を含める
-
-例:
-- ❌ 悪い例: "DatabaseError: connection failed"
-- ✅ 良い例: "データベースに接続できませんでした。アプリケーションを再起動してください。"
-
----
-
-## テスト
-
-### テストの実行
-
-```bash
-# すべてのテスト
-npm test
-
-# 単体テストのみ
-npm run test:unit
-
-# 統合テストのみ
-npm run test:integration
-
-# E2Eテストのみ
-npm run test:e2e
-
-# カバレッジレポート
-npm run test:coverage
+```rust
+// src-tauri/src/database/mod.rs
+pub fn initialize_database() -> Result<Connection, DatabaseError> {
+    let conn = get_connection()?;
+    
+    // スキーマ作成
+    if let Err(e) = schema::create_schema(&conn) {
+        return Err(e);
+    }
+    
+    // マイグレーション実行
+    let mut conn = conn;
+    if let Err(e) = migrations::run_migrations(&mut conn) {
+        return Err(e);
+    }
+    
+    Ok(conn)
+}
 ```
 
-### テストの書き方
+### 新しいマイグレーションの追加
 
-詳細は [テストドキュメント](../tests/README.md) を参照してください。
+新しいマイグレーションを追加する場合は、以下の手順に従ってください：
 
-### Rustテスト
+1. **`migrations.rs`の`run_migrations`関数に新しいマイグレーションを追加**
+
+```rust
+pub fn run_migrations(conn: &mut Connection) -> Result<(), DatabaseError> {
+    let current_version = get_current_version(conn)?;
+    
+    // 既存のマイグレーション...
+    
+    // 新しいマイグレーションを追加
+    if current_version < 4 {
+        apply_migration(conn, 4, "your_migration_name", |conn_ref| {
+            // マイグレーション処理を実装
+            conn_ref.execute(
+                "ALTER TABLE apis ADD COLUMN new_column TEXT",
+                [],
+            )?;
+            Ok(())
+        })?;
+    }
+    
+    Ok(())
+}
+```
+
+2. **マイグレーションのテスト**
+
+マイグレーションを追加したら、必ずテストを実行してください：
 
 ```bash
 cd src-tauri
-cargo test
+cargo test --test migrations
 ```
+
+3. **スキーマ定義の更新**
+
+`DOCKS/DATABASE_SCHEMA.sql` も更新してください。
+
+### マイグレーション履歴の確認
+
+マイグレーション履歴は、`migrations`テーブルで確認できます：
+
+```sql
+SELECT version, name, applied_at FROM migrations ORDER BY version;
+```
+
+### マイグレーションのロールバック
+
+現在の実装では、マイグレーションのロールバック機能は提供されていません。スキーマ変更が必要な場合は、新しいマイグレーションで対応してください。
+
+### ベストプラクティス
+
+1. **後方互換性の維持**: 既存のデータを壊さないように注意してください
+2. **トランザクションの使用**: マイグレーションは自動的にトランザクション内で実行されます
+3. **インデックスの追加**: パフォーマンスに影響する場合は、インデックスの追加も検討してください
+4. **テストの追加**: マイグレーションごとにテストを追加してください
 
 ---
 
-## コントリビューション
+## コントリビューションガイド
 
-### コントリビューションの流れ
+### コードスタイル
 
-1. **Issueの作成**: バグ報告や機能要望のIssueを作成
-2. **ブランチの作成**: `feature/***`または`bugfix/***`ブランチを作成
-3. **実装**: 機能を実装し、テストを作成
-4. **プルリクエスト**: プルリクエストを作成
-5. **コードレビュー**: レビューを受けて修正
-6. **マージ**: 承認後にマージ
+- **TypeScript**: ESLintとPrettierを使用
+- **Rust**: `cargo fmt`と`cargo clippy`を使用
 
 ### コミットメッセージ
 
-以下のフォーマットに従ってください：
+コミットメッセージは、以下の形式に従ってください：
 
 ```
 <type>: <subject>
@@ -304,104 +136,35 @@ cargo test
 <body>
 ```
 
-**タイプ**:
-- `feat`: 新機能
-- `fix`: バグ修正
-- `docs`: ドキュメント
-- `test`: テスト
-- `refactor`: リファクタリング
-- `style`: コードスタイル
+**type**: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
 
-**例**:
-```
-feat: add model search functionality
+### プルリクエスト
 
-- Implement real-time search bar
-- Add category filters
-- Add size filters
-```
+1. 新しいブランチを作成: `git checkout -b feature/your-feature-name`
+2. 変更をコミット: `git commit -m "feat: add new feature"`
+3. ブランチをプッシュ: `git push origin feature/your-feature-name`
+4. プルリクエストを作成
 
----
+### テスト
 
-## アーキテクチャ設計
-
-詳細は以下を参照してください：
-
-- [アーキテクチャ設計書](../ARCHITECTURE.md)
-- [IPCインターフェース仕様](../INTERFACE_SPEC.md)
-- [データベーススキーマ説明](./DATABASE_SCHEMA.md)
-- [認証プロキシ仕様](./AUTH_PROXY_SPEC.md)
-
----
-
-## デバッグ
-
-### フロントエンド
+プルリクエストを送信する前に、必ずテストを実行してください：
 
 ```bash
-# 開発モードで起動（デバッグ情報表示）
-npm run tauri dev
-```
+# 全テスト実行
+npm test
 
-### バックエンド
+# カバレッジ確認
+npm run test:coverage
 
-```bash
-# Rustデバッグ
+# Rustテスト
 cd src-tauri
-cargo build
-RUST_BACKTRACE=1 cargo run
-```
-
-### 認証プロキシ
-
-```bash
-# 認証プロキシを直接起動
-cd src/backend/auth
-npm install
-npx tsx server.ts
+cargo test
 ```
 
 ---
 
-## パフォーマンス最適化
+## その他のリソース
 
-### フロントエンド
-
-- React.memoの使用
-- useMemo/useCallbackの適切な使用
-- 不要な再レンダリングの防止
-
-### バックエンド
-
-- データベースクエリの最適化
-- 非同期処理の適切な使用
-- メモリリークの防止
-
----
-
-## セキュリティ
-
-### APIキー
-
-- AES-256-GCMで暗号化
-- ハッシュ化して検証
-- ログに記録しない
-
-### 入力値検証
-
-- SQLインジェクション対策（パラメータ化クエリ）
-- XSS対策（Reactの自動エスケープ）
-
----
-
-## 関連ドキュメント
-
-- [開発環境セットアップ](./DEVELOPMENT_SETUP.md)
-- [プロジェクト構造](./PROJECT_STRUCTURE.md)
-- [テストドキュメント](../tests/README.md)
-- [コードレビューチェックリスト](../tests/code-review/review-checklist.md)
-
----
-
-**開発に参加いただき、ありがとうございます！**
-
+- [アーキテクチャ設計書](../DOCKS/ARCHITECTURE.md)
+- [API仕様書](../DOCKS/INTERFACE_SPEC.md)
+- [データベーススキーマ](../DOCKS/DATABASE_SCHEMA.sql)

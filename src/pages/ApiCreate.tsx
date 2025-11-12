@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppLayout } from '../components/layout/AppLayout';
-import { safeInvoke } from '../utils/tauri';
+import { safeInvoke, clearInvokeCache } from '../utils/tauri';
 import { ModelSelection, ENGINE_NAMES } from '../components/api/ModelSelection';
 import { ApiConfigForm } from '../components/api/ApiConfigForm';
 import { ApiCreationProgress } from '../components/api/ApiCreationProgress';
@@ -322,6 +322,8 @@ export const ApiCreate: React.FC = () => {
           apiKey: response.api_key || undefined,
           port: response.port,
         };
+
+        clearInvokeCache('list_apis');
 
         setProgress({ step: '完了', progress: 100 });
         await new Promise(resolve => setTimeout(resolve, 300));

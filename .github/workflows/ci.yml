@@ -105,6 +105,35 @@ jobs:
         working-directory: src-tauri
         run: cargo build --release
 
-      - name: Run Rust tests
+      - name: Install cargo-tarpaulin
+        run: cargo install cargo-tarpaulin --locked
+
+      - name: Run Rust tests with coverage
         working-directory: src-tauri
-        run: cargo test --release
+        run: cargo tarpaulin --out Xml --output-dir ../coverage-rust
+        continue-on-error: true
+
+      - name: Check Rust coverage threshold
+        run: |
+          if [ -f coverage-rust/cobertura.xml ]; then
+            # カバレッジ閾値チェック（80%以上）
+            # cobertura.xmlからカバレッジを計算
+            COVERAGE=$(grep -oP 'line-rate="\K[0-9.]+' coverage-rust/cobertura.xml | head -1 || echo "0")
+            COVERAGE_PERCENT=$(awk "BEGIN {printf \"%.2f\", $COVERAGE * 100}")
+            echo "Rust Coverage: ${COVERAGE_PERCENT}%"
+            if awk "BEGIN {exit ($COVERAGE_PERCENT < 80) ? 1 : 0}"; then
+              echo "✅ Rust coverage meets threshold (${COVERAGE_PERCENT}%)"
+            else
+              echo "❌ Rust coverage is below 80% threshold (${COVERAGE_PERCENT}%)"
+              exit 1
+            fi
+          else
+            echo "⚠️ Rust coverage file not found, skipping threshold check"
+          fi
+
+      - name: Upload Rust coverage reports
+        uses: codecov/codecov-action@v4
+        if: always()
+        with:
+          files: ./coverage-rust/cobertura.xml
+          fail_ci_if_error: false

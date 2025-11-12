@@ -207,6 +207,50 @@ export async function getApiInfo(apiId: string): Promise<ApiInfo | null> {
 }
 
 /**
+ * API IDからIPホワイトリストを取得
+ * @param apiId API ID
+ * @returns IPホワイトリスト（配列）、存在しない場合はnull
+ */
+export async function getIpWhitelist(apiId: string): Promise<string[] | null> {
+  const db = await getDatabase();
+
+  return new Promise((resolve, reject) => {
+    // api_security_settingsテーブルからIPホワイトリストを取得
+    db.get(
+      'SELECT ip_whitelist FROM api_security_settings WHERE api_id = ?',
+      [apiId],
+      (
+        err,
+        row:
+          | {
+              ip_whitelist?: string | null;
+            }
+          | undefined
+      ) => {
+        db.close();
+        if (err) {
+          reject(err);
+        } else if (row && row.ip_whitelist) {
+          try {
+            // JSON配列形式で保存されているため、パース
+            const whitelist = JSON.parse(row.ip_whitelist) as string[];
+            resolve(Array.isArray(whitelist) ? whitelist : null);
+          } catch (parseErr) {
+            // JSONパースエラーの場合はnullを返す
+            if (process.env.NODE_ENV === 'development') {
+              console.warn('[IP_WHITELIST] JSONパースエラー:', parseErr);
+            }
+            resolve(null);
+          }
+        } else {
+          resolve(null);
+        }
+      }
+    );
+  });
+}
+
+/**
  * リクエストログ保存インターフェース
  */
 export interface SaveRequestLogParams {
