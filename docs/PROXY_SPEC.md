@@ -93,10 +93,10 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 | モード          | 説明                                                      |
 |-----------------|---------------------------------------------------------|
 | `local-http`    | HTTPのみ。ローカルネットワーク限定（ファイアウォール必須） |
-| `dev-selfsigned`| 自己署名証明書で HTTPS 提供。一般ユーザーがドメイン不要で外部公開する際の推奨モード |
-| `https-acme`    | ACME (Let’s Encrypt など) で証明書を取得し HTTPS 提供（カスタムドメイン所有者向け） |
+| `dev-selfsigned`| 自己署名証明書で HTTPS 提供。LAN / 開発用途専用。Wizard はルート証明書の生成・配布・削除手順を提示する |
+| `https-acme`    | ACME (Let’s Encrypt など) で証明書を取得し HTTPS 提供（インターネット公開の既定モード） |
 
-CLI のデフォルトは `local-http`（ローカル検証向け）とし、インターネット公開を行う場合の推奨モードは `dev-selfsigned` とする。これによりドメインを持たない利用者でも自己署名HTTPSで安全に外部公開できる。ACMEモードはカスタムドメインを所有しているユーザーが必要に応じて有効化する。`--port` で指定した値は HTTP 用ポートとして扱い、HTTPS は `port + 1` をデフォルトとする（例: 8080/8081）。
+CLI のデフォルトは `local-http`（ローカル検証向け）とし、インターネット公開を行う場合の既定モードは `https-acme` とする。`dev-selfsigned` を選ぶ場合は、Wizard/CLI が生成したルート証明書をクライアント OS／ブラウザにインポートし、ローテーション期限・撤去手順も `docs/SECURITY_FIREWALL_GUIDE.md` に従う必要がある。`--port` で指定した値は HTTP 用ポートとして扱い、HTTPS は `port + 1` をデフォルトとする（例: 8080/8081）。
 
 * 設定は `ProxyConfig` に集約 (`core` 側で管理)
 * ACME 証明書は `security.db` にパスと更新日時を保存
@@ -118,7 +118,7 @@ CLI のデフォルトは `local-http`（ローカル検証向け）とし、イ
 
 ## 9. セキュリティポリシー JSON の前提
 
-Proxy / UI / CLI は `SecurityPolicy.raw_json` に以下のキーが存在する前提で動作する（省略時は無効扱い）:
+Proxy / UI / CLI は `SecurityPolicy.policy_json` に以下のキーが存在する前提で動作する（省略時は無効扱い）:
 
 ```jsonc
 {

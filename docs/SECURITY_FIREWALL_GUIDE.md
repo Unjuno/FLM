@@ -68,7 +68,7 @@ sudo ufw delete <RULE_NUMBER>
 ### 4.2 firewalld (CentOS/RHEL 等)
 ```bash
 for cidr in 203.0.113.0/24 2001:db8::/48; do
-  family=$([[$cidr == *:* ]] && echo ipv6 || echo ipv4)
+  family=$( [[ $cidr == *:* ]] && echo ipv6 || echo ipv4 )
   for port in 8080 8081; do
     sudo firewall-cmd --permanent \
       --add-rich-rule="rule family='${family}' source address='${cidr}' port protocol='tcp' port='${port}' accept"

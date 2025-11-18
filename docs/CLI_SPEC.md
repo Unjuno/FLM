@@ -16,6 +16,10 @@ flm <command> [subcommand] [options]
 - 出力: デフォルト JSON（`--format text` で人間向け表示）
 - `--db-path-config`, `--db-path-security` で DB パス上書き可能（省略時は既定）
 - ログ: `stderr` に INFO/ERROR をJSON Linesで出力、`stdout` は純粋な結果
+- JSON 出力/IPCポリシー:
+  - すべての JSON 出力は `{ "version": "1.0", "data": { ... } }` 形式で返し、`version` の major が変化した場合のみ breaking change とみなす。
+  - CLI が UI/Proxy へ IPC で結果を渡す際は `serde` の `deny_unknown_fields` を避け、未知フィールドを無視できるよう `#[serde(default)]` を付与。これにより Core でフィールド追加しても下位互換を維持できる。
+  - DTO スキーマは `docs/CORE_API.md` のデータモデルと 1:1 で対応させ、変更時は両ドキュメントを同じ変更セットで更新する。
 
 ## 3. コマンド一覧
 
@@ -56,7 +60,15 @@ Rust製セキュアプロキシを起動し、Forward先を検出済みエンジ
 
 成功時出力:
 ```json
-{"status":"running","mode":"local-http","endpoint":"http://0.0.0.0:8080","pid":12345}
+{
+  "version": "1.0",
+  "data": {
+    "status": "running",
+    "mode": "local-http",
+    "endpoint": "http://0.0.0.0:8080",
+    "pid": 12345
+  }
+}
 ```
 
 ### 3.4 `flm proxy stop`
@@ -110,7 +122,16 @@ flm security policy show
 flm security policy set --json ./policy.json
 ```
 
-### 3.9 `flm chat`
+### 3.9 `flm security backup`
+`security.db` の暗号化済みバックアップと復元を扱う。`security.db` を直接コピーせず、暗号化キーと一貫性を保つためこのコマンドを必須とする。
+
+サブコマンド:
+- `flm security backup create --output <dir>`: 暗号化済み `security.db.bak.<timestamp>` を指定フォルダに出力（デフォルトは OS 設定ディレクトリ配下の `.../flm/backups/`）。3世代を超える場合は最古を削除。
+- `flm security backup restore --file <path>`: アプリ停止を確認したうえで `.bak` を本番 `security.db` に復元し、マイグレーションを再実行。成功後は CLI が読み取り専用モード解除を案内。
+
+すべての操作はジャーナルログに `request_id` を残し、ファイルパスは標準エラーに出力してユーザーが暗号化済みバックアップを管理できるようにする。
+
+### 3.10 `flm chat`
 `POST /v1/chat/completions` を通じて CLI から応答を確認（任意）。
 
 要件:
@@ -122,6 +143,32 @@ flm security policy set --json ./policy.json
 flm chat --model flm://ollama/llama3:8b --prompt "Hello"
 flm chat --model flm://ollama/llama3:8b --prompt "Hello" --stream
 ```
+
+### 3.11 `flm model-profiles` （Phase3予定）
+モデルごとの詳細設定（`docs/UI_EXTENSIONS.md` セクション1）を CLI から管理する。
+
+- `flm model-profiles list [--engine <id>] [--model <id>]`
+- `flm model-profiles save --engine <id> --model <id> --label <name> --params ./profile.json`
+- `flm model-profiles delete --id <profile_id>`
+
+`profile.json` は `{"temperature":0.7,"max_tokens":512,...}` の形式で保存し、`config.db` の `model_profiles` テーブルに書き込む。CLI は `version` フィールドを自動付与し、UI/Proxy から呼び出せるよう Core API へ連携する。
+
+### 3.12 `flm api prompts` （Phase3予定）
+エンドポイント別プロンプトテンプレートを管理するコマンド。UI Extensions の API-specific prompt 管理と同一仕様。
+
+- `flm api prompts list`
+- `flm api prompts show --api-id <id>`
+- `flm api prompts set --api-id <id> --file ./prompt.txt`
+
+テンプレは `config.db` の `api_prompts` テーブルに保存し、`EngineService::chat` 呼び出し前に適用される。CLI は `version` と `updated_at` を保存し、後方互換のため JSON schema を `docs/CORE_API.md` と同期させる。
+
+### 3.13 `flm migrate legacy`
+アーカイブ済みプロトタイプ（`archive/prototype/`）からデータを新スキーマへ移行するユーティリティ。`docs/PLAN.md` / `docs/DB_SCHEMA.md` のデータ移行戦略と同じ手順を実行する。
+
+- `flm migrate legacy --source <path> --tmp <dir>`: 旧 SQLite / JSON をパースし、`config.db` / `security.db` へ取り込むための `.sql` + `.json` を `<tmp>` に生成。デフォルトは `./tmp/flm-migrate-<timestamp>`。
+- `flm migrate legacy --source <path> --apply`: 変換に加えて自動バックアップ（`flm security backup create` と同じロケーション）を取得し、検証後に本番 DB を置き換える。整合性チェックに失敗した場合は自動ロールバックして終了コード 1 を返す。
+
+すべての実行は `logs/migrations/<timestamp>.log` に記録し、`--dry-run` オプションで差分のみ出力する。適用時にはユーザーに「アプリが停止しているか」を確認し、失敗時の復旧コマンドを案内する。
 
 ## 4. エラー仕様
 - 共通形式:

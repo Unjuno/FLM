@@ -11,7 +11,7 @@ Phase 1/2 でコア機能と最小UIを完成させた後に追加する機能�
 ### 機能案
 - `Advanced` セクションで `temperature`, `max_tokens`, `stop`, `top_p`, `repeat_penalty` などを保存・再利用
 - エンジン固有設定（例: Ollama の `mixture`、vLLM の `tensor_parallel_size`）を動的フォームで表示
-- 設定を `profile` として保存 (`config.db` の `model_profiles` テーブルを追加)
+- 設定を `profile` として保存（実装に着手する前に `docs/DB_SCHEMA.md` / `docs/CLI_SPEC.md` に `model_profiles` テーブルと関連コマンドを正式に追記する）
 
 ### 実装メモ
 - ModelInfo に `default_parameters` を拡張
@@ -25,10 +25,10 @@ Phase 1/2 でコア機能と最小UIを完成させた後に追加する機能�
 ### 機能案
 - API一覧に「Prompt Template」列を追加し、各APIごとにテンプレを切り替え/編集
 - テンプレ編集UIはシンプルなテキストエリア＋プレビューで即時保存可能（バージョン管理はPhase3以降）
-- CLI: `flm api prompts set --api-id ...` といったコマンドで API 単位のテンプレ編集をサポート
+- CLI: `flm api prompts set --api-id ...` といったコマンドで API 単位のテンプレ編集をサポート（導入時は CLI / DB 両方の仕様書を更新する）
 
 ### 実装メモ
-- `config.db` に `api_prompts` テーブルを追加（`api_id`, `template_text`, `updated_at`）
+- `config.db` に `api_prompts` テーブルを追加（`api_id`, `template_text`, `updated_at`）※ 新テーブル追加時は `docs/DB_SCHEMA.md` / マイグレーション手順を先に整備する
 - `EngineService::chat` 呼び出し前に API 指定のテンプレを `ChatRequest` に挿入
 - UI では APIカードごとに「Prompt」編集ボタンを配置し、モーダルで簡単に編集
 

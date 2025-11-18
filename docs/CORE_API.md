@@ -211,7 +211,7 @@ pub struct ProxyHandle {
 #[derive(Clone, Debug)]
 pub struct SecurityPolicy {
     pub id: String,
-    pub raw_json: String,
+    pub policy_json: String,
     pub updated_at: String,
 }
 
@@ -399,6 +399,11 @@ impl ConfigService {
 * CLI: EngineService / ProxyService を直接使用
 * Proxy: Axum handler → EngineService / SecurityService を呼び出し OpenAI互換レスポンスを構築
 * UI: Tauri コマンド → EngineService / ProxyService / SecurityService / ConfigService を呼ぶ
+
+### DTO/IPC 互換性ポリシー
+- CLI/UI/Proxy が Core へ渡す DTO は `serde` ベースの JSON でシリアライズされ、`version` フィールド（例: `{"version":"1.0","data":{...}}`）を付与する。Reverse 互換は `major` が一致する限り保証し、`minor` アップデートではフィールド追加のみ行う。
+- `ProxyHandle`, `SecurityPolicy`, `ApiKeyMetadata` など外部に露出する構造体は `#[non_exhaustive]` で定義し、未知フィールドを無視できるよう CLI/UI 側で `serde(default)` を設定する。
+- IPC 追加時は `docs/CLI_SPEC.md` / `docs/UI_MINIMAL.md` に JSON Schema（必須フィールド/型）を追記し、`CORE_API.md` の該当データモデルを参照させる。これにより CLI がサブコマンド増設しても UI/Proxy で schema drift が起きない。
 
 ## 7. 未確定事項
 

@@ -29,13 +29,13 @@
 - Dashboard から起動できるステッパーUIで「外部公開に必要な最小セット」を案内する。
 - ステップ構成:
   1. **Pre-check**: `ProxyService::status`, `SecurityService::list_api_keys`, `SecurityService::get_policy` を呼び、APIキー・IPホワイトリスト・Proxyモードの不足を可視化。
-  2. **Proxy Mode & Port**: `dev-selfsigned` / `https-acme` を選択し、`ProxyService::start` に引き渡す設定（ポート、ACMEメール/ドメイン）を入力。
+  2. **Proxy Mode & Port**: `https-acme` を既定とし（CLI/Wizard が DNS-01 / HTTP-01 設定をガイド）、LAN / 開発用途のみ `dev-selfsigned` を選択可能にする。選択内容は `ProxyService::start` に引き渡し、ACME 再試行・手動証明書アップロード・自己署名ルート配布手順を案内する。
   3. **Security Policy**: IPホワイトリスト/CORS/RateLimit フォームを `SecurityService::set_policy` で確定。入力時に RFC1918/リンクローカルのみの場合は警告を出し、「手動で公開IPを追加してください」と案内する（`allowed_ips` のバリデーションは UI 側で実施）。
   4. **Firewall Automation**: クライアントOSを自動検出し（Tauri側 Native API）、`ProxyService::status` で得た全待受ポート（例: 8080/8081）と `SecurityPolicy.allowed_ips`（IPv4/IPv6 CIDR 可）に応じたコマンドスクリプト（PowerShell, pfctl, ufw/firewalld 等）を生成。  
-     - HTTP/HTTPS それぞれのポートをまとめて開放できるよう、Preview には **複数ルール**（Windowsなら `foreach` ループ、Unixなら複数行）を含める。許可IPが複数ある場合はリスト展開して全組み合わせを生成。  
-     - 「管理者権限で適用」ボタンを押すと UAC/sudo プロンプトを出し、`ipc.system_firewall_apply(script)` で昇格したシェルを実行。結果（stdout/stderr, exit code）をログカードに表示。  
-     - 併せて「スクリプトをコピー / 保存」アクションを提供し、`docs/SECURITY_FIREWALL_GUIDE.md` に沿って手動実行する選択肢も残す（IPv6 ルールや HTTP-only の場合も同じワークフロー）。
-- Wizard 完了後に `SecurityService::get_policy` / `ProxyService::status` / `system.firewall_state` を再取得し、ダッシュボードへサマリカードを表示する。
+     - デフォルトは「プレビュー + コピー/保存」で、常に `docs/SECURITY_FIREWALL_GUIDE.md` の手動手順を提示。HTTP/HTTPS 両ポートと複数 IP を網羅したスクリプトを出力する。  
+     - 「管理者権限で適用」を選択した場合のみ UAC/sudo プロンプトを表示し、`ipc.system_firewall_apply(script, shell)` で昇格実行する。適用結果（stdout/stderr/exit_code）に加えてロールバック用スクリプトを自動保存し、結果ログを `AppData/flm/logs/security/firewall-*.log`（OS 標準アプリデータ配下、権限 700/600）へ追記する。  
+     - 権限拒否・ヘッドレス環境では手動実行のみを案内し、Wizard 上で「適用済み」を明示的にチェックできるようにする（IPv6 / HTTP-only の場合も同じ）。
+- Wizard 完了後に `SecurityService::get_policy` / `ProxyService::status` を再取得し、ダッシュボードへサマリカードを表示する。
 
 ## 3. ワイヤーフレーム（テキスト）
 ```
@@ -73,12 +73,12 @@ Setup Wizard
 | Config閲覧/更新 | `ipc.config_list/get/set` → `ConfigService` | 表示は key/value テーブル |
 | Chatテスト | UI側で HTTP `/v1/chat/completions` にアクセス | Proxy status で取得した URL/Port を使用。SSE を UI でストリーム表示 |
 | Wizard Pre-check | `ipc.proxy_status()`, `ipc.policy_get()`, `ipc.api_keys_list()` | 不足項目を算出し、次ステップのフォーム初期値に反映 |
-| Wizard Firewall Preview | `ipc.system_firewall_preview(os, port, allowed_ips)` | Core外（Tauri側）に実装するネイティブモジュール。OS別テンプレートから実行予定スクリプト文字列を返す |
-| Wizard Firewall Apply | `ipc.system_firewall_apply(script)` | 管理者権限でスクリプトを実行し、実行ログ（stdout/stderr/exit code）を返す。失敗時は SECURITY_FIREWALL_GUIDE へのリンクを表示 |
+| Wizard Firewall Preview | `ipc.system_firewall_preview(os, ports, allowed_ips)` | Core外（Tauri側）に実装するネイティブモジュール。OS別テンプレートから実行予定スクリプト文字列を返す |
+| Wizard Firewall Apply | `ipc.system_firewall_apply(script, shell)` | 管理者権限でスクリプトを実行し、実行ログ（stdout/stderr/exit code）を返す。失敗時は SECURITY_FIREWALL_GUIDE へのリンクを表示 |
 
 ### Adapter専用 IPC (Firewall)
 - `system_firewall_preview/apply` は Core API には含まれない。Tauri バックエンド（Adapter層）が OS 判定・昇格を実装し、Domain とは疎結合に保つ。
-- Core との接点は Proxy/Policy 情報の取得のみで、Firewall コマンドは `docs/SECURITY_FIREWALL_GUIDE.md` のテンプレートを参照して生成・実行する。
+- Core との接点は Proxy/Policy 情報の取得のみで、Firewall コマンドは `docs/SECURITY_FIREWALL_GUIDE.md` のテンプレートを参照して生成・実行する。生成/適用結果の永続ログはファイルベース（`logs/security/firewall-*.log`）に統一し、`security.db` の `audit_logs` には書き込まない。
 
 ## 5. UX / エラーハンドリングポリシー
 - ロード状態を視覚的に示す（Engine table skeleton、ボタン disabled など）。
@@ -90,7 +90,7 @@ Setup Wizard
 
 ## 6. Firewall Automation IPC
 - `system_firewall_preview`  
-  - 入力: `os`（"windows" | "macos" | "linux"）、`port`、`allowed_ips`（CIDR/IP配列）  
+  - 入力: `os`（"windows" | "macos" | "linux"）、`ports`（待受ポート配列）、`allowed_ips`（CIDR/IP配列）  
   - 出力: `{ script: String, display_name: String, shell: "powershell" | "bash" }`。`script` は実行可能な PowerShell/pfctl/ufw 等のテンプレ。`display_name` は Wizard UI で表示するタイトル。
   - 例:
     ```json

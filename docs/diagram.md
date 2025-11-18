@@ -27,7 +27,7 @@ flowchart TD
         EngineAdapters["Engine Adapters\n(Ollama/vLLM/etc.)"]
     end
 
-    subgraph External["External Systems"]
+    subgraph        External["External Systems"]
         Engines[(LLM Engines)]
         ConfigDB[("config.db")]
         SecurityDB[("security.db")]
