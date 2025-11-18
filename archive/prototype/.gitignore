@@ -1,0 +1,109 @@
+# Dependencies
+node_modules/
+.pnp
+.pnp.js
+
+# Testing
+coverage/
+*.lcov
+.nyc_output
+
+# Production
+dist/
+build/
+
+# Rust build artifacts
+target/
+**/target/
+*.pdb
+
+# Debug files
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+lerna-debug.log*
+
+# Editor directories and files
+.vscode/*
+!.vscode/extensions.json
+.idea
+.DS_Store
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+
+# Environment variables
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+
+# OS files
+Thumbs.db
+.DS_Store
+
+# Tauri generated files (already covered in src-tauri/.gitignore)
+src-tauri/gen/schemas
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+test-results.txt
+*.check_output*.txt
+src-tauri/check_output*.txt
+
+# Backup files
+*.bak
+*.backup
+*~
+
+# Temporary scripts
+fix_*.cjs
+fix_*.js
+tmp_*.py
+
+# Unknown files
+ersjunnyDesktopFLLM
+ersjunnyDesktopFLM
+
+# Temporary reports and scripts (root level only)
+MODEL_CLEANUP_REPORT.md
+REFACTORING_SUMMARY.md
+ENGINE_TROUBLESHOOTING.md
+CODE_REVIEW_FIXES.md
+CODE_REVIEW_FIXES_SUMMARY.md
+CODE_REVIEW_IMPROVEMENTS_2025.md
+CODE_REVIEW_REPORT.md
+CODE_REVIEW_REPORT_2025.md
+FIXES_SUMMARY.md
+FLM_CODE_REVIEW_REPORT_2025.md
+FLM_CODE_REVIEW_REPORT_2025_COMPREHENSIVE.md
+FLM_CODE_REVIEW_REPORT_2025_FINAL.md
+IMPROVEMENTS_IMPLEMENTATION_2025.md
+IMPROVEMENTS_SUMMARY_2025.md
+SECURITY_FIXES_IMPLEMENTATION.md
+
+# Temporary JSON files
+invalid-models-list.json
+model-availability-check-results.json
+
+# Temporary scripts
+scripts/*.js
+scripts/*.md
+!scripts/README.md
+
+# Temporary Python files
+main.py
+
+# Temporary batch files
+run.bat
+run.ps1
+
+# Test HTML files
+WEB/test-api.html
+

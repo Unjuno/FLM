@@ -1,89 +1,36 @@
-# docs/ - ユーザー向け・開発者向けドキュメント
+# Documentation Index
 
-## 📚 このディレクトリについて
+Updated: 2025-11-18
 
-このディレクトリには、ユーザー向けと開発者向けのドキュメントが含まれています。
+This folder hosts the canonical specifications for the rebuilt FLM project. Use this index to find the right source of truth before implementing or updating code. Legacy drafts are stored separately in `DOCS.zip`; do not reference them for new work unless you are intentionally auditing history.
 
-**📖 [ドキュメントインデックス](../DOCKS/DOCUMENTATION_INDEX.md)** - すべてのドキュメントファイルの一覧と分類（推奨）
+## How to Navigate
 
----
+| Document | Purpose | Primary Audience | Status |
+| --- | --- | --- | --- |
+| `PLAN.md` | Phase roadmap, architecture principles, deliverables | All contributors | Canonical |
+| `FEATURE_SPEC.md` | Minimal feature scope and acceptance criteria | Product / Eng leads | Canonical |
+| `CORE_API.md` | Domain models, traits, service APIs | Rust core implementers | Canonical |
+| `PROXY_SPEC.md` | HTTP proxy behavior, routing, middleware, TLS modes | Proxy engineers | Canonical |
+| `ENGINE_DETECT.md` | Engine discovery flow per provider | Engine adapter devs | Canonical |
+| `DB_SCHEMA.md` | SQLite schemas, migration policy | Persistence layer devs | Canonical |
+| `CLI_SPEC.md` | Command definitions, options, error contract | CLI authors/testers | Canonical |
+| `UI_MINIMAL.md` | Phase 2 UI screens, IPC flows, Setup Wizard | UI engineers | Canonical |
+| `UI_EXTENSIONS.md` | Post-MVP UI roadmap | Product / UI leads | Reference |
+| `SECURITY_FIREWALL_GUIDE.md` | Firewall automation templates for Setup Wizard | UI backend / Ops | Canonical |
+| `diagram.md` | Mermaid architecture diagram | Everyone | Canonical |
 
-## 📚 ドキュメント構成
+## Versioning Rules
 
-### 👥 ユーザー向けドキュメント
+1. Each canonical file now includes a status header with last-updated date—keep it current when you change content.
+2. If you need to keep superseded specs, move them into `archive/` or `DOCS.zip`; do not leave multiple competing versions in `docs/`.
+3. When altering behavior that spans multiple specs, update this index (and affected documents) in the same change set.
 
-- **[INSTALLATION_GUIDE.md](./INSTALLATION_GUIDE.md)** - インストールガイド（システム要件、インストール手順、アップデート、アンインストール）
-- **[USER_GUIDE.md](./USER_GUIDE.md)** - ユーザーガイド（使い方ガイド、ステップバイステップ）
-- **[FAQ.md](./FAQ.md)** - よくある質問（30の質問と回答）
-- **[TROUBLESHOOTING.md](./TROUBLESHOOTING.md)** - トラブルシューティングガイド（15の問題と解決方法）
+## Contact / Ownership
 
-### 👨‍💻 開発者向けドキュメント
+- Architecture & Core: `CORE_API.md`, `PLAN.md`, `PROXY_SPEC.md`
+- CLI & Tooling: `CLI_SPEC.md`, `DB_SCHEMA.md`
+- UI & Wizard: `UI_MINIMAL.md`, `UI_EXTENSIONS.md`, `SECURITY_FIREWALL_GUIDE.md`
 
-#### 開発環境・セットアップ
-- **[DEVELOPMENT_SETUP.md](./DEVELOPMENT_SETUP.md)** - 開発環境セットアップ手順
-- **[PROJECT_STRUCTURE.md](./PROJECT_STRUCTURE.md)** - プロジェクト構造の説明
-
-#### API・技術仕様
-- **[API_DOCUMENTATION.md](./API_DOCUMENTATION.md)** - APIドキュメント（Tauri IPCコマンドとOpenAI互換API）
-- **[AUTH_PROXY_SPEC.md](./AUTH_PROXY_SPEC.md)** - 認証プロキシ仕様
-- **[DATABASE_SCHEMA.md](./DATABASE_SCHEMA.md)** - データベーススキーマ説明
-
-#### 開発ガイド
-- **[DEVELOPER_GUIDE.md](./DEVELOPER_GUIDE.md)** - 開発者ガイド（アーキテクチャ説明、コントリビューションガイド）
-
-#### パフォーマンス・品質
-- **[PERFORMANCE_OPTIMIZATION.md](./PERFORMANCE_OPTIMIZATION.md)** - パフォーマンス最適化
-
-#### 将来の拡張
-- **[FUTURE_EXTENSIONS.md](./FUTURE_EXTENSIONS.md)** - 将来の拡張計画
-
-#### 開発計画
-- **[NEXT_STEPS.md](./NEXT_STEPS.md)** - 次のステップ
-- **[NEXT_ACTIONS_PRIORITY.md](./NEXT_ACTIONS_PRIORITY.md)** - 次のアクション優先度
-
----
-
-## 📁 サブディレクトリ
-
-### 📊 プロジェクト概要
-- **[overview/](./overview/)** - プロジェクト概要情報
-  - `APP_INFO.md` - アプリケーション情報
-  - `USAGE_STATUS.md` - 使用可能状況レポート
-
-### 📝 リリース関連
-- **[release/](./release/)** - リリース準備・完了ドキュメント
-  - リリース準備チェックリスト、完了レポートなど
-
-### 📈 実装・テストレポート
-- **[reports/](./reports/)** - 実装完了、テスト実行、評価レポート
-  - 実装完了レポート、テストレポート、セキュリティ監査レポートなど
-
-### 🧪 テストガイド
-- **[tests/guides/](./tests/guides/)** - テスト実行ガイド
-  - テストガイド、クイックテストガイド、LLMテストガイドなど
-- **[test-plans/](./test-plans/)** - テスト計画ドキュメント
-
-### 📋 手順書
-- **[procedures/](./procedures/)** - 公開手順・開発手順
-  - 開発手順、ウェブサイト公開手順、スチーム公開手順など
-
-### 📖 ガイド
-- **[guides/](./guides/)** - 各種機能の使用方法ガイド
-  - レート制限機能の使用方法、Redisレート制限のセットアップなど
-
----
-
-## 🔗 関連ドキュメント
-
-### 設計・アーキテクチャドキュメント
-設計・アーキテクチャに関するドキュメントは `../DOCKS/` ディレクトリにあります。
-
-- **[ドキュメントインデックス](../DOCKS/DOCUMENTATION_INDEX.md)** - すべてのドキュメントの一覧
-- **[アーキテクチャ設計書](../DOCKS/ARCHITECTURE.md)** - システムアーキテクチャ
-- **[機能仕様書](../DOCKS/SPECIFICATION.md)** - 完全な仕様書
-- **[タスクチェックリスト](../DOCKS/AGENT_CHECKLIST.md)** - エージェント別タスクチェックリスト
-
----
-
-**最終更新**: 2024年
+Open an issue before large structural edits so reviewers know which documents to re-read.
 

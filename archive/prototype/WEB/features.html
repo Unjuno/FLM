@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FLMの主要機能を紹介。API作成、API利用、API管理、モデル管理、セキュリティ機能について詳しく説明します。">
+  <meta name="keywords" content="FLM,機能,API,モデル管理,セキュリティ,Ollama">
+  <title>機能紹介 - FLM</title>
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- ヘッダー -->
+  <header>
+    <nav class="container">
+      <div class="logo">
+        <img src="images/logo.png" alt="" class="logo-image" width="32" height="32" aria-hidden="true">
+        <a href="index.html" class="logo-link-inherit">FLM</a>
+      </div>
+      <button class="mobile-menu-toggle" aria-label="メニューを開く" aria-expanded="false">☰</button>
+      <ul class="nav-links">
+        <li><a href="index.html">ホーム</a></li>
+        <li><a href="features.html" class="active">機能</a></li>
+        <li><a href="guide.html">使い方</a></li>
+        <li><a href="download.html">ダウンロード</a></li>
+        <li><a href="test-api.html">APIテスト</a></li>
+        <li><a href="faq.html">FAQ</a></li>
+        <li><a href="contact.html">お問い合わせ</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main>
+    <section class="section">
+      <div class="container">
+        <h1 class="section-title">FLMの機能</h1>
+        <p class="section-subtitle">
+          FLMは、誰でも簡単にローカルLLMのAPIを作成・管理できるツールです。以下の5つの主要機能で構成されています。<br>
+          <strong>WEBサイトに設定できる使い捨てのAPIも簡単に作成でき、このWEBサイト自体がHTML/CSS/JSだけで動作する静的サイトです。</strong>
+        </p>
+
+        <!-- 機能1: API作成機能 -->
+        <div class="feature-section">
+          <div class="feature-content">
+            <div class="feature-text">
+              <div class="feature-icon" aria-hidden="true">✨</div>
+              <h3>API作成機能</h3>
+              <p>
+                FLMの核心機能です。複雑な設定やプログラミング知識がなくても、
+                ワンクリックでローカルLLMのAPIを作成できます。
+              </p>
+              <ul class="feature-list">
+                <li>モデル選択からAPI作成まで、すべてGUIで完結</li>
+                <li>ポート番号や認証設定を自動で最適化</li>
+                <li>Ollamaとの自動連携で、セットアップ手順を簡略化</li>
+                <li>作成したAPIはすぐに利用可能</li>
+              </ul>
+              <div class="use-case">
+                <h4>💡 こんな場面で使えます</h4>
+                <p>
+                  チャットボットや自動応答システムを作りたい時、コード生成支援ツールを作りたい時など、
+                  AIを使ったアプリケーションを開発する際に便利です。<br>
+                  <strong>特に、HTML/CSS/JSだけで動作する静的WEBサイトに設定できる使い捨てのAPIを作成したい場合に最適です。</strong>
+                  一時的なプロジェクト、デモサイト、プロトタイプ開発など、短期間だけ必要なAPIを素早く作成・削除できます。
+                </p>
+              </div>
+            </div>
+            <div class="feature-icon" aria-hidden="true">
+              🎯
+            </div>
+          </div>
+        </div>
+
+        <!-- 機能2: API利用機能 -->
+        <div class="feature-section">
+          <div class="feature-content reverse">
+            <div class="feature-text">
+              <div class="feature-icon" aria-hidden="true">💬</div>
+              <h3>API利用機能</h3>
+              <p>
+                作成したAPIを簡単にテスト・利用できます。ブラウザベースのチャットインターフェースで、
+                すぐにAPIの動作を確認できます。
+              </p>
+              <ul class="feature-list">
+                <li>組み込みのチャットインターフェースで即座にテスト可能</li>
+                <li>サンプルコード（curl、Python、JavaScript）を自動生成</li>
+                <li>APIの詳細情報を一目で確認</li>
+                <li>エンドポイントURLとAPIキーを簡単にコピー</li>
+              </ul>
+              <div class="use-case">
+                <h4>💡 こんな場面で使えます</h4>
+                <p>
+                  作成したAPIが正しく動作するか確認したい時、他のアプリケーションでAPIを使う際の
+                  サンプルコードが必要な時などに便利です。
+                </p>
+              </div>
+            </div>
+            <div class="feature-icon" aria-hidden="true">
+              🔌
+            </div>
+          </div>
+        </div>
+
+        <!-- 機能3: API管理機能 -->
+        <div class="feature-section">
+          <div class="feature-content">
+            <div class="feature-text">
+              <div class="feature-icon" aria-hidden="true">⚙️</div>
+              <h3>API管理機能</h3>
+              <p>
+                作成したAPIを一元管理できます。起動/停止、設定変更、削除など、
+                すべての操作を直感的なUIで行えます。
+              </p>
+              <ul class="feature-list">
+                <li>複数のAPIを一覧表示で管理</li>
+                <li>ワンクリックでAPIの起動・停止</li>
+                <li>ポート番号や認証設定の変更</li>
+                <li>不要になったAPIの簡単な削除</li>
+              </ul>
+              <div class="use-case">
+                <h4>💡 こんな場面で使えます</h4>
+                <p>
+                  複数のAPIを使い分けたい時、設定を変更したい時、不要なAPIを整理したい時などに便利です。
+                </p>
+              </div>
+            </div>
+            <div class="feature-icon" aria-hidden="true">
+              📋
+            </div>
+          </div>
+        </div>
+
+        <!-- 機能4: モデル管理機能 -->
+        <div class="feature-section">
+          <div class="feature-content reverse">
+            <div class="feature-text">
+              <div class="feature-icon" aria-hidden="true">🤖</div>
+              <h3>モデル管理機能</h3>
+              <p>
+                Ollamaモデルの検索、ダウンロード、管理を簡単に行えます。
+                用途に応じて最適なモデルを選択できます。
+              </p>
+              <ul class="feature-list">
+                <li>人気モデルの検索とカテゴリー別フィルタリング</li>
+                <li>ワンクリックでモデルのダウンロード</li>
+                <li>ダウンロード進捗のリアルタイム表示</li>
+                <li>インストール済みモデルの一覧表示と削除</li>
+              </ul>
+              <div class="use-case">
+                <h4>💡 こんな場面で使えます</h4>
+                <p>
+                  新しいAIモデルを試してみたい時、用途に合わせて最適なモデルを選びたい時、
+                  ストレージを節約するために不要なモデルを削除したい時などに便利です。
+                </p>
+              </div>
+            </div>
+            <div class="feature-icon" aria-hidden="true">
+              📦
+            </div>
+          </div>
+        </div>
+
+        <!-- 機能5: セキュリティ機能 -->
+        <div class="feature-section">
+          <div class="feature-content">
+            <div class="feature-text">
+              <div class="feature-icon" aria-hidden="true">🔒</div>
+              <h3>セキュリティ機能</h3>
+              <p>
+                APIキーの生成、管理、再生成を安全に行えます。
+                すべてのデータはローカルで処理され、プライバシーが完全に保護されます。
+              </p>
+              <ul class="feature-list">
+                <li>自動生成される強力なAPIキー</li>
+                <li>APIキーの一覧表示と管理</li>
+                <li>ワンクリックでAPIキーの再生成</li>
+                <li>すべてのデータ処理がローカルで完結</li>
+              </ul>
+              <div class="use-case">
+                <h4>💡 こんな場面で使えます</h4>
+                <p>
+                  APIキーが漏洩した可能性がある時、セキュリティを強化したい時、
+                  複数のAPIキーを管理したい時などに便利です。
+                </p>
+              </div>
+            </div>
+            <div class="feature-icon" aria-hidden="true">
+              🛡️
+            </div>
+          </div>
+        </div>
+
+        <!-- 技術的な特徴セクション -->
+        <div class="feature-section">
+          <div class="container">
+            <h2 class="section-title section-title-large text-primary text-center mb-2rem">
+              🛠️ 技術的な特徴
+            </h2>
+            
+            <div class="grid grid-3 grid-spaced">
+              <div class="card">
+                <h3 class="card-title">🔐 セキュリティ</h3>
+                <ul class="feature-list">
+                  <li>APIキーはAES-256-GCMで暗号化保存</li>
+                  <li>すべてのデータ処理がローカルで完結</li>
+                  <li>インターネットへのデータ送信なし</li>
+                  <li>プライバシーを完全に保護</li>
+                </ul>
+              </div>
+              
+              <div class="card">
+                <h3 class="card-title">⚡ パフォーマンス</h3>
+                <ul class="feature-list">
+                  <li>GPU（NVIDIA GPU）対応で高速化</li>
+                  <li>複数のAPIを同時実行可能</li>
+                  <li>メモリ効率的な設計</li>
+                  <li>リソース使用量の最適化</li>
+                </ul>
+              </div>
+              
+              <div class="card">
+                <h3 class="card-title">🔌 互換性</h3>
+                <ul class="feature-list">
+                  <li>OpenAI互換APIエンドポイント</li>
+                  <li>標準的なHTTP/JSONプロトコル</li>
+                  <li>curl、Python、JavaScript対応</li>
+                  <li>既存のアプリケーションと統合可能</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- 使い捨てAPIと静的サイト対応セクション -->
+        <div class="feature-section section-bg-light">
+          <div class="container">
+            <h2 class="section-title section-title-large text-primary text-center mb-2rem">
+              🌐 WEBサイト用使い捨てAPI & 静的サイト対応
+            </h2>
+            
+            <div class="grid grid-2 grid-spaced">
+              <div class="card">
+                <h3 class="card-title">📄 使い捨てAPIとは</h3>
+                <p class="card-description">
+                  使い捨てAPIは、一時的なプロジェクトやデモサイト、プロトタイプ開発などで
+                  短期間だけ必要なAPIを素早く作成・削除できる機能です。
+                </p>
+                <ul class="feature-list">
+                  <li>数分でAPIを作成・削除可能</li>
+                  <li>設定が簡単で、すぐに利用開始</li>
+                  <li>不要になったら簡単に削除</li>
+                  <li>ローカルで動作するため安全</li>
+                </ul>
+              </div>
+              
+              <div class="card">
+                <h3 class="card-title">🌍 静的サイト対応</h3>
+                <p class="card-description">
+                  このWEBサイト自体がHTML/CSS/JSだけで動作する静的サイトです。
+                  サーバーサイドの処理が不要で、どこでもホスティング可能です。
+                </p>
+                <ul class="feature-list">
+                  <li>HTML/CSS/JSのみで動作</li>
+                  <li>GitHub Pages、Netlify、Vercel対応</li>
+                  <li>サーバーサイド処理不要</li>
+                  <li>高速で安全な配信</li>
+                </ul>
+              </div>
+            </div>
+            
+            <div class="card mt-2rem">
+              <h3 class="card-title text-center">💡 使い捨てAPIの活用例</h3>
+              <div class="grid grid-3 grid-spaced mt-1rem">
+                <div>
+                  <h4>🎨 デモサイト</h4>
+                  <p class="text-light">
+                    クライアントへのデモ用に一時的なAPIを作成。
+                    デモ終了後はすぐに削除できます。
+                  </p>
+                </div>
+                <div>
+                  <h4>🧪 プロトタイプ開発</h4>
+                  <p class="text-light">
+                    アイデアの検証用に素早くAPIを作成。
+                    検証後は不要になったら削除。
+                  </p>
+                </div>
+                <div>
+                  <h4>📚 学習・教育</h4>
+                  <p class="text-light">
+                    学習用の一時的なAPIを作成。
+                    学習終了後は簡単に削除できます。
+                  </p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- システム要件セクション -->
+        <div class="feature-section">
+          <div class="container">
+            <h2 class="section-title section-title-large text-primary text-center mb-2rem">
+              💻 システム要件
+            </h2>
+            
+            <div class="grid grid-2 grid-spaced">
+              <div class="card">
+                <h3 class="card-title">最小要件</h3>
+                <ul class="feature-list">
+                  <li>OS: Windows 10/11、macOS 11.0+、Ubuntu 20.04+</li>
+                  <li>RAM: 8GB</li>
+                  <li>ストレージ: 10GB（モデル含む）</li>
+                  <li>CPU: 64-bit プロセッサ</li>
+                </ul>
+              </div>
+              
+              <div class="card">
+                <h3 class="card-title">推奨要件</h3>
+                <ul class="feature-list">
+                  <li>RAM: 16GB以上</li>
+                  <li>ストレージ: 20GB以上</li>
+                  <li>GPU: NVIDIA GPU（オプション、高速化のため）</li>
+                  <li>インターネット接続: 初回セットアップ時のみ必要</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- CTAセクション -->
+        <section class="section gradient-primary-spaced">
+          <div class="container">
+            <h2 class="text-xl mb-1rem">今すぐFLMを始めましょう</h2>
+            <p class="text-lg mb-2rem opacity-95">
+              すべての機能を無料で利用できます
+            </p>
+            <a href="download.html" class="btn btn-primary btn-large btn-white">
+              今すぐダウンロード
+            </a>
+          </div>
+        </section>
+      </div>
+    </section>
+  </main>
+
+  <!-- フッター -->
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>プロジェクト</h3>
+          <ul>
+            <li><a href="features.html">機能</a></li>
+            <li><a href="guide.html">使い方</a></li>
+            <li><a href="download.html">ダウンロード</a></li>
+          </ul>
+        </div>
+        
+        <div class="footer-section">
+          <h3>サポート</h3>
+          <ul>
+            <li><a href="faq.html">FAQ</a></li>
+            <li><a href="contact.html">お問い合わせ</a></li>
+            <li><a href="guide.html">使い方ガイド</a></li>
+          </ul>
+        </div>
+        
+        <div class="footer-section">
+          <h3>リンク</h3>
+          <ul>
+            <li><a href="#">GitHub（準備中）</a></li>
+            <li><a href="#">Steam（配布予定）</a></li>
+            <li><a href="#">プライバシーポリシー（準備中）</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="footer-bottom">
+        <p>&copy; 2024 FLM. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JavaScript -->
+  <script src="js/main.js"></script>
+  <script src="js/navigation.js"></script>
+</body>
+</html>
+

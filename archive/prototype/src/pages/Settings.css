@@ -1,0 +1,514 @@
+/* Settingsページのスタイル */
+/* 共通スタイルは src/styles/common.css を参照 */
+
+/* ページ固有のスタイル */
+.settings-page {
+  /* 共通スタイルの .page-background を使用 */
+  background: var(--color-bg-secondary, #f7fafc) !important;
+}
+
+[data-theme="dark"] .settings-page {
+  background: var(--color-bg-secondary, #2d3748) !important;
+}
+
+.settings-container {
+  /* 共通スタイルの .page-container を使用 */
+  max-width: var(--layout-max-width, 1200px);
+  background: var(--color-bg-primary, #ffffff);
+  border: 1px solid var(--color-border-light, #e2e8f0);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.05));
+}
+
+[data-theme="dark"] .settings-container {
+  background: var(--color-bg-primary, #1a202c);
+  border-color: var(--color-border-light, #4a5568);
+  box-shadow: var(--shadow-sm, 0 1px 2px 0 rgba(0, 0, 0, 0.3));
+}
+
+.settings-content-wrapper {
+  padding: var(--spacing-md);
+}
+
+.settings-header {
+  background: var(--color-bg-primary, #ffffff);
+  color: var(--color-text-primary, #1a202c);
+  padding: var(--spacing-md);
+  margin-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border-light, #e2e8f0);
+  text-align: left;
+  position: relative;
+}
+
+[data-theme="dark"] .settings-header {
+  background: var(--color-bg-primary, #1a202c);
+  color: var(--color-text-primary, #f7fafc);
+  border-bottom-color: var(--color-border-light, #4a5568);
+}
+
+.settings-header .back-button {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  background: var(--color-bg-primary, #ffffff);
+  border: 1px solid var(--color-border-light, #e2e8f0);
+  border-radius: var(--radius-md);
+  color: var(--color-text-secondary, #4a5568);
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  margin-bottom: var(--spacing-sm);
+  transition: all var(--transition-base, 200ms ease-in-out);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-xs);
+  position: relative;
+  z-index: 1;
+}
+
+.settings-header .back-button:hover {
+  background: var(--color-bg-tertiary, #edf2f7);
+  border-color: var(--color-border, #cbd5e0);
+  color: var(--color-text-primary, #1a202c);
+}
+
+[data-theme="dark"] .settings-header .back-button {
+  background: var(--color-bg-primary, #1a202c);
+  border-color: var(--color-border-light, #4a5568);
+  color: var(--color-text-secondary, #cbd5e0);
+}
+
+[data-theme="dark"] .settings-header .back-button:hover {
+  background: var(--color-bg-tertiary, #4a5568);
+  border-color: var(--color-border, #718096);
+  color: var(--color-text-primary, #f7fafc);
+}
+
+.settings-header h1 {
+  font-size: 1.125rem;
+  margin: 0 0 var(--spacing-xs) 0;
+  color: var(--color-text-primary, #1a202c);
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+[data-theme="dark"] .settings-header h1 {
+  color: var(--color-text-primary, #f7fafc);
+}
+
+.settings-subtitle {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary, #4a5568);
+  margin: 0;
+  font-weight: 400;
+  opacity: 0.9;
+}
+
+[data-theme="dark"] .settings-subtitle {
+  color: var(--color-text-secondary, #cbd5e0);
+}
+
+.settings-loading {
+  text-align: center;
+  padding: var(--spacing-xl);
+  color: var(--color-text-secondary);
+  font-size: 0.875rem;
+}
+
+.settings-content {
+  margin-bottom: var(--spacing-md);
+}
+
+.settings-section {
+  margin-bottom: var(--spacing-lg);
+  padding-bottom: var(--spacing-md);
+  border-bottom: 1px solid var(--color-border-light);
+  transition: all var(--transition-base);
+}
+
+.settings-section:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+  padding-bottom: 0;
+}
+
+.settings-section:hover {
+  border-bottom-color: var(--color-border);
+}
+
+.settings-section-title {
+  font-size: 0.875rem;
+  margin: 0 0 var(--spacing-sm) 0;
+  color: var(--color-primary, #667eea);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+}
+
+.settings-section-title::before {
+  content: '';
+  width: 3px;
+  height: 1rem;
+  background: var(--color-primary, #667eea);
+  border-radius: var(--radius-full, 9999px);
+}
+
+[data-theme="dark"] .settings-section-title {
+  color: var(--color-primary, #667eea);
+}
+
+.settings-group {
+  margin-bottom: var(--spacing-md);
+  padding: var(--spacing-sm);
+  background: var(--color-bg-primary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-group:hover {
+  border-color: var(--color-border);
+  box-shadow: var(--shadow);
+  background: var(--color-bg-primary);
+}
+
+[data-theme="dark"] .settings-group {
+  background: var(--color-bg-primary);
+  border-color: var(--color-border-light);
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme="dark"] .settings-group:hover {
+  background: var(--color-bg-primary);
+  border-color: var(--color-border);
+  box-shadow: var(--shadow);
+}
+
+.settings-group:last-child {
+  margin-bottom: 0;
+}
+
+.settings-group label {
+  display: block;
+  margin-bottom: var(--spacing-xs);
+  font-weight: 600;
+  color: var(--color-text-primary);
+  font-size: 0.875rem;
+}
+
+.settings-hint {
+  display: block;
+  font-weight: normal;
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  margin-top: var(--spacing-xs);
+  line-height: 1.5;
+}
+
+.settings-input,
+.settings-select {
+  width: 100%;
+  padding: var(--spacing-sm);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  transition: all var(--transition-base);
+  box-sizing: border-box;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-input:focus,
+.settings-select:focus {
+  outline: none;
+  border-color: var(--color-primary, #667eea);
+  box-shadow: 0 0 0 3px var(--color-primary-light, rgba(102, 126, 234, 0.2)), var(--shadow);
+}
+
+[data-theme="dark"] .settings-input:focus,
+[data-theme="dark"] .settings-select:focus {
+  border-color: var(--color-primary, #667eea);
+  box-shadow: 0 0 0 3px var(--color-primary-light, rgba(102, 126, 234, 0.2)), var(--shadow);
+}
+
+.settings-input:focus-visible,
+.settings-select:focus-visible {
+  outline: 2px solid var(--color-primary, #667eea);
+  outline-offset: 2px;
+  border-color: var(--color-primary, #667eea);
+}
+
+.settings-checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  font-weight: 500;
+  color: var(--color-text-primary);
+  -webkit-user-select: none;
+  user-select: none;
+  font-size: 0.875rem;
+  position: relative;
+}
+
+/* チェックボックスのスタイルは共通CSS（src/styles/common.css）で統一 */
+
+.settings-info {
+  color: var(--color-text-secondary);
+  font-size: 0.75rem;
+  line-height: 1.5;
+  margin: 0;
+  padding: var(--spacing-sm);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  border-left: 2px solid var(--color-info);
+}
+
+.settings-theme-preview {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
+}
+
+.settings-theme-toggle {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-md);
+  background: transparent;
+  color: var(--color-primary);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-theme-toggle:hover {
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+
+.settings-theme-toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.settings-actions {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding-top: var(--spacing-md);
+  border-top: 1px solid var(--color-border-light);
+  gap: var(--spacing-md);
+  flex-wrap: wrap;
+}
+
+.settings-actions-right {
+  display: flex;
+  gap: var(--spacing-sm);
+  flex-wrap: wrap;
+}
+
+.settings-button {
+  padding: var(--spacing-sm) var(--spacing-md);
+  border: none;
+  border-radius: var(--radius-md);
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-base);
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+  display: inline-flex;
+  align-items: center;
+  gap: var(--spacing-xs);
+}
+
+.settings-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  pointer-events: none;
+}
+
+.settings-button.primary {
+  background: var(--color-primary, #667eea);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-button.primary:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+  background: var(--color-primary-hover, #5568d3);
+}
+
+[data-theme="dark"] .settings-button.primary {
+  background: var(--color-primary, #667eea);
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme="dark"] .settings-button.primary:hover:not(:disabled) {
+  box-shadow: var(--shadow);
+  background: var(--color-primary-hover, #5568d3);
+}
+
+.settings-button.secondary {
+  background: var(--color-bg-secondary);
+  color: var(--color-text-primary);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-button.secondary:hover:not(:disabled) {
+  background: var(--color-bg-tertiary);
+  border-color: var(--color-border-dark);
+  transform: translateY(-1px);
+}
+
+.settings-button.secondary:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
+.settings-button.primary:focus-visible {
+  outline: 2px solid var(--color-text-inverse);
+  outline-offset: 2px;
+}
+
+.settings-button.danger {
+  background: var(--color-error, #ef4444);
+  color: var(--color-text-inverse);
+  box-shadow: var(--shadow-sm);
+}
+
+.settings-button.danger:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+  background: var(--color-error-hover, #dc2626);
+}
+
+[data-theme="dark"] .settings-button.danger {
+  background: var(--color-error, #ef4444);
+  box-shadow: var(--shadow-sm);
+}
+
+[data-theme="dark"] .settings-button.danger:hover:not(:disabled) {
+  box-shadow: var(--shadow);
+  background: var(--color-error-hover, #dc2626);
+}
+
+.settings-button.danger:focus-visible {
+  outline: 2px solid var(--color-text-inverse);
+  outline-offset: 2px;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+  .settings-page {
+    padding: var(--spacing-md);
+  }
+
+  .settings-container {
+    padding: var(--spacing-md);
+    border-radius: var(--radius-md);
+  }
+
+  .settings-header h1 {
+    font-size: 1rem;
+  }
+
+  .settings-actions {
+    flex-direction: column;
+  }
+
+  .settings-actions-right {
+    width: 100%;
+    flex-direction: column;
+  }
+
+  .settings-button {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .settings-group {
+    padding: var(--spacing-sm);
+  }
+}
+
+/* エンジンアップデートセクション */
+.settings-engine-update {
+  padding: var(--spacing-sm);
+}
+
+.settings-engine-update-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: var(--spacing-sm);
+  gap: var(--spacing-sm);
+}
+
+.settings-engine-update-header h3 {
+  margin: 0 0 var(--spacing-xs) 0;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.settings-engine-version-info {
+  display: flex;
+  flex-direction: column;
+  gap: var(--spacing-xs);
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+}
+
+.settings-engine-version {
+  display: block;
+}
+
+.settings-engine-update-available {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+}
+
+.settings-engine-update-progress {
+  margin-top: var(--spacing-sm);
+  padding: var(--spacing-sm);
+  background: var(--color-bg-secondary);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border-light);
+}
+
+.settings-progress-bar {
+  width: 100%;
+  height: 6px;
+  background: var(--color-bg-tertiary);
+  border-radius: var(--radius-full);
+  overflow: hidden;
+  margin-bottom: var(--spacing-xs);
+}
+
+.settings-progress-fill {
+  height: 100%;
+  width: var(--progress-width, 0%);
+  background: var(--color-primary);
+  border-radius: var(--radius-full);
+  transition: width 0.3s ease;
+}
+
+.settings-progress-text {
+  font-size: 0.75rem;
+  color: var(--color-text-secondary);
+  text-align: center;
+}

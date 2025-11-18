@@ -1,0 +1,380 @@
+// Jest Snapshot v1, https://goo.gl/fbAQLP
+
+exports[`ErrorMessage.tsx スナップショットテスト Ollamaエラーのスナップショット 1`] = `
+<div>
+  <div
+    class="error-message error-ollama"
+  >
+    <div
+      class="error-header"
+    >
+      <span
+        aria-hidden="true"
+        class="error-icon"
+      />
+      <h3
+        class="error-title"
+        id="error-title-ollama"
+      >
+        Ollamaのエラー
+      </h3>
+    </div>
+    <div
+      aria-atomic="false"
+      aria-live="polite"
+      class="error-content"
+    >
+      <p
+        aria-describedby="error-title-ollama"
+        class="error-text"
+      >
+        Ollamaエラー
+      </p>
+      <div
+        class="error-suggestion"
+      >
+        <span
+          aria-hidden="true"
+          class="suggestion-icon"
+        />
+        <span
+          class="suggestion-text"
+        >
+          Ollamaが正しくインストールされ、起動しているか確認してください。
+        </span>
+      </div>
+    </div>
+    <div
+      class="error-actions"
+    >
+      <button
+        aria-label="ヘルプページを開く"
+        class="error-help-button"
+        type="button"
+      >
+        ヘルプを見る
+      </button>
+    </div>
+  </div>
+  <div
+    aria-label="解決手順"
+    class="error-detailed-steps"
+  >
+    <div
+      class="steps-title"
+    >
+      解決手順:
+    </div>
+    <ul
+      class="steps-list"
+    >
+      <li
+        class="step-item"
+      >
+        1. Ollamaがインストールされているか確認してください
+      </li>
+      <li
+        class="step-item"
+      >
+        2. Ollamaサービスが起動しているか確認してください（タスクマネージャーまたはプロセス一覧で確認）
+      </li>
+      <li
+        class="step-item"
+      >
+        3. ターミナルで「ollama serve」コマンドを実行してOllamaを起動してください
+      </li>
+      <li
+        class="step-item"
+      >
+        4. それでも解決しない場合は、Ollamaを再インストールしてください
+      </li>
+    </ul>
+  </div>
+</div>
+`;
+
+exports[`ErrorMessage.tsx スナップショットテスト リトライ機能付きエラーメッセージのスナップショット 1`] = `
+<div>
+  <div
+    class="error-message error-general"
+  >
+    <div
+      class="error-header"
+    >
+      <span
+        aria-hidden="true"
+        class="error-icon"
+      />
+      <h3
+        class="error-title"
+        id="error-title-general"
+      >
+        エラー
+      </h3>
+    </div>
+    <div
+      aria-atomic="false"
+      aria-live="polite"
+      class="error-content"
+    >
+      <p
+        aria-describedby="error-title-general"
+        class="error-text"
+      >
+        エラー
+      </p>
+      <div
+        class="error-suggestion"
+      >
+        <span
+          aria-hidden="true"
+          class="suggestion-icon"
+        />
+        <span
+          class="suggestion-text"
+        >
+          問題が続く場合は、アプリケーションを再起動してみてください。
+        </span>
+      </div>
+    </div>
+    <div
+      class="error-actions"
+    >
+      <button
+        aria-label="操作を再試行する"
+        class="error-retry-button"
+        type="button"
+      >
+        もう一度試す
+      </button>
+      <button
+        aria-label="ヘルプページを開く"
+        class="error-help-button"
+        type="button"
+      >
+        ヘルプを見る
+      </button>
+    </div>
+  </div>
+  <div
+    aria-label="解決手順"
+    class="error-detailed-steps"
+  >
+    <div
+      class="steps-title"
+    >
+      解決手順:
+    </div>
+    <ul
+      class="steps-list"
+    >
+      <li
+        class="step-item"
+      >
+        1. アプリケーションを再起動してください
+      </li>
+      <li
+        class="step-item"
+      >
+        2. エラーメッセージの内容を確認してください
+      </li>
+      <li
+        class="step-item"
+      >
+        3. ヘルプページで同様のエラーがないか確認してください
+      </li>
+      <li
+        class="step-item"
+      >
+        4. 問題が続く場合は、サポートに問い合わせてください
+      </li>
+    </ul>
+  </div>
+</div>
+`;
+
+exports[`ErrorMessage.tsx スナップショットテスト 基本的なエラーメッセージのスナップショット 1`] = `
+<div>
+  <div
+    class="error-message error-general"
+  >
+    <div
+      class="error-header"
+    >
+      <span
+        aria-hidden="true"
+        class="error-icon"
+      />
+      <h3
+        class="error-title"
+        id="error-title-general"
+      >
+        エラー
+      </h3>
+    </div>
+    <div
+      aria-atomic="false"
+      aria-live="polite"
+      class="error-content"
+    >
+      <p
+        aria-describedby="error-title-general"
+        class="error-text"
+      >
+        テストエラー
+      </p>
+      <div
+        class="error-suggestion"
+      >
+        <span
+          aria-hidden="true"
+          class="suggestion-icon"
+        />
+        <span
+          class="suggestion-text"
+        >
+          問題が続く場合は、アプリケーションを再起動してみてください。
+        </span>
+      </div>
+    </div>
+    <div
+      class="error-actions"
+    >
+      <button
+        aria-label="ヘルプページを開く"
+        class="error-help-button"
+        type="button"
+      >
+        ヘルプを見る
+      </button>
+    </div>
+  </div>
+  <div
+    aria-label="解決手順"
+    class="error-detailed-steps"
+  >
+    <div
+      class="steps-title"
+    >
+      解決手順:
+    </div>
+    <ul
+      class="steps-list"
+    >
+      <li
+        class="step-item"
+      >
+        1. アプリケーションを再起動してください
+      </li>
+      <li
+        class="step-item"
+      >
+        2. エラーメッセージの内容を確認してください
+      </li>
+      <li
+        class="step-item"
+      >
+        3. ヘルプページで同様のエラーがないか確認してください
+      </li>
+      <li
+        class="step-item"
+      >
+        4. 問題が続く場合は、サポートに問い合わせてください
+      </li>
+    </ul>
+  </div>
+</div>
+`;
+
+exports[`ErrorMessage.tsx スナップショットテスト 提案メッセージ付きエラーメッセージのスナップショット 1`] = `
+<div>
+  <div
+    class="error-message error-general"
+  >
+    <div
+      class="error-header"
+    >
+      <span
+        aria-hidden="true"
+        class="error-icon"
+      />
+      <h3
+        class="error-title"
+        id="error-title-general"
+      >
+        エラー
+      </h3>
+    </div>
+    <div
+      aria-atomic="false"
+      aria-live="polite"
+      class="error-content"
+    >
+      <p
+        aria-describedby="error-title-general"
+        class="error-text"
+      >
+        エラーメッセージ
+      </p>
+      <div
+        class="error-suggestion"
+      >
+        <span
+          aria-hidden="true"
+          class="suggestion-icon"
+        />
+        <span
+          class="suggestion-text"
+        >
+          これは提案メッセージです
+        </span>
+      </div>
+    </div>
+    <div
+      class="error-actions"
+    >
+      <button
+        aria-label="ヘルプページを開く"
+        class="error-help-button"
+        type="button"
+      >
+        ヘルプを見る
+      </button>
+    </div>
+  </div>
+  <div
+    aria-label="解決手順"
+    class="error-detailed-steps"
+  >
+    <div
+      class="steps-title"
+    >
+      解決手順:
+    </div>
+    <ul
+      class="steps-list"
+    >
+      <li
+        class="step-item"
+      >
+        1. アプリケーションを再起動してください
+      </li>
+      <li
+        class="step-item"
+      >
+        2. エラーメッセージの内容を確認してください
+      </li>
+      <li
+        class="step-item"
+      >
+        3. ヘルプページで同様のエラーがないか確認してください
+      </li>
+      <li
+        class="step-item"
+      >
+        4. 問題が続く場合は、サポートに問い合わせてください
+      </li>
+    </ul>
+  </div>
+</div>
+`;

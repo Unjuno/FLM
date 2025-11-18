@@ -1,0 +1,789 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FLMのよくある質問（FAQ）。基本情報、インストール、使い方、トラブルシューティング、セキュリティに関する質問に回答します。">
+  <meta name="keywords" content="FLM,FAQ,よくある質問,ヘルプ,サポート">
+  <title>よくある質問（FAQ） - FLM</title>
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <!-- スキップリンク（アクセシビリティ対応） -->
+  <a href="#main-content" class="skip-link">メインコンテンツへスキップ</a>
+  
+  <!-- ヘッダー -->
+  <header>
+    <nav class="container">
+      <div class="logo">
+        <img src="images/logo.png" alt="" class="logo-image" width="32" height="32" aria-hidden="true">
+        <a href="index.html" class="logo-link-inherit">FLM</a>
+      </div>
+      <button class="mobile-menu-toggle" aria-label="メニューを開く" aria-expanded="false" aria-controls="main-navigation">☰</button>
+      <ul class="nav-links" id="main-navigation" role="menubar">
+        <li role="none"><a href="index.html" role="menuitem">ホーム</a></li>
+        <li role="none"><a href="features.html" role="menuitem">機能</a></li>
+        <li role="none"><a href="guide.html" role="menuitem">使い方</a></li>
+        <li role="none"><a href="download.html" role="menuitem">ダウンロード</a></li>
+        <li role="none"><a href="test-api.html" role="menuitem">APIテスト</a></li>
+        <li role="none"><a href="faq.html" class="active" role="menuitem" aria-current="page">FAQ</a></li>
+        <li role="none"><a href="contact.html" role="menuitem">お問い合わせ</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main id="main-content">
+    <section class="section">
+      <div class="container">
+        <h1 class="section-title">よくある質問（FAQ）</h1>
+        <p class="section-subtitle">
+          FLMに関するよくある質問と回答をまとめました。お探しの情報が見つからない場合は、<a href="contact.html">お問い合わせ</a>からご連絡ください。
+        </p>
+
+        <!-- カテゴリー1: 基本情報 -->
+        <div class="faq-category">
+          <h2><span aria-hidden="true">📋</span> 基本情報</h2>
+
+          <div class="faq-item">
+            <div class="faq-question">FLMとは何ですか？</div>
+            <div class="faq-answer">
+              <p>
+                FLMは、誰でも簡単にローカルLLMのAPIを作成・管理できるデスクトップアプリケーションです。
+                プログラミングの知識がなくても、GUIで操作するだけで、Ollamaを使ったAI APIを数分で作成できます。
+              </p>
+              <p>
+                すべてのデータ処理はローカルで行われ、インターネットにデータを送信することはありません。
+                そのため、プライバシーを完全に保護しながら、AIを活用できます。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">誰が使えますか？（非開発者でも使えますか？）</div>
+            <div class="faq-answer">
+              <p>
+                はい、非開発者でも使えます。FLMは、技術的な知識がなくても使えるように設計されています。
+              </p>
+              <ul>
+                <li>プログラミングの知識は不要です</li>
+                <li>コマンドライン操作は不要です</li>
+                <li>すべての操作がGUIで完結します</li>
+                <li>直感的なインターフェースで、すぐに使い始められます</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">料金はかかりますか？</div>
+            <div class="faq-answer">
+              <p>
+                FLMは完全に無料で利用できます。将来的にも無料で提供される予定です。
+              </p>
+              <p>
+                追加のサービスやプレミアム機能を検討する予定はありません。
+                すべての機能が無料で利用できます。
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- カテゴリー2: インストール・セットアップ -->
+        <div class="faq-category">
+          <h2><span aria-hidden="true">💻</span> インストール・セットアップ</h2>
+
+          <div class="faq-item">
+            <div class="faq-question">どのOSで動作しますか？</div>
+            <div class="faq-answer">
+              <p>
+                FLMは、以下のOSで動作します：
+              </p>
+              <ul>
+                <li><strong>Windows:</strong> Windows 10/11 (64-bit)</li>
+                <li><strong>macOS:</strong> macOS 11.0+ (Intel & Apple Silicon対応)</li>
+                <li><strong>Linux:</strong> Ubuntu 20.04+、Debian 11+、Fedora 34+</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">システム要件は？</div>
+            <div class="faq-answer">
+              <p>
+                <strong>最小要件:</strong>
+              </p>
+              <ul>
+                <li>OS: Windows 10/11、macOS 11.0+、Ubuntu 20.04+</li>
+                <li>RAM: 8GB</li>
+                <li>ストレージ: 10GB（モデル含む）</li>
+                <li>CPU: 64-bit プロセッサ</li>
+              </ul>
+              <p>
+                <strong>推奨要件:</strong>
+              </p>
+              <ul>
+                <li>RAM: 16GB以上</li>
+                <li>ストレージ: 20GB以上</li>
+                <li>GPU: NVIDIA GPU（オプション、高速化のため）</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">インストール方法は？</div>
+            <div class="faq-answer">
+              <p>
+                <a href="download.html">ダウンロードページ</a>から、お使いのOS向けのインストーラーをダウンロードしてください。
+              </p>
+              <ul>
+                <li><strong>Windows:</strong> .exeファイルを実行し、インストールウィザードに従います</li>
+                <li><strong>macOS:</strong> .dmgファイルを開き、アプリケーションフォルダにドラッグ&ドロップします</li>
+                <li><strong>Linux:</strong> .AppImageファイルに実行権限を付与して実行します</li>
+              </ul>
+              <p>
+                詳細な手順は、<a href="guide.html">使い方ガイド</a>を参照してください。
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- カテゴリー3: 使い方 -->
+        <div class="faq-category">
+          <h2><span aria-hidden="true">📖</span> 使い方</h2>
+
+          <div class="faq-item">
+            <div class="faq-question">APIの作成方法は？</div>
+            <div class="faq-answer">
+              <p>
+                APIの作成は非常に簡単です。以下の3ステップで完了します：
+              </p>
+              <ol>
+                <li>ホーム画面から「新しいAPIを作成」ボタンをクリック</li>
+                <li>モデル選択画面で、使用したいAIモデルを選択</li>
+                <li>設定画面で、API名やポート番号を設定（必要に応じて変更）し、「作成」ボタンをクリック</li>
+              </ol>
+              <p>
+                詳細な手順は、<a href="guide.html">使い方ガイド</a>の「ステップ4: API作成」を参照してください。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">モデルはどこからダウンロードしますか？</div>
+            <div class="faq-answer">
+              <p>
+                モデルは、FLMアプリ内の「モデル管理」画面からダウンロードできます。
+              </p>
+              <ul>
+                <li>ホーム画面から「モデル管理」を選択</li>
+                <li>「モデル検索・ダウンロード」タブで、必要なモデルを検索</li>
+                <li>モデルを選択して「ダウンロード」ボタンをクリック</li>
+              </ul>
+              <p>
+                モデルはOllama公式ライブラリから自動でダウンロードされます。
+                ダウンロードには数分から数十分かかることがあります（モデルのサイズによります）。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">APIを他のアプリで使う方法は？</div>
+            <div class="faq-answer">
+              <p>
+                APIを作成した後、詳細画面に表示されるエンドポイントURLとAPIキーを使って、他のアプリケーションからAPIを呼び出せます。
+              </p>
+              <p>
+                詳細画面には、以下のサンプルコードが表示されます：
+              </p>
+              <ul>
+                <li>curlコマンド（コマンドライン用）</li>
+                <li>Pythonコード</li>
+                <li>JavaScriptコード</li>
+              </ul>
+              <p>
+                これらのサンプルコードをコピーして、お使いのアプリケーションに貼り付けて使用できます。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">APIとは何ですか？</div>
+            <div class="faq-answer">
+              <p>
+                API（Application Programming Interface）は、アプリケーション間でデータをやり取りするためのインターフェースです。
+                FLMで作成したAPIを使用して、他のアプリケーションからLLMの機能を利用できます。
+              </p>
+              <p>
+                例えば、チャットボットや自動応答システム、コード生成支援ツールなど、さまざまなアプリケーションからFLMで作成したAPIを呼び出して使用できます。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">どのモデルを選べばいいですか？</div>
+            <div class="faq-answer">
+              <p>
+                用途に応じて最適なモデルを選ぶことができます：
+              </p>
+              <ul>
+                <li><strong>初心者:</strong> 推奨モデルを選択（画面上で⭐マークで表示）</li>
+                <li><strong>チャット用途:</strong> llama3:8b、mistral:7bなど</li>
+                <li><strong>コード生成:</strong> codellama:7b、deepseek-coder:6.7bなど</li>
+                <li><strong>軽量モデル:</strong> tinyllama:1.1b、phi:2.7bなど（メモリが少ない環境向け）</li>
+              </ul>
+              <p>
+                モデル管理画面では、モデルのサイズ、パラメータ数、カテゴリなどの情報を確認できます。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">ポート番号は何を選べばいいですか？</div>
+            <div class="faq-answer">
+              <p>
+                デフォルトの8080で問題ありません。他のアプリケーションが使用している場合は、8081、8082などの別のポート番号を選択してください。
+              </p>
+              <p>
+                ポート番号は1024から65535の範囲で選択できます。よく使用されるポート番号（80、443、3306など）は避けることをおすすめします。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">WEBサイトに設定できる使い捨てのAPIを作成できますか？</div>
+            <div class="faq-answer">
+              <p>
+                はい、HTML/CSS/JSだけで動作する静的WEBサイトに設定できる使い捨てのAPIを簡単に作成できます。
+              </p>
+              <p>
+                <strong>使い捨てAPIとは:</strong>
+              </p>
+              <ul>
+                <li>一時的なプロジェクトやデモサイト、プロトタイプ開発などで短期間だけ必要なAPI</li>
+                <li>数分で作成・削除可能</li>
+                <li>設定が簡単で、すぐに利用開始できる</li>
+                <li>不要になったら簡単に削除できる</li>
+              </ul>
+              <p>
+                <strong>活用例:</strong>
+              </p>
+              <ul>
+                <li>デモサイト: クライアントへのデモ用に一時的なAPIを作成。デモ終了後はすぐに削除</li>
+                <li>プロトタイプ開発: アイデアの検証用に素早くAPIを作成。検証後は不要になったら削除</li>
+                <li>学習・教育: 学習用の一時的なAPIを作成。学習終了後は簡単に削除</li>
+              </ul>
+              <p>
+                詳細な手順は、<a href="guide.html">使い方ガイド</a>の「ステップ6: WEBサイト用使い捨てAPIの作成」を参照してください。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">このWEBサイトは静的サイトですか？</div>
+            <div class="faq-answer">
+              <p>
+                はい、このWEBサイト自体がHTML/CSS/JSだけで動作する静的サイトです。
+              </p>
+              <p>
+                <strong>静的サイトの特徴:</strong>
+              </p>
+              <ul>
+                <li>サーバーサイド処理不要: HTML、CSS、JavaScriptのみで動作</li>
+                <li>どこでもホスティング可能: GitHub Pages、Netlify、Vercelなど、あらゆる静的ホスティングサービスで利用可能</li>
+                <li>高速で安全: 静的ファイルのみのため、高速で安全に配信</li>
+                <li>メンテナンスが簡単: ファイルを編集するだけで更新可能</li>
+              </ul>
+              <p>
+                このWEBサイトのすべてのページがHTMLファイルとして存在し、CSSとJavaScriptは外部ファイルとして読み込まれます。
+                サーバーサイドの処理やデータベースは一切使用していません。
+              </p>
+              <p>
+                詳細は、<a href="guide.html">使い方ガイド</a>の「ステップ7: このWEBサイトについて（静的サイト）」を参照してください。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">認証を有効にする必要はありますか？</div>
+            <div class="faq-answer">
+              <p>
+                認証の有効化は、使用環境によって異なります：
+              </p>
+              <ul>
+                <li><strong>ローカル環境のみで使用:</strong> 認証を無効にしても問題ありません</li>
+                <li><strong>外部アプリケーションから使用:</strong> 認証を有効にすることをおすすめします（セキュリティのため）</li>
+              </ul>
+              <p>
+                認証を有効にすると、APIキーが必要になります。APIキーは作成時に表示されるので、安全な場所にコピーして保存してください。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">APIキーはどこで確認できますか？</div>
+            <div class="faq-answer">
+              <p>
+                APIキーは以下の方法で確認できます：
+              </p>
+              <ul>
+                <li><strong>API作成時:</strong> 成功画面に表示されます</li>
+                <li><strong>API詳細画面:</strong> 「詳細」ボタンから確認できます（表示/非表示を切り替え可能）</li>
+                <li><strong>設定変更画面:</strong> APIキーを再生成できます</li>
+              </ul>
+              <p>
+                <strong>重要:</strong> APIキーは作成時に一度だけ表示されます。安全な場所にコピーして保存してください。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">Ollamaとは何ですか？</div>
+            <div class="faq-answer">
+              <p>
+                Ollamaは、ローカルでLLM（大規模言語モデル）を実行するためのツールです。FLMはOllamaを使用してLLMのAPIを提供します。
+              </p>
+              <p>
+                Ollamaは、あなたのコンピューター上でAIモデルを実行するため、インターネットにデータを送信することなく、プライバシーを完全に保護しながらAIを活用できます。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">Ollamaのインストールは必要ですか？</div>
+            <div class="faq-answer">
+              <p>
+                いいえ、必要ありません。FLMが自動的にOllamaをダウンロード・インストールします。既にインストールされている場合は、それを使用します。
+              </p>
+              <p>
+                初回起動時に、Ollamaのセットアップが自動で開始されます。インターネット接続が必要です。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">モデルのサイズはどのくらいですか？</div>
+            <div class="faq-answer">
+              <p>
+                モデルによって異なります：
+              </p>
+              <ul>
+                <li><strong>小:</strong> 1-3GB（例: tinyllama）</li>
+                <li><strong>中:</strong> 4-7GB（例: llama3:8b）</li>
+                <li><strong>大:</strong> 8GB以上（例: llama3:70b）</li>
+              </ul>
+              <p>
+                モデル管理画面では、各モデルのサイズが表示されます。ストレージ容量を確認してからダウンロードしてください。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">モデルのダウンロードに時間がかかりますか？</div>
+            <div class="faq-answer">
+              <p>
+                はい、モデルのサイズとインターネット速度によって異なります：
+              </p>
+              <ul>
+                <li><strong>小:</strong> 数分</li>
+                <li><strong>中:</strong> 10-30分</li>
+                <li><strong>大:</strong> 1時間以上</li>
+              </ul>
+              <p>
+                ダウンロード中は、プログレスバーで進捗状況を確認できます。ダウンロードは一時停止・再開・キャンセルが可能です。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">モデルを削除できますか？</div>
+            <div class="faq-answer">
+              <p>
+                はい、インストール済みモデル一覧から削除できます。削除すると、ストレージが解放されます。
+              </p>
+              <p>
+                モデルを削除するには、モデル管理画面の「インストール済みモデル」タブで、削除したいモデルの「削除」ボタンをクリックします。
+              </p>
+              <p>
+                <strong>注意:</strong> 削除したモデルを使用しているAPIがある場合、そのAPIは正常に動作しなくなる可能性があります。
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- カテゴリー4: トラブルシューティング -->
+        <div class="faq-category">
+          <h2><span aria-hidden="true">🔧</span> トラブルシューティング</h2>
+
+          <div class="faq-item">
+            <div class="faq-question">APIが起動しません</div>
+            <div class="faq-answer">
+              <p>
+                以下の点を確認してください：
+              </p>
+              <ul>
+                <li>Ollamaが正しく起動しているか（ホーム画面で確認）</li>
+                <li>ポート番号が他のアプリケーションと重複していないか（別のポート番号を試してください）</li>
+                <li>モデルが正しくダウンロードされているか（モデル管理画面で確認）</li>
+                <li>インターネット接続が安定しているか（初回セットアップ時）</li>
+              </ul>
+              <p>
+                問題が続く場合は、<a href="contact.html">お問い合わせ</a>からご連絡ください。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">エラーメッセージが表示されます</div>
+            <div class="faq-answer">
+              <p>
+                よくあるエラーと解決方法：
+              </p>
+              <ul>
+                <li><strong>「ポート番号が既に使用されています」</strong>→ 別のポート番号を試してください</li>
+                <li><strong>「Ollamaに接続できません」</strong>→ Ollamaが起動しているか確認してください</li>
+                <li><strong>「モデルが見つかりません」</strong>→ モデルがダウンロードされているか確認してください</li>
+                <li><strong>「APIキーの再生成に失敗しました」</strong>→ 認証が有効になっているか確認してください</li>
+              </ul>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">モデルのダウンロードに失敗します</div>
+            <div class="faq-answer">
+              <p>
+                以下の点を確認してください：
+              </p>
+              <ul>
+                <li>インターネット接続が安定しているか</li>
+                <li>ストレージに十分な空き容量があるか（モデルは数GBになることがあります）</li>
+                <li>ファイアウォールがダウンロードをブロックしていないか</li>
+                <li>プロキシ設定が必要な場合、システムのプロキシ設定を確認してください</li>
+              </ul>
+              <p>
+                問題が続く場合は、<a href="contact.html">お問い合わせ</a>からご連絡ください。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">APIキーを忘れてしまいました</div>
+            <div class="faq-answer">
+              <p>
+                APIキーを再生成できます。設定変更画面で「APIキーを再生成」ボタンをクリックしてください。
+              </p>
+              <p>
+                <strong>注意:</strong> 再生成すると、古いAPIキーは無効になります。新しいAPIキーを使用するように、接続しているアプリケーションの設定を更新してください。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">エラーメッセージがわかりません</div>
+            <div class="faq-answer">
+              <p>
+                FLMのエラーメッセージは非開発者向けに作成されています。メッセージの内容に従って操作してください。
+              </p>
+              <p>
+                問題が解決しない場合は、以下の情報を確認してください：
+              </p>
+              <ul>
+                <li><a href="guide.html">使い方ガイド</a>の「トラブルシューティング」セクション</li>
+                <li>このFAQのトラブルシューティングセクション</li>
+                <li><a href="contact.html">お問い合わせ</a>からサポートに連絡</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- カテゴリー5: 技術的な質問 -->
+        <div class="faq-category">
+          <h2><span aria-hidden="true">⚙️</span> 技術的な質問</h2>
+
+          <div class="faq-item">
+            <div class="faq-question">FLMはオフラインで動作しますか？</div>
+            <div class="faq-answer">
+              <p>
+                部分的にオフラインで動作します：
+              </p>
+              <ul>
+                <li><strong>モデルダウンロード:</strong> インターネット接続が必要です（初回のみ）</li>
+                <li><strong>APIの利用:</strong> オフラインで動作します（モデルがダウンロード済みの場合）</li>
+              </ul>
+              <p>
+                モデルをダウンロードした後は、インターネット接続なしでもAPIを使用できます。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">複数のAPIを同時に起動できますか？</div>
+            <div class="faq-answer">
+              <p>
+                はい、異なるポート番号を使用すれば、複数のAPIを同時に起動できます。
+              </p>
+              <p>
+                例えば、ポート8080でチャット用API、ポート8081でコード生成用APIというように、用途に応じて複数のAPIを運用できます。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">APIはOpenAI互換ですか？</div>
+            <div class="faq-answer">
+              <p>
+                はい、OpenAI互換のAPIエンドポイントを提供します。OpenAIのSDKを使用してAPIに接続できます。
+              </p>
+              <p>
+                FLMで作成したAPIは、OpenAIの`/v1/chat/completions`エンドポイントと互換性があるため、OpenAIのSDKを使用しているアプリケーションからそのまま使用できます。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">データはどこに保存されますか？</div>
+            <div class="faq-answer">
+              <p>
+                データは以下の場所に保存されます：
+              </p>
+              <ul>
+                <li><strong>Windows:</strong> <code>%APPDATA%\FLM\</code></li>
+                <li><strong>macOS:</strong> <code>~/Library/Application Support/FLM/</code></li>
+                <li><strong>Linux:</strong> <code>~/.local/share/FLM/</code></li>
+              </ul>
+              <p>
+                このディレクトリには、データベースファイル、設定ファイル、Ollamaのポータブル版（自動ダウンロードした場合）などが保存されます。
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- カテゴリー6: パフォーマンス -->
+        <div class="faq-category">
+          <h2><span aria-hidden="true">⚡</span> パフォーマンス</h2>
+
+          <div class="faq-item">
+            <div class="faq-question">APIの応答速度はどのくらいですか？</div>
+            <div class="faq-answer">
+              <p>
+                モデルとハードウェアによって異なります：
+              </p>
+              <ul>
+                <li><strong>軽量モデル:</strong> 数秒</li>
+                <li><strong>中規模モデル:</strong> 10-30秒</li>
+                <li><strong>大規模モデル:</strong> 1分以上</li>
+              </ul>
+              <p>
+                GPU（特にNVIDIA GPU）を使用すると、応答速度が大幅に向上します。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">メモリ使用量はどのくらいですか？</div>
+            <div class="faq-answer">
+              <p>
+                モデルサイズに応じて異なります：
+              </p>
+              <ul>
+                <li><strong>小:</strong> 2-4GB</li>
+                <li><strong>中:</strong> 8-12GB</li>
+                <li><strong>大:</strong> 16GB以上</li>
+              </ul>
+              <p>
+                複数のAPIを同時に起動する場合は、それぞれのメモリ使用量が加算されます。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">CPU使用率が高いです</div>
+            <div class="faq-answer">
+              <p>
+                LLMの推論処理はCPUを多く使用します。これは正常な動作です。
+              </p>
+              <p>
+                必要に応じて、以下の対策を試してください：
+              </p>
+              <ul>
+                <li>軽量モデルを使用する</li>
+                <li>GPUを使用する（NVIDIA GPU推奨）</li>
+                <li>同時に実行するAPIの数を減らす</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+
+        <!-- カテゴリー7: その他 -->
+        <div class="faq-category">
+          <h2><span aria-hidden="true">📝</span> その他</h2>
+
+          <div class="faq-item">
+            <div class="faq-question">機能要望やバグ報告はどこでできますか？</div>
+            <div class="faq-answer">
+              <p>
+                GitHub Issuesで報告してください。準備中です。
+              </p>
+              <p>
+                また、<a href="contact.html">お問い合わせ</a>からもご連絡いただけます。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">開発に参加したいです</div>
+            <div class="faq-answer">
+              <p>
+                コントリビューションを歓迎します。<a href="../docs/DEVELOPER_GUIDE.md" target="_blank">開発者ガイド</a>を参照してください。
+              </p>
+              <p>
+                開発に参加する方法やコーディング規約など、詳細な情報は開発者ガイドに記載されています。
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- カテゴリー8: セキュリティ・プライバシー -->
+        <div class="faq-category">
+          <h2><span aria-hidden="true">🔒</span> セキュリティ・プライバシー</h2>
+          
+          <div class="faq-item">
+            <div class="faq-question">データは外部に送信されますか？</div>
+            <div class="faq-answer">
+              <p>
+                いいえ、データは一切外部に送信されません。すべてのデータ処理はローカルで行われます。
+              </p>
+              <ul>
+                <li>AIモデルはすべてローカルで実行されます</li>
+                <li>APIへのリクエストもローカルで処理されます</li>
+                <li>インターネットへのデータ送信は発生しません</li>
+                <li>Ollamaのダウンロード時のみ、インターネット接続が必要です（一度だけ）</li>
+              </ul>
+              <p>
+                そのため、完全にプライバシーが保護されます。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">APIキーは安全ですか？</div>
+            <div class="faq-answer">
+              <p>
+                はい、APIキーは安全に管理されます：
+              </p>
+              <ul>
+                <li>APIキーは強力な暗号化アルゴリズム（AES-256-GCM）で暗号化して保存されます</li>
+                <li>APIキーはデータベースにハッシュ値として保存されます</li>
+                <li>APIキーは作成時に一度だけ表示されます（安全な場所にコピーして保存してください）</li>
+                <li>APIキーを忘れた場合は、再生成できます（古いキーは無効になります）</li>
+              </ul>
+              <p>
+                <strong>重要:</strong> APIキーは他人に共有しないでください。
+              </p>
+            </div>
+          </div>
+
+          <div class="faq-item">
+            <div class="faq-question">ローカルで実行されることは保証されますか？</div>
+            <div class="faq-answer">
+              <p>
+                はい、保証されます。FLMは以下の設計により、すべての処理がローカルで完結するようになっています：
+              </p>
+              <ul>
+                <li>Ollamaはローカルで実行されます（デフォルト: localhost:11434）</li>
+                <li>認証プロキシもローカルで実行されます（デフォルト: localhost:8080など）</li>
+                <li>データベース（SQLite）もローカルに保存されます</li>
+                <li>すべての通信はローカルホスト（127.0.0.1）内で完結します</li>
+              </ul>
+              <p>
+                ソースコードは将来的に公開予定ですので、動作を確認できます。
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <!-- まだ質問がありますか？ -->
+        <div class="contact-prompt">
+          <h2>まだ質問がありますか？</h2>
+          <p>
+            このFAQで解決しない場合は、お気軽にお問い合わせください。
+          </p>
+          <a href="contact.html" class="btn btn-primary btn-large btn-inverse">
+            お問い合わせ
+          </a>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- フッター -->
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>プロジェクト</h3>
+          <ul>
+            <li><a href="features.html">機能</a></li>
+            <li><a href="guide.html">使い方</a></li>
+            <li><a href="download.html">ダウンロード</a></li>
+          </ul>
+        </div>
+        
+        <div class="footer-section">
+          <h3>サポート</h3>
+          <ul>
+            <li><a href="faq.html">FAQ</a></li>
+            <li><a href="contact.html">お問い合わせ</a></li>
+            <li><a href="guide.html">使い方ガイド</a></li>
+          </ul>
+        </div>
+        
+        <div class="footer-section">
+          <h3>リンク</h3>
+          <ul>
+            <li><a href="#">GitHub（準備中）</a></li>
+            <li><a href="#">Steam（配布予定）</a></li>
+            <li><a href="#">プライバシーポリシー（準備中）</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="footer-bottom">
+        <p>&copy; 2024 FLM. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JavaScript -->
+  <script src="js/main.js"></script>
+  <script src="js/navigation.js"></script>
+  <script>
+    // アコーディオン機能
+    document.addEventListener('DOMContentLoaded', function() {
+      const faqItems = document.querySelectorAll('.faq-item');
+      
+      faqItems.forEach(item => {
+        const question = item.querySelector('.faq-question');
+        
+        question.addEventListener('click', function() {
+          // 他のアイテムを閉じる（オプション: すべて開いたままにする場合はこの行を削除）
+          // faqItems.forEach(otherItem => {
+          //   if (otherItem !== item) {
+          //     otherItem.classList.remove('active');
+          //   }
+          // });
+          
+          // 現在のアイテムを開閉
+          item.classList.toggle('active');
+        });
+      });
+    });
+  </script>
+</body>
+</html>
+

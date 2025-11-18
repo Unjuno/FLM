@@ -55,6 +55,11 @@ jobs:
         run: npm run build
         continue-on-error: false
       
+      - name: Check Rust compilation
+        working-directory: src-tauri
+        run: cargo check --target x86_64-pc-windows-msvc
+        continue-on-error: false
+      
       - name: Build Tauri (Windows)
         run: npm run tauri:build:windows
         continue-on-error: false
@@ -111,6 +116,11 @@ jobs:
       
       - name: Build frontend
         run: npm run build
+      
+      - name: Check Rust compilation
+        working-directory: src-tauri
+        run: cargo check
+        continue-on-error: false
       
       - name: Build Tauri (macOS)
         run: npm run tauri build
@@ -181,6 +191,11 @@ jobs:
       
       - name: Build frontend
         run: npm run build
+      
+      - name: Check Rust compilation
+        working-directory: src-tauri
+        run: cargo check
+        continue-on-error: false
       
       - name: Build Tauri (Linux)
         run: npm run tauri build

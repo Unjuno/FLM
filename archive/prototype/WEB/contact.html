@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="FLMに関するお問い合わせフォーム。機能に関する質問、バグ報告、機能要望など、お気軽にお問い合わせください。">
+  <meta name="keywords" content="FLM,お問い合わせ,連絡,サポート,ヘルプ">
+  <title>お問い合わせ - FLM</title>
+  <link rel="icon" type="image/png" href="images/logo.png">
+  <link rel="stylesheet" href="css/reset.css">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/responsive.css">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+  <a href="#main-content" class="skip-link">メインコンテンツへスキップ</a>
+  <!-- ヘッダー -->
+  <header>
+    <nav class="container">
+      <div class="logo">
+        <img src="images/logo.png" alt="" class="logo-image" width="32" height="32" aria-hidden="true">
+        <a href="index.html" class="logo-link-inherit">FLM</a>
+      </div>
+      <button class="mobile-menu-toggle" aria-label="メニューを開く" aria-expanded="false" aria-controls="main-navigation">☰</button>
+      <ul class="nav-links" id="main-navigation" role="menubar">
+        <li role="none"><a href="index.html" role="menuitem">ホーム</a></li>
+        <li role="none"><a href="features.html" role="menuitem">機能</a></li>
+        <li role="none"><a href="guide.html" role="menuitem">使い方</a></li>
+        <li role="none"><a href="download.html" role="menuitem">ダウンロード</a></li>
+        <li role="none"><a href="test-api.html" role="menuitem">APIテスト</a></li>
+        <li role="none"><a href="faq.html" role="menuitem">FAQ</a></li>
+        <li role="none"><a href="contact.html" class="active" role="menuitem" aria-current="page">お問い合わせ</a></li>
+      </ul>
+    </nav>
+  </header>
+
+  <!-- メインコンテンツ -->
+  <main id="main-content">
+    <section class="section">
+      <div class="container">
+        <h1 class="section-title">お問い合わせ</h1>
+        <p class="section-subtitle">
+          機能に関する質問、バグ報告、機能要望など、お気軽にお問い合わせください。
+          通常、1-2営業日以内にご返信いたします。
+        </p>
+
+        <!-- お問い合わせフォーム -->
+        <form class="contact-form" id="contact-form">
+          <div class="form-group">
+            <label for="name">
+              お名前 <span class="required">*</span>
+            </label>
+            <input
+              type="text"
+              id="name"
+              name="name"
+              required
+              placeholder="山田 太郎"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="email">
+              メールアドレス <span class="required">*</span>
+            </label>
+            <input
+              type="email"
+              id="email"
+              name="email"
+              required
+              placeholder="example@email.com"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="category">
+              カテゴリー <span class="required">*</span>
+            </label>
+            <select id="category" name="category" required>
+              <option value="">選択してください</option>
+              <option value="question">機能に関する質問</option>
+              <option value="bug">バグ報告</option>
+              <option value="feature">機能要望</option>
+              <option value="other">その他</option>
+            </select>
+          </div>
+
+          <div class="form-group">
+            <label for="subject">
+              件名 <span class="required">*</span>
+            </label>
+            <input
+              type="text"
+              id="subject"
+              name="subject"
+              required
+              placeholder="お問い合わせの件名"
+            />
+          </div>
+
+          <div class="form-group">
+            <label for="message">
+              メッセージ <span class="required">*</span>
+            </label>
+            <textarea
+              id="message"
+              name="message"
+              required
+              placeholder="お問い合わせ内容を詳しくご記入ください（10文字以上）"
+            ></textarea>
+          </div>
+
+          <div class="form-actions">
+            <button type="submit" class="btn btn-primary btn-large">
+              送信
+            </button>
+          </div>
+        </form>
+
+        <!-- その他の連絡方法 -->
+        <div class="other-contacts">
+          <h2 class="section-title section-title-large mb-1rem">その他の連絡方法</h2>
+          <p class="section-subtitle section-subtitle-spaced">
+            フォーム以外の方法でもご連絡いただけます
+          </p>
+
+          <div class="contact-cards">
+            <div class="contact-card">
+              <div class="contact-card-icon" aria-hidden="true">💬</div>
+              <h4>GitHub Issues</h4>
+              <p>バグ報告や機能要望はGitHub Issuesでも受け付けています（準備中）</p>
+              <a href="#">GitHub（準備中）</a>
+            </div>
+
+            <div class="contact-card">
+              <div class="contact-card-icon" aria-hidden="true">💬</div>
+              <h4>Discord</h4>
+              <p>コミュニティでの質問やディスカッションにご参加ください（準備中）</p>
+              <a href="#">Discord（準備中）</a>
+            </div>
+
+            <div class="contact-card">
+              <div class="contact-card-icon" aria-hidden="true">🐦</div>
+              <h4>Twitter/X</h4>
+              <p>最新情報やアナウンスはTwitter/Xで発信しています（準備中）</p>
+              <a href="#">Twitter/X（準備中）</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- 注意事項 -->
+        <div class="notice-box">
+          <h4><span aria-hidden="true">📌</span> お問い合わせに関する注意事項</h4>
+          <ul>
+            <li>現在、フォーム送信機能はフロントエンドのみの実装です。実際のメール送信機能は将来実装予定です。</li>
+            <li>緊急の場合は、GitHub IssuesやDiscordをご利用ください（準備中）。</li>
+            <li>お問い合わせ内容によっては、返信に数日かかる場合があります。</li>
+            <li>バグ報告の際は、再現手順やスクリーンショットがあると助かります。</li>
+          </ul>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <!-- フッター -->
+  <footer>
+    <div class="container">
+      <div class="footer-content">
+        <div class="footer-section">
+          <h3>プロジェクト</h3>
+          <ul>
+            <li><a href="features.html">機能</a></li>
+            <li><a href="guide.html">使い方</a></li>
+            <li><a href="download.html">ダウンロード</a></li>
+          </ul>
+        </div>
+        
+        <div class="footer-section">
+          <h3>サポート</h3>
+          <ul>
+            <li><a href="faq.html">FAQ</a></li>
+            <li><a href="contact.html">お問い合わせ</a></li>
+            <li><a href="guide.html">使い方ガイド</a></li>
+          </ul>
+        </div>
+        
+        <div class="footer-section">
+          <h3>リンク</h3>
+          <ul>
+            <li><a href="#">GitHub（準備中）</a></li>
+            <li><a href="#">Steam（配布予定）</a></li>
+            <li><a href="#">プライバシーポリシー（準備中）</a></li>
+          </ul>
+        </div>
+      </div>
+      
+      <div class="footer-bottom">
+        <p>&copy; 2024 FLM. All rights reserved.</p>
+      </div>
+    </div>
+  </footer>
+
+  <!-- JavaScript -->
+  <script src="js/main.js"></script>
+  <script src="js/navigation.js"></script>
+  <script src="js/contact.js"></script>
+</body>
+</html>

@@ -1,0 +1,1747 @@
+{
+  "version": "1.0.0",
+  "lastUpdated": "2024-11-02T00:00:00Z",
+  "description": "Webサイト用途向けの推奨モデル設定",
+  "models": [
+    {
+      "id": "llama3-8b-chat",
+      "name": "Llama 3 8B Chat",
+      "modelName": "llama3:8b",
+      "engine": "ollama",
+      "description": "高性能な汎用チャットモデル。会話、質問応答、文章生成に最適。",
+      "category": "chat",
+      "recommended": true,
+      "icon": "💬",
+      "tags": [
+        "chat",
+        "general",
+        "conversation"
+      ],
+      "defaultSettings": {
+        "port": 8080,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "top_k": 40,
+          "max_tokens": 2048,
+          "repeat_penalty": 1.1
+        },
+        "memory": {
+          "context_window": 8192,
+          "batch_size": 512
+        }
+      },
+      "useCases": [
+        "Webサイトのチャットボット",
+        "FAQ自動応答システム",
+        "コンテンツ生成"
+      ],
+      "requirements": {
+        "minMemory": 8,
+        "recommendedMemory": 16,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "llama3.2-3b-chat",
+      "name": "Llama 3.2 3B Chat",
+      "modelName": "llama3.2:3b",
+      "engine": "ollama",
+      "description": "軽量で高速なチャットモデル。小規模なWebサイトに最適。",
+      "category": "chat",
+      "recommended": true,
+      "icon": "💬",
+      "tags": [
+        "chat",
+        "lightweight",
+        "fast"
+      ],
+      "defaultSettings": {
+        "port": 8080,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "top_k": 40,
+          "max_tokens": 1024,
+          "repeat_penalty": 1.1
+        },
+        "memory": {
+          "context_window": 4096,
+          "batch_size": 256
+        }
+      },
+      "useCases": [
+        "軽量なチャットボット",
+        "レスポンス時間重視のアプリケーション"
+      ],
+      "requirements": {
+        "minMemory": 4,
+        "recommendedMemory": 8,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "llava-vision",
+      "name": "LLaVA Vision",
+      "modelName": "llava:latest",
+      "engine": "ollama",
+      "description": "画像認識・画像説明が可能なマルチモーダルモデル。",
+      "category": "vision",
+      "recommended": true,
+      "icon": "🖼️",
+      "tags": [
+        "vision",
+        "image",
+        "multimodal"
+      ],
+      "capabilities": {
+        "vision": true
+      },
+      "defaultSettings": {
+        "port": 8081,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "max_tokens": 1024
+        },
+        "memory": {
+          "context_window": 4096,
+          "batch_size": 512
+        },
+        "multimodal": {
+          "enableVision": true,
+          "maxImageSize": 10
+        }
+      },
+      "useCases": [
+        "画像説明生成",
+        "画像分類",
+        "視覚的な質問応答"
+      ],
+      "requirements": {
+        "minMemory": 12,
+        "recommendedMemory": 24,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "whisper-audio",
+      "name": "Whisper Audio",
+      "modelName": "whisper:latest",
+      "engine": "ollama",
+      "description": "音声認識・音声変換が可能なモデル。",
+      "category": "audio",
+      "recommended": false,
+      "icon": "🎵",
+      "tags": [
+        "audio",
+        "speech",
+        "transcription"
+      ],
+      "capabilities": {
+        "audio": true
+      },
+      "defaultSettings": {
+        "port": 8082,
+        "enableAuth": true,
+        "multimodal": {
+          "enableAudio": true,
+          "maxAudioSize": 50
+        }
+      },
+      "useCases": [
+        "音声文字起こし",
+        "音声翻訳",
+        "音声コマンド認識"
+      ],
+      "requirements": {
+        "minMemory": 4,
+        "recommendedMemory": 8,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "codellama-code",
+      "name": "CodeLlama",
+      "modelName": "codellama:latest",
+      "engine": "ollama",
+      "description": "コード生成・補完に特化したモデル。",
+      "category": "code",
+      "recommended": true,
+      "icon": "💻",
+      "tags": [
+        "code",
+        "programming",
+        "generation"
+      ],
+      "defaultSettings": {
+        "port": 8083,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.2,
+          "top_p": 0.95,
+          "top_k": 40,
+          "max_tokens": 4096,
+          "repeat_penalty": 1.1
+        },
+        "memory": {
+          "context_window": 16384,
+          "batch_size": 512
+        }
+      },
+      "useCases": [
+        "コード生成支援",
+        "コード補完",
+        "コードレビュー支援"
+      ],
+      "requirements": {
+        "minMemory": 10,
+        "recommendedMemory": 16,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "llama-guard-safety",
+      "name": "Llama Guard",
+      "modelName": "llama-guard:latest",
+      "engine": "ollama",
+      "description": "コンテンツの安全性をチェックするモデレーション特化モデル。",
+      "category": "other",
+      "recommended": true,
+      "icon": "🛡️",
+      "tags": [
+        "moderation",
+        "safety",
+        "compliance"
+      ],
+      "capabilities": {
+        "vision": false,
+        "audio": false
+      },
+      "defaultSettings": {
+        "port": 8084,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0,
+          "top_p": 0.8,
+          "top_k": 20,
+          "max_tokens": 1024,
+          "repeat_penalty": 1
+        }
+      },
+      "useCases": [
+        "ユーザー投稿の安全性チェック",
+        "APIレスポンスのフィルタリング"
+      ],
+      "requirements": {
+        "minMemory": 8,
+        "recommendedMemory": 16,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "moondream-multimodal",
+      "name": "Moondream",
+      "modelName": "moondream:latest",
+      "engine": "ollama",
+      "description": "軽量で高速なマルチモーダルモデル。画像の説明や質問応答に最適。",
+      "category": "multimodal",
+      "recommended": true,
+      "icon": "🌙",
+      "tags": [
+        "multimodal",
+        "vision",
+        "lightweight"
+      ],
+      "capabilities": {
+        "vision": true
+      },
+      "defaultSettings": {
+        "port": 8085,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.6,
+          "max_tokens": 1024
+        },
+        "multimodal": {
+          "enableVision": true,
+          "maxImageSize": 6
+        }
+      },
+      "useCases": [
+        "商品画像の説明生成",
+        "ビジュアルQA",
+        "アクセシビリティ補助"
+      ],
+      "requirements": {
+        "minMemory": 6,
+        "recommendedMemory": 12,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "nllb-translation",
+      "name": "NLLB-200 3.3B",
+      "modelName": "nllb-200:3.3b",
+      "engine": "ollama",
+      "description": "200言語対応の高品質な翻訳モデル。",
+      "category": "translation",
+      "recommended": true,
+      "icon": "🌐",
+      "tags": [
+        "translation",
+        "multilingual"
+      ],
+      "defaultSettings": {
+        "port": 8086,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.2,
+          "top_p": 0.9,
+          "max_tokens": 1024
+        }
+      },
+      "useCases": [
+        "多言語チャットボット",
+        "グローバルFAQの翻訳",
+        "地域別コンテンツの自動化"
+      ],
+      "requirements": {
+        "minMemory": 8,
+        "recommendedMemory": 12,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "flux-image",
+      "name": "Flux Image Generation",
+      "modelName": "flux:latest",
+      "engine": "ollama",
+      "description": "高品質な画像生成に対応した拡張モデル。",
+      "category": "image-generation",
+      "recommended": true,
+      "icon": "🖌️",
+      "tags": [
+        "image-generation",
+        "creative",
+        "diffusion"
+      ],
+      "defaultSettings": {
+        "port": 8087,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.6,
+          "top_p": 0.9,
+          "max_tokens": 2048
+        }
+      },
+      "useCases": [
+        "サムネイル生成",
+        "クリエイティブイメージ生成"
+      ],
+      "requirements": {
+        "minMemory": 12,
+        "recommendedMemory": 24,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "bark-tts",
+      "name": "Bark TTS",
+      "modelName": "bark:latest",
+      "engine": "ollama",
+      "description": "多言語音声合成に対応した音声生成モデル。",
+      "category": "audio-generation",
+      "recommended": true,
+      "icon": "🔊",
+      "tags": [
+        "audio",
+        "tts",
+        "multilingual"
+      ],
+      "defaultSettings": {
+        "port": 8088,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "top_p": 0.95,
+          "max_tokens": 1024
+        },
+        "multimodal": {
+          "enableAudio": true,
+          "maxAudioSize": 80
+        }
+      },
+      "useCases": [
+        "音声ガイダンス生成",
+        "多言語アナウンス",
+        "アクセシビリティ向上"
+      ],
+      "requirements": {
+        "minMemory": 6,
+        "recommendedMemory": 12,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "medllama-assist",
+      "name": "MedLlama Assistant",
+      "modelName": "medllama:latest",
+      "engine": "ollama",
+      "description": "医療・ヘルスケア領域に特化した質問応答モデル。",
+      "category": "qa",
+      "recommended": false,
+      "icon": "🩺",
+      "tags": [
+        "medical",
+        "qa",
+        "specialized"
+      ],
+      "defaultSettings": {
+        "port": 8089,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.3,
+          "top_p": 0.8,
+          "max_tokens": 1024
+        }
+      },
+      "useCases": [
+        "医療ナレッジベースの検索支援",
+        "専門用語の説明作成"
+      ],
+      "requirements": {
+        "minMemory": 12,
+        "recommendedMemory": 24,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "qwen2.5-lightweight",
+      "name": "Qwen 2.5 1.5B Lightweight",
+      "modelName": "qwen2.5:1.5b",
+      "engine": "ollama",
+      "description": "超軽量で高速な多言語チャットモデル。ローカル実行に最適。",
+      "category": "chat",
+      "recommended": true,
+      "icon": "⚡",
+      "tags": [
+        "lightweight",
+        "fast",
+        "multilingual"
+      ],
+      "defaultSettings": {
+        "port": 8122,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "max_tokens": 1024
+        }
+      },
+      "useCases": [
+        "軽量チャットボット",
+        "ローカル環境での高速応答"
+      ],
+      "requirements": {
+        "minMemory": 4,
+        "recommendedMemory": 8,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "smol-lm-ultra-light",
+      "name": "Smol LM 600M Ultra Light",
+      "modelName": "smol-lm:600m",
+      "engine": "ollama",
+      "description": "極軽量でローカル実行に最適なモデル。最小リソースで動作。",
+      "category": "chat",
+      "recommended": true,
+      "icon": "💨",
+      "tags": [
+        "ultra-lightweight",
+        "local",
+        "minimal"
+      ],
+      "defaultSettings": {
+        "port": 8123,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "max_tokens": 512
+        }
+      },
+      "useCases": [
+        "リソース制約環境でのチャット",
+        "エッジデバイスでの実行"
+      ],
+      "requirements": {
+        "minMemory": 2,
+        "recommendedMemory": 4,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "pixtral-multimodal",
+      "name": "Pixtral Multimodal",
+      "modelName": "pixtral:latest",
+      "engine": "ollama",
+      "description": "高精度な画像理解とテキスト生成のマルチモーダルモデル。",
+      "category": "multimodal",
+      "recommended": true,
+      "icon": "🖼️",
+      "tags": [
+        "multimodal",
+        "vision",
+        "high-quality"
+      ],
+      "capabilities": {
+        "vision": true
+      },
+      "defaultSettings": {
+        "port": 8124,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.6,
+          "max_tokens": 2048
+        },
+        "multimodal": {
+          "enableVision": true,
+          "maxImageSize": 10
+        }
+      },
+      "useCases": [
+        "高精度な画像説明生成",
+        "視覚的な質問応答"
+      ],
+      "requirements": {
+        "minMemory": 16,
+        "recommendedMemory": 32,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "xtts-v2-tts",
+      "name": "XTTS v2 TTS",
+      "modelName": "xtts-v2:latest",
+      "engine": "ollama",
+      "description": "高品質な多言語音声合成モデル。",
+      "category": "audio-generation",
+      "recommended": true,
+      "icon": "🔊",
+      "tags": [
+        "tts",
+        "multilingual",
+        "high-quality"
+      ],
+      "capabilities": {
+        "audio": true
+      },
+      "defaultSettings": {
+        "port": 8125,
+        "enableAuth": true,
+        "multimodal": {
+          "enableAudio": true,
+          "maxAudioSize": 50
+        }
+      },
+      "useCases": [
+        "多言語音声合成",
+        "ナレーション生成"
+      ],
+      "requirements": {
+        "minMemory": 6,
+        "recommendedMemory": 12,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "stable-diffusion-xl-image",
+      "name": "Stable Diffusion XL",
+      "modelName": "stable-diffusion-xl:latest",
+      "engine": "ollama",
+      "description": "高解像度画像生成モデル。",
+      "category": "image-generation",
+      "recommended": true,
+      "icon": "🎨",
+      "tags": [
+        "image-generation",
+        "high-resolution",
+        "creative"
+      ],
+      "defaultSettings": {
+        "port": 8126,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "max_tokens": 2048
+        }
+      },
+      "useCases": [
+        "高解像度画像生成",
+        "クリエイティブイメージ作成"
+      ],
+      "requirements": {
+        "minMemory": 16,
+        "recommendedMemory": 32,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "phi-3-mini-4k-lightweight",
+      "name": "Phi-3 Mini 4K Lightweight",
+      "modelName": "phi-3:mini-4k",
+      "engine": "ollama",
+      "description": "4Kコンテキスト対応の軽量チャットモデル。",
+      "category": "chat",
+      "recommended": true,
+      "icon": "⚡",
+      "tags": [
+        "lightweight",
+        "4k-context",
+        "fast"
+      ],
+      "defaultSettings": {
+        "port": 8131,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "max_tokens": 4096
+        }
+      },
+      "useCases": [
+        "長文コンテキストでのチャット",
+        "ローカル環境での高速応答"
+      ],
+      "requirements": {
+        "minMemory": 4,
+        "recommendedMemory": 8,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "gemma-2b-it-lightweight",
+      "name": "Gemma 2B IT Lightweight",
+      "modelName": "gemma:2b-it",
+      "engine": "ollama",
+      "description": "指示応答に最適化された軽量チャットモデル。",
+      "category": "chat",
+      "recommended": true,
+      "icon": "💨",
+      "tags": [
+        "lightweight",
+        "instruction-tuned",
+        "local"
+      ],
+      "defaultSettings": {
+        "port": 8132,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "max_tokens": 1024
+        }
+      },
+      "useCases": [
+        "指示応答タスク",
+        "リソース制約環境でのチャット"
+      ],
+      "requirements": {
+        "minMemory": 4,
+        "recommendedMemory": 8,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "cogvlm-multimodal",
+      "name": "CogVLM Multimodal",
+      "modelName": "cogvlm:latest",
+      "engine": "ollama",
+      "description": "視覚と言語の理解に優れたマルチモーダルモデル。",
+      "category": "multimodal",
+      "recommended": true,
+      "icon": "👁️",
+      "tags": [
+        "multimodal",
+        "vision",
+        "high-quality"
+      ],
+      "capabilities": {
+        "vision": true
+      },
+      "defaultSettings": {
+        "port": 8133,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.6,
+          "max_tokens": 2048
+        }
+      },
+      "useCases": [
+        "高精度な画像理解",
+        "視覚的な質問応答"
+      ],
+      "requirements": {
+        "minMemory": 20,
+        "recommendedMemory": 40,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "qwen-vl-multimodal",
+      "name": "Qwen-VL Multimodal",
+      "modelName": "qwen-vl:latest",
+      "engine": "ollama",
+      "description": "Qwenベースの高精度マルチモーダルモデル。",
+      "category": "multimodal",
+      "recommended": true,
+      "icon": "🖼️",
+      "tags": [
+        "multimodal",
+        "vision",
+        "qwen"
+      ],
+      "capabilities": {
+        "vision": true
+      },
+      "defaultSettings": {
+        "port": 8134,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.6,
+          "max_tokens": 2048
+        }
+      },
+      "useCases": [
+        "画像とテキストの理解",
+        "マルチモーダル質問応答"
+      ],
+      "requirements": {
+        "minMemory": 12,
+        "recommendedMemory": 24,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "clip-multimodal",
+      "name": "CLIP Multimodal",
+      "modelName": "clip:latest",
+      "engine": "ollama",
+      "description": "画像とテキストの理解に優れた軽量マルチモーダルモデル。",
+      "category": "multimodal",
+      "recommended": true,
+      "icon": "🔍",
+      "tags": [
+        "multimodal",
+        "vision",
+        "lightweight"
+      ],
+      "capabilities": {
+        "vision": true
+      },
+      "defaultSettings": {
+        "port": 8135,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.5,
+          "max_tokens": 512
+        }
+      },
+      "useCases": [
+        "画像検索",
+        "画像とテキストのマッチング"
+      ],
+      "requirements": {
+        "minMemory": 2,
+        "recommendedMemory": 4,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "blip-multimodal",
+      "name": "BLIP Multimodal",
+      "modelName": "blip:latest",
+      "engine": "ollama",
+      "description": "画像キャプション生成と視覚的質問応答モデル。",
+      "category": "multimodal",
+      "recommended": false,
+      "icon": "📝",
+      "tags": [
+        "multimodal",
+        "vision",
+        "captioning"
+      ],
+      "capabilities": {
+        "vision": true
+      },
+      "defaultSettings": {
+        "port": 8136,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.6,
+          "max_tokens": 1024
+        }
+      },
+      "useCases": [
+        "画像キャプション生成",
+        "視覚的質問応答"
+      ],
+      "requirements": {
+        "minMemory": 4,
+        "recommendedMemory": 8,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "phi-3-mini-128k-lightweight",
+      "name": "Phi-3 Mini 128K Lightweight",
+      "modelName": "phi-3:mini-128k",
+      "engine": "ollama",
+      "description": "128Kコンテキスト対応の軽量チャットモデル。",
+      "category": "chat",
+      "recommended": true,
+      "icon": "⚡",
+      "tags": [
+        "lightweight",
+        "128k-context",
+        "long-context"
+      ],
+      "defaultSettings": {
+        "port": 8141,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "max_tokens": 131072
+        }
+      },
+      "useCases": [
+        "超長文コンテキストでのチャット",
+        "ドキュメント解析"
+      ],
+      "requirements": {
+        "minMemory": 4,
+        "recommendedMemory": 8,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "gemma-1.1b-ultra-light",
+      "name": "Gemma 1.1B Ultra Light",
+      "modelName": "gemma:1.1b",
+      "engine": "ollama",
+      "description": "超軽量で高速なチャットモデル。",
+      "category": "chat",
+      "recommended": true,
+      "icon": "💨",
+      "tags": [
+        "ultra-lightweight",
+        "fast",
+        "minimal"
+      ],
+      "defaultSettings": {
+        "port": 8142,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "max_tokens": 512
+        }
+      },
+      "useCases": [
+        "最小リソース環境でのチャット",
+        "高速応答が必要なタスク"
+      ],
+      "requirements": {
+        "minMemory": 2,
+        "recommendedMemory": 4,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "nano-gpt-edge",
+      "name": "Nano GPT Edge",
+      "modelName": "nano-gpt:latest",
+      "engine": "ollama",
+      "description": "極軽量でエッジデバイス向けのモデル。",
+      "category": "chat",
+      "recommended": true,
+      "icon": "📱",
+      "tags": [
+        "nano",
+        "edge",
+        "iot",
+        "minimal"
+      ],
+      "defaultSettings": {
+        "port": 8143,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "max_tokens": 256
+        }
+      },
+      "useCases": [
+        "IoTデバイスでの実行",
+        "エッジコンピューティング"
+      ],
+      "requirements": {
+        "minMemory": 1,
+        "recommendedMemory": 2,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "musicgen-audio",
+      "name": "MusicGen Audio",
+      "modelName": "musicgen:latest",
+      "engine": "ollama",
+      "description": "高品質な音楽生成モデル。",
+      "category": "audio-generation",
+      "recommended": true,
+      "icon": "🎵",
+      "tags": [
+        "music",
+        "audio-generation",
+        "high-quality"
+      ],
+      "capabilities": {
+        "audio": true
+      },
+      "defaultSettings": {
+        "port": 8144,
+        "enableAuth": true,
+        "multimodal": {
+          "enableAudio": true,
+          "maxAudioSize": 100
+        }
+      },
+      "useCases": [
+        "テキストから音楽生成",
+        "BGM作成"
+      ],
+      "requirements": {
+        "minMemory": 8,
+        "recommendedMemory": 16,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "audiocraft-audio",
+      "name": "AudioCraft Audio",
+      "modelName": "audiocraft:latest",
+      "engine": "ollama",
+      "description": "音声と音楽の生成に特化したモデル。",
+      "category": "audio-generation",
+      "recommended": false,
+      "icon": "🎶",
+      "tags": [
+        "audio",
+        "music",
+        "generation"
+      ],
+      "capabilities": {
+        "audio": true
+      },
+      "defaultSettings": {
+        "port": 8145,
+        "enableAuth": true,
+        "multimodal": {
+          "enableAudio": true,
+          "maxAudioSize": 50
+        }
+      },
+      "useCases": [
+        "音声生成",
+        "音楽生成"
+      ],
+      "requirements": {
+        "minMemory": 4,
+        "recommendedMemory": 8,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "micro-llm-microcontroller",
+      "name": "Micro LLM Microcontroller",
+      "modelName": "micro-llm:latest",
+      "engine": "ollama",
+      "description": "マイクロコントローラー向けの極軽量モデル。",
+      "category": "chat",
+      "recommended": true,
+      "icon": "🔧",
+      "tags": [
+        "micro",
+        "microcontroller",
+        "ultra-lightweight"
+      ],
+      "defaultSettings": {
+        "port": 8152,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "max_tokens": 256
+        }
+      },
+      "useCases": [
+        "マイクロコントローラーでの実行",
+        "エッジデバイスでのチャット"
+      ],
+      "requirements": {
+        "minMemory": 1,
+        "recommendedMemory": 2,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "gen2-video",
+      "name": "Gen-2 Video",
+      "modelName": "gen2:latest",
+      "engine": "ollama",
+      "description": "高品質な動画生成モデル。",
+      "category": "video-generation",
+      "recommended": true,
+      "icon": "🎥",
+      "tags": [
+        "video",
+        "text-to-video",
+        "high-quality"
+      ],
+      "defaultSettings": {
+        "port": 8154,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "max_tokens": 2048
+        }
+      },
+      "useCases": [
+        "テキストから動画生成",
+        "高品質動画作成"
+      ],
+      "requirements": {
+        "minMemory": 12,
+        "recommendedMemory": 24,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "point-e-3d",
+      "name": "Point-E 3D",
+      "modelName": "point-e:latest",
+      "engine": "ollama",
+      "description": "3Dポイントクラウド生成モデル。",
+      "category": "image-generation",
+      "recommended": false,
+      "icon": "🎯",
+      "tags": [
+        "3d",
+        "point-cloud",
+        "generation"
+      ],
+      "defaultSettings": {
+        "port": 8155,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "max_tokens": 2048
+        }
+      },
+      "useCases": [
+        "テキストから3Dモデル生成",
+        "3Dポイントクラウド生成"
+      ],
+      "requirements": {
+        "minMemory": 4,
+        "recommendedMemory": 8,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "wizard-math-7b",
+      "name": "Wizard Math 7B",
+      "modelName": "wizard-math:7b",
+      "engine": "ollama",
+      "description": "数学問題解決に特化したモデル。",
+      "category": "qa",
+      "recommended": true,
+      "icon": "🔢",
+      "tags": [
+        "math",
+        "problem-solving",
+        "science"
+      ],
+      "defaultSettings": {
+        "port": 8160,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.3,
+          "top_p": 0.9,
+          "max_tokens": 2048
+        }
+      },
+      "useCases": [
+        "数学問題の解決",
+        "数式処理"
+      ],
+      "requirements": {
+        "minMemory": 8,
+        "recommendedMemory": 16,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "mistral-instruct-7b",
+      "name": "Mistral Instruct 7B",
+      "modelName": "mistral-instruct:7b",
+      "engine": "ollama",
+      "description": "指示応答モデル（汎用・特殊用途対応）。",
+      "category": "chat",
+      "recommended": true,
+      "icon": "🎯",
+      "tags": [
+        "instruct",
+        "general-purpose",
+        "versatile"
+      ],
+      "defaultSettings": {
+        "port": 8172,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "max_tokens": 2048
+        }
+      },
+      "useCases": [
+        "汎用指示応答",
+        "多様なタスク対応"
+      ],
+      "requirements": {
+        "minMemory": 8,
+        "recommendedMemory": 16,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "starcoder2-15b",
+      "name": "StarCoder2 15B",
+      "modelName": "starcoder2:15b",
+      "engine": "ollama",
+      "description": "大規模コード生成モデル。",
+      "category": "code",
+      "recommended": true,
+      "icon": "⭐",
+      "tags": [
+        "code",
+        "large",
+        "generation"
+      ],
+      "defaultSettings": {
+        "port": 8177,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.2,
+          "top_p": 0.9,
+          "max_tokens": 2048
+        }
+      },
+      "useCases": [
+        "大規模コード生成",
+        "複雑なプログラミングタスク"
+      ],
+      "requirements": {
+        "minMemory": 24,
+        "recommendedMemory": 48,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "instructblip-7b",
+      "name": "InstructBLIP 7B",
+      "modelName": "instructblip:7b",
+      "engine": "ollama",
+      "description": "指示に基づく画像理解モデル。",
+      "category": "multimodal",
+      "recommended": true,
+      "icon": "🖼️",
+      "tags": [
+        "multimodal",
+        "vision",
+        "instruct"
+      ],
+      "capabilities": {
+        "vision": true
+      },
+      "defaultSettings": {
+        "port": 8178,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.6,
+          "max_tokens": 2048
+        }
+      },
+      "useCases": [
+        "指示に基づく画像理解",
+        "視覚的質問応答"
+      ],
+      "requirements": {
+        "minMemory": 12,
+        "recommendedMemory": 24,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "phi-3-medium-4k",
+      "name": "Phi-3 Medium 4K",
+      "modelName": "phi-3:medium-4k",
+      "engine": "ollama",
+      "description": "中規模4Kコンテキストモデル。",
+      "category": "chat",
+      "recommended": true,
+      "icon": "⚡",
+      "tags": [
+        "4k-context",
+        "medium",
+        "versatile"
+      ],
+      "defaultSettings": {
+        "port": 8180,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "max_tokens": 4096
+        }
+      },
+      "useCases": [
+        "長文コンテキストでのチャット",
+        "中規模タスク"
+      ],
+      "requirements": {
+        "minMemory": 12,
+        "recommendedMemory": 24,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "qwen2.5-3b",
+      "name": "Qwen 2.5 3B",
+      "modelName": "qwen2.5:3b",
+      "engine": "ollama",
+      "description": "軽量多言語チャットモデル。",
+      "category": "chat",
+      "recommended": true,
+      "icon": "🌐",
+      "tags": [
+        "lightweight",
+        "multilingual",
+        "fast"
+      ],
+      "defaultSettings": {
+        "port": 8181,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "max_tokens": 1024
+        }
+      },
+      "useCases": [
+        "軽量チャット",
+        "多言語対応"
+      ],
+      "requirements": {
+        "minMemory": 4,
+        "recommendedMemory": 8,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "llama3.2-8b",
+      "name": "Llama 3.2 8B",
+      "modelName": "llama3.2:8b",
+      "engine": "ollama",
+      "description": "バランス型高性能モデル。",
+      "category": "chat",
+      "recommended": true,
+      "icon": "🦙",
+      "tags": [
+        "balanced",
+        "high-performance",
+        "llama3.2"
+      ],
+      "defaultSettings": {
+        "port": 8182,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "max_tokens": 2048
+        }
+      },
+      "useCases": [
+        "汎用チャット",
+        "バランス型タスク"
+      ],
+      "requirements": {
+        "minMemory": 8,
+        "recommendedMemory": 16,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "qwen2.5-7b",
+      "name": "Qwen 2.5 7B",
+      "modelName": "qwen2.5:7b",
+      "engine": "ollama",
+      "description": "中規模多言語チャットモデル。",
+      "category": "chat",
+      "recommended": true,
+      "icon": "🌏",
+      "tags": [
+        "multilingual",
+        "medium",
+        "qwen"
+      ],
+      "defaultSettings": {
+        "port": 8184,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "max_tokens": 2048
+        }
+      },
+      "useCases": [
+        "多言語チャット",
+        "国際対応"
+      ],
+      "requirements": {
+        "minMemory": 8,
+        "recommendedMemory": 16,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "gemma-7b-it",
+      "name": "Gemma 7B IT",
+      "modelName": "gemma:7b-it",
+      "engine": "ollama",
+      "description": "指示応答に最適化されたモデル。",
+      "category": "chat",
+      "recommended": true,
+      "icon": "💎",
+      "tags": [
+        "instruct",
+        "optimized",
+        "gemma"
+      ],
+      "defaultSettings": {
+        "port": 8185,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "max_tokens": 2048
+        }
+      },
+      "useCases": [
+        "指示応答",
+        "タスク実行"
+      ],
+      "requirements": {
+        "minMemory": 8,
+        "recommendedMemory": 16,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "phi-3-small",
+      "name": "Phi-3 Small",
+      "modelName": "phi-3:small",
+      "engine": "ollama",
+      "description": "超軽量高性能モデル。",
+      "category": "chat",
+      "recommended": true,
+      "icon": "⚡",
+      "tags": [
+        "ultra-lightweight",
+        "fast",
+        "phi3"
+      ],
+      "defaultSettings": {
+        "port": 8186,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "max_tokens": 1024
+        }
+      },
+      "useCases": [
+        "軽量チャット",
+        "高速応答"
+      ],
+      "requirements": {
+        "minMemory": 4,
+        "recommendedMemory": 8,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "tinyllama-1.1b-chat",
+      "name": "TinyLlama 1.1B Chat",
+      "modelName": "tinyllama:1.1b-chat",
+      "engine": "ollama",
+      "description": "チャット最適化版。",
+      "category": "chat",
+      "recommended": true,
+      "icon": "🐣",
+      "tags": [
+        "ultra-lightweight",
+        "tiny",
+        "fast"
+      ],
+      "defaultSettings": {
+        "port": 8187,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.7,
+          "top_p": 0.9,
+          "max_tokens": 512
+        }
+      },
+      "useCases": [
+        "超軽量チャット",
+        "リソース制約環境"
+      ],
+      "requirements": {
+        "minMemory": 2,
+        "recommendedMemory": 4,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "llava-llama3-8b",
+      "name": "LLaVA Llama3 8B",
+      "modelName": "llava-llama3:8b",
+      "engine": "ollama",
+      "description": "Llama3ベースの視覚理解モデル。",
+      "category": "multimodal",
+      "recommended": true,
+      "icon": "👁️",
+      "tags": [
+        "multimodal",
+        "vision",
+        "llama3"
+      ],
+      "capabilities": {
+        "vision": true
+      },
+      "defaultSettings": {
+        "port": 8188,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.6,
+          "max_tokens": 2048
+        }
+      },
+      "useCases": [
+        "画像理解",
+        "視覚的質問応答"
+      ],
+      "requirements": {
+        "minMemory": 12,
+        "recommendedMemory": 24,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "deepseek-coder-1.3b",
+      "name": "DeepSeek Coder 1.3B",
+      "modelName": "deepseek-coder:1.3b",
+      "engine": "ollama",
+      "description": "軽量コード生成モデル。",
+      "category": "code",
+      "recommended": true,
+      "icon": "💻",
+      "tags": [
+        "code",
+        "lightweight",
+        "fast"
+      ],
+      "defaultSettings": {
+        "port": 8189,
+        "enableAuth": true,
+        "modelParameters": {
+          "temperature": 0.2,
+          "top_p": 0.9,
+          "max_tokens": 1024
+        }
+      },
+      "useCases": [
+        "軽量コード生成",
+        "リソース制約環境"
+      ],
+      "requirements": {
+        "minMemory": 4,
+        "recommendedMemory": 8,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "speecht5",
+      "name": "SpeechT5",
+      "modelName": "speecht5:latest",
+      "engine": "ollama",
+      "description": "音声入力・出力対応の対話モデル。",
+      "category": "audio",
+      "recommended": true,
+      "icon": "🎤",
+      "tags": [
+        "speech",
+        "voice-input",
+        "voice-output",
+        "dialogue"
+      ],
+      "capabilities": {
+        "audio": true
+      },
+      "defaultSettings": {
+        "port": 8190,
+        "enableAuth": true,
+        "multimodal": {
+          "enableAudio": true,
+          "maxAudioSize": 50
+        }
+      },
+      "useCases": [
+        "音声対話",
+        "音声入力・出力"
+      ],
+      "requirements": {
+        "minMemory": 2,
+        "recommendedMemory": 4,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "speechllm-7b",
+      "name": "SpeechLLM 7B",
+      "modelName": "speechllm:7b",
+      "engine": "ollama",
+      "description": "音声と言語の統合対話モデル。",
+      "category": "multimodal",
+      "recommended": true,
+      "icon": "🗣️",
+      "tags": [
+        "speech",
+        "multimodal",
+        "voice",
+        "dialogue"
+      ],
+      "capabilities": {
+        "audio": true
+      },
+      "defaultSettings": {
+        "port": 8191,
+        "enableAuth": true,
+        "multimodal": {
+          "enableAudio": true,
+          "maxAudioSize": 100
+        }
+      },
+      "useCases": [
+        "音声対話",
+        "音声と言語の統合"
+      ],
+      "requirements": {
+        "minMemory": 12,
+        "recommendedMemory": 24,
+        "gpuRecommended": true
+      }
+    },
+    {
+      "id": "bark",
+      "name": "Bark",
+      "modelName": "bark:latest",
+      "engine": "ollama",
+      "description": "テキスト・音声入力から音声出力を生成。",
+      "category": "audio-generation",
+      "recommended": true,
+      "icon": "🐕",
+      "tags": [
+        "audio-generation",
+        "voice-output",
+        "text-to-speech"
+      ],
+      "capabilities": {
+        "audio": true
+      },
+      "defaultSettings": {
+        "port": 8192,
+        "enableAuth": true,
+        "multimodal": {
+          "enableAudio": true,
+          "maxAudioSize": 50
+        }
+      },
+      "useCases": [
+        "音声生成",
+        "テキストから音声"
+      ],
+      "requirements": {
+        "minMemory": 4,
+        "recommendedMemory": 8,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "valle-x",
+      "name": "VALL-E X",
+      "modelName": "valle-x:latest",
+      "engine": "ollama",
+      "description": "高品質音声対話モデル（多言語対応）。",
+      "category": "audio-generation",
+      "recommended": true,
+      "icon": "🌍",
+      "tags": [
+        "audio-generation",
+        "voice",
+        "multilingual"
+      ],
+      "capabilities": {
+        "audio": true
+      },
+      "defaultSettings": {
+        "port": 8193,
+        "enableAuth": true,
+        "multimodal": {
+          "enableAudio": true,
+          "maxAudioSize": 50
+        }
+      },
+      "useCases": [
+        "高品質音声生成",
+        "多言語音声対話"
+      ],
+      "requirements": {
+        "minMemory": 4,
+        "recommendedMemory": 8,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "funasr",
+      "name": "FunASR",
+      "modelName": "funasr:latest",
+      "engine": "ollama",
+      "description": "リアルタイム音声認識モデル。",
+      "category": "audio",
+      "recommended": true,
+      "icon": "⚡",
+      "tags": [
+        "asr",
+        "realtime",
+        "speech-recognition"
+      ],
+      "capabilities": {
+        "audio": true
+      },
+      "defaultSettings": {
+        "port": 8194,
+        "enableAuth": true,
+        "multimodal": {
+          "enableAudio": true,
+          "maxAudioSize": 50
+        }
+      },
+      "useCases": [
+        "リアルタイム音声認識",
+        "音声入力"
+      ],
+      "requirements": {
+        "minMemory": 2,
+        "recommendedMemory": 4,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "realtime-voice",
+      "name": "Real-time Voice",
+      "modelName": "realtime-voice:latest",
+      "engine": "ollama",
+      "description": "リアルタイム音声対話モデル。",
+      "category": "audio",
+      "recommended": true,
+      "icon": "💬",
+      "tags": [
+        "realtime",
+        "voice-dialogue",
+        "speech"
+      ],
+      "capabilities": {
+        "audio": true
+      },
+      "defaultSettings": {
+        "port": 8195,
+        "enableAuth": true,
+        "multimodal": {
+          "enableAudio": true,
+          "maxAudioSize": 50
+        }
+      },
+      "useCases": [
+        "リアルタイム音声対話",
+        "音声チャット"
+      ],
+      "requirements": {
+        "minMemory": 4,
+        "recommendedMemory": 8,
+        "gpuRecommended": false
+      }
+    },
+    {
+      "id": "multilingual-voice",
+      "name": "Multilingual Voice",
+      "modelName": "multilingual-voice:latest",
+      "engine": "ollama",
+      "description": "多言語音声対話モデル。",
+      "category": "audio",
+      "recommended": true,
+      "icon": "🌐",
+      "tags": [
+        "multilingual",
+        "voice-dialogue",
+        "speech"
+      ],
+      "capabilities": {
+        "audio": true
+      },
+      "defaultSettings": {
+        "port": 8196,
+        "enableAuth": true,
+        "multimodal": {
+          "enableAudio": true,
+          "maxAudioSize": 50
+        }
+      },
+      "useCases": [
+        "多言語音声対話",
+        "国際音声チャット"
+      ],
+      "requirements": {
+        "minMemory": 4,
+        "recommendedMemory": 8,
+        "gpuRecommended": false
+      }
+    }
+  ]
+}
