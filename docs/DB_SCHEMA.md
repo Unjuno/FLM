@@ -23,7 +23,7 @@
 | テーブル            | 説明                                                           |
 |---------------------|----------------------------------------------------------------|
 | `schema_migrations` | SQLx 管理テーブル                                              |
-| `api_keys`          | `id TEXT PRIMARY KEY, label TEXT UNIQUE, hash TEXT UNIQUE, created_at, revoked_at DATETIME` |
+| `api_keys`          | `id TEXT PRIMARY KEY, label TEXT, hash TEXT UNIQUE, created_at, revoked_at DATETIME` |
 | `security_policies` | `id TEXT PRIMARY KEY CHECK(id = 'default'), policy_json TEXT, updated_at`            |
 | `audit_logs`        | `id INTEGER PK, request_id TEXT, api_key_id TEXT, endpoint TEXT, status INTEGER, latency_ms INTEGER, created_at DATETIME` |
 | `rate_limit_states` | レート制限の状態を保持（リセット可能）                         |

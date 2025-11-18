@@ -26,6 +26,7 @@
 | `flm models list` | 利用可能モデル一覧を取得（読取専用） | Ollama: `/api/tags`, 他: `/v1/models` |
 | `flm proxy start` | Rust製セキュアプロキシ起動 | `--mode local-http` / `--mode https-acme` / `--mode dev-selfsigned` |
 | `flm proxy stop` | プロキシ停止 | PID/ポート、Graceful shutdown |
+| `flm proxy status` | 稼働中ハンドルの一覧取得 | `ProxyService::status` の結果を JSONで表示（mode/port/cert/uptime） |
 | `flm config set/get/list` | 設定DB (`config.db`) 操作 | キー/値 or JSON ブロック |
 | `flm api-keys create/list/revoke/rotate` | APIキー管理 | セキュリティDB (`security.db`) を使用 |
 | `flm security policy` | IPホワイトリスト/CORS/レート制限設定の取得・更新 | Policy JSON を丸ごと取得・更新（差分は将来拡張） |

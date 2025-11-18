@@ -233,6 +233,10 @@ pub struct SecurityPolicy {
 /// Phase1/2では SecurityPolicy はグローバルに1件のみ運用し、`id = "default"` を固定とする。
 /// CLI/UI/Proxyは暗黙にこのIDを扱い、将来プロファイル分割が必要になった場合にのみ
 /// SecurityServiceへ複数IDサポートを拡張する。
+///
+/// APIキーの `label` は UI 表示用メタデータであり、DB 制約としては一意ではない。`rotate_api_key`
+/// で `new_label` を指定しなかった場合、旧レコードのラベルをそのまま新レコードにコピーし、
+/// 旧レコードは `revoked_at` を設定して失効させる。
 ```
 
 ### EngineStatus 遷移規則

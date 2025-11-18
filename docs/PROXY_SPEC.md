@@ -116,8 +116,6 @@ CLI のデフォルトは `local-http`（ローカル検証向け）とし、イ
 | `logit_bias`, `presence_penalty`, `frequency_penalty` | 未サポートエンジン多数 | warning を出しつつ無視 |
 | `stop` | Ollama/vLLM | llama.cpp 等未対応は無視 |
 
-## 9. 未決事項
-
 ## 9. セキュリティポリシー JSON の前提
 
 Proxy / UI / CLI は `SecurityPolicy.raw_json` に以下のキーが存在する前提で動作する（省略時は無効扱い）:

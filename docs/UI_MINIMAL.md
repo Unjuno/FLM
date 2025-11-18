@@ -28,13 +28,14 @@
 ### Setup Wizard (External Publish)
 - Dashboard から起動できるステッパーUIで「外部公開に必要な最小セット」を案内する。
 - ステップ構成:
-  1. **Pre-check**: `ProxyService::status`, `SecurityService::list_api_keys`, `SecurityService::policy_get` を呼び、APIキー・IPホワイトリスト・Proxyモードの不足を可視化。
+  1. **Pre-check**: `ProxyService::status`, `SecurityService::list_api_keys`, `SecurityService::get_policy` を呼び、APIキー・IPホワイトリスト・Proxyモードの不足を可視化。
   2. **Proxy Mode & Port**: `dev-selfsigned` / `https-acme` を選択し、`ProxyService::start` に引き渡す設定（ポート、ACMEメール/ドメイン）を入力。
-  3. **Security Policy**: IPホワイトリスト/CORS/RateLimit フォームを `SecurityService::policy_set` で確定。入力時に RFC1918/リンクローカルのみの場合は警告を出し、「手動で公開IPを追加してください」と案内する（`allowed_ips` のバリデーションは UI 側で実施）。
-  4. **Firewall Automation**: クライアントOSを自動検出し（Tauri側 Native API）、許可ポート/IPに応じたコマンドスクリプト（PowerShell, pfctl, ufw/firewalld 等）を生成。  
+  3. **Security Policy**: IPホワイトリスト/CORS/RateLimit フォームを `SecurityService::set_policy` で確定。入力時に RFC1918/リンクローカルのみの場合は警告を出し、「手動で公開IPを追加してください」と案内する（`allowed_ips` のバリデーションは UI 側で実施）。
+  4. **Firewall Automation**: クライアントOSを自動検出し（Tauri側 Native API）、`ProxyService::status` で得た全待受ポート（例: 8080/8081）と `SecurityPolicy.allowed_ips`（IPv4/IPv6 CIDR 可）に応じたコマンドスクリプト（PowerShell, pfctl, ufw/firewalld 等）を生成。  
+     - HTTP/HTTPS それぞれのポートをまとめて開放できるよう、Preview には **複数ルール**（Windowsなら `foreach` ループ、Unixなら複数行）を含める。許可IPが複数ある場合はリスト展開して全組み合わせを生成。  
      - 「管理者権限で適用」ボタンを押すと UAC/sudo プロンプトを出し、`ipc.system_firewall_apply(script)` で昇格したシェルを実行。結果（stdout/stderr, exit code）をログカードに表示。  
-     - 併せて「スクリプトをコピー / 保存」アクションを提供し、`docs/SECURITY_FIREWALL_GUIDE.md` に沿って手動実行する選択肢も残す。
-- Wizard 完了後に `SecurityService::policy_get` / `ProxyService::status` / `system.firewall_state` を再取得し、ダッシュボードへサマリカードを表示する。
+     - 併せて「スクリプトをコピー / 保存」アクションを提供し、`docs/SECURITY_FIREWALL_GUIDE.md` に沿って手動実行する選択肢も残す（IPv6 ルールや HTTP-only の場合も同じワークフロー）。
+- Wizard 完了後に `SecurityService::get_policy` / `ProxyService::status` / `system.firewall_state` を再取得し、ダッシュボードへサマリカードを表示する。
 
 ## 3. ワイヤーフレーム（テキスト）
 ```
@@ -94,7 +95,7 @@ Setup Wizard
   - 例:
     ```json
     {
-      "script": "New-NetFirewallRule -DisplayName \"FLM Proxy HTTPS\" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8081 -RemoteAddress 203.0.113.0/24",
+      "script": "$ports = @(8080,8081)\nforeach ($port in $ports) {\n  New-NetFirewallRule -DisplayName \"FLM Proxy $port\" -Direction Inbound -Action Allow -Protocol TCP -LocalPort $port -RemoteAddress 203.0.113.0/24\n}",
       "display_name": "Windows / PowerShell",
       "shell": "powershell"
     }
@@ -102,7 +103,7 @@ Setup Wizard
 - `system_firewall_apply`  
   - 入力: `script`（preview で得た文字列）、`shell`。  
   - 実行: OS 標準の昇格 API を通じて実行し、`{ stdout, stderr, exit_code }` を返す。exit_code≠0 の場合は Wizard が失敗とみなす。
-- どちらも Core API に依存せず、Tauri ネイティブプラグイン（Rust）として実装する。アクセス権を最小化するため、ファイアウォール設定以外の特権操作は許可しない。ログは `logs/security/firewall-*.log` に保存する。
+- どちらも Core API に依存せず、Tauri ネイティブプラグイン（Rust）として実装する。アクセス権を最小化するため、ファイアウォール設定以外の特権操作は許可しない。ログは `logs/security/firewall-*.log` に保存する。IPv6 対応が必要な場合は `allowed_ips` から `:` を含む値を検知し、テンプレートを `New-NetFirewallRule -LocalAddress ::` などに切り替える。
 
 ## 7. 未決事項
 - UI コンポーネントライブラリ（Tailwind / MUI など）、テーマカラー。

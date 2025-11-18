@@ -67,7 +67,19 @@ Rust製セキュアプロキシを起動し、Forward先を検出済みエンジ
 flm proxy stop --port 8080
 ```
 
-### 3.5 `flm config`
+### 3.5 `flm proxy status`
+現在稼働中のプロキシハンドル一覧を取得し、モード/ポート/ACME 情報を確認する。
+
+- 出力: `ProxyService::status` が返すハンドル配列を JSON でそのまま表示（`id`, `mode`, `port`, `listen_addr`, `acme_domain`, `running`, `last_error` など）
+- `--format text` の場合はテーブル表示
+- ハンドルが存在しない場合は空配列
+
+例:
+```bash
+flm proxy status --format text
+```
+
+### 3.6 `flm config`
 `set` / `get` / `list` を提供。対象は `config.db`。
 
 例:
@@ -77,7 +89,7 @@ flm config get proxy.port
 flm config list
 ```
 
-### 3.6 `flm api-keys`
+### 3.7 `flm api-keys`
 API キー生成・一覧・無効化・ローテーションを担当（`security.db`）。
 
 例:
@@ -88,7 +100,7 @@ flm api-keys revoke ak_xxxxx
 flm api-keys rotate ak_xxxxx
 ```
 
-### 3.7 `flm security policy`
+### 3.8 `flm security policy`
 IPホワイトリスト、CORS、レート制限設定の取得・更新。
 Phase1/2 ではグローバルポリシー ID `"default"` のみを扱い、CLI から ID を指定する必要はない。
 
@@ -98,7 +110,7 @@ flm security policy show
 flm security policy set --json ./policy.json
 ```
 
-### 3.8 `flm chat`
+### 3.9 `flm chat`
 `POST /v1/chat/completions` を通じて CLI から応答を確認（任意）。
 
 要件:
@@ -136,6 +148,7 @@ flm chat --model flm://ollama/llama3:8b --prompt "Hello" --stream
 - 統合:
   - `proxy start --mode local-http` → 応答確認 → `proxy stop`
   - `proxy start --mode dev-selfsigned` で TLS ハンドシェイク確認
+- `proxy status` で `ProxyService::status` のレスポンスを検証（起動前は空、起動後は mode/port/pid が一致、停止後に再び空になること）
 - `security policy` コマンドでポリシーJSONの取得・全体更新を確認
 - モック: Ollama API / OpenAI互換API を HTTP server mock で再現
 - CI: Windows + Linux + macOS で CLI コマンド一式と Proxy 統合テストを実行

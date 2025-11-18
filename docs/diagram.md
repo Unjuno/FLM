@@ -35,7 +35,7 @@ flowchart TD
         Clients[(Client Apps\n/cURL/Postman)]
     end
 
-    CLI -->|IPC| Domain
+    CLI -->|Direct call| Domain
     UI -->|IPC| Domain
     ProxyAdapter --> Domain
 

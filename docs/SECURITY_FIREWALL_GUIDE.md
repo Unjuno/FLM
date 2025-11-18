@@ -4,7 +4,7 @@
 外部公開時に必要となる OS レベルのファイアウォール設定と、Setup Wizard Step 4 が自動生成・実行する処理を定義する。
 
 ## 1. 前提
-- `ProxyService::status` で取得した待受ポート（デフォルト: HTTP 8080 / HTTPS 8081）と、`SecurityService::policy_get` で取得した許可 IP / CIDR を対象とする。
+- `ProxyService::status` で取得した待受ポート群（デフォルト: `[8080, 8081]`）と、`SecurityService::get_policy` の `allowed_ips`（IPv4/IPv6 混在可）を入力にする。
 - Wizard は OS 判定後、`system_firewall_preview` でスクリプト文字列を生成し、「管理者権限で適用」で昇格済みシェル経由の `system_firewall_apply` を実行する。
 - 昇格を拒否された場合は本ガイドの手順を案内し、ユーザーまたは管理者に手動実行してもらう。
 - 適用前にバックアップ（例: `netsh advfirewall export`, `sudo pfctl -sr`, `sudo ufw status numbered`）を推奨。
@@ -17,17 +17,23 @@
 
 ### 2.2 手動コマンド例
 ```powershell
-New-NetFirewallRule `
-  -DisplayName "FLM Proxy HTTPS" `
-  -Direction Inbound `
-  -Action Allow `
-  -Protocol TCP `
-  -LocalPort <PORT> `
-  -RemoteAddress <CIDR/IP>
+$ports = @(8080, 8081)                 # HTTP / HTTPS
+$cidrs = @("203.0.113.0/24", "2001:db8::/48")
+foreach ($port in $ports) {
+  foreach ($cidr in $cidrs) {
+    New-NetFirewallRule `
+      -DisplayName "FLM Proxy $port $cidr" `
+      -Direction Inbound `
+      -Action Allow `
+      -Protocol TCP `
+      -LocalPort $port `
+      -RemoteAddress $cidr
+  }
+}
 ```
-削除:
+削除（Wizardは display_name を "FLM Proxy <port> <cidr>" 形式で付与）:
 ```powershell
-Remove-NetFirewallRule -DisplayName "FLM Proxy HTTPS"
+Get-NetFirewallRule -DisplayName "FLM Proxy *" | Remove-NetFirewallRule
 ```
 
 ## 3. macOS
@@ -38,7 +44,8 @@ Remove-NetFirewallRule -DisplayName "FLM Proxy HTTPS"
 ### 3.2 手動コマンド例
 ```bash
 sudo tee /etc/pf.anchors/flm >/dev/null <<'EOF'
-pass in proto tcp from <CIDR/IP> to any port <PORT> keep state
+table <flm_allow> persist { 203.0.113.0/24, 2001:db8::/48 }
+pass in proto tcp from <flm_allow> to any port { 8080 8081 } keep state
 EOF
 sudo pfctl -f /etc/pf.conf && sudo pfctl -e
 ```
@@ -46,33 +53,45 @@ sudo pfctl -f /etc/pf.conf && sudo pfctl -e
 ## 4. Linux
 ### 4.1 UFW (Ubuntu 等)
 ```bash
-sudo ufw allow proto tcp from <CIDR/IP> to any port <PORT> comment 'FLM Proxy'
+for cidr in 203.0.113.0/24 2001:db8::/48; do
+  sudo ufw allow proto tcp from "$cidr" to any port 8080 comment 'FLM Proxy HTTP'
+  sudo ufw allow proto tcp from "$cidr" to any port 8081 comment 'FLM Proxy HTTPS'
+done
 sudo ufw reload
 ```
 削除:
 ```bash
-sudo ufw delete allow proto tcp from <CIDR/IP> to any port <PORT>
+sudo ufw status numbered  # 番号を確認
+sudo ufw delete <RULE_NUMBER>
 ```
 
 ### 4.2 firewalld (CentOS/RHEL 等)
 ```bash
-sudo firewall-cmd --permanent \
-  --add-rich-rule="rule family='ipv4' source address='<CIDR/IP>' port protocol='tcp' port='<PORT>' accept"
+for cidr in 203.0.113.0/24 2001:db8::/48; do
+  family=$([[$cidr == *:* ]] && echo ipv6 || echo ipv4)
+  for port in 8080 8081; do
+    sudo firewall-cmd --permanent \
+      --add-rich-rule="rule family='${family}' source address='${cidr}' port protocol='tcp' port='${port}' accept"
+  done
+done
 sudo firewall-cmd --reload
 ```
 
 ### 4.3 iptables
 `ufw`/`firewalld` が無効な環境のみ提示する。
 ```bash
-sudo iptables -A INPUT -p tcp -s <CIDR/IP> --dport <PORT> -j ACCEPT
+sudo iptables -A INPUT -p tcp -s 203.0.113.0/24 -m multiport --dports 8080,8081 -j ACCEPT
+sudo ip6tables -A INPUT -p tcp -s 2001:db8::/48 -m multiport --dports 8080,8081 -j ACCEPT
 sudo iptables-save | sudo tee /etc/iptables/rules.v4
+sudo ip6tables-save | sudo tee /etc/iptables/rules.v6
 ```
 
 ## 5. Wizard 連携
 - プレビューカードには OS 名、ポート、許可 IP、生成スクリプト、Shell 種別（PowerShell / bash 等）を表示し、「Apply / Copy / Save」を提供。
-- `system_firewall_preview(os, port, allowed_ips)` → `{ script: String, shell: "powershell" | "bash" }`
+- `system_firewall_preview(os, ports, allowed_ips)` → `{ script: String, shell: "powershell" | "bash" }` （ports は `[8080,8081]` など複数値。スクリプトはすべての組み合わせを生成）
 - `system_firewall_apply(script, shell)` → `{ stdout: String, stderr: String, exit_code: i32 }`
 - exit_code ≠ 0 の場合は失敗扱いとし、本ガイド該当章と手動チェックを案内する。
+- Wizard バックエンドは `AppData/flm/logs/security/`（OS別の標準アプリデータ配下）に `firewall-<timestamp>.log` を保存し、ディレクトリが無ければ作成する。アクセス権はユーザー権限(700/600相当)で管理し、CLI からは読み書きしない。
 
 ## 6. 手動チェック
 - `nmap <host> -p <port>` または `Test-NetConnection -ComputerName <host> -Port <port>` で開放状態を検証。

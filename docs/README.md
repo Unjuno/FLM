@@ -2,7 +2,7 @@
 
 Updated: 2025-11-18
 
-This folder hosts the canonical specifications for the rebuilt FLM project. Use this index to find the right source of truth before implementing or updating code. Legacy drafts are stored separately in `DOCS.zip`; do not reference them for new work unless you are intentionally auditing history.
+This folder hosts the canonical specifications for the rebuilt FLM project. Use this index to find the right source of truth before implementing or updating code. Legacy drafts remain under `archive/prototype/docs/`; do not reference them for new work unless you are intentionally auditing history.
 
 ## How to Navigate
 

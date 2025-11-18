@@ -60,10 +60,11 @@ flm/
 - **セキュリティ**: IPホワイトリスト、APIキーのローテーション、レート制限、CORS、Forward先ホスト固定を最小構成要件に含め、SecurityPolicy は Phase1/2 ではグローバルID `"default"` のみ扱う
 
 ### CLI
-- `flm engines detect` : 対応エンジンを検出して JSON を出力（成功状態は `InstalledOnly`, `RunningHealthy`, `RunningDegraded`, `Error(Network)` など `docs/ENGINE_DETECT.md` 参照）
+- `flm engines detect` : 対応エンジンを検出して JSON を出力（成功状態は `InstalledOnly`, `RunningHealthy`, `RunningDegraded`, `ErrorNetwork`, `ErrorApi` など `docs/ENGINE_DETECT.md` 参照）
 - `flm models list` : エンジン種別に応じた API（Ollama: `/api/tags`, その他: `/v1/models`）で利用可能モデルを取得。モデルIDは `flm://{engine_id}/{model_name}` に正規化
 - `flm proxy start` : Rust製セキュアプロキシを起動（HTTPローカル→HTTPS/ACME設定はオプション）
 - `flm proxy stop` : プロキシのプロセス管理
+- `flm proxy status` : 稼働中ハンドルのモード / ポート / 証明書状態を JSON で確認
 - `flm config set/get` : 設定DBへの読み書き
 - `flm api-keys *` : APIキー生成／一覧／ローテーション（security DB を利用）
 - `flm security policy` : IPホワイトリストやCORS設定を確認・変更
@@ -93,6 +94,7 @@ flm/
 - エンジン検出 (`flm engines detect`)
 - モデル一覧/選択 (`flm models list`)
 - 認証プロキシ起動 (`flm proxy start --port 8080 --mode local-http` 等)
+- プロキシ状態確認 (`flm proxy status` でハンドル一覧を取得)
 - APIキー管理・IPホワイトリスト・CORS設定コマンド
 - CLIはすべて Rust コアのAPIを呼び出す構造で実装
 - 単体テスト／統合テストを CLI ＋ Rustサービスで構築し、下記合格基準を満たす
@@ -120,7 +122,7 @@ flm/
 - セキュリティ設定（IP/CORS/APIキー）を含む統合テストを確立
 - UI は主要操作 3 ケースの手動テスト手順を残し、IPC経路をユニットテスト
 - Phaseごとの合格基準:
-  - **Phase 1**: エンジン検出成功率100%（対象エンジン4種×主要OSで3回以上）、状態判定（InstalledOnly/RunningHealthy等）が正確にレポートされる、プロキシ再起動時間中央値<3s（初回除く）、APIキーがDBに平文で残らないことをテストで証明、ストリーミング負荷テスト（100 req/min）を成功させる、OpenAI互換→各エンジン変換で fallback ルール（未対応パラメータのログ・無視）を実装
+  - **Phase 1**: エンジン検出成功率100%（対象エンジン4種×主要OSで3回以上）、状態判定（InstalledOnly/RunningHealthy等）が正確にレポートされる、プロキシ再起動時間中央値<3s（初回除く）、APIキーがDBに平文で残らないことをテストで証明、ストリーミング負荷テスト（100 req/min）を成功させる、OpenAI互換→各エンジン変換で fallback ルール（未対応パラメータのログ・無視）を実装、`flm proxy status` が起動前後のハンドル変化を正しく返すことを CI で確認
   - **Phase 2**: UI 主要操作3ケースを実機確認、IPC経路ユニットテストで成功率100%、UIからの操作で全コアAPIが呼べることを自動テスト、Setup Wizard 4ステップが Windows/macOS/Linux で `SECURITY_FIREWALL_GUIDE.md` に沿って成功ログ（preview/apply + rollback含む）を出力することを実証
   - **Phase 3**: インストーラ生成→E2Eスモークテスト成功、CLI/GUI両方で `/v1/models` と `/v1/chat/completions` が動作、ACMEモードで証明書取得が自動化されていることを検証
 
