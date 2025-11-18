@@ -334,9 +334,22 @@ pub enum HttpError {
 
 ### SecurityPolicy エッジケース
 
-- `ip_whitelist`: 空配列 `[]` または省略時は IP 制限無効（すべて許可）。`null` は無効として扱う。
-- `cors.allowed_origins`: 空配列 `[]` は `*`（すべて許可）として扱う。省略時は `*`。
-- `rate_limit`: 省略時はレート制限無効。`rpm` が 0 の場合は無効として扱う。`burst` が省略時は `rpm` と同じ値を使用。
+**JSONスキーマ例**（Phase 1/2 の最小スキーマ）:
+
+```jsonc
+{
+  "ip_whitelist": ["127.0.0.1", "192.168.0.0/16"],
+  "cors": { "allowed_origins": ["https://example.com"] },
+  "rate_limit": { "rpm": 60, "burst": 10 }
+}
+```
+
+**バリデーションルール**:
+- `ip_whitelist`: CIDR/IPv4/IPv6 文字列の配列。空配列 `[]` または省略時は IP 制限無効（すべて許可）。`null` は無効として扱う。
+- `cors.allowed_origins`: 許可Origin配列。空配列 `[]` は `*`（すべて許可）として扱う。省略時は `*`。
+- `rate_limit`: `rpm`（per API key）と任意の `burst`。省略時はレート制限無効。`rpm` が 0 の場合は無効として扱う。`burst` が省略時は `rpm` と同じ値を使用。
+
+**参照**: Proxy/UI/CLI はこのスキーマを基準に「設定済みか」を判定し、Proxy は同じキーを参照して制御する。詳細は `docs/PROXY_SPEC.md` セクション9を参照。
 
 ## 3. `LlmEngine` Trait
 
