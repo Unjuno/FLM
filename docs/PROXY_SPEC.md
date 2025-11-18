@@ -93,13 +93,15 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 | モード          | 説明                                                      |
 |-----------------|---------------------------------------------------------|
 | `local-http`    | HTTPのみ。ローカルネットワーク限定（ファイアウォール必須） |
-| `dev-selfsigned`| 自己署名証明書で HTTPS 提供。LAN / 開発用途専用。Wizard はルート証明書の生成・配布・削除手順を提示する |
-| `https-acme`    | ACME (Let’s Encrypt など) で証明書を取得し HTTPS 提供（インターネット公開の既定モード） |
+| `dev-selfsigned`| 自己署名証明書で HTTPS 提供。LAN / 開発用途専用。Wizard はルート証明書の生成・配布・削除手順を提示する（手動インストールが必要） |
+| `packaged-ca`   | パッケージに同梱されたルートCA証明書を使用。インストール時にOS信頼ストアへ自動登録されるため、ブラウザ警告なしでHTTPS利用可能。大衆向け配布に最適。Phase 3 で実装予定 |
+| `https-acme`    | ACME (Let's Encrypt など) で証明書を取得し HTTPS 提供（インターネット公開の既定モード） |
 
-CLI のデフォルトは `local-http`（ローカル検証向け）とし、インターネット公開を行う場合の既定モードは `https-acme` とする。`dev-selfsigned` を選ぶ場合は、Wizard/CLI が生成したルート証明書をクライアント OS／ブラウザにインポートし、ローテーション期限・撤去手順も `docs/SECURITY_FIREWALL_GUIDE.md` に従う必要がある。`--port` で指定した値は HTTP 用ポートとして扱い、HTTPS は `port + 1` をデフォルトとする（例: 8080/8081）。
+CLI のデフォルトは `local-http`（ローカル検証向け）とし、インターネット公開を行う場合の既定モードは `https-acme` とする。`dev-selfsigned` を選ぶ場合は、Wizard/CLI が生成したルート証明書をクライアント OS／ブラウザに手動でインポートし、ローテーション期限・撤去手順も `docs/SECURITY_FIREWALL_GUIDE.md` に従う必要がある。`packaged-ca` モードは Phase 3 のパッケージング時に実装し、インストーラが自動的に証明書を登録する。`--port` で指定した値は HTTP 用ポートとして扱い、HTTPS は `port + 1` をデフォルトとする（例: 8080/8081）。
 
 * 設定は `ProxyConfig` に集約 (`core` 側で管理)
 * ACME 証明書は `security.db` にパスと更新日時を保存
+* `packaged-ca` モードのルートCA証明書はビルド時に生成し、インストーラに同梱。サーバー証明書は起動時に自動生成（ルートCAで署名）
 
 ## 7. エラー・ログポリシー
 
@@ -133,7 +135,43 @@ Proxy / UI / CLI は `SecurityPolicy.policy_json` に以下のキーが存在す
 - `rate_limit`: `rpm`（per API key）と任意の `burst`。省略でレート制限無効。
 - Phase1/2ではグローバルポリシーID `"default"` のみを参照し、Proxy は常にこのポリシーをロードして適用する。
 
-## 10. 未決事項
+## 10. 証明書管理（packaged-ca モード）
+
+### 10.1 ルートCA証明書の生成と同梱
+
+* ビルド時に一度だけ自己署名ルートCA証明書を生成（例: `FLM Local CA`）
+* 公開鍵 (`flm-ca.crt`) をインストーラに同梱
+* 秘密鍵 (`flm-ca.key`) はビルド環境のシークレットとして管理（漏洩時は再生成）
+* 証明書の有効期限は10年を推奨（ローテーション戦略は `docs/SECURITY_FIREWALL_GUIDE.md` 参照）
+
+### 10.2 サーバー証明書の自動生成
+
+* `packaged-ca` モードで起動時、サーバー証明書を自動生成
+* Subject Alternative Name (SAN) に以下を含める:
+  - `localhost`, `127.0.0.1`, `::1`
+  - RFC1918 プライベートIP範囲（`192.168.0.0/16`, `10.0.0.0/8`, `172.16.0.0/12`）
+* ルートCAで署名し、`AppData/flm/certs/server.pem` に保存
+* 証明書が既に存在し有効期限内なら再利用（IP変動時も再生成不要）
+
+### 10.3 インストール時の自動登録
+
+* Windows: NSIS/PowerShell で `Cert:\LocalMachine\Root` に `flm-ca.crt` を登録（UAC確認）
+* macOS: `security add-trusted-cert -d -r trustRoot -k /Library/Keychains/System.keychain` を実行
+* Linux: `/usr/local/share/ca-certificates/flm-ca.crt` にコピー後、`update-ca-certificates` を実行
+* インストール中に「FLM Local CA 証明書を信頼しますか？」という確認ダイアログを表示
+
+### 10.4 アンインストール時の削除
+
+* アンインストーラで証明書を削除するオプションを提供
+* 手動削除手順も `docs/SECURITY_FIREWALL_GUIDE.md` に記載
+
+### 10.5 ローテーション戦略
+
+* ルートCA証明書の期限切れ前に警告を表示（アプリ起動時）
+* 新バージョンのインストールで新しいルートCAを配布
+* 緊急時は `flm-ca.key` を使って新CAを生成し、アップデートで配布
+
+## 11. 未決事項
 
 - `/v1/audio/*` 等の将来 API は `EngineCapabilities` を確認して動的にサポート
 - ProxyService でのホットリロード（設定変更を再起動無しで反映するか）

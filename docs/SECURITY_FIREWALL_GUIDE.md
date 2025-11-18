@@ -4,7 +4,7 @@
 外部公開時に必要となる OS レベルのファイアウォール設定と、Setup Wizard Step 4 が自動生成・実行する処理を定義する。
 
 ## 1. 前提
-- `ProxyService::status` で取得した待受ポート群（デフォルト: `[8080, 8081]`）と、`SecurityService::get_policy` の `allowed_ips`（IPv4/IPv6 混在可）を入力にする。
+- `ProxyService::status` で取得した待受ポート群（デフォルト: `[8080, 8081]`）と、`SecurityService::get_policy` が返す `SecurityPolicy.policy_json` 内の `ip_whitelist`（IPv4/IPv6 混在可）を入力にする。
 - Wizard は OS 判定後、`system_firewall_preview` でスクリプト文字列を生成し、「管理者権限で適用」で昇格済みシェル経由の `system_firewall_apply` を実行する。
 - 昇格を拒否された場合は本ガイドの手順を案内し、ユーザーまたは管理者に手動実行してもらう。
 - 適用前にバックアップ（例: `netsh advfirewall export`, `sudo pfctl -sr`, `sudo ufw status numbered`）を推奨。
@@ -88,7 +88,7 @@ sudo ip6tables-save | sudo tee /etc/iptables/rules.v6
 
 ## 5. Wizard 連携
 - プレビューカードには OS 名、ポート、許可 IP、生成スクリプト、Shell 種別（PowerShell / bash 等）を表示し、「Apply / Copy / Save」を提供。
-- `system_firewall_preview(os, ports, allowed_ips)` → `{ script: String, shell: "powershell" | "bash" }` （ports は `[8080,8081]` など複数値。スクリプトはすべての組み合わせを生成）
+- `system_firewall_preview(os, ports, ip_whitelist)` → `{ script: String, shell: "powershell" | "bash" }` （ports は `[8080,8081]` など複数値。`ip_whitelist` は `SecurityPolicy.policy_json` から取得した配列。スクリプトはすべての組み合わせを生成）
 - `system_firewall_apply(script, shell)` → `{ stdout: String, stderr: String, exit_code: i32 }`
 - exit_code ≠ 0 の場合は失敗扱いとし、本ガイド該当章と手動チェックを案内する。
 - Wizard バックエンドは `AppData/flm/logs/security/`（OS別の標準アプリデータ配下）に `firewall-<timestamp>.log` を保存し、ディレクトリが無ければ作成する。アクセス権はユーザー権限(700/600相当)で管理し、CLI からは読み書きしない。
@@ -102,6 +102,80 @@ sudo ip6tables-save | sudo tee /etc/iptables/rules.v6
 - **権限不足**: 昇格ダイアログを許可していない。管理者セッションで再実行。
 - **重複ルール**: 同名ルールが存在する場合は一度削除してから適用。
 - **外部未到達**: OS ファイアウォール以外（ルーター / クラウド SG）のポート開放も確認。
+
+## 8. 証明書管理（packaged-ca モード）
+
+### 8.1 インストール時の自動登録
+
+パッケージ版では、インストール時にルートCA証明書 (`flm-ca.crt`) がOS信頼ストアへ自動登録されます。これにより、ブラウザ警告なしでHTTPS通信が可能になります。
+
+**Windows**:
+```powershell
+# インストーラが自動実行（UAC確認あり）
+Import-Certificate -FilePath "$INSTDIR\flm-ca.crt" `
+  -CertStoreLocation Cert:\LocalMachine\Root
+```
+
+**macOS**:
+```bash
+# インストーラが自動実行（sudo確認あり）
+sudo security add-trusted-cert -d -r trustRoot \
+  -k /Library/Keychains/System.keychain \
+  "$INSTDIR/flm-ca.crt"
+```
+
+**Linux**:
+```bash
+# インストーラが自動実行（sudo確認あり）
+sudo cp flm-ca.crt /usr/local/share/ca-certificates/flm-ca.crt
+sudo update-ca-certificates
+```
+
+### 8.2 証明書の手動削除（アンインストール時）
+
+アンインストール時に証明書を削除する場合は、以下の手順を実行してください。
+
+**Windows**:
+```powershell
+Get-ChildItem Cert:\LocalMachine\Root | 
+  Where-Object { $_.Subject -like "*FLM Local CA*" } | 
+  Remove-Item
+```
+
+**macOS**:
+```bash
+sudo security delete-certificate -c "FLM Local CA" /Library/Keychains/System.keychain
+```
+
+**Linux**:
+```bash
+sudo rm /usr/local/share/ca-certificates/flm-ca.crt
+sudo update-ca-certificates
+```
+
+### 8.3 証明書の確認
+
+インストール済みの証明書を確認する方法:
+
+**Windows**:
+```powershell
+Get-ChildItem Cert:\LocalMachine\Root | 
+  Where-Object { $_.Subject -like "*FLM Local CA*" }
+```
+
+**macOS**:
+```bash
+security find-certificate -c "FLM Local CA" -a /Library/Keychains/System.keychain
+```
+
+**Linux**:
+```bash
+ls -la /usr/local/share/ca-certificates/flm-ca.crt
+```
+
+### 8.4 ローテーション
+
+ルートCA証明書の有効期限（10年）が近づいた場合、新バージョンのインストールで新しいルートCAが自動的に配布されます。アプリ起動時に期限切れ警告が表示される場合は、最新版へのアップデートを推奨します。
 
 ---
 このガイドは Phase2 以降も随時更新する。

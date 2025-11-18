@@ -179,6 +179,7 @@ pub enum ProxyMode {
     LocalHttp,
     DevSelfSigned,
     HttpsAcme,
+    PackagedCa, // Phase 3 で実装: パッケージ同梱のルートCA証明書を使用
 }
 
 #[derive(Clone, Debug)]
@@ -250,6 +251,92 @@ pub struct SecurityPolicy {
 - `ErrorNetwork/ErrorApi → RunningHealthy`: 連続成功が閾値を満たした際に自動復帰
 
 これらの閾値は `EngineServiceConfig` で設定し、CLI から `flm config` 経由で調整可能にする。
+
+### 補助型定義
+
+```rust
+// EngineProcessController で使用
+#[derive(Clone, Debug)]
+pub struct EngineBinaryInfo {
+    pub engine_id: EngineId,
+    pub kind: EngineKind,
+    pub binary_path: String,
+    pub version: Option<String>,
+}
+
+#[derive(Clone, Debug)]
+pub struct EngineRuntimeInfo {
+    pub engine_id: EngineId,
+    pub kind: EngineKind,
+    pub base_url: String,
+    pub port: Option<u16>,
+}
+
+// HttpClient で使用（serde_json::Value の型エイリアス）
+pub type Value = serde_json::Value;
+
+#[derive(Clone, Debug)]
+pub struct HttpRequest {
+    pub method: String, // "GET" | "POST" | etc.
+    pub url: String,
+    pub headers: Vec<(String, String)>,
+    pub body: Option<Value>,
+}
+
+// HttpClient::stream の戻り値型（trait object を Box で包む）
+// 実装時は `use std::pin::Pin; use futures::Stream;` が必要
+pub type HttpStream = Pin<Box<dyn Stream<Item = Result<Vec<u8>, HttpError>> + Send>>;
+
+// エラー型
+#[derive(Debug)]
+pub enum EngineError {
+    NotFound { engine_id: EngineId },
+    NetworkError { reason: String },
+    ApiError { reason: String, status_code: Option<u16> },
+    Timeout { operation: String },
+    InvalidResponse { reason: String },
+}
+
+#[derive(Debug)]
+pub enum ProxyError {
+    AlreadyRunning { handle_id: String },
+    PortInUse { port: u16 },
+    CertGenerationFailed { reason: String },
+    AcmeError { reason: String },
+    InvalidConfig { reason: String },
+    Timeout { operation: String },
+}
+
+#[derive(Debug)]
+pub enum RepoError {
+    NotFound { key: String },
+    ConstraintViolation { reason: String },
+    MigrationFailed { reason: String },
+    IoError { reason: String },
+}
+
+#[derive(Debug)]
+pub enum HttpError {
+    NetworkError { reason: String },
+    Timeout,
+    InvalidResponse { reason: String },
+    StatusCode { code: u16, body: Option<String> },
+}
+```
+
+### ProxyConfig バリデーション要件
+
+- `mode`: すべてのバリアントが有効。`HttpsAcme` の場合は `acme_email` と `acme_domain` が必須。
+- `port`: 1-65535 の範囲。0 は無効。
+- `acme_email`: `HttpsAcme` モード時のみ必須。RFC5322 準拠のメールアドレス形式。
+- `acme_domain`: `HttpsAcme` モード時のみ必須。FQDN 形式（例: `example.com`）。ワイルドカードは Phase 3 以降。
+- `PackagedCa` モード時は `acme_email` / `acme_domain` は無視される（証明書はパッケージ同梱）。
+
+### SecurityPolicy エッジケース
+
+- `ip_whitelist`: 空配列 `[]` または省略時は IP 制限無効（すべて許可）。`null` は無効として扱う。
+- `cors.allowed_origins`: 空配列 `[]` は `*`（すべて許可）として扱う。省略時は `*`。
+- `rate_limit`: 省略時はレート制限無効。`rpm` が 0 の場合は無効として扱う。`burst` が省略時は `rpm` と同じ値を使用。
 
 ## 3. `LlmEngine` Trait
 
@@ -388,11 +475,24 @@ impl ConfigService {
 ```
 
 * EngineService は `LlmEngine` 実装を登録した `EngineRegistry` を介して実装細部を隠蔽する
-* ProxyService は Axum サーバ起動を統括し、HTTPS/ACME の証明書ハンドリングも内部に閉じる
+* ProxyService は Axum サーバ起動を統括し、HTTPS/ACME/`packaged-ca` の証明書ハンドリングも内部に閉じる。`packaged-ca` モード（Phase 3）では、パッケージ同梱のルートCA証明書を OS 信頼ストアへ自動登録し、ブラウザ警告なしで HTTPS を提供する。
 * SecurityService / ConfigService は CLI / UI / Proxy の共通 API を提供する
   * Phase1/2では `SecurityPolicy` の `id` を `"default"` に固定し、`get_policy`/`set_policy` は内部的にこのIDを扱う想定
   * `rotate_api_key` は旧キーを即座に `revoked_at` 付きで無効化し、新しいキーID/平文を返す（グレース期間は設けない）
 * `*_Service::new()` では、Adapter 層から渡される DB 接続に対して `sqlx::migrate!()` を呼び出すのみで、接続管理や I/O は Adapter 側の責務とする
+
+### 並行性・リソース管理ポリシー
+
+- **スレッド安全性**: すべての Service は `Send + Sync` を実装し、複数スレッドからの同時アクセスを許可する。Repository trait の実装も同様にスレッドセーフである必要がある。
+- **リソース管理**: `ProxyService::start` で起動したプロキシは、`stop` が呼ばれるまでリソースを保持する。アプリ終了時は Adapter 層がすべてのハンドルを `stop` してから終了する。
+- **DB 接続プール**: Adapter 層が SQLite 接続プールを管理し、Core は提供された接続のみを使用する。同時書き込みは SQLite の `WAL` モードで制御する。
+- **エンジン検出の並行性**: `EngineService::detect_engines` は各エンジンの検出を並列実行し、タイムアウト（デフォルト 5 秒）で打ち切る。
+
+### 非同期処理の仕様
+
+- **タイムアウト**: HTTP リクエストはデフォルト 30 秒、エンジン検出は 5 秒、ACME 証明書取得は 90 秒。タイムアウトは `EngineServiceConfig` / `ProxyConfig` で調整可能。
+- **キャンセレーション**: `chat_stream` は `tokio::sync::broadcast` または `AbortHandle` でキャンセル可能。クライアントが切断した場合は即座にストリームを終了し、エンジン側へのリクエストも可能な限り中断する。
+- **リトライ**: ネットワークエラー（`EngineError::NetworkError`）は自動リトライしない。Adapter 層が必要に応じて指数バックオフでリトライを実装する。
 
 ## 6. IPC / CLI / Proxy からの利用
 

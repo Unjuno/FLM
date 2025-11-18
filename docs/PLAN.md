@@ -54,8 +54,8 @@ flm/
 ### コア機能
 - **既存エンジン利用**: Ollama / LM Studio / vLLM / llama.cpp を自動検出し、稼働状態を統一APIで扱う
 - **認証プロキシ**: Rust (Axum/Hyper) 製の HTTPS／認証レイヤー。Node実装はアーカイブ
-- **証明書管理**: 初期フェーズはローカルHTTP (`local-http`) をデフォルト。外部公開時は ACME / Let’s Encrypt (`https-acme`) を推奨し、自己署名 (`dev-selfsigned`) を選択する場合はルート証明書配布・信頼設定・ローテーション手順を `docs/PROXY_SPEC.md` / `docs/SECURITY_FIREWALL_GUIDE.md` に従って実施
-- **HTTPS方針**: ドメインを持たない利用者でも ACME を利用できるように CLI/Wizard から DNS-01 / HTTP-01 を補助し、自己署名はオフライン/LAN 限定モードとして明確に区別する
+- **証明書管理**: 初期フェーズはローカルHTTP (`local-http`) をデフォルト。外部公開時は ACME / Let's Encrypt (`https-acme`) を推奨し、自己署名 (`dev-selfsigned`) を選択する場合はルート証明書配布・信頼設定・ローテーション手順を `docs/PROXY_SPEC.md` / `docs/SECURITY_FIREWALL_GUIDE.md` に従って実施。Phase 3 のパッケージング時には `packaged-ca` モードを実装し、インストール時にルートCA証明書をOS信頼ストアへ自動登録する方式を提供（大衆向け配布に最適）
+- **HTTPS方針**: ドメインを持たない利用者でも ACME を利用できるように CLI/Wizard から DNS-01 / HTTP-01 を補助し、自己署名はオフライン/LAN 限定モードとして明確に区別する。パッケージ版では `packaged-ca` モードを既定とし、証明書の自動インストールによりブラウザ警告なしでHTTPS利用を可能にする
 - **設定保存**: SQLite を用途別に分割 (`config.db`, `security.db`) し、`security.db` は OS キーチェーン（DPAPI / Keychain / libsecret）で暗号化鍵を保護、600相当の権限設定、バックアップ/復旧フロー、APIキーのローテーション自動化を `docs/DB_SCHEMA.md` / `docs/SECURITY_FIREWALL_GUIDE.md` に記載。`config.db` / `security.db` のマイグレーション失敗時は読み取り専用のセーフモードで起動できるようにする
 - **セキュリティ**: IPホワイトリスト、APIキーのローテーション、レート制限、CORS、Forward先ホスト固定を最小構成要件に含め、SecurityPolicy は Phase1/2 ではグローバルID `"default"` のみ扱う
     - **security.db ガバナンス**: 
@@ -116,6 +116,11 @@ flm/
 ### Phase 3: パッケージング
 - Tauri で配布用ビルドを作成（Rustコアを共有）
 - Windows/macOS/Linux 用インストーラを準備
+- `packaged-ca` モードの実装:
+  - ビルド時にルートCA証明書 (`flm-ca.crt`) を生成し、インストーラに同梱
+  - インストール時にOS信頼ストアへ自動登録（UAC/sudo確認あり）
+  - サーバー証明書は起動時に自動生成（ルートCAで署名、SANにRFC1918範囲を含める）
+  - アンインストール時に証明書削除オプションを提供
 - リリースノートを作成し、CLI 単体版も配布
 
 ## データ移行戦略
@@ -148,7 +153,7 @@ flm/
       - **1A (エンジン検出/モデル一覧)**: エンジン検出成功率100%（対象4エンジン×主要OS×3回）、状態判定（InstalledOnly/RunningHealthy等）が正確、APIキーがDBに平文で残らないことをテストで証明
       - **1B (プロキシ/セキュリティ)**: プロキシ再起動時間中央値<3s（初回除く）※`https-acme` は<90s、ストリーミング負荷テスト（100 req/min）を専用ベンチで成功、OpenAI互換→各エンジン変換で fallback ルールを実装、`flm proxy status` が起動前後のハンドル変化を正しく返すことを CI で確認
   - **Phase 2**: UI 主要操作3ケースを実機確認、IPCユニットテスト成功率100%、UIから全コアAPIが呼べることを自動テスト、Setup Wizard 4ステップが Windows/macOS/Linux で `SECURITY_FIREWALL_GUIDE.md` に沿って成功ログ（preview/apply + rollback含む）を出力し、権限不足時の手動適用フローが案内されること
-  - **Phase 3**: インストーラ生成→E2Eスモークテスト成功、CLI/GUI両方で `/v1/models` と `/v1/chat/completions` が動作、`https-acme` モードの証明書発行/更新が自動化され、失敗時のフォールバック手順が確認済みであること
+  - **Phase 3**: インストーラ生成→E2Eスモークテスト成功、CLI/GUI両方で `/v1/models` と `/v1/chat/completions` が動作、`https-acme` モードの証明書発行/更新が自動化され、失敗時のフォールバック手順が確認済みであること。`packaged-ca` モードでは、インストール時にルートCA証明書が OS 信頼ストアへ自動登録され、ブラウザ警告なしで HTTPS が利用可能であることを Windows/macOS/Linux で検証済みであること。アンインストール時に証明書削除オプションが正常に動作すること。
 
 ## 今後のタスク例
 - [ ] README の再構成

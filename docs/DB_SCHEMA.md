@@ -14,7 +14,7 @@
 | テーブル            | 説明                                              |
 |---------------------|---------------------------------------------------|
 | `schema_migrations` | SQLx 管理テーブル                                 |
-| `settings`          | `key TEXT PRIMARY KEY, value TEXT, updated_at`    |
+| `settings`          | `key TEXT PRIMARY KEY, value TEXT, updated_at, notes TEXT` （`notes` は移行時の未知フィールド保存用） |
 | `engines_cache`     | 検出結果キャッシュ。`engine_id`, `state_json`, `cached_at` |
 | `proxy_profiles`    | 過去のプロキシ設定 (`id`, `config_json`, `created_at`) |
 
@@ -27,7 +27,7 @@
 | `security_policies` | `id TEXT PRIMARY KEY CHECK(id = 'default'), policy_json TEXT, updated_at`            |
 | `audit_logs`        | `id INTEGER PK, request_id TEXT, api_key_id TEXT, endpoint TEXT, status INTEGER, latency_ms INTEGER, created_at DATETIME` |
 | `rate_limit_states` | レート制限の状態を保持（リセット可能）                         |
-| `certificates`      | ACME/自己署名証明書のメタデータ（パス、更新日時）              |
+| `certificates`      | ACME/自己署名証明書のメタデータ（パス、更新日時）。`packaged-ca` モードのサーバー証明書メタデータも保存 |
 
 ## 3. マイグレーションの実行タイミング
 

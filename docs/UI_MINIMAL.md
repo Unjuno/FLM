@@ -29,9 +29,12 @@
 - Dashboard から起動できるステッパーUIで「外部公開に必要な最小セット」を案内する。
 - ステップ構成:
   1. **Pre-check**: `ProxyService::status`, `SecurityService::list_api_keys`, `SecurityService::get_policy` を呼び、APIキー・IPホワイトリスト・Proxyモードの不足を可視化。
-  2. **Proxy Mode & Port**: `https-acme` を既定とし（CLI/Wizard が DNS-01 / HTTP-01 設定をガイド）、LAN / 開発用途のみ `dev-selfsigned` を選択可能にする。選択内容は `ProxyService::start` に引き渡し、ACME 再試行・手動証明書アップロード・自己署名ルート配布手順を案内する。
-  3. **Security Policy**: IPホワイトリスト/CORS/RateLimit フォームを `SecurityService::set_policy` で確定。入力時に RFC1918/リンクローカルのみの場合は警告を出し、「手動で公開IPを追加してください」と案内する（`allowed_ips` のバリデーションは UI 側で実施）。
-  4. **Firewall Automation**: クライアントOSを自動検出し（Tauri側 Native API）、`ProxyService::status` で得た全待受ポート（例: 8080/8081）と `SecurityPolicy.allowed_ips`（IPv4/IPv6 CIDR 可）に応じたコマンドスクリプト（PowerShell, pfctl, ufw/firewalld 等）を生成。  
+  2. **Proxy Mode & Port**: 
+     - パッケージ版では `packaged-ca` を既定とし（証明書はインストール時に自動登録済み）、外部サイトから警告なしでHTTPS利用可能であることを表示。
+     - CLI版では `https-acme` を既定とし（CLI/Wizard が DNS-01 / HTTP-01 設定をガイド）、LAN / 開発用途のみ `dev-selfsigned` を選択可能にする。
+     - 選択内容は `ProxyService::start` に引き渡し、ACME 再試行・手動証明書アップロード・自己署名ルート配布手順を案内する。
+  3. **Security Policy**: IPホワイトリスト/CORS/RateLimit フォームを `SecurityService::set_policy` で確定。入力時に RFC1918/リンクローカルのみの場合は警告を出し、「手動で公開IPを追加してください」と案内する（`ip_whitelist` のバリデーションは UI 側で実施）。
+  4. **Firewall Automation**: クライアントOSを自動検出し（Tauri側 Native API）、`ProxyService::status` で得た全待受ポート（例: 8080/8081）と `SecurityPolicy.policy_json` 内の `ip_whitelist`（IPv4/IPv6 CIDR 可）に応じたコマンドスクリプト（PowerShell, pfctl, ufw/firewalld 等）を生成。  
      - デフォルトは「プレビュー + コピー/保存」で、常に `docs/SECURITY_FIREWALL_GUIDE.md` の手動手順を提示。HTTP/HTTPS 両ポートと複数 IP を網羅したスクリプトを出力する。  
      - 「管理者権限で適用」を選択した場合のみ UAC/sudo プロンプトを表示し、`ipc.system_firewall_apply(script, shell)` で昇格実行する。適用結果（stdout/stderr/exit_code）に加えてロールバック用スクリプトを自動保存し、結果ログを `AppData/flm/logs/security/firewall-*.log`（OS 標準アプリデータ配下、権限 700/600）へ追記する。  
      - 権限拒否・ヘッドレス環境では手動実行のみを案内し、Wizard 上で「適用済み」を明示的にチェックできるようにする（IPv6 / HTTP-only の場合も同じ）。
@@ -73,7 +76,7 @@ Setup Wizard
 | Config閲覧/更新 | `ipc.config_list/get/set` → `ConfigService` | 表示は key/value テーブル |
 | Chatテスト | UI側で HTTP `/v1/chat/completions` にアクセス | Proxy status で取得した URL/Port を使用。SSE を UI でストリーム表示 |
 | Wizard Pre-check | `ipc.proxy_status()`, `ipc.policy_get()`, `ipc.api_keys_list()` | 不足項目を算出し、次ステップのフォーム初期値に反映 |
-| Wizard Firewall Preview | `ipc.system_firewall_preview(os, ports, allowed_ips)` | Core外（Tauri側）に実装するネイティブモジュール。OS別テンプレートから実行予定スクリプト文字列を返す |
+| Wizard Firewall Preview | `ipc.system_firewall_preview(os, ports, ip_whitelist)` | Core外（Tauri側）に実装するネイティブモジュール。OS別テンプレートから実行予定スクリプト文字列を返す。`ip_whitelist` は `SecurityPolicy.policy_json` から取得した配列 |
 | Wizard Firewall Apply | `ipc.system_firewall_apply(script, shell)` | 管理者権限でスクリプトを実行し、実行ログ（stdout/stderr/exit code）を返す。失敗時は SECURITY_FIREWALL_GUIDE へのリンクを表示 |
 
 ### Adapter専用 IPC (Firewall)
@@ -90,7 +93,7 @@ Setup Wizard
 
 ## 6. Firewall Automation IPC
 - `system_firewall_preview`  
-  - 入力: `os`（"windows" | "macos" | "linux"）、`ports`（待受ポート配列）、`allowed_ips`（CIDR/IP配列）  
+  - 入力: `os`（"windows" | "macos" | "linux"）、`ports`（待受ポート配列）、`ip_whitelist`（CIDR/IP配列。`SecurityPolicy.policy_json` の `ip_whitelist` キーから取得）  
   - 出力: `{ script: String, display_name: String, shell: "powershell" | "bash" }`。`script` は実行可能な PowerShell/pfctl/ufw 等のテンプレ。`display_name` は Wizard UI で表示するタイトル。
   - 例:
     ```json
@@ -103,7 +106,7 @@ Setup Wizard
 - `system_firewall_apply`  
   - 入力: `script`（preview で得た文字列）、`shell`。  
   - 実行: OS 標準の昇格 API を通じて実行し、`{ stdout, stderr, exit_code }` を返す。exit_code≠0 の場合は Wizard が失敗とみなす。
-- どちらも Core API に依存せず、Tauri ネイティブプラグイン（Rust）として実装する。アクセス権を最小化するため、ファイアウォール設定以外の特権操作は許可しない。ログは `logs/security/firewall-*.log` に保存する。IPv6 対応が必要な場合は `allowed_ips` から `:` を含む値を検知し、テンプレートを `New-NetFirewallRule -LocalAddress ::` などに切り替える。
+- どちらも Core API に依存せず、Tauri ネイティブプラグイン（Rust）として実装する。アクセス権を最小化するため、ファイアウォール設定以外の特権操作は許可しない。ログは `logs/security/firewall-*.log` に保存する。IPv6 対応が必要な場合は `ip_whitelist` から `:` を含む値を検知し、テンプレートを `New-NetFirewallRule -LocalAddress ::` などに切り替える。
 
 ## 7. 未決事項
 - UI コンポーネントライブラリ（Tailwind / MUI など）、テーマカラー。

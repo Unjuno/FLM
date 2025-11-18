@@ -45,8 +45,9 @@ Rust製セキュアプロキシを起動し、Forward先を検出済みエンジ
 
 モード:
 - `local-http` (デフォルト): ローカルネットワーク限定。TLS 無し
-- `dev-selfsigned`: 自己署名証明書で HTTPS を提供。ドメインを持たないユーザー向けの標準公開モード
-- `https-acme`: ACME(Let's Encrypt等)で証明書を取得してHTTPS提供（カスタムドメイン所有者向け）
+- `dev-selfsigned`: 自己署名証明書で HTTPS を提供。LAN / 開発用途専用（Wizard/CLI がルート証明書の配布・削除手順を案内。手動インストールが必要）
+- `packaged-ca`: パッケージに同梱されたルートCA証明書を使用。インストール時にOS信頼ストアへ自動登録されるため、ブラウザ警告なしでHTTPS利用可能。大衆向け配布に最適。Phase 3 で実装予定
+- `https-acme`: ACME(Let's Encrypt等)で証明書を取得してHTTPS提供。インターネット公開時の既定モード（ドメイン所有者だけでなく、DNS-01/HTTP-01 を補助して一般ユーザーも利用可能）
 
 その他仕様（詳細は `docs/PROXY_SPEC.md`）:
 - Forward 先ホストは検出済みエンジンに固定し任意URLへの転送を禁止
@@ -170,18 +171,43 @@ flm chat --model flm://ollama/llama3:8b --prompt "Hello" --stream
 
 すべての実行は `logs/migrations/<timestamp>.log` に記録し、`--dry-run` オプションで差分のみ出力する。適用時にはユーザーに「アプリが停止しているか」を確認し、失敗時の復旧コマンドを案内する。
 
+### 3.14 `flm check`
+データベースの整合性を検証し、APIキー件数/ラベル、SecurityPolicy の JSON、ProxyProfile のポート値などが期待通りであることを確認する。移行後や復旧後に実行してデータの整合性を保証する。
+
+- `flm check`: `config.db` と `security.db` の整合性をチェックし、問題があれば詳細を JSON で出力（exit code 1）。正常時は `{"version":"1.0","data":{"status":"ok","checks":[...]}}` を返す。
+- `flm check --verbose`: 各チェック項目の詳細を表示（テーブル存在確認、制約違反、参照整合性など）。
+
+例:
+```bash
+flm check
+flm check --verbose
+```
+
 ## 4. エラー仕様
-- 共通形式:
+- 共通形式: 成功時は `{"version":"1.0","data":{...}}` 形式だが、エラー時は `{"error":{...}}` 形式を返す（意図的な設計）。エラーレスポンスには `version` フィールドは含めない。
 ```json
 {"error":{"code":"ENGINE_NOT_FOUND","message":"Ollama is not installed"}}
 ```
-- 主なコード:
-  - `ENGINE_NOT_FOUND`
-  - `PROXY_ALREADY_RUNNING`
-  - `POLICY_INVALID`
-  - `CERT_GENERATION_FAILED`
-  - `CONFIG_NOT_SET`
-  - `DB_ERROR`
+- 主なコードと Core API エラー型の対応:
+
+| CLI エラーコード | Core API エラー型 | 説明 | Exit Code |
+|-----------------|------------------|------|-----------|
+| `ENGINE_NOT_FOUND` | `EngineError::NotFound` | 指定エンジンが検出されない | 1 |
+| `ENGINE_NETWORK_ERROR` | `EngineError::NetworkError` | エンジンへの接続失敗 | 1 |
+| `ENGINE_API_ERROR` | `EngineError::ApiError` | エンジン API の応答エラー | 1 |
+| `ENGINE_TIMEOUT` | `EngineError::Timeout` | エンジン操作のタイムアウト | 1 |
+| `PROXY_ALREADY_RUNNING` | `ProxyError::AlreadyRunning` | プロキシが既に起動中 | 1 |
+| `PROXY_PORT_IN_USE` | `ProxyError::PortInUse` | 指定ポートが使用中 | 1 |
+| `PROXY_CERT_FAILED` | `ProxyError::CertGenerationFailed` | 証明書生成失敗 | 1 |
+| `PROXY_ACME_ERROR` | `ProxyError::AcmeError` | ACME 証明書取得失敗 | 1 |
+| `PROXY_INVALID_CONFIG` | `ProxyError::InvalidConfig` | プロキシ設定が無効 | 1 |
+| `POLICY_INVALID` | `RepoError::ConstraintViolation` | セキュリティポリシーの JSON スキーマ違反 | 1 |
+| `CONFIG_NOT_SET` | `RepoError::NotFound` | 設定キーが存在しない | 1 |
+| `DB_ERROR` | `RepoError::*` | データベース操作エラー（マイグレーション失敗含む） | 2 |
+| `MIGRATION_FAILED` | `RepoError::MigrationFailed` | DB マイグレーション失敗 | 2 |
+| `IO_ERROR` | `RepoError::IoError` | ファイル I/O エラー | 2 |
+
+- エラーコードは `docs/CORE_API.md` のエラー型定義と 1:1 で対応し、CLI は Core のエラーを適切なコードに変換する。
 
 ## 5. SQLite 設定
 - 既定パス:
