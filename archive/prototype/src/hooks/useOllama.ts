@@ -333,10 +333,12 @@ export function useOllamaDownload() {
           // UnlistenFnは通常Promise<void>を返す
           await unlistenRef.current();
         } catch (cleanupErr) {
-          // クリーンアップエラーは無視（型チェックを回避するためanyを使用）
-          // eslint-disable-next-line @typescript-eslint/no-explicit-any
-          const ignored = cleanupErr as any;
-          void ignored;
+          // クリーンアップエラーは無視（エラーログのみ記録）
+          logger.debug(
+            '[useOllamaProcess] クリーンアップエラー（無視されます）',
+            cleanupErr instanceof Error ? cleanupErr : String(cleanupErr),
+            'useOllama'
+          );
         }
         unlistenRef.current = null;
       }

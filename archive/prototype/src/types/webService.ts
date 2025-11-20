@@ -28,6 +28,38 @@ export interface WebServiceRequirements {
 }
 
 /**
+ * モデルパラメータの型定義
+ */
+export interface ModelParameters {
+  temperature?: number;
+  top_p?: number;
+  top_k?: number;
+  max_tokens?: number;
+  stop?: string[];
+  frequency_penalty?: number;
+  presence_penalty?: number;
+  [key: string]: string | number | boolean | string[] | undefined;
+}
+
+/**
+ * メモリ設定の型定義
+ */
+export interface MemoryConfig {
+  type?: string;
+  size?: number;
+  [key: string]: string | number | boolean | undefined;
+}
+
+/**
+ * マルチモーダル設定の型定義
+ */
+export interface MultimodalConfig {
+  enabled?: boolean;
+  supported_types?: string[];
+  [key: string]: string | number | boolean | string[] | undefined;
+}
+
+/**
  * モデル選定結果
  */
 export interface ModelSelectionResult {
@@ -43,9 +75,9 @@ export interface ModelSelectionResult {
   config: {
     port: number;
     enableAuth: boolean;
-    modelParameters: Record<string, any>;
-    memory?: Record<string, any>;
-    multimodal?: Record<string, any>;
+    modelParameters: ModelParameters;
+    memory?: MemoryConfig;
+    multimodal?: MultimodalConfig;
   };
 }
 

@@ -5,6 +5,7 @@ import { useState, useCallback, useRef, useEffect } from 'react';
 import { safeInvoke } from '../utils/tauri';
 import { listen } from '@tauri-apps/api/event';
 import { extractErrorMessage } from '../utils/errorHandler';
+import { logger } from '../utils/logger';
 import type { ModelInfo } from './useModelSearch';
 
 /**
@@ -158,10 +159,11 @@ export const useModelDownload = (onDownloadComplete?: () => void) => {
                 unsubscribeProgressRef.current();
               } catch (error) {
                 // ホットリロード時など、コールバックが見つからない場合は警告を抑制
-                if (process.env.NODE_ENV === 'development') {
-                  // eslint-disable-next-line no-console
-                  console.debug('イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）', error);
-                }
+                logger.debug(
+                  'イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）',
+                  error instanceof Error ? error : String(error),
+                  'useModelDownload'
+                );
               }
               unsubscribeProgressRef.current = null;
             }
@@ -174,10 +176,11 @@ export const useModelDownload = (onDownloadComplete?: () => void) => {
                 unsubscribeProgressRef.current();
               } catch (error) {
                 // ホットリロード時など、コールバックが見つからない場合は警告を抑制
-                if (process.env.NODE_ENV === 'development') {
-                  // eslint-disable-next-line no-console
-                  console.debug('イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）', error);
-                }
+                logger.debug(
+                  'イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）',
+                  error instanceof Error ? error : String(error),
+                  'useModelDownload'
+                );
               }
               unsubscribeProgressRef.current = null;
             }
@@ -207,10 +210,11 @@ export const useModelDownload = (onDownloadComplete?: () => void) => {
           unsubscribeProgressRef.current();
         } catch (error) {
           // ホットリロード時など、コールバックが見つからない場合は警告を抑制
-          if (process.env.NODE_ENV === 'development') {
-            // eslint-disable-next-line no-console
-            console.debug('イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）', error);
-          }
+          logger.debug(
+            'イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）',
+            error instanceof Error ? error : String(error),
+            'useModelDownload'
+          );
         }
         unsubscribeProgressRef.current = null;
       }
@@ -279,10 +283,11 @@ export const useModelDownload = (onDownloadComplete?: () => void) => {
           downloadAbortControllerRef.current.abort();
         } catch (error) {
           // AbortControllerのエラーも無視
-          if (process.env.NODE_ENV === 'development') {
-            // eslint-disable-next-line no-console
-            console.debug('AbortControllerのクリーンアップ中にエラーが発生しました（無視されます）', error);
-          }
+          logger.debug(
+            'AbortControllerのクリーンアップ中にエラーが発生しました（無視されます）',
+            error instanceof Error ? error : String(error),
+            'useModelDownload'
+          );
         }
         downloadAbortControllerRef.current = null;
       }

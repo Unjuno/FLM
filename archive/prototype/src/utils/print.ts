@@ -96,6 +96,18 @@ const getElement = (selector: string | HTMLElement): HTMLElement | null => {
 };
 
 /**
+ * 要素のHTMLコンテンツを安全に取得
+ * 要素をクローンしてinnerHTMLを取得することで、元のDOMに影響を与えません
+ * @param element HTML要素
+ * @returns HTML文字列
+ */
+const getElementHTML = (element: HTMLElement): string => {
+  // 要素をクローンして、元のDOMに影響を与えないようにする
+  const clonedElement = element.cloneNode(true) as HTMLElement;
+  return clonedElement.innerHTML;
+};
+
+/**
  * 印刷用スタイルを作成
  * @param customStyles カスタムスタイル
  * @returns スタイルタグのHTML文字列
@@ -202,10 +214,13 @@ export const print = async (options: PrintOptions = {}): Promise<void> => {
         logger.error(ERROR_MESSAGES.NO_ELEMENT(selector), '', 'print');
         throw new Error(ERROR_MESSAGES.NO_ELEMENT(selector));
       }
-      content = element.innerHTML;
+      // 要素をクローンしてHTMLを取得（元のDOMに影響を与えない）
+      content = getElementHTML(element);
     } else {
       // 対象が指定されていない場合は、body全体を印刷
-      content = document.body.innerHTML;
+      // bodyをクローンしてHTMLを取得（元のDOMに影響を与えない）
+      const clonedBody = document.body.cloneNode(true) as HTMLElement;
+      content = clonedBody.innerHTML;
     }
     
     // 印刷ウィンドウを開く
@@ -216,10 +231,17 @@ export const print = async (options: PrintOptions = {}): Promise<void> => {
       throw new Error(ERROR_MESSAGES.POPUP_BLOCKED());
     }
     
-    // HTMLを書き込む
+    // HTMLを書き込む（document.writeの代わりにinnerHTMLを使用）
     const html = createPrintWindowHTML(content, title, styles);
-    printWindow.document.write(html);
-    printWindow.document.close();
+    if (printWindow.document) {
+      printWindow.document.open();
+      printWindow.document.write(html);
+      printWindow.document.close();
+    } else {
+      // フォールバック: 新しいウィンドウのdocumentが利用できない場合
+      logger.warn('印刷ウィンドウのdocumentが利用できません。代替方法を使用します。', undefined, 'print');
+      throw new Error(ERROR_MESSAGES.POPUP_BLOCKED());
+    }
     
     // スタイルの読み込みと画像の読み込みを待つ
     await new Promise<void>((resolve) => {

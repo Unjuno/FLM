@@ -57,10 +57,11 @@ export const useApiOperations = (loadApis: () => Promise<void>) => {
       } catch (error) {
         // ホットリロード時など、コールバックが見つからない場合は警告を抑制
         // これは開発環境でのみ発生する問題で、本番環境では問題にならない
-        if (process.env.NODE_ENV === 'development') {
-          // eslint-disable-next-line no-console
-          console.debug('イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）', error);
-        }
+        logger.debug(
+          'イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）',
+          error instanceof Error ? error : String(error),
+          'useApiOperations'
+        );
       }
       unsubscribeProgressRef.current = null;
     }

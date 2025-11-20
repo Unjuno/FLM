@@ -175,9 +175,9 @@ async function generateCertificateWithNodeForge(
       altNames.push({ type: 7, ip: localIp });
     }
 
-    // setExtensionsはnode-forgeの型定義が不完全なため、型アサーションを使用
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    cert.setExtensions([
+    // setExtensionsはnode-forgeの型定義に従う
+    // node-forgeのExtension型定義を使用
+    const extensions: forge.pki.CertificateExtension[] = [
       {
         name: 'basicConstraints',
         cA: true,
@@ -192,7 +192,8 @@ async function generateCertificateWithNodeForge(
         name: 'subjectAltName',
         altNames: altNames,
       },
-    ] as any);
+    ];
+    cert.setExtensions(extensions);
 
     // 証明書に署名
     cert.sign(privateKey, forge.md.sha256.create());

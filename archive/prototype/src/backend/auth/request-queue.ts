@@ -209,9 +209,15 @@ export function requestQueueMiddleware(
       return new Promise<void>((resolve, reject) => {
         // レスポンス終了時にPromiseを解決
         const originalEnd = res.end.bind(res);
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        res.end = function (chunk?: any, encoding?: any) {
-          const result = originalEnd(chunk, encoding);
+        // ExpressのResponse.endメソッドの型定義に従う
+        // chunk: string | Buffer | undefined
+        // encoding: BufferEncoding | undefined
+        res.end = function (
+          chunk?: string | Buffer,
+          encoding?: BufferEncoding,
+          cb?: () => void
+        ) {
+          const result = originalEnd(chunk, encoding, cb);
           resolve();
           return result;
         };
