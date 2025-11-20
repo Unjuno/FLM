@@ -1,5 +1,5 @@
 # FLM Proxy Specification
-> Status: Canonical | Audience: Proxy/Network engineers | Updated: 2025-11-18
+> Status: Canonical | Audience: Proxy/Network engineers | Updated: 2025-11-20
 
 ## 1. 役割
 
@@ -90,18 +90,56 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 
 ## 6. TLS / HTTPS モード
 
-| モード          | 説明                                                      |
-|-----------------|---------------------------------------------------------|
-| `local-http`    | HTTPのみ。ローカルネットワーク限定（ファイアウォール必須） |
-| `dev-selfsigned`| 自己署名証明書で HTTPS 提供。LAN / 開発用途専用。Wizard はルート証明書の生成・配布・削除手順を提示する（手動インストールが必要） |
-| `packaged-ca`   | パッケージに同梱されたルートCA証明書を使用。インストール時にOS信頼ストアへ自動登録されるため、ブラウザ警告なしでHTTPS利用可能。大衆向け配布に最適。Phase 3 で実装予定 |
-| `https-acme`    | ACME (Let's Encrypt など) で証明書を取得し HTTPS 提供（インターネット公開の既定モード） |
+### 6.1 モード選択フローチャート
 
-CLI のデフォルトは `local-http`（ローカル検証向け）とし、インターネット公開を行う場合の既定モードは `https-acme` とする。`dev-selfsigned` を選ぶ場合は、Wizard/CLI が生成したルート証明書をクライアント OS／ブラウザに手動でインポートし、ローテーション期限・撤去手順も `docs/SECURITY_FIREWALL_GUIDE.md` に従う必要がある。`packaged-ca` モードは Phase 3 のパッケージング時に実装し、インストーラが自動的に証明書を登録する。`--port` で指定した値は HTTP 用ポートとして扱い、HTTPS は `port + 1` をデフォルトとする（例: 8080/8081）。
+```
+インターネット公開？
+├─ はい → パッケージ版？
+│   ├─ はい → packaged-ca (Phase 3、証明書自動登録)
+│   └─ いいえ → https-acme (ACME証明書、ドメイン必要)
+└─ いいえ → LAN/開発用途？
+    ├─ はい → dev-selfsigned (手動証明書インストール必要)
+    └─ いいえ → local-http (デフォルト、TLS無し)
+```
+
+**既定モード**:
+- CLI版: `local-http`（ローカル検証向け）
+- インターネット公開（CLI版）: `https-acme`（ACME証明書、ドメイン必要）
+- パッケージ版（Phase 3）: `packaged-ca`（証明書自動登録、大衆向け配布に最適）
+
+### 6.2 モード詳細
+
+| モード          | 説明                                                      | 用途 |
+|-----------------|---------------------------------------------------------|------|
+| `local-http`    | HTTPのみ。ローカルネットワーク限定（ファイアウォール必須） | CLIデフォルト、ローカル検証 |
+| `dev-selfsigned`| 自己署名証明書で HTTPS 提供。LAN / 開発用途専用。Wizard はルート証明書の生成・配布・削除手順を提示する（手動インストールが必要） | LAN/開発用途 |
+| `https-acme`    | ACME (Let's Encrypt など) で証明書を取得し HTTPS 提供 | インターネット公開（CLI版の既定） |
+| `packaged-ca`   | パッケージに同梱されたルートCA証明書を使用。インストール時にOS信頼ストアへ自動登録されるため、ブラウザ警告なしでHTTPS利用可能。大衆向け配布に最適。Phase 3 で実装予定 | パッケージ版（Phase 3）の既定 |
+
+**ポート設定**: `--port` で指定した値は HTTP 用ポートとして扱い、HTTPS は `port + 1` をデフォルトとする（例: 8080/8081）。
+
+**証明書管理**:
+- `dev-selfsigned`: Wizard/CLI が生成したルート証明書をクライアント OS／ブラウザに手動でインポート。ローテーション期限・撤去手順は `docs/SECURITY_FIREWALL_GUIDE.md` に従う。
+- `https-acme`: ACME 証明書は `security.db` にパスと更新日時を保存。タイムアウト・リトライ戦略は後述。
+- `packaged-ca`: ルートCA証明書はビルド時に生成し、インストーラに同梱。サーバー証明書は起動時に自動生成（ルートCAで署名）。インストール時にOS信頼ストアへ自動登録。
 
 * 設定は `ProxyConfig` に集約 (`core` 側で管理)
 * ACME 証明書は `security.db` にパスと更新日時を保存
 * `packaged-ca` モードのルートCA証明書はビルド時に生成し、インストーラに同梱。サーバー証明書は起動時に自動生成（ルートCAで署名）
+
+### 6.3 ACME チャレンジ詳細
+
+`ProxyConfig` の `acme_challenge` / `acme_dns_profile_id` フィールドは `docs/CORE_API.md` で定義された通りに解釈する。Proxy 実装では以下の要件を満たす:
+
+| モード | 必須フィールド | 追加要件 |
+|--------|---------------|----------|
+| `Http01` (既定) | `acme_domain`, `acme_email` | `port` を HTTP、`port+1` を HTTPS に使用し、HTTP 側に `/.well-known/acme-challenge/*` エンドポイントを一時的に追加する。 |
+| `Dns01` | `acme_domain`, `acme_email`, `acme_dns_profile_id` | DNS プロバイダ資格情報は CLI/Tauri Wizard が OS キーチェーンに保存し、ProxyService は CLI 経由でトークンを受け取る。TXT レコード `_acme-challenge.{domain}` を生成し、検証後に削除する。 |
+
+- ACME 取得/更新のデフォルトタイムアウトは 90 秒。2 回連続で失敗した場合は `ProxyError::AcmeError` を CLI へ返す。
+- CLI オプション `--challenge http-01|dns-01` と `--dns-profile <id>` は `ProxyConfig` に直結する。UI Setup Wizard でも同じフィールドを表示する。
+- HTTP-01 の場合、80/tcp が使用できない環境では CLI が自動的にポートフォワード（`netsh interface portproxy` / `iptables`）を設定し、終了時に戻す。DNS-01 はフォワード不要。
+- どちらのチャレンジでも証明書/秘密鍵は `security.db` にメタデータを保存し、実体ファイルは OS ごとの安全なパス（`%ProgramData%\flm\certs` 等）に配置する。
 
 ## 7. エラー・ログポリシー
 
@@ -120,20 +158,16 @@ CLI のデフォルトは `local-http`（ローカル検証向け）とし、イ
 
 ## 9. セキュリティポリシー JSON の前提
 
-Proxy / UI / CLI は `SecurityPolicy.policy_json` に以下のキーが存在する前提で動作する（省略時は無効扱い）:
+Proxy / UI / CLI は `SecurityPolicy.policy_json` に以下のキーが存在する前提で動作する。
 
-```jsonc
-{
-  "ip_whitelist": ["127.0.0.1"],
-  "cors": { "allowed_origins": ["https://example.com"] },
-  "rate_limit": { "rpm": 60, "burst": 10 }
-}
-```
+**JSONスキーマの定義**: `docs/CORE_API.md` の「SecurityPolicy エッジケース」セクションを参照（唯一の定義源）。
 
-- `ip_whitelist`: CIDR/IPv4/IPv6 文字列の配列。空または省略で無効。
-- `cors.allowed_origins`: 許可Origin配列。空で `*`。
-- `rate_limit`: `rpm`（per API key）と任意の `burst`。省略でレート制限無効。
-- Phase1/2ではグローバルポリシーID `"default"` のみを参照し、Proxy は常にこのポリシーをロードして適用する。
+**バリデーションルール**（`CORE_API.md` より）:
+- `ip_whitelist`: CIDR/IPv4/IPv6 文字列の配列。空配列 `[]` または省略時は IP 制限無効（すべて許可）。`null` は無効として扱う。
+- `cors.allowed_origins`: 許可Origin配列。空配列 `[]` は `*`（すべて許可）として扱う。省略時は `*`。
+- `rate_limit`: `rpm`（per API key）と任意の `burst`。省略時はレート制限無効。`rpm` が 0 の場合は無効として扱う。`burst` が省略時は `rpm` と同じ値を使用。
+
+**運用**: Phase1/2ではグローバルポリシーID `"default"` のみを参照し、Proxy は常にこのポリシーをロードして適用する。
 
 ## 10. 証明書管理（packaged-ca モード）
 

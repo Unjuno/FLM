@@ -1,5 +1,5 @@
 # FLM Core API Specification
-> Status: Canonical | Audience: Rust core engineers | Updated: 2025-11-18
+> Status: Canonical | Audience: Rust core engineers | Updated: 2025-11-20
 
 ## 1. Rust Workspace Modules
 
@@ -183,11 +183,20 @@ pub enum ProxyMode {
 }
 
 #[derive(Clone, Debug)]
+pub enum AcmeChallengeKind {
+    Http01,
+    Dns01,
+}
+
+#[derive(Clone, Debug)]
 pub struct ProxyConfig {
     pub mode: ProxyMode,
     pub port: u16,
     pub acme_email: Option<String>,
     pub acme_domain: Option<String>,
+    pub acme_challenge: Option<AcmeChallengeKind>,
+    /// DNS-01 自動化で使用する資格情報プロフィールID（CLIが secrets store に保持）
+    pub acme_dns_profile_id: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -204,6 +213,8 @@ pub struct ProxyHandle {
     pub port: u16,
     pub mode: ProxyMode,
     pub listen_addr: String,
+    /// HTTPS を有効にするモード（dev-selfsigned / https-acme / packaged-ca）では `port + 1`
+    pub https_port: Option<u16>,
     pub acme_domain: Option<String>,
     pub running: bool,
     pub last_error: Option<String>,
@@ -327,16 +338,32 @@ pub enum HttpError {
 ### ProxyConfig バリデーション要件
 
 - `mode`: すべてのバリアントが有効。`HttpsAcme` の場合は `acme_email` と `acme_domain` が必須。
-- `port`: 1-65535 の範囲。0 は無効。
+- `port`: 1-65535 の範囲。0 は無効。HTTPS を有効にするモードでは `port + 1` が TLS リスニングポートとして予約されるため、両方のポートが空いていることを CLI で検証する。
 - `acme_email`: `HttpsAcme` モード時のみ必須。RFC5322 準拠のメールアドレス形式。
 - `acme_domain`: `HttpsAcme` モード時のみ必須。FQDN 形式（例: `example.com`）。ワイルドカードは Phase 3 以降。
+- `acme_challenge`: 省略時は `Http01`。`Dns01` を指定する場合は `acme_dns_profile_id` も必須。
+- `acme_dns_profile_id`: `Dns01` のみ必須。CLI/Tauri が OS のシークレットストアに保持している DNS プロバイダ資格情報のキー。`Http01` の場合は `None`。
 - `PackagedCa` モード時は `acme_email` / `acme_domain` は無視される（証明書はパッケージ同梱）。
+- `ProxyHandle.https_port`: `ProxyConfig.mode` が `LocalHttp` 以外の場合は常に `Some(port + 1)` を返し、`LocalHttp` では `None`。
 
 ### SecurityPolicy エッジケース
 
-- `ip_whitelist`: 空配列 `[]` または省略時は IP 制限無効（すべて許可）。`null` は無効として扱う。
-- `cors.allowed_origins`: 空配列 `[]` は `*`（すべて許可）として扱う。省略時は `*`。
-- `rate_limit`: 省略時はレート制限無効。`rpm` が 0 の場合は無効として扱う。`burst` が省略時は `rpm` と同じ値を使用。
+**JSONスキーマ例**（Phase 1/2 の最小スキーマ）:
+
+```jsonc
+{
+  "ip_whitelist": ["127.0.0.1", "192.168.0.0/16"],
+  "cors": { "allowed_origins": ["https://example.com"] },
+  "rate_limit": { "rpm": 60, "burst": 10 }
+}
+```
+
+**バリデーションルール**:
+- `ip_whitelist`: CIDR/IPv4/IPv6 文字列の配列。空配列 `[]` または省略時は IP 制限無効（すべて許可）。`null` は無効として扱う。
+- `cors.allowed_origins`: 許可Origin配列。空配列 `[]` は `*`（すべて許可）として扱う。省略時は `*`。
+- `rate_limit`: `rpm`（per API key）と任意の `burst`。省略時はレート制限無効。`rpm` が 0 の場合は無効として扱う。`burst` が省略時は `rpm` と同じ値を使用。
+
+**参照**: Proxy/UI/CLI はこのスキーマを基準に「設定済みか」を判定し、Proxy は同じキーを参照して制御する。詳細は `docs/PROXY_SPEC.md` セクション9を参照。
 
 ## 3. `LlmEngine` Trait
 
@@ -505,9 +532,40 @@ impl ConfigService {
 - `ProxyHandle`, `SecurityPolicy`, `ApiKeyMetadata` など外部に露出する構造体は `#[non_exhaustive]` で定義し、未知フィールドを無視できるよう CLI/UI 側で `serde(default)` を設定する。
 - IPC 追加時は `docs/CLI_SPEC.md` / `docs/UI_MINIMAL.md` に JSON Schema（必須フィールド/型）を追記し、`CORE_API.md` の該当データモデルを参照させる。これにより CLI がサブコマンド増設しても UI/Proxy で schema drift が起きない。
 
-## 7. 未確定事項
+## 7. ACME 設定詳細
 
-* ProxyConfig の ACME 設定（ドメイン / メールアドレス / チャレンジ種類）
+### 7.1 チャレンジ種類
 
-これらは `CORE_API.md` の該当セクションに追記していく。
+| フィールド | 値 | 用途 | 制約 |
+|-----------|----|------|------|
+| `acme_challenge = Http01` | HTTP-01 | 既定。プロキシ自身が `http://{domain}/.well-known/acme-challenge/*` をリッスンし、Let's Encrypt Staging/Production 双方に対応。 | 外部から 80/tcp に到達できること。`port` が 80 でない場合は CLI が iptables / portproxy で一時フォワードする。 |
+| `acme_challenge = Dns01` | DNS-01 | DNS 更新権限がある場合に使用。長時間キャッシュされるゾーンでも対応可能。 | `acme_dns_profile_id` に指定された資格情報を CLI/Setup Wizard が OS シークレットストアから取得し、TXT レコードを自動作成する。 |
+
+`acme_challenge` を省略した場合は `Http01` が選択される。DNS-01 を選ぶと `acme_dns_profile_id` が必須となり、CLI は `flm secrets dns add --provider cloudflare` などで登録済みのプロフィールを参照する。
+
+### 7.2 HTTP-01 ハンドリング
+
+1. `ProxyService::start` が `HttpsAcme + Http01` を検知すると、`port` を HTTP、`port + 1` を HTTPS に割り当て、HTTP 側で `/.well-known/acme-challenge/*` を優先マウントする。
+2. ACME クライアントは 90 秒タイムアウトでチャレンジ→検証→証明書発行まで実施し、取得した証明書パスと期限を `security.db` に保存する。
+3. 証明書取得後は `/.well-known` ルートを閉じ、通常の OpenAI 互換エンドポイントのみを公開する。
+
+### 7.3 DNS-01 ハンドリング
+
+1. CLI/Tauri Wizard が `acme_dns_profile_id` で示された資格情報（例: Cloudflare API トークン）を OS シークレットストアから読み出す。
+2. `ProxyService::start` が ACME クライアントに資格情報を受け渡し、TXT レコード `_acme-challenge.{domain}` を生成。
+3. 伝播確認（最大 120 秒）後に証明書取得を完了し、`security.db` に証明書・秘密鍵・有効期限を保存する。
+4. DNS レコードは成功後すぐに削除するが、CLI で `--keep-dns-record` を指定した場合は次回まで残す。
+
+### 7.4 証明書更新
+
+- `ProxyService` は証明書の残存日数を起動時と 24 時間ごとのジョブで確認し、残り 20 日未満で自動更新タスクをキューイングする。
+- 更新時もチャレンジ種別は `ProxyConfig` の指定に従う。HTTP-01 の場合は一時的に 80/tcp を占有し、DNS-01 の場合は同じ `acme_dns_profile_id` を再利用する。
+- 更新失敗時は `ProxyError::AcmeError` を返し、`ProxyHandle.last_error` に詳細メッセージを格納する。CLI/UI はこのフィールドを表示して再実行を促す。
+
+### 7.5 手動フォールバック
+
+- CLI は `flm proxy start --mode https-acme --challenge http-01 --fallback dev-selfsigned` のようにフォールバックモードを受け付け、ACME が 2 回連続で失敗した場合に自動で `dev-selfsigned` を起動する。フォールバック発動時は `ProxyHandle.last_error` に ACME 失敗理由を保持する。
+- Setup Wizard は HTTP-01 の場合にのみポートフォワード設定（Windows: `netsh interface portproxy`, Linux/macOS: `pf`/`iptables`）を案内する。
+
+これらにより、Phase 1 完了前に ACME の要件（DNS-01/HTTP-01）が明文化され、CLI/Proxy/UI すべてが同じ設定項目を共有できる。
 

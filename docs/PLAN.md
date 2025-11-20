@@ -1,5 +1,5 @@
 # FLM Next Plan
-> Status: Canonical | Audience: All contributors | Updated: 2025-11-18
+> Status: Canonical | Audience: All contributors | Updated: 2025-11-20
 
 ## 背景
 - 既存プロトタイプは機能が肥大化し保守が困難になったため `archive/prototype/` に退避した
@@ -35,6 +35,10 @@ flm/
     PROXY_SPEC.md     # プロキシ変換ルール
     ENGINE_DETECT.md  # エンジン検出ロジック
     DB_SCHEMA.md      # スキーマ＋マイグレーション指針
+    MIGRATION_GUIDE.md # 旧プロトタイプからの移行手順
+    TEST_STRATEGY.md   # CI/負荷/手動テストの方針
+    VERSIONING_POLICY.md # Core/API/CLI/Proxyのバージョン管理
+    templates/ADR_TEMPLATE.md # 変更管理テンプレート
     diagram.md
     UI_MINIMAL.md     # Phase2 UI仕様
     SECURITY_FIREWALL_GUIDE.md  # Firewall自動化ガイド
@@ -92,8 +96,8 @@ flm/
 - アーカイブとの区別を README に追記
 - Rustコアライブラリ（ドメインレイヤー）の骨格を作成し、CLI/UI/Proxyが利用するAPIを定義（詳細は `docs/CORE_API.md`）
 - Domain/Ports と Application/Adapters の責務境界を `CORE_API.md` と `diagram.md` に反映
-- エンジン検出仕様 (`docs/ENGINE_DETECT.md`)、DBスキーマ＋マイグレーション (`docs/DB_SCHEMA.md`)、プロキシ仕様 (`docs/PROXY_SPEC.md`) を完成させ、**Core API / Proxy / DB Schema を `v1.0.0` としてタグ付け・署名し、以降の変更は ADR + バージョンアップでのみ許可**  
-  - フリーズ手順: (1) `docs/*` に最終版を反映 → (2) `core-api-v1.0.0` タグを GPG 署名で作成 → (3) 変更要望は ADR テンプレート提出 → (4) 承認後にマイナー/パッチバージョンを更新
+- エンジン検出仕様 (`docs/ENGINE_DETECT.md`)、DBスキーマ＋マイグレーション (`docs/DB_SCHEMA.md`)、プロキシ仕様 (`docs/PROXY_SPEC.md`)、移行ガイド (`docs/MIGRATION_GUIDE.md`)、テスト戦略 (`docs/TEST_STRATEGY.md`) を完成させ、**Core API / Proxy / DB Schema を `v1.0.0` としてタグ付け・署名し、以降の変更は ADR + バージョンアップでのみ許可**  
+  - フリーズ手順: (1) `docs/*` に最終版を反映 → (2) `core-api-v1.0.0` タグを GPG 署名で作成 → (3) 変更要望は `docs/templates/ADR_TEMPLATE.md` で提出 → (4) 承認後に `docs/VERSIONING_POLICY.md` に従ってマイナー/パッチバージョンを更新
 - UI モックの検討は Phase2 以降に回し、Phase0では Core API 固定を優先
 - 旧 `archive/prototype/` から `config.json` / SQLite 等のデータをエクスポートする移行計画（変換スクリプト、ロールバック手順、テストデータ）を策定
 
@@ -138,14 +142,19 @@ flm/
 - CLI コマンド仕様: `docs/CLI_SPEC.md`（Phase1で作成）
 - UI ワイヤーフレーム: `docs/UI_MINIMAL.md`（Phase2で作成、Setup Wizard + Firewall Automation を含む）
 - Firewall 設定ガイド: `docs/SECURITY_FIREWALL_GUIDE.md`
+- 移行ガイド: `docs/MIGRATION_GUIDE.md`
+- バージョン管理ポリシー: `docs/VERSIONING_POLICY.md`
+- テスト戦略: `docs/TEST_STRATEGY.md`
+- 手動UIシナリオ: `tests/ui-scenarios.md`
+- ADR テンプレート: `docs/templates/ADR_TEMPLATE.md`
 
 ## メトリクス
 - Rustコアの自動テストカバレッジ 80%以上
 - CLI 経由でのプロキシ起動→HTTP応答（初回/2回目）を CI で検証
 - セキュリティ設定（IP/CORS/APIキー）を含む統合テストを確立
-- UI は主要操作 3 ケースの手動テスト手順を残し、IPC経路をユニットテスト
+- UI は主要操作 3 ケースの手動テスト手順（`tests/ui-scenarios.md` 参照）を残し、IPC経路をユニットテスト
 - 受入メトリクスは GitHub Actions / self-hosted runners 上の OS 行列（Windows 11, macOS Sonoma, Ubuntu 22.04）で自動計測し、負荷テスト（100 req/min）は専用ベンチマークジョブ＋モックエンジンで継続的に検証する。CI マトリクス:
-    - `ci-cli` ワークフロー: {OS × Engine} = (Win/macOS/Linux) × (Ollama/vLLM/LM Studio/llama.cpp mock)。`flm engines detect`, `flm models list`, `flm proxy start/stop`, `flm proxy status` を実行し、SSE/非SSE を確認。
+    - `ci-cli` ワークフロー: {OS × Engine} = (Win/macOS/Linux) × (Ollama/vLLM/LM Studio/llama.cpp mock)。`flm engines detect`, `flm models list`, `flm proxy start/stop`, `flm proxy status` を実行し、SSE/非SSE を確認（詳細は `docs/TEST_STRATEGY.md`）。
     - `ci-proxy-load` ワークフロー: Linux self-hosted runnerで vLLM + mock engines を起動し、`wrk`/`k6` による 100 req/min (チャット + embeddings) を 10 分間流し、P95 レイテンシとエラー率を記録。結果は GitHub Actions artifacts + Grafana snapshot に保管。
     - `ci-acme-smoke` ワークフロー: nightly で staging ACME サーバと接続し、DNS-01/HTTP-01 モードをそれぞれ実行。82 分以内に証明書取得完了しない場合は失敗として issue を自動作成。
 - Phaseごとの合格基準:
