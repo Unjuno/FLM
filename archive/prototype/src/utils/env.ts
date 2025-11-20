@@ -9,7 +9,7 @@ type RuntimeMode = 'development' | 'test' | 'production';
  * 現在の実行モードを判定する
  * - process.env.NODE_ENV を参照
  * - それが無い場合は production 扱い
- * 
+ *
  * 注意: Jest環境ではimport.metaが使用できないため、process.env.NODE_ENVのみを使用
  * Vite環境でもprocess.env.NODE_ENVが設定されているため、この方法で動作します
  */

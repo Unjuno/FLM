@@ -49,4 +49,3 @@ export function removeFromMap<K, V>(map: Map<K, V>, key: K): Map<K, V> {
   newMap.delete(key);
   return newMap;
 }
-

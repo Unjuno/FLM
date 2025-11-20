@@ -5,7 +5,20 @@
  */
 export interface WebServiceRequirements {
   // 基本要件
-  category?: 'chat' | 'code' | 'translation' | 'summarization' | 'qa' | 'vision' | 'audio' | 'multimodal' | 'image-generation' | 'audio-generation' | 'embedding' | 'video-generation' | 'other';
+  category?:
+    | 'chat'
+    | 'code'
+    | 'translation'
+    | 'summarization'
+    | 'qa'
+    | 'vision'
+    | 'audio'
+    | 'multimodal'
+    | 'image-generation'
+    | 'audio-generation'
+    | 'embedding'
+    | 'video-generation'
+    | 'other';
   useCase?: string; // 具体的な用途（例: "チャットボット", "FAQ自動応答", "画像説明生成"）
 
   // パフォーマンス要件

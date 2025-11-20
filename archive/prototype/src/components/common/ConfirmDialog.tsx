@@ -52,9 +52,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         if (confirmButtonRef.current) {
           confirmButtonRef.current.focus();
         } else if (dialogRef.current) {
-          const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
-            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-          );
+          const focusableElements =
+            dialogRef.current.querySelectorAll<HTMLElement>(
+              'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            );
           if (focusableElements.length > 0) {
             focusableElements[0].focus();
           }
@@ -81,9 +82,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
       if (event.key !== 'Tab') return;
 
-      const focusableElements = dialogRef.current!.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
+      const focusableElements =
+        dialogRef.current!.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
 
       if (focusableElements.length === 0) return;
 
@@ -111,6 +113,17 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     };
   }, [handleDialogDismiss, isOpen]);
 
+  const handleOverlayKeyDown = (event: React.KeyboardEvent<HTMLDivElement>) => {
+    if (event.target !== event.currentTarget) {
+      return;
+    }
+
+    if (event.key === 'Escape' || event.key === 'Enter' || event.key === ' ') {
+      event.preventDefault();
+      handleDialogDismiss();
+    }
+  };
+
   if (!isOpen) return null;
 
   const handleConfirmClick = () => {
@@ -132,19 +145,22 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   return (
     <div
       className="confirm-dialog-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-dialog-title"
-      onClick={(e) => {
+      role="button"
+      tabIndex={0}
+      aria-label="Close dialog"
+      onClick={e => {
         if (e.target === e.currentTarget) {
           handleDialogDismiss();
         }
       }}
+      onKeyDown={handleOverlayKeyDown}
     >
       <div
         ref={dialogRef}
         className="confirm-dialog"
-        role="document"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-dialog-title"
       >
         <h3 id="confirm-dialog-title">{title}</h3>
         <p>{message}</p>

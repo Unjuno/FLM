@@ -84,9 +84,12 @@ describe('ApiKeys', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
     });
 
-    await waitFor(() => {
-      expect(screen.getByText('Test API')).toBeInTheDocument();
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText('Test API')).toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
   });
 
   it('should handle copy API key', async () => {
@@ -120,9 +123,12 @@ describe('ApiKeys', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
     });
 
-    await waitFor(() => {
-      expect(screen.getByText('Test API')).toBeInTheDocument();
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText('Test API')).toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
 
     // 表示ボタンをクリックしてAPIキーを表示
     await act(async () => {
@@ -130,20 +136,26 @@ describe('ApiKeys', () => {
       await userEvent.click(showButton);
     });
 
-    await waitFor(() => {
-      // コピーボタンが表示されることを確認
-      const copyButton = screen.getByText('コピー');
-      expect(copyButton).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        // コピーボタンが表示されることを確認
+        const copyButton = screen.getByText('コピー');
+        expect(copyButton).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     await act(async () => {
       const copyButton = screen.getByText('コピー');
       await userEvent.click(copyButton);
     });
 
-    await waitFor(() => {
-      expect(mockShowSuccess).toHaveBeenCalled();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(mockShowSuccess).toHaveBeenCalled();
+      },
+      { timeout: 5000 }
+    );
   });
 
   it('should handle regenerate API key', async () => {
@@ -174,9 +186,12 @@ describe('ApiKeys', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
     });
 
-    await waitFor(() => {
-      expect(screen.getByText('Test API')).toBeInTheDocument();
-    }, { timeout: 10000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText('Test API')).toBeInTheDocument();
+      },
+      { timeout: 10000 }
+    );
 
     await act(async () => {
       const regenerateButton = screen.getByText('キーを再生成');
@@ -184,9 +199,11 @@ describe('ApiKeys', () => {
     });
 
     // 確認ダイアログが表示されることを確認
-    await waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
   });
 });
-

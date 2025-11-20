@@ -56,51 +56,48 @@ export const EngineStatus: React.FC<EngineStatusProps> = ({
   const [errors, setErrors] = useState<Record<string, string | null>>({});
 
   // エンジンを検出する関数
-  const detectEngine = useCallback(
-    async (engineType: string) => {
-      setDetecting(prev => ({ ...prev, [engineType]: true }));
-      setErrors(prev => ({ ...prev, [engineType]: null }));
+  const detectEngine = useCallback(async (engineType: string) => {
+    setDetecting(prev => ({ ...prev, [engineType]: true }));
+    setErrors(prev => ({ ...prev, [engineType]: null }));
 
-      try {
-        const result = await safeInvoke<EngineDetectionResult>('detect_engine', {
-          engineType,
-        });
+    try {
+      const result = await safeInvoke<EngineDetectionResult>('detect_engine', {
+        engineType,
+      });
 
-        setDetectionResults(prev => ({
-          ...prev,
-          [engineType]: result,
-        }));
+      setDetectionResults(prev => ({
+        ...prev,
+        [engineType]: result,
+      }));
 
-        logger.info(
-          `${ENGINE_NAMES[engineType] || engineType}の検出完了`,
-          JSON.stringify(result),
-          'EngineStatus'
-        );
-      } catch (err) {
-        const errorMessage = extractErrorMessage(
-          err,
-          `${ENGINE_NAMES[engineType] || engineType}の検出に失敗しました`
-        );
-        setErrors(prev => ({
-          ...prev,
-          [engineType]: errorMessage,
-        }));
-        setDetectionResults(prev => ({
-          ...prev,
-          [engineType]: null,
-        }));
+      logger.info(
+        `${ENGINE_NAMES[engineType] || engineType}の検出完了`,
+        JSON.stringify(result),
+        'EngineStatus'
+      );
+    } catch (err) {
+      const errorMessage = extractErrorMessage(
+        err,
+        `${ENGINE_NAMES[engineType] || engineType}の検出に失敗しました`
+      );
+      setErrors(prev => ({
+        ...prev,
+        [engineType]: errorMessage,
+      }));
+      setDetectionResults(prev => ({
+        ...prev,
+        [engineType]: null,
+      }));
 
-        logger.error(
-          `${ENGINE_NAMES[engineType] || engineType}の検出エラー`,
-          err,
-          'EngineStatus'
-        );
-      } finally {
-        setDetecting(prev => ({ ...prev, [engineType]: false }));
-      }
-    },
-    []
-  );
+      logger.error(
+        `${ENGINE_NAMES[engineType] || engineType}の検出エラー`,
+        err,
+        'EngineStatus'
+      );
+    } finally {
+      setDetecting(prev => ({ ...prev, [engineType]: false }));
+    }
+  }, []);
 
   // すべてのエンジンを検出
   const detectAllEngines = useCallback(async () => {
@@ -167,7 +164,9 @@ export const EngineStatus: React.FC<EngineStatusProps> = ({
                 </span>
                 <div className="engine-status-info">
                   <h3 className="engine-status-name">{engineName}</h3>
-                  <p className={`engine-status-state ${getStatusClass(result)}`}>
+                  <p
+                    className={`engine-status-state ${getStatusClass(result)}`}
+                  >
                     {isDetecting ? '検出中...' : getStatusText(result)}
                   </p>
                 </div>
@@ -188,7 +187,9 @@ export const EngineStatus: React.FC<EngineStatusProps> = ({
                     </div>
                   )}
                   {result.message && (
-                    <div className="engine-status-message">{result.message}</div>
+                    <div className="engine-status-message">
+                      {result.message}
+                    </div>
                   )}
                 </div>
               )}
@@ -223,4 +224,3 @@ export const EngineStatus: React.FC<EngineStatusProps> = ({
     </div>
   );
 };
-

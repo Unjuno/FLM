@@ -56,10 +56,11 @@ export const AuditLogExport: React.FC<AuditLogExportProps> = ({
   const downloadFile = useCallback(
     async (data: string, format: 'csv' | 'json' | 'txt'): Promise<void> => {
       try {
-        const extension = format === 'csv' ? 'csv' : format === 'json' ? 'json' : 'txt';
+        const extension =
+          format === 'csv' ? 'csv' : format === 'json' ? 'json' : 'txt';
         const filename = `audit-logs_${new Date().toISOString().split('T')[0]}.${extension}`;
         const mimeType = MIME_TYPES[format];
-        
+
         // Blobを作成してダウンロード
         const blob = new Blob([data], { type: mimeType });
         const url = URL.createObjectURL(blob);
@@ -70,8 +71,11 @@ export const AuditLogExport: React.FC<AuditLogExportProps> = ({
         link.click();
         document.body.removeChild(link);
         URL.revokeObjectURL(url);
-        
-        logger.info(`監査ログをエクスポートしました: ${filename}`, 'AuditLogExport');
+
+        logger.info(
+          `監査ログをエクスポートしました: ${filename}`,
+          'AuditLogExport'
+        );
       } catch (err) {
         logger.error('ファイル保存エラー', err, 'AuditLogExport');
         throw err;
@@ -112,7 +116,8 @@ export const AuditLogExport: React.FC<AuditLogExportProps> = ({
 
         if (onExportComplete) {
           // データから行数を推定（簡易的な方法）
-          const count = data.split('\n').filter(line => line.trim().length > 0).length - 1; // ヘッダー行を除外
+          const count =
+            data.split('\n').filter(line => line.trim().length > 0).length - 1; // ヘッダー行を除外
           onExportComplete(Math.max(0, count));
         }
       } catch (err) {
@@ -222,4 +227,3 @@ export const AuditLogExport: React.FC<AuditLogExportProps> = ({
     </div>
   );
 };
-

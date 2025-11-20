@@ -10,7 +10,11 @@ import {
 } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
 import { debugLog, debugWarn } from '../setup/debug';
-import { cleanupTestApis, createTestApi, handleTauriAppNotRunningError } from '../setup/test-helpers';
+import {
+  cleanupTestApis,
+  createTestApi,
+  handleTauriAppNotRunningError,
+} from '../setup/test-helpers';
 
 interface RequestLogInfo {
   id: string;
@@ -59,7 +63,7 @@ describe('F008: ログ削除機能 統合テスト', () => {
     const apiIds: string[] = [];
     if (testApiId) apiIds.push(testApiId);
     if (testApiId2) apiIds.push(testApiId2);
-    
+
     if (apiIds.length > 0) {
       await cleanupTestApis(apiIds);
       debugLog(`テスト用APIを削除しました: ${apiIds.join(', ')}`);

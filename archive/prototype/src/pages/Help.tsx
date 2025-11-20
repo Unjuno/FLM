@@ -60,52 +60,55 @@ export const Help: React.FC = () => {
   }, [location.search]);
 
   // ショートカット定義（表示用）
-  const globalShortcuts: KeyboardShortcut[] = useMemo(() => [
-    {
-      key: 'n',
-      description: t('help.shortcuts.shortcuts.createApi'),
-      ctrlKey: true,
-      handler: () => navigate('/api/create'),
-    },
-    {
-      key: 'l',
-      description: t('help.shortcuts.shortcuts.showLogs'),
-      ctrlKey: true,
-      handler: () => navigate('/logs'),
-    },
-    {
-      key: 'p',
-      description: t('help.shortcuts.shortcuts.showPerformance'),
-      ctrlKey: true,
-      handler: () => navigate('/performance'),
-    },
-    {
-      key: 'm',
-      description: t('help.shortcuts.shortcuts.showModels'),
-      ctrlKey: true,
-      handler: () => navigate('/models'),
-    },
-    {
-      key: 'h',
-      description: t('help.shortcuts.shortcuts.showHelp'),
-      ctrlKey: true,
-      handler: () => navigate('/help'),
-    },
-    {
-      key: 'Home',
-      description: t('help.shortcuts.shortcuts.goHome'),
-      ctrlKey: true,
-      handler: () => navigate('/'),
-    },
-    {
-      key: 'Escape',
-      description: t('help.shortcuts.shortcuts.closeModal'),
-      handler: () => {
-        const event = new CustomEvent('closeModal');
-        window.dispatchEvent(event);
+  const globalShortcuts: KeyboardShortcut[] = useMemo(
+    () => [
+      {
+        key: 'n',
+        description: t('help.shortcuts.shortcuts.createApi'),
+        ctrlKey: true,
+        handler: () => navigate('/api/create'),
       },
-    },
-  ], [t, navigate]);
+      {
+        key: 'l',
+        description: t('help.shortcuts.shortcuts.showLogs'),
+        ctrlKey: true,
+        handler: () => navigate('/logs'),
+      },
+      {
+        key: 'p',
+        description: t('help.shortcuts.shortcuts.showPerformance'),
+        ctrlKey: true,
+        handler: () => navigate('/performance'),
+      },
+      {
+        key: 'm',
+        description: t('help.shortcuts.shortcuts.showModels'),
+        ctrlKey: true,
+        handler: () => navigate('/models'),
+      },
+      {
+        key: 'h',
+        description: t('help.shortcuts.shortcuts.showHelp'),
+        ctrlKey: true,
+        handler: () => navigate('/help'),
+      },
+      {
+        key: 'Home',
+        description: t('help.shortcuts.shortcuts.goHome'),
+        ctrlKey: true,
+        handler: () => navigate('/'),
+      },
+      {
+        key: 'Escape',
+        description: t('help.shortcuts.shortcuts.closeModal'),
+        handler: () => {
+          const event = new CustomEvent('closeModal');
+          window.dispatchEvent(event);
+        },
+      },
+    ],
+    [t, navigate]
+  );
 
   // グローバルキーボードショートカットを有効化
   useGlobalKeyboardShortcuts();
@@ -120,58 +123,61 @@ export const Help: React.FC = () => {
     setExpandedItems(newExpanded);
   };
 
-  const faqItems = useMemo(() => [
-    {
-      id: 'faq-1',
-      question: t('help.faq.items.faq1.question'),
-      answer: t('help.faq.items.faq1.answer'),
-    },
-    {
-      id: 'faq-2',
-      question: t('help.faq.items.faq2.question'),
-      answer: t('help.faq.items.faq2.answer'),
-    },
-    {
-      id: 'faq-3',
-      question: t('help.faq.items.faq3.question'),
-      answer: t('help.faq.items.faq3.answer'),
-    },
-    {
-      id: 'faq-4',
-      question: t('help.faq.items.faq4.question'),
-      answer: t('help.faq.items.faq4.answer'),
-    },
-    {
-      id: 'faq-5',
-      question: t('help.faq.items.faq5.question'),
-      answer: t('help.faq.items.faq5.answer'),
-    },
-    {
-      id: 'faq-6',
-      question: t('help.faq.items.faq6.question'),
-      answer: t('help.faq.items.faq6.answer'),
-    },
-    {
-      id: 'faq-7',
-      question: t('help.faq.items.faq7.question'),
-      answer: t('help.faq.items.faq7.answer'),
-    },
-    {
-      id: 'faq-8',
-      question: t('help.faq.items.faq8.question'),
-      answer: t('help.faq.items.faq8.answer'),
-    },
-    {
-      id: 'faq-9',
-      question: t('help.faq.items.faq9.question'),
-      answer: t('help.faq.items.faq9.answer'),
-    },
-    {
-      id: 'faq-10',
-      question: t('help.faq.items.faq10.question'),
-      answer: t('help.faq.items.faq10.answer'),
-    },
-  ], [t]);
+  const faqItems = useMemo(
+    () => [
+      {
+        id: 'faq-1',
+        question: t('help.faq.items.faq1.question'),
+        answer: t('help.faq.items.faq1.answer'),
+      },
+      {
+        id: 'faq-2',
+        question: t('help.faq.items.faq2.question'),
+        answer: t('help.faq.items.faq2.answer'),
+      },
+      {
+        id: 'faq-3',
+        question: t('help.faq.items.faq3.question'),
+        answer: t('help.faq.items.faq3.answer'),
+      },
+      {
+        id: 'faq-4',
+        question: t('help.faq.items.faq4.question'),
+        answer: t('help.faq.items.faq4.answer'),
+      },
+      {
+        id: 'faq-5',
+        question: t('help.faq.items.faq5.question'),
+        answer: t('help.faq.items.faq5.answer'),
+      },
+      {
+        id: 'faq-6',
+        question: t('help.faq.items.faq6.question'),
+        answer: t('help.faq.items.faq6.answer'),
+      },
+      {
+        id: 'faq-7',
+        question: t('help.faq.items.faq7.question'),
+        answer: t('help.faq.items.faq7.answer'),
+      },
+      {
+        id: 'faq-8',
+        question: t('help.faq.items.faq8.question'),
+        answer: t('help.faq.items.faq8.answer'),
+      },
+      {
+        id: 'faq-9',
+        question: t('help.faq.items.faq9.question'),
+        answer: t('help.faq.items.faq9.answer'),
+      },
+      {
+        id: 'faq-10',
+        question: t('help.faq.items.faq10.question'),
+        answer: t('help.faq.items.faq10.answer'),
+      },
+    ],
+    [t]
+  );
 
   const guideSections = useMemo(() => {
     const getContent = (guideId: string, count: number): string[] => {
@@ -185,7 +191,7 @@ export const Help: React.FC = () => {
       }
       return content;
     };
-    
+
     return [
       {
         id: 'guide-1',
@@ -227,7 +233,7 @@ export const Help: React.FC = () => {
       }
       return symptoms;
     };
-    
+
     const getSolutions = (troubleId: string, count: number): string[] => {
       const solutions: string[] = [];
       for (let i = 0; i < count; i++) {
@@ -239,7 +245,7 @@ export const Help: React.FC = () => {
       }
       return solutions;
     };
-    
+
     return [
       {
         id: 'trouble-1',
@@ -281,10 +287,13 @@ export const Help: React.FC = () => {
   }, [t]);
 
   // パンくずリストの項目
-  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: t('help.title') || 'ヘルプ' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(
+    () => [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('help.title') || 'ヘルプ' },
+    ],
+    [t]
+  );
 
   return (
     <AppLayout>
@@ -293,9 +302,7 @@ export const Help: React.FC = () => {
         <div className="page-container help-container">
           <header className="page-header help-header">
             <h1>{t('help.title')}</h1>
-            <p className="help-subtitle">
-              {t('help.subtitle')}
-            </p>
+            <p className="help-subtitle">{t('help.subtitle')}</p>
           </header>
 
           <div className="help-content-wrapper">
@@ -446,9 +453,19 @@ export const Help: React.FC = () => {
                           content="APIの接続先URLです。外部アプリケーションからこのURLにアクセスしてAPIを使用できます。"
                           title="エンドポイントとは？"
                         >
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                            }}
+                          >
                             エンドポイント
-                            <span style={{ fontSize: '0.875rem', opacity: 0.7 }}>❓</span>
+                            <span
+                              style={{ fontSize: '0.875rem', opacity: 0.7 }}
+                            >
+                              ❓
+                            </span>
                           </span>
                         </Tooltip>
                       </h3>
@@ -463,9 +480,19 @@ export const Help: React.FC = () => {
                           content="APIを安全に使用するための認証キーです。外部アプリケーションからAPIを使用する際に必要です。"
                           title="APIキーとは？"
                         >
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                            }}
+                          >
                             APIキー
-                            <span style={{ fontSize: '0.875rem', opacity: 0.7 }}>❓</span>
+                            <span
+                              style={{ fontSize: '0.875rem', opacity: 0.7 }}
+                            >
+                              ❓
+                            </span>
                           </span>
                         </Tooltip>
                       </h3>
@@ -480,9 +507,19 @@ export const Help: React.FC = () => {
                           content="APIが使用する通信ポート番号です。通常は自動的に設定されます。"
                           title="ポート番号とは？"
                         >
-                          <span style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}>
+                          <span
+                            style={{
+                              display: 'inline-flex',
+                              alignItems: 'center',
+                              gap: '0.5rem',
+                            }}
+                          >
                             ポート番号
-                            <span style={{ fontSize: '0.875rem', opacity: 0.7 }}>❓</span>
+                            <span
+                              style={{ fontSize: '0.875rem', opacity: 0.7 }}
+                            >
+                              ❓
+                            </span>
                           </span>
                         </Tooltip>
                       </h3>
@@ -502,7 +539,8 @@ export const Help: React.FC = () => {
                     <div className="glossary-item">
                       <h3 className="glossary-term">エンジン</h3>
                       <p className="glossary-definition">
-                        AIモデルを実行するためのソフトウェアです。Ollama、LM Studio、vLLMなどがあります。
+                        AIモデルを実行するためのソフトウェアです。Ollama、LM
+                        Studio、vLLMなどがあります。
                         最も一般的なのはOllamaです。
                       </p>
                     </div>

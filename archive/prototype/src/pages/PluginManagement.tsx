@@ -73,7 +73,9 @@ export const PluginManagement: React.FC = () => {
       filesystem_access: 'deny',
     },
   });
-  const [editingPermissions, setEditingPermissions] = useState<string | null>(null);
+  const [editingPermissions, setEditingPermissions] = useState<string | null>(
+    null
+  );
   const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
   const [showIncompleteFeatures, setShowIncompleteFeatures] = useState(false);
 
@@ -81,20 +83,29 @@ export const PluginManagement: React.FC = () => {
   useGlobalKeyboardShortcuts();
 
   // パンくずリストの項目
-  const breadcrumbItems: BreadcrumbItem[] = React.useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: t('header.settings') || '設定', path: '/settings' },
-    { label: t('pluginManagement.title') || 'プラグイン管理' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = React.useMemo(
+    () => [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('header.settings') || '設定', path: '/settings' },
+      { label: t('pluginManagement.title') || 'プラグイン管理' },
+    ],
+    [t]
+  );
 
   // 不完全な機能の表示設定を読み込む
   useEffect(() => {
     const loadSettings = async () => {
       try {
-        const settings = await safeInvoke<{ show_incomplete_features?: boolean | null }>('get_app_settings');
+        const settings = await safeInvoke<{
+          show_incomplete_features?: boolean | null;
+        }>('get_app_settings');
         setShowIncompleteFeatures(settings.show_incomplete_features ?? false);
       } catch (err) {
-        logger.warn('設定の読み込みに失敗しました。デフォルトで非表示にします。', String(err), 'PluginManagement');
+        logger.warn(
+          '設定の読み込みに失敗しました。デフォルトで非表示にします。',
+          String(err),
+          'PluginManagement'
+        );
         setShowIncompleteFeatures(false);
       }
     };
@@ -171,9 +182,7 @@ export const PluginManagement: React.FC = () => {
       setShowRegisterForm(false);
       loadPlugins();
     } catch (err) {
-      showError(
-        extractErrorMessage(err, 'プラグインの登録に失敗しました')
-      );
+      showError(extractErrorMessage(err, 'プラグインの登録に失敗しました'));
     } finally {
       setSaving(false);
     }
@@ -196,24 +205,27 @@ export const PluginManagement: React.FC = () => {
   /**
    * プラグインの権限を更新
    */
-  const handleUpdatePermissions = useCallback(async (pluginId: string, permissions: PluginPermissions) => {
-    try {
-      setSaving(true);
-      await safeInvoke('update_plugin_permissions', {
-        plugin_id: pluginId,
-        permissions,
-      });
-      showSuccess('プラグインの権限を更新しました');
-      setEditingPermissions(null);
-      loadPlugins();
-    } catch (err) {
-      showError(
-        extractErrorMessage(err, 'プラグインの権限更新に失敗しました')
-      );
-    } finally {
-      setSaving(false);
-    }
-  }, [showSuccess, showError, loadPlugins]);
+  const handleUpdatePermissions = useCallback(
+    async (pluginId: string, permissions: PluginPermissions) => {
+      try {
+        setSaving(true);
+        await safeInvoke('update_plugin_permissions', {
+          plugin_id: pluginId,
+          permissions,
+        });
+        showSuccess('プラグインの権限を更新しました');
+        setEditingPermissions(null);
+        loadPlugins();
+      } catch (err) {
+        showError(
+          extractErrorMessage(err, 'プラグインの権限更新に失敗しました')
+        );
+      } finally {
+        setSaving(false);
+      }
+    },
+    [showSuccess, showError, loadPlugins]
+  );
 
   /**
    * 権限の表示名を取得
@@ -247,7 +259,10 @@ export const PluginManagement: React.FC = () => {
         <div className="plugin-management-container">
           <Breadcrumb items={breadcrumbItems} />
           <header className="plugin-management-header">
-            <button className="back-button" onClick={() => navigate('/settings')}>
+            <button
+              className="back-button"
+              onClick={() => navigate('/settings')}
+            >
               ← 戻る
             </button>
             <h1>プラグイン管理</h1>
@@ -357,7 +372,10 @@ export const PluginManagement: React.FC = () => {
                         className="form-input"
                         value={newPlugin.version || ''}
                         onChange={e =>
-                          setNewPlugin({ ...newPlugin, version: e.target.value })
+                          setNewPlugin({
+                            ...newPlugin,
+                            version: e.target.value,
+                          })
                         }
                         placeholder="1.0.0"
                         disabled={saving}
@@ -380,7 +398,10 @@ export const PluginManagement: React.FC = () => {
                       />
                     </div>
                     <div className="form-group">
-                      <label className="form-label" htmlFor="plugin-description">
+                      <label
+                        className="form-label"
+                        htmlFor="plugin-description"
+                      >
                         説明
                       </label>
                       <textarea
@@ -406,7 +427,9 @@ export const PluginManagement: React.FC = () => {
                         id="plugin-type"
                         className="form-select"
                         value={newPlugin.plugin_type || 'Custom'}
-                        aria-label={t('pluginManagement.pluginType') || 'プラグインタイプ'}
+                        aria-label={
+                          t('pluginManagement.pluginType') || 'プラグインタイプ'
+                        }
                         onChange={e =>
                           setNewPlugin({
                             ...newPlugin,
@@ -426,116 +449,157 @@ export const PluginManagement: React.FC = () => {
                       <fieldset>
                         <legend className="form-label">権限設定</legend>
                         <div className="permissions-section">
-                        <div className="permission-item">
-                          <label htmlFor="new-plugin-db-access" className="permission-label">データベースアクセス</label>
-                          <select
-                            id="new-plugin-db-access"
-                            className="form-select"
-                            value={newPlugin.permissions?.database_access || 'none'}
-                            aria-label={t('pluginManagement.databaseAccess') || 'データベースアクセス権限'}
-                            onChange={e =>
-                              setNewPlugin({
-                                ...newPlugin,
-                                permissions: {
-                                  ...(newPlugin.permissions || {
-                                    database_access: 'none',
-                                    network_access: 'deny',
-                                    api_key_access: 'deny',
-                                    filesystem_access: 'deny',
-                                  }),
-                                  database_access: e.target.value,
-                                },
-                              })
-                            }
-                            disabled={saving}
-                          >
-                            <option value="none">なし</option>
-                            <option value="read">読み取りのみ</option>
-                            <option value="write">読み書き</option>
-                          </select>
+                          <div className="permission-item">
+                            <label
+                              htmlFor="new-plugin-db-access"
+                              className="permission-label"
+                            >
+                              データベースアクセス
+                            </label>
+                            <select
+                              id="new-plugin-db-access"
+                              className="form-select"
+                              value={
+                                newPlugin.permissions?.database_access || 'none'
+                              }
+                              aria-label={
+                                t('pluginManagement.databaseAccess') ||
+                                'データベースアクセス権限'
+                              }
+                              onChange={e =>
+                                setNewPlugin({
+                                  ...newPlugin,
+                                  permissions: {
+                                    ...(newPlugin.permissions || {
+                                      database_access: 'none',
+                                      network_access: 'deny',
+                                      api_key_access: 'deny',
+                                      filesystem_access: 'deny',
+                                    }),
+                                    database_access: e.target.value,
+                                  },
+                                })
+                              }
+                              disabled={saving}
+                            >
+                              <option value="none">なし</option>
+                              <option value="read">読み取りのみ</option>
+                              <option value="write">読み書き</option>
+                            </select>
+                          </div>
+                          <div className="permission-item">
+                            <label
+                              htmlFor="new-plugin-network-access"
+                              className="permission-label"
+                            >
+                              外部通信
+                            </label>
+                            <select
+                              id="new-plugin-network-access"
+                              className="form-select"
+                              value={
+                                newPlugin.permissions?.network_access || 'deny'
+                              }
+                              aria-label={
+                                t('pluginManagement.networkAccess') ||
+                                'ネットワークアクセス権限'
+                              }
+                              onChange={e =>
+                                setNewPlugin({
+                                  ...newPlugin,
+                                  permissions: {
+                                    ...(newPlugin.permissions || {
+                                      database_access: 'none',
+                                      network_access: 'deny',
+                                      api_key_access: 'deny',
+                                      filesystem_access: 'deny',
+                                    }),
+                                    network_access: e.target.value,
+                                  },
+                                })
+                              }
+                              disabled={saving}
+                            >
+                              <option value="deny">拒否</option>
+                              <option value="allow">許可</option>
+                            </select>
+                          </div>
+                          <div className="permission-item">
+                            <label
+                              htmlFor="new-plugin-api-key-access"
+                              className="permission-label"
+                            >
+                              APIキーアクセス
+                            </label>
+                            <select
+                              id="new-plugin-api-key-access"
+                              className="form-select"
+                              value={
+                                newPlugin.permissions?.api_key_access || 'deny'
+                              }
+                              aria-label={
+                                t('pluginManagement.apiKeyAccess') ||
+                                'APIキーアクセス権限'
+                              }
+                              onChange={e =>
+                                setNewPlugin({
+                                  ...newPlugin,
+                                  permissions: {
+                                    ...(newPlugin.permissions || {
+                                      database_access: 'none',
+                                      network_access: 'deny',
+                                      api_key_access: 'deny',
+                                      filesystem_access: 'deny',
+                                    }),
+                                    api_key_access: e.target.value,
+                                  },
+                                })
+                              }
+                              disabled={saving}
+                            >
+                              <option value="deny">拒否</option>
+                              <option value="allow">許可</option>
+                            </select>
+                          </div>
+                          <div className="permission-item">
+                            <label
+                              htmlFor="new-plugin-fs-access"
+                              className="permission-label"
+                            >
+                              ファイルシステムアクセス
+                            </label>
+                            <select
+                              id="new-plugin-fs-access"
+                              className="form-select"
+                              value={
+                                newPlugin.permissions?.filesystem_access ||
+                                'deny'
+                              }
+                              aria-label={
+                                t('pluginManagement.filesystemAccess') ||
+                                'ファイルシステムアクセス権限'
+                              }
+                              onChange={e =>
+                                setNewPlugin({
+                                  ...newPlugin,
+                                  permissions: {
+                                    ...(newPlugin.permissions || {
+                                      database_access: 'none',
+                                      network_access: 'deny',
+                                      api_key_access: 'deny',
+                                      filesystem_access: 'deny',
+                                    }),
+                                    filesystem_access: e.target.value,
+                                  },
+                                })
+                              }
+                              disabled={saving}
+                            >
+                              <option value="deny">拒否</option>
+                              <option value="allow">許可</option>
+                            </select>
+                          </div>
                         </div>
-                        <div className="permission-item">
-                          <label htmlFor="new-plugin-network-access" className="permission-label">外部通信</label>
-                          <select
-                            id="new-plugin-network-access"
-                            className="form-select"
-                            value={newPlugin.permissions?.network_access || 'deny'}
-                            aria-label={t('pluginManagement.networkAccess') || 'ネットワークアクセス権限'}
-                            onChange={e =>
-                              setNewPlugin({
-                                ...newPlugin,
-                                permissions: {
-                                  ...(newPlugin.permissions || {
-                                    database_access: 'none',
-                                    network_access: 'deny',
-                                    api_key_access: 'deny',
-                                    filesystem_access: 'deny',
-                                  }),
-                                  network_access: e.target.value,
-                                },
-                              })
-                            }
-                            disabled={saving}
-                          >
-                            <option value="deny">拒否</option>
-                            <option value="allow">許可</option>
-                          </select>
-                        </div>
-                        <div className="permission-item">
-                          <label htmlFor="new-plugin-api-key-access" className="permission-label">APIキーアクセス</label>
-                          <select
-                            id="new-plugin-api-key-access"
-                            className="form-select"
-                            value={newPlugin.permissions?.api_key_access || 'deny'}
-                            aria-label={t('pluginManagement.apiKeyAccess') || 'APIキーアクセス権限'}
-                            onChange={e =>
-                              setNewPlugin({
-                                ...newPlugin,
-                                permissions: {
-                                  ...(newPlugin.permissions || {
-                                    database_access: 'none',
-                                    network_access: 'deny',
-                                    api_key_access: 'deny',
-                                    filesystem_access: 'deny',
-                                  }),
-                                  api_key_access: e.target.value,
-                                },
-                              })
-                            }
-                            disabled={saving}
-                          >
-                            <option value="deny">拒否</option>
-                            <option value="allow">許可</option>
-                          </select>
-                        </div>
-                        <div className="permission-item">
-                          <label htmlFor="new-plugin-fs-access" className="permission-label">ファイルシステムアクセス</label>
-                          <select
-                            id="new-plugin-fs-access"
-                            className="form-select"
-                            value={newPlugin.permissions?.filesystem_access || 'deny'}
-                            aria-label={t('pluginManagement.filesystemAccess') || 'ファイルシステムアクセス権限'}
-                            onChange={e =>
-                              setNewPlugin({
-                                ...newPlugin,
-                                permissions: {
-                                  ...(newPlugin.permissions || {
-                                    database_access: 'none',
-                                    network_access: 'deny',
-                                    api_key_access: 'deny',
-                                    filesystem_access: 'deny',
-                                  }),
-                                  filesystem_access: e.target.value,
-                                },
-                              })
-                            }
-                            disabled={saving}
-                          >
-                            <option value="deny">拒否</option>
-                            <option value="allow">許可</option>
-                          </select>
-                        </div>
-                      </div>
                       </fieldset>
                       <p className="permission-hint">
                         プラグインの権限を設定します。デフォルトではすべての権限が拒否されています。
@@ -657,31 +721,56 @@ export const PluginManagement: React.FC = () => {
                                 className="button-link"
                                 onClick={() =>
                                   setEditingPermissions(
-                                    editingPermissions === plugin.id ? null : plugin.id
+                                    editingPermissions === plugin.id
+                                      ? null
+                                      : plugin.id
                                   )
                                 }
                                 disabled={saving}
                               >
-                                {editingPermissions === plugin.id ? 'キャンセル' : '編集'}
+                                {editingPermissions === plugin.id
+                                  ? 'キャンセル'
+                                  : '編集'}
                               </button>
                             </div>
                             {editingPermissions === plugin.id ? (
                               <div className="permissions-edit-form">
                                 <div className="permission-item">
-                                  <label htmlFor={`plugin-${plugin.id}-db-access`} className="permission-label">データベースアクセス</label>
+                                  <label
+                                    htmlFor={`plugin-${plugin.id}-db-access`}
+                                    className="permission-label"
+                                  >
+                                    データベースアクセス
+                                  </label>
                                   <select
                                     id={`plugin-${plugin.id}-db-access`}
                                     className="form-select"
-                                    value={plugin.permissions?.database_access || 'none'}
-                                    aria-label={t('pluginManagement.databaseAccess') || 'データベースアクセス権限'}
+                                    value={
+                                      plugin.permissions?.database_access ||
+                                      'none'
+                                    }
+                                    aria-label={
+                                      t('pluginManagement.databaseAccess') ||
+                                      'データベースアクセス権限'
+                                    }
                                     onChange={async e => {
-                                      const updatedPermissions: PluginPermissions = {
-                                        database_access: e.target.value,
-                                        network_access: plugin.permissions?.network_access || 'deny',
-                                        api_key_access: plugin.permissions?.api_key_access || 'deny',
-                                        filesystem_access: plugin.permissions?.filesystem_access || 'deny',
-                                      };
-                                      await handleUpdatePermissions(plugin.id, updatedPermissions);
+                                      const updatedPermissions: PluginPermissions =
+                                        {
+                                          database_access: e.target.value,
+                                          network_access:
+                                            plugin.permissions
+                                              ?.network_access || 'deny',
+                                          api_key_access:
+                                            plugin.permissions
+                                              ?.api_key_access || 'deny',
+                                          filesystem_access:
+                                            plugin.permissions
+                                              ?.filesystem_access || 'deny',
+                                        };
+                                      await handleUpdatePermissions(
+                                        plugin.id,
+                                        updatedPermissions
+                                      );
                                     }}
                                     disabled={saving}
                                   >
@@ -691,20 +780,41 @@ export const PluginManagement: React.FC = () => {
                                   </select>
                                 </div>
                                 <div className="permission-item">
-                                  <label htmlFor={`plugin-${plugin.id}-network-access`} className="permission-label">外部通信</label>
+                                  <label
+                                    htmlFor={`plugin-${plugin.id}-network-access`}
+                                    className="permission-label"
+                                  >
+                                    外部通信
+                                  </label>
                                   <select
                                     id={`plugin-${plugin.id}-network-access`}
                                     className="form-select"
-                                    value={plugin.permissions?.network_access || 'deny'}
-                                    aria-label={t('pluginManagement.networkAccess') || 'ネットワークアクセス権限'}
+                                    value={
+                                      plugin.permissions?.network_access ||
+                                      'deny'
+                                    }
+                                    aria-label={
+                                      t('pluginManagement.networkAccess') ||
+                                      'ネットワークアクセス権限'
+                                    }
                                     onChange={async e => {
-                                      const updatedPermissions: PluginPermissions = {
-                                        database_access: plugin.permissions?.database_access || 'none',
-                                        network_access: e.target.value,
-                                        api_key_access: plugin.permissions?.api_key_access || 'deny',
-                                        filesystem_access: plugin.permissions?.filesystem_access || 'deny',
-                                      };
-                                      await handleUpdatePermissions(plugin.id, updatedPermissions);
+                                      const updatedPermissions: PluginPermissions =
+                                        {
+                                          database_access:
+                                            plugin.permissions
+                                              ?.database_access || 'none',
+                                          network_access: e.target.value,
+                                          api_key_access:
+                                            plugin.permissions
+                                              ?.api_key_access || 'deny',
+                                          filesystem_access:
+                                            plugin.permissions
+                                              ?.filesystem_access || 'deny',
+                                        };
+                                      await handleUpdatePermissions(
+                                        plugin.id,
+                                        updatedPermissions
+                                      );
                                     }}
                                     disabled={saving}
                                   >
@@ -713,20 +823,41 @@ export const PluginManagement: React.FC = () => {
                                   </select>
                                 </div>
                                 <div className="permission-item">
-                                  <label htmlFor={`plugin-${plugin.id}-api-key-access`} className="permission-label">APIキーアクセス</label>
+                                  <label
+                                    htmlFor={`plugin-${plugin.id}-api-key-access`}
+                                    className="permission-label"
+                                  >
+                                    APIキーアクセス
+                                  </label>
                                   <select
                                     id={`plugin-${plugin.id}-api-key-access`}
                                     className="form-select"
-                                    value={plugin.permissions?.api_key_access || 'deny'}
-                                    aria-label={t('pluginManagement.apiKeyAccess') || 'APIキーアクセス権限'}
+                                    value={
+                                      plugin.permissions?.api_key_access ||
+                                      'deny'
+                                    }
+                                    aria-label={
+                                      t('pluginManagement.apiKeyAccess') ||
+                                      'APIキーアクセス権限'
+                                    }
                                     onChange={async e => {
-                                      const updatedPermissions: PluginPermissions = {
-                                        database_access: plugin.permissions?.database_access || 'none',
-                                        network_access: plugin.permissions?.network_access || 'deny',
-                                        api_key_access: e.target.value,
-                                        filesystem_access: plugin.permissions?.filesystem_access || 'deny',
-                                      };
-                                      await handleUpdatePermissions(plugin.id, updatedPermissions);
+                                      const updatedPermissions: PluginPermissions =
+                                        {
+                                          database_access:
+                                            plugin.permissions
+                                              ?.database_access || 'none',
+                                          network_access:
+                                            plugin.permissions
+                                              ?.network_access || 'deny',
+                                          api_key_access: e.target.value,
+                                          filesystem_access:
+                                            plugin.permissions
+                                              ?.filesystem_access || 'deny',
+                                        };
+                                      await handleUpdatePermissions(
+                                        plugin.id,
+                                        updatedPermissions
+                                      );
                                     }}
                                     disabled={saving}
                                   >
@@ -735,20 +866,41 @@ export const PluginManagement: React.FC = () => {
                                   </select>
                                 </div>
                                 <div className="permission-item">
-                                  <label htmlFor={`plugin-${plugin.id}-fs-access`} className="permission-label">ファイルシステムアクセス</label>
+                                  <label
+                                    htmlFor={`plugin-${plugin.id}-fs-access`}
+                                    className="permission-label"
+                                  >
+                                    ファイルシステムアクセス
+                                  </label>
                                   <select
                                     id={`plugin-${plugin.id}-fs-access`}
                                     className="form-select"
-                                    value={plugin.permissions?.filesystem_access || 'deny'}
-                                    aria-label={t('pluginManagement.filesystemAccess') || 'ファイルシステムアクセス権限'}
+                                    value={
+                                      plugin.permissions?.filesystem_access ||
+                                      'deny'
+                                    }
+                                    aria-label={
+                                      t('pluginManagement.filesystemAccess') ||
+                                      'ファイルシステムアクセス権限'
+                                    }
                                     onChange={async e => {
-                                      const updatedPermissions: PluginPermissions = {
-                                        database_access: plugin.permissions?.database_access || 'none',
-                                        network_access: plugin.permissions?.network_access || 'deny',
-                                        api_key_access: plugin.permissions?.api_key_access || 'deny',
-                                        filesystem_access: e.target.value,
-                                      };
-                                      await handleUpdatePermissions(plugin.id, updatedPermissions);
+                                      const updatedPermissions: PluginPermissions =
+                                        {
+                                          database_access:
+                                            plugin.permissions
+                                              ?.database_access || 'none',
+                                          network_access:
+                                            plugin.permissions
+                                              ?.network_access || 'deny',
+                                          api_key_access:
+                                            plugin.permissions
+                                              ?.api_key_access || 'deny',
+                                          filesystem_access: e.target.value,
+                                        };
+                                      await handleUpdatePermissions(
+                                        plugin.id,
+                                        updatedPermissions
+                                      );
                                     }}
                                     disabled={saving}
                                   >
@@ -760,16 +912,34 @@ export const PluginManagement: React.FC = () => {
                             ) : (
                               <div className="permissions-display">
                                 <div className="permission-badge">
-                                  データベース: {getPermissionLabel('database_access', plugin.permissions?.database_access || 'none')}
+                                  データベース:{' '}
+                                  {getPermissionLabel(
+                                    'database_access',
+                                    plugin.permissions?.database_access ||
+                                      'none'
+                                  )}
                                 </div>
                                 <div className="permission-badge">
-                                  外部通信: {getPermissionLabel('network_access', plugin.permissions?.network_access || 'deny')}
+                                  外部通信:{' '}
+                                  {getPermissionLabel(
+                                    'network_access',
+                                    plugin.permissions?.network_access || 'deny'
+                                  )}
                                 </div>
                                 <div className="permission-badge">
-                                  APIキー: {getPermissionLabel('api_key_access', plugin.permissions?.api_key_access || 'deny')}
+                                  APIキー:{' '}
+                                  {getPermissionLabel(
+                                    'api_key_access',
+                                    plugin.permissions?.api_key_access || 'deny'
+                                  )}
                                 </div>
                                 <div className="permission-badge">
-                                  ファイルシステム: {getPermissionLabel('filesystem_access', plugin.permissions?.filesystem_access || 'deny')}
+                                  ファイルシステム:{' '}
+                                  {getPermissionLabel(
+                                    'filesystem_access',
+                                    plugin.permissions?.filesystem_access ||
+                                      'deny'
+                                  )}
                                 </div>
                               </div>
                             )}

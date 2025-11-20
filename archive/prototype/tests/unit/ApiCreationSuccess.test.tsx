@@ -4,7 +4,13 @@
  * @jest-environment jsdom
  */
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import { render, screen, fireEvent, act, waitFor } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  act,
+  waitFor,
+} from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { ApiCreationSuccess } from '../../src/components/api/ApiCreationSuccess';
 
@@ -120,8 +126,12 @@ describe('ApiCreationSuccess.tsx', () => {
       const copyButtons = screen.getAllByRole('button', { name: /コピー/i });
       // APIキーのコピーボタンは2番目（最初はエンドポイント用、最後はサンプルコード用）
       // APIキーセクション内のコピーボタンを探す
-      const apiKeySection = screen.getByText('APIキー').closest('.info-section');
-      const apiKeyCopyButton = apiKeySection?.querySelector('button[class*="copy"]') as HTMLButtonElement;
+      const apiKeySection = screen
+        .getByText('APIキー')
+        .closest('.info-section');
+      const apiKeyCopyButton = apiKeySection?.querySelector(
+        'button[class*="copy"]'
+      ) as HTMLButtonElement;
       if (!apiKeyCopyButton) {
         // フォールバック: 2番目のコピーボタンを使用
         expect(copyButtons.length).toBeGreaterThanOrEqual(2);
@@ -129,9 +139,14 @@ describe('ApiCreationSuccess.tsx', () => {
         await act(async () => {
           fireEvent.click(apiKeyCopyButtonFallback);
         });
-        await waitFor(() => {
-          expect(mockCopyToClipboard).toHaveBeenCalledWith('test-api-key-12345');
-        }, { timeout: 3000 });
+        await waitFor(
+          () => {
+            expect(mockCopyToClipboard).toHaveBeenCalledWith(
+              'test-api-key-12345'
+            );
+          },
+          { timeout: 3000 }
+        );
         return;
       }
 
@@ -139,10 +154,15 @@ describe('ApiCreationSuccess.tsx', () => {
         fireEvent.click(apiKeyCopyButton);
       });
 
-      await waitFor(() => {
-        // APIキーがコピーされたことを確認（サンプルコードのコピーではない）
-        expect(mockCopyToClipboard).toHaveBeenCalledWith('test-api-key-12345');
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          // APIキーがコピーされたことを確認（サンプルコードのコピーではない）
+          expect(mockCopyToClipboard).toHaveBeenCalledWith(
+            'test-api-key-12345'
+          );
+        },
+        { timeout: 3000 }
+      );
     });
   });
 
@@ -173,9 +193,14 @@ describe('ApiCreationSuccess.tsx', () => {
         fireEvent.click(copyButtons[0]);
       });
 
-      await waitFor(() => {
-        expect(mockCopyToClipboard).toHaveBeenCalledWith('http://localhost:8080');
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          expect(mockCopyToClipboard).toHaveBeenCalledWith(
+            'http://localhost:8080'
+          );
+        },
+        { timeout: 3000 }
+      );
     });
   });
 

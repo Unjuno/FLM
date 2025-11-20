@@ -54,11 +54,14 @@ export const OAuthSettings: React.FC = () => {
   useGlobalKeyboardShortcuts();
 
   // パンくずリストの項目
-  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: t('header.settings') || '設定', path: '/settings' },
-    { label: t('oauthSettings.title') || 'OAuth認証設定' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(
+    () => [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('header.settings') || '設定', path: '/settings' },
+      { label: t('oauthSettings.title') || 'OAuth認証設定' },
+    ],
+    [t]
+  );
 
   /**
    * OAuth認証フローを開始
@@ -486,7 +489,9 @@ export const OAuthSettings: React.FC = () => {
                           });
                         }
                       }}
-                      disabled={saving || !savedToken.refresh_token || isPending}
+                      disabled={
+                        saving || !savedToken.refresh_token || isPending
+                      }
                     >
                       {saving ? '処理中...' : 'トークンをリフレッシュ'}
                     </button>

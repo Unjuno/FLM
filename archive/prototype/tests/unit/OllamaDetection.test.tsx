@@ -154,7 +154,9 @@ describe('OllamaDetection.tsx', () => {
         />
       );
       // 実装ではdetection-status-cardが表示される（running=falseの場合は🔍）
-      expect(container.querySelector('.detection-status-card')).toBeInTheDocument();
+      expect(
+        container.querySelector('.detection-status-card')
+      ).toBeInTheDocument();
       // running=falseの場合は🔍が表示される
       expect(screen.getByText('🔍')).toBeInTheDocument();
     });

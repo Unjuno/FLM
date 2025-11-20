@@ -2,7 +2,11 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
-import { cleanupTestApis, createTestApi, handleTauriAppNotRunningError } from '../setup/test-helpers';
+import {
+  cleanupTestApis,
+  createTestApi,
+  handleTauriAppNotRunningError,
+} from '../setup/test-helpers';
 import { debugLog, debugWarn } from '../setup/debug';
 
 /**
@@ -71,10 +75,7 @@ describe('F007: パフォーマンス監視機能 統合テスト', () => {
       if (handleTauriAppNotRunningError(error)) {
         // テストは続行（testApiIdがnullのまま）
       } else {
-        debugWarn(
-          'テスト用APIの作成に失敗しました（既存APIを使用）:',
-          error
-        );
+        debugWarn('テスト用APIの作成に失敗しました（既存APIを使用）:', error);
       }
       try {
         const apis = await invoke<ApiInfo[]>('list_apis');

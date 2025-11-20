@@ -136,11 +136,7 @@ export function useAppInitialization(): UseAppInitializationReturn {
         }
       } catch (err) {
         // 予期しないエラーが発生した場合
-        logger.error(
-          'アプリケーション初期化エラー',
-          err,
-          'App'
-        );
+        logger.error('アプリケーション初期化エラー', err, 'App');
         // エラーが発生しても、アプリは起動を続ける
         // 初期化エラーは記録されるが、ユーザーはアプリを使用できる
         clearTimeout(forceShowTimeout);
@@ -186,4 +182,3 @@ export function useAppInitialization(): UseAppInitializationReturn {
 
   return { isInitializing };
 }
-

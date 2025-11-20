@@ -1,6 +1,12 @@
 // ApiSettings - API設定変更ページ
 
-import React, { useState, useEffect, useTransition, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useTransition,
+  useMemo,
+  useCallback,
+} from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { ErrorMessage } from '../components/common/ErrorMessage';
@@ -194,7 +200,10 @@ export const ApiSettings: React.FC = () => {
           // 設定を再読み込みして反映
           loadSettings();
         } catch (err) {
-          const errorMessage = extractErrorMessage(err, 'APIキーの再生成に失敗しました');
+          const errorMessage = extractErrorMessage(
+            err,
+            'APIキーの再生成に失敗しました'
+          );
           setError(errorMessage);
           showErrorNotification('APIキーの再生成に失敗しました', errorMessage);
         } finally {
@@ -222,7 +231,7 @@ export const ApiSettings: React.FC = () => {
       message: confirmMessage,
       onConfirm: () => {
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-        
+
         // モデル削除オプションを確認（2回目の確認ダイアログ）
         if (settings.modelName) {
           setConfirmDialog({
@@ -250,7 +259,7 @@ export const ApiSettings: React.FC = () => {
             },
             onCancel: () => {
               setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-              
+
               // モデル削除なしで削除を実行
               (async () => {
                 try {

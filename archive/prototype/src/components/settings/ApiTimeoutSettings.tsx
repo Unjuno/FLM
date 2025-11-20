@@ -21,10 +21,7 @@ export const ApiTimeoutSettings: React.FC<ApiTimeoutSettingsProps> = ({
   onSettingsChange,
 }) => {
   return (
-    <section
-      className="settings-section"
-      aria-labelledby="api-timeout-heading"
-    >
+    <section className="settings-section" aria-labelledby="api-timeout-heading">
       <h2 id="api-timeout-heading" className="settings-section-title">
         APIタイムアウト設定
       </h2>
@@ -32,7 +29,8 @@ export const ApiTimeoutSettings: React.FC<ApiTimeoutSettingsProps> = ({
         <label htmlFor="default-api-timeout-secs">
           デフォルトAPIタイムアウト（秒）
           <span className="settings-hint">
-            APIリクエストのデフォルトタイムアウト時間を設定します。各APIで個別にタイムアウトを設定していない場合に使用されます（最小1秒、最大600秒、デフォルト: 30秒）
+            APIリクエストのデフォルトタイムアウト時間を設定します。各APIで個別にタイムアウトを設定していない場合に使用されます（最小1秒、最大600秒、デフォルト:
+            30秒）
           </span>
         </label>
         <input
@@ -55,4 +53,3 @@ export const ApiTimeoutSettings: React.FC<ApiTimeoutSettingsProps> = ({
     </section>
   );
 };
-

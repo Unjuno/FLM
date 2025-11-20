@@ -10,6 +10,7 @@ import * as https from 'https';
 import { ensureCertificateExists } from '../../src/backend/auth/certificate-generator.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { debugLog } from '../setup/debug';
 
 const execAsync = promisify(exec);
 
@@ -26,16 +27,7 @@ const testPort = 8444;
  */
 describe('Certificate Integration Tests (TEST_EXECUTION_GUIDE)', () => {
   beforeAll(() => {
-    // debug.tsをインポート（必要に応じて）
-    if (typeof require !== 'undefined') {
-      const { debugLog } = require('../setup/debug');
-      debugLog('証明書自動生成機能統合テストを開始します');
-    } else if (
-      process.env.NODE_ENV === 'development' ||
-      process.env.JEST_DEBUG === '1'
-    ) {
-      console.log('証明書自動生成機能統合テストを開始します');
-    }
+    debugLog('証明書自動生成機能統合テストを開始します');
 
     testDataDir = path.join(os.tmpdir(), 'flm-test-cert-integration');
     testCertDir = path.join(testDataDir, 'certificates');

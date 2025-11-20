@@ -186,7 +186,7 @@ class Logger {
       }
 
       const { invoke } = await import('@tauri-apps/api/core');
-      
+
       let errorMessage = message;
       let errorStack: string | undefined;
       let errorCategory = 'general';
@@ -195,12 +195,16 @@ class Logger {
         errorMessage = error.message || message;
         errorStack = error.stack;
         // エラーの種類に応じてカテゴリを判定
-        if (error.message.toLowerCase().includes('network') || 
-            error.message.toLowerCase().includes('connection') ||
-            error.message.toLowerCase().includes('timeout')) {
+        if (
+          error.message.toLowerCase().includes('network') ||
+          error.message.toLowerCase().includes('connection') ||
+          error.message.toLowerCase().includes('timeout')
+        ) {
           errorCategory = 'network';
-        } else if (error.message.toLowerCase().includes('database') ||
-                   error.message.toLowerCase().includes('sql')) {
+        } else if (
+          error.message.toLowerCase().includes('database') ||
+          error.message.toLowerCase().includes('sql')
+        ) {
           errorCategory = 'database';
         } else if (error.message.toLowerCase().includes('api')) {
           errorCategory = 'api';
@@ -222,14 +226,18 @@ class Logger {
           context: contextJson,
           source: 'frontend',
           api_id: null,
-          user_agent: typeof navigator !== 'undefined' ? navigator.userAgent : null,
+          user_agent:
+            typeof navigator !== 'undefined' ? navigator.userAgent : null,
         },
       });
     } catch (e) {
       // エラーログの保存に失敗しても、アプリケーションの動作には影響しない
       // デバッグモードの場合のみコンソールに出力
       if (isDev() || isDebugMode()) {
-        console.debug('[Logger] エラーログのデータベース保存に失敗しました:', e);
+        console.debug(
+          '[Logger] エラーログのデータベース保存に失敗しました:',
+          e
+        );
       }
     }
   }

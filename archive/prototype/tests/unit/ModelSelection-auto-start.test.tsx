@@ -7,14 +7,55 @@ import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { ModelSelection } from '../../src/components/api/ModelSelection';
+import * as tauriUtils from '../../src/utils/tauri';
+import { MemoryRouter } from 'react-router-dom';
 
 // Tauri IPCをモック
-const mockSafeInvoke = jest.fn();
-jest.mock('../../src/utils/tauri', () => ({
-  safeInvoke: (...args: unknown[]) => mockSafeInvoke(...args),
-  isTauriAvailable: jest.fn(() => false),
-  clearInvokeCache: jest.fn(),
-}));
+const mockSafeInvoke = jest.spyOn(tauriUtils, 'safeInvoke');
+jest.spyOn(tauriUtils, 'isTauriAvailable').mockReturnValue(false);
+jest.spyOn(tauriUtils, 'clearInvokeCache').mockImplementation(() => {});
+const defaultSafeInvokeImplementation = (
+  command: string,
+  _payload?: Record<string, unknown>
+) => {
+  // console.log('safeInvoke called:', command);
+  if (command === 'get_available_engines') {
+    return Promise.resolve(['ollama', 'lm_studio', 'vllm', 'llama_cpp']);
+  }
+
+  if (command === 'get_models_list' || command === 'get_engine_models') {
+    return Promise.resolve([
+      {
+        name: 'mock-model',
+        size: 1024,
+        modified_at: new Date().toISOString(),
+        parameter_size: '7B',
+      },
+    ]);
+  }
+
+  if (command === 'get_installed_models') {
+    return Promise.resolve([{ name: 'mock-model' }]);
+  }
+
+  if (command === 'get_model_catalog') {
+    return Promise.resolve([
+      {
+        name: 'catalog-model',
+        description: 'Mock catalog model',
+        size: 2048,
+        parameters: 7,
+        category: 'chat',
+        recommended: true,
+        author: 'mock',
+        license: 'apache-2.0',
+        modified_at: new Date().toISOString(),
+      },
+    ]);
+  }
+
+  return Promise.resolve({ models: [] });
+};
 
 // useOllamaProcessをモック
 const mockStartOllama = jest.fn();
@@ -43,19 +84,24 @@ jest.mock('../../src/utils/logger', () => ({
   },
 }));
 
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => jest.fn(),
+}));
+
 describe('ModelSelection.tsx - エンジン自動起動機能', () => {
   const mockOnModelSelected = jest.fn();
   const mockOnEngineChange = jest.fn();
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockSafeInvoke.mockResolvedValue({ models: [] });
+    mockSafeInvoke.mockImplementation(defaultSafeInvokeImplementation);
     mockStartOllama.mockResolvedValue(undefined);
   });
 
   describe('エンジン選択時の自動検出・起動', () => {
     it('エンジンがインストールされているが起動していない場合、自動起動する', async () => {
-      mockSafeInvoke.mockImplementation((command: string) => {
+      mockSafeInvoke.mockImplementation((command: string, payload) => {
         if (command === 'detect_engine') {
           return Promise.resolve({
             engine_type: 'ollama',
@@ -65,16 +111,18 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
             path: '/path/to/ollama',
           });
         }
-        return Promise.resolve({ models: [] });
+        return defaultSafeInvokeImplementation(command, payload);
       });
 
       render(
-        <ModelSelection
-          onModelSelected={mockOnModelSelected}
-          selectedModel={null}
-          engineType="ollama"
-          onEngineChange={mockOnEngineChange}
-        />
+        <MemoryRouter>
+          <ModelSelection
+            onModelSelected={mockOnModelSelected}
+            selectedModel={null}
+            engineType="ollama"
+            onEngineChange={mockOnEngineChange}
+          />
+        </MemoryRouter>
       );
 
       await waitFor(
@@ -89,7 +137,7 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
     });
 
     it('Ollamaエンジンの場合、startOllamaを呼び出す', async () => {
-      mockSafeInvoke.mockImplementation((command: string) => {
+      mockSafeInvoke.mockImplementation((command: string, payload) => {
         if (command === 'detect_engine') {
           return Promise.resolve({
             engine_type: 'ollama',
@@ -97,16 +145,18 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
             running: false,
           });
         }
-        return Promise.resolve({ models: [] });
+        return defaultSafeInvokeImplementation(command, payload);
       });
 
       render(
-        <ModelSelection
-          onModelSelected={mockOnModelSelected}
-          selectedModel={null}
-          engineType="ollama"
-          onEngineChange={mockOnEngineChange}
-        />
+        <MemoryRouter>
+          <ModelSelection
+            onModelSelected={mockOnModelSelected}
+            selectedModel={null}
+            engineType="ollama"
+            onEngineChange={mockOnEngineChange}
+          />
+        </MemoryRouter>
       );
 
       await waitFor(
@@ -118,7 +168,7 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
     });
 
     it('他のエンジン（LM Studio等）の場合、start_engineコマンドを呼び出す', async () => {
-      mockSafeInvoke.mockImplementation((command: string) => {
+      mockSafeInvoke.mockImplementation((command: string, payload) => {
         if (command === 'detect_engine') {
           return Promise.resolve({
             engine_type: 'lm_studio',
@@ -129,33 +179,35 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
         if (command === 'start_engine') {
           return Promise.resolve({ success: true });
         }
-        return Promise.resolve({ models: [] });
+        return defaultSafeInvokeImplementation(command, payload);
       });
 
       render(
-        <ModelSelection
-          onModelSelected={mockOnModelSelected}
-          selectedModel={null}
-          engineType="lm_studio"
-          onEngineChange={mockOnEngineChange}
-        />
+        <MemoryRouter>
+          <ModelSelection
+            onModelSelected={mockOnModelSelected}
+            selectedModel={null}
+            engineType="lm_studio"
+            onEngineChange={mockOnEngineChange}
+          />
+        </MemoryRouter>
       );
 
-      await waitFor(
-        () => {
-          expect(mockSafeInvoke).toHaveBeenCalledWith(
-            'detect_engine',
-            expect.objectContaining({
-              engine_type: 'lm_studio',
-            })
-          );
-        },
-        { timeout: 3000 }
-      );
+        await waitFor(
+          () => {
+            expect(mockSafeInvoke).toHaveBeenCalledWith(
+              'detect_engine',
+              expect.objectContaining({
+                engineType: 'lm_studio',
+              })
+            );
+          },
+          { timeout: 3000 }
+        );
     });
 
     it('エンジンが既に起動している場合、自動起動しない', async () => {
-      mockSafeInvoke.mockImplementation((command: string) => {
+      mockSafeInvoke.mockImplementation((command: string, payload) => {
         if (command === 'detect_engine') {
           return Promise.resolve({
             engine_type: 'ollama',
@@ -163,16 +215,18 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
             running: true, // 既に起動中
           });
         }
-        return Promise.resolve({ models: [] });
+        return defaultSafeInvokeImplementation(command, payload);
       });
 
       render(
-        <ModelSelection
-          onModelSelected={mockOnModelSelected}
-          selectedModel={null}
-          engineType="ollama"
-          onEngineChange={mockOnEngineChange}
-        />
+        <MemoryRouter>
+          <ModelSelection
+            onModelSelected={mockOnModelSelected}
+            selectedModel={null}
+            engineType="ollama"
+            onEngineChange={mockOnEngineChange}
+          />
+        </MemoryRouter>
       );
 
       await waitFor(() => {
@@ -186,7 +240,7 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
 
   describe('起動中のUI無効化', () => {
     it('エンジン起動中はUI要素が無効化される', async () => {
-      mockSafeInvoke.mockImplementation((command: string) => {
+      mockSafeInvoke.mockImplementation((command: string, payload) => {
         if (command === 'detect_engine') {
           return Promise.resolve({
             engine_type: 'ollama',
@@ -194,7 +248,7 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
             running: false,
           });
         }
-        return Promise.resolve({ models: [] });
+        return defaultSafeInvokeImplementation(command, payload);
       });
 
       const { container } = render(
@@ -221,7 +275,7 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
     });
 
     it('起動中のメッセージを表示する', async () => {
-      mockSafeInvoke.mockImplementation((command: string) => {
+      mockSafeInvoke.mockImplementation((command: string, payload) => {
         if (command === 'detect_engine') {
           return Promise.resolve({
             engine_type: 'ollama',
@@ -229,7 +283,7 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
             running: false,
           });
         }
-        return Promise.resolve({ models: [] });
+        return defaultSafeInvokeImplementation(command, payload);
       });
 
       render(
@@ -262,7 +316,7 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
         return Promise.resolve(undefined);
       });
 
-      mockSafeInvoke.mockImplementation((command: string) => {
+      mockSafeInvoke.mockImplementation((command: string, payload) => {
         if (command === 'detect_engine') {
           return Promise.resolve({
             engine_type: 'ollama',
@@ -273,7 +327,7 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
         if (command === 'get_ollama_models') {
           return Promise.resolve({ models: [] });
         }
-        return Promise.resolve({ models: [] });
+        return defaultSafeInvokeImplementation(command, payload);
       });
 
       render(
@@ -296,7 +350,7 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
 
   describe('エラー発生時の自動起動', () => {
     it('エンジンが起動していないエラーが発生した場合、自動起動を試みる', async () => {
-      mockSafeInvoke.mockImplementation((command: string) => {
+      mockSafeInvoke.mockImplementation((command: string, payload) => {
         if (command === 'get_ollama_models') {
           return Promise.reject(new Error('Ollamaが起動していません'));
         }
@@ -307,7 +361,7 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
             running: false,
           });
         }
-        return Promise.resolve({ models: [] });
+        return defaultSafeInvokeImplementation(command, payload);
       });
 
       render(
@@ -333,40 +387,40 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
 
     engines.forEach(engine => {
       it(`${engine}エンジンの自動起動をサポートする`, async () => {
-        mockSafeInvoke.mockImplementation((command: string) => {
-          if (command === 'detect_engine') {
-            return Promise.resolve({
-              engine_type: engine,
-              installed: true,
-              running: false,
-            });
-          }
-          if (command === 'start_engine' && engine !== 'ollama') {
-            return Promise.resolve({ success: true });
-          }
-          return Promise.resolve({ models: [] });
-        });
-
-        render(
-          <ModelSelection
-            onModelSelected={mockOnModelSelected}
-            selectedModel={null}
-            engineType={engine}
-            onEngineChange={mockOnEngineChange}
-          />
-        );
-
-        await waitFor(
-          () => {
-            expect(mockSafeInvoke).toHaveBeenCalledWith(
-              'detect_engine',
-              expect.objectContaining({
+          mockSafeInvoke.mockImplementation((command: string, payload) => {
+            if (command === 'detect_engine') {
+              return Promise.resolve({
                 engine_type: engine,
-              })
-            );
-          },
-          { timeout: 3000 }
-        );
+                installed: true,
+                running: false,
+              });
+            }
+            if (command === 'start_engine' && engine !== 'ollama') {
+              return Promise.resolve({ success: true });
+            }
+            return defaultSafeInvokeImplementation(command, payload);
+          });
+
+          render(
+            <ModelSelection
+              onModelSelected={mockOnModelSelected}
+              selectedModel={null}
+              engineType={engine}
+              onEngineChange={mockOnEngineChange}
+            />
+          );
+
+          await waitFor(
+            () => {
+              expect(mockSafeInvoke).toHaveBeenCalledWith(
+                'detect_engine',
+                expect.objectContaining({
+                  engineType: engine,
+                })
+              );
+            },
+            { timeout: 3000 }
+          );
       });
     });
   });

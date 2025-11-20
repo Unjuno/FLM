@@ -27,3 +27,6 @@ export const isTauriAvailable = (): boolean => {
   );
 };
 
+export const clearInvokeCache = (): void => {
+  // noop in Jest environment
+};

@@ -18,7 +18,11 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
-import { cleanupTestApis, createTestApi, handleTauriAppNotRunningError } from '../setup/test-helpers';
+import {
+  cleanupTestApis,
+  createTestApi,
+  handleTauriAppNotRunningError,
+} from '../setup/test-helpers';
 import { debugLog, debugWarn } from '../setup/debug';
 
 interface ApiInfo {
@@ -96,7 +100,6 @@ describe('F005 認証機能 統合テスト', () => {
    */
   describe('1. APIキー生成機能', () => {
     it('認証有効時に自動生成された安全なAPIキーが作成される', async () => {
-
       // 認証有効でAPIを作成
       let testApiId: string;
       try {
@@ -121,7 +124,6 @@ describe('F005 認証機能 統合テスト', () => {
     });
 
     it('認証無効時はAPIキーが生成されない', async () => {
-
       // 認証無効でAPIを作成
       let testApiId: string;
       try {
@@ -144,7 +146,6 @@ describe('F005 認証機能 統合テスト', () => {
     });
 
     it('APIキーを取得できる', async () => {
-
       // 認証有効でAPIを作成
       let testApiId: string;
       try {
@@ -168,7 +169,6 @@ describe('F005 認証機能 統合テスト', () => {
     });
 
     it('APIキーを再生成できる', async () => {
-
       // 認証有効でAPIを作成
       let testApiId: string;
       try {
@@ -204,7 +204,6 @@ describe('F005 認証機能 統合テスト', () => {
     });
 
     it('認証無効なAPIではAPIキーを再生成できない', async () => {
-
       // 認証無効でAPIを作成
       let testApiId: string;
       try {
@@ -225,7 +224,6 @@ describe('F005 認証機能 統合テスト', () => {
     });
 
     it('生成されたAPIキーは安全な形式である', async () => {
-
       // 認証有効でAPIを作成
       let testApiId: string;
       try {
@@ -256,7 +254,6 @@ describe('F005 認証機能 統合テスト', () => {
    */
   describe('2. 認証方式', () => {
     it('認証有効なAPIではAPIキーが必須である', async () => {
-
       // 認証有効でAPIを作成
       let testApiId: string;
       try {
@@ -279,7 +276,6 @@ describe('F005 認証機能 統合テスト', () => {
     });
 
     it('認証無効なAPIではAPIキーが不要である', async () => {
-
       // 認証無効でAPIを作成
       let testApiId: string;
       try {
@@ -302,7 +298,6 @@ describe('F005 認証機能 統合テスト', () => {
     });
 
     it('認証設定を変更できる（無効→有効）', async () => {
-
       // 認証無効でAPIを作成
       let testApiId: string;
       try {
@@ -333,7 +328,6 @@ describe('F005 認証機能 統合テスト', () => {
     });
 
     it('認証設定を変更できる（有効→無効）', async () => {
-
       // 認証有効でAPIを作成
       let testApiId: string;
       try {
@@ -369,7 +363,6 @@ describe('F005 認証機能 統合テスト', () => {
    */
   describe('3. 統合フローテスト', () => {
     it('API作成→認証有効化→APIキー生成→再生成のフローが正常に動作する', async () => {
-
       // ステップ1: 認証無効でAPIを作成
       let testApiId: string;
       try {

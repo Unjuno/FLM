@@ -23,7 +23,7 @@ jest.mock('../../src/contexts/I18nContext');
 // rechartsのモック（ResizeObserverエラーを回避）
 jest.mock('recharts', () => {
   // React 19のJSX変換を使用するため、React.createElementを使用
-  const React = require('react');
+  const React = jest.requireActual<typeof import('react')>('react');
   return {
     BarChart: ({ children, ...props }: any) => {
       // dataKeyなどのrecharts専用プロップを除外
@@ -624,7 +624,10 @@ describe('LogStatistics.tsx', () => {
       // または、stat-valueが2.50%を含むカードを探す
       const errorRateCard = Array.from(statCards).find(card => {
         const value = card.querySelector('.stat-value');
-        return value?.textContent?.includes('2.50%') || value?.textContent?.includes('%');
+        return (
+          value?.textContent?.includes('2.50%') ||
+          value?.textContent?.includes('%')
+        );
       });
       expect(errorRateCard).toBeTruthy();
 
@@ -717,11 +720,14 @@ describe('LogStatistics.tsx', () => {
 
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      expect(mockSafeInvoke).toHaveBeenCalledWith('get_log_statistics', expect.objectContaining({
-        api_id: 'test-api-id',
-        start_date: startDate,
-        end_date: endDate,
-      }));
+      expect(mockSafeInvoke).toHaveBeenCalledWith(
+        'get_log_statistics',
+        expect.objectContaining({
+          api_id: 'test-api-id',
+          start_date: startDate,
+          end_date: endDate,
+        })
+      );
     });
 
     it('nullの日時はnullとして送信する', async () => {
@@ -736,11 +742,14 @@ describe('LogStatistics.tsx', () => {
 
       await new Promise(resolve => setTimeout(resolve, 100));
 
-      expect(mockSafeInvoke).toHaveBeenCalledWith('get_log_statistics', expect.objectContaining({
-        api_id: 'test-api-id',
-        start_date: null,
-        end_date: null,
-      }));
+      expect(mockSafeInvoke).toHaveBeenCalledWith(
+        'get_log_statistics',
+        expect.objectContaining({
+          api_id: 'test-api-id',
+          start_date: null,
+          end_date: null,
+        })
+      );
     });
   });
 
