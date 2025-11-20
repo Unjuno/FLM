@@ -76,4 +76,3 @@ export const HomeSearchResults: React.FC<HomeSearchResultsProps> = ({
     </section>
   );
 };
-

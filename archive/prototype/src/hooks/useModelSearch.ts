@@ -13,7 +13,20 @@ export interface ModelInfo {
   description?: string;
   size?: number;
   parameters?: number;
-  category?: 'chat' | 'code' | 'translation' | 'summarization' | 'qa' | 'vision' | 'audio' | 'multimodal' | 'image-generation' | 'audio-generation' | 'embedding' | 'video-generation' | 'other';
+  category?:
+    | 'chat'
+    | 'code'
+    | 'translation'
+    | 'summarization'
+    | 'qa'
+    | 'vision'
+    | 'audio'
+    | 'multimodal'
+    | 'image-generation'
+    | 'audio-generation'
+    | 'embedding'
+    | 'video-generation'
+    | 'other';
   recommended?: boolean;
   author?: string;
   license?: string;
@@ -48,7 +61,9 @@ export const useModelSearch = (fallbackModels: ModelInfo[] = []) => {
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedSizeFilter, setSelectedSizeFilter] = useState<string>('all');
   const [selectedUseCase, setSelectedUseCase] = useState<string>('all');
-  const [sortBy, setSortBy] = useState<'popular' | 'size' | 'name' | 'newest'>('popular');
+  const [sortBy, setSortBy] = useState<'popular' | 'size' | 'name' | 'newest'>(
+    'popular'
+  );
 
   // モデル一覧を取得（useCallbackでメモ化）
   const loadModels = useCallback(async () => {
@@ -98,7 +113,11 @@ export const useModelSearch = (fallbackModels: ModelInfo[] = []) => {
             'useModelSearch'
           );
           if (catalogErr instanceof Error) {
-            logger.error('モデルカタログ取得エラー', catalogErr, 'useModelSearch');
+            logger.error(
+              'モデルカタログ取得エラー',
+              catalogErr,
+              'useModelSearch'
+            );
           } else {
             logger.warn(
               'モデルカタログ取得エラー（詳細）',
@@ -255,4 +274,3 @@ export const useModelSearch = (fallbackModels: ModelInfo[] = []) => {
     loadModels,
   };
 };
-

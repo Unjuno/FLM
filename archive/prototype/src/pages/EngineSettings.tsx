@@ -1,7 +1,13 @@
 // EngineSettings - エンジン設定ページ
 // エンジン設定の編集・保存
 
-import React, { useState, useEffect, useTransition, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useTransition,
+  useMemo,
+  useCallback,
+} from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { useNotifications } from '../contexts/NotificationContext';
@@ -118,11 +124,11 @@ export const EngineSettings: React.FC = () => {
   const loadExistingConfig = useCallback(async () => {
     // アンマウントチェック
     if (!isMounted()) return;
-    
+
     try {
       if (isMounted()) {
         setLoading(true);
-      setError(null);
+        setError(null);
       }
 
       const configs = await safeInvoke<EngineConfigData[]>(
@@ -158,9 +164,7 @@ export const EngineSettings: React.FC = () => {
       }
     } catch (err) {
       if (isMounted()) {
-        setError(
-          extractErrorMessage(err, '設定の読み込みに失敗しました')
-        );
+        setError(extractErrorMessage(err, '設定の読み込みに失敗しました'));
       }
     } finally {
       if (isMounted()) {
@@ -183,7 +187,7 @@ export const EngineSettings: React.FC = () => {
   const handleSave = useCallback(async () => {
     // アンマウントチェック
     if (!isMounted()) return;
-    
+
     try {
       if (isMounted()) {
         setSaving(true);
@@ -232,8 +236,7 @@ export const EngineSettings: React.FC = () => {
       navigate('/engines');
     } catch (err) {
       if (!isMounted()) return;
-      const errorMessage =
-        extractErrorMessage(err, '設定の保存に失敗しました');
+      const errorMessage = extractErrorMessage(err, '設定の保存に失敗しました');
       setError(errorMessage);
       showError(errorMessage);
     } finally {
@@ -251,7 +254,7 @@ export const EngineSettings: React.FC = () => {
   const handleDelete = useCallback(async () => {
     // アンマウントチェック
     if (!isMounted()) return;
-    
+
     if (!config.id) {
       return;
     }
@@ -278,8 +281,10 @@ export const EngineSettings: React.FC = () => {
           navigate('/engines');
         } catch (err) {
           if (!isMounted()) return;
-          const errorMessage =
-            extractErrorMessage(err, '設定の削除に失敗しました');
+          const errorMessage = extractErrorMessage(
+            err,
+            '設定の削除に失敗しました'
+          );
           setError(errorMessage);
           showError(errorMessage);
         } finally {

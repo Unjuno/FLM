@@ -84,4 +84,3 @@ export function useModalFocusTrap(
     };
   }, [isOpen, onClose, modalRef]);
 }
-

@@ -76,7 +76,9 @@ describe('ApiCreationProgress.tsx', () => {
       render(
         <ApiCreationProgress progress={{ step: '処理中', progress: 50 }} />
       );
-      const stepElements = screen.getAllByText(/エンジン確認|設定保存|認証プロキシ起動|完了/i);
+      const stepElements = screen.getAllByText(
+        /エンジン確認|設定保存|認証プロキシ起動|完了/i
+      );
       expect(stepElements.length).toBeGreaterThan(0);
     });
   });

@@ -1,7 +1,13 @@
 // AuditLogs - 監査ログ表示ページ
 // すべてのAPI操作の記録を表示
 
-import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useRef,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { safeInvoke } from '../utils/tauri';
@@ -53,11 +59,14 @@ export const AuditLogs: React.FC = () => {
   useGlobalKeyboardShortcuts();
 
   // パンくずリストの項目
-  const breadcrumbItems: BreadcrumbItem[] = React.useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: t('apiLogs.title') || 'APIログ', path: '/logs' },
-    { label: t('auditLogs.title') || '監査ログ' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = React.useMemo(
+    () => [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('apiLogs.title') || 'APIログ', path: '/logs' },
+      { label: t('auditLogs.title') || '監査ログ' },
+    ],
+    [t]
+  );
 
   /**
    * ログ一覧を読み込む
@@ -81,9 +90,7 @@ export const AuditLogs: React.FC = () => {
       });
       setLogs(logsData);
     } catch (err) {
-      setError(
-        extractErrorMessage(err, 'ログの読み込みに失敗しました')
-      );
+      setError(extractErrorMessage(err, 'ログの読み込みに失敗しました'));
     } finally {
       setLoading(false);
     }
@@ -305,7 +312,9 @@ export const AuditLogs: React.FC = () => {
                         </div>
                         <div className="audit-log-details">
                           {log.details && (
-                            <p className="audit-log-detail-text">{log.details}</p>
+                            <p className="audit-log-detail-text">
+                              {log.details}
+                            </p>
                           )}
                           <div className="audit-log-meta">
                             {log.ip_address && (

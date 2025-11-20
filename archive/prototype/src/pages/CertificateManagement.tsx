@@ -65,11 +65,14 @@ export const CertificateManagement: React.FC = () => {
   useGlobalKeyboardShortcuts();
 
   // パンくずリストの項目
-  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: t('header.settings') || '設定', path: '/settings' },
-    { label: t('certificateManagement.title') || '証明書管理' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(
+    () => [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('header.settings') || '設定', path: '/settings' },
+      { label: t('certificateManagement.title') || '証明書管理' },
+    ],
+    [t]
+  );
 
   /**
    * ACMEライブラリ統合ガイド
@@ -189,7 +192,11 @@ pub async fn issue_certificate(domain: String, email: String, app_state: State<'
       setCertificates(certificatesData);
     } catch (err) {
       // エラーは静かに処理（基盤実装のため）
-      logger.warn('証明書の読み込みに失敗しました', extractErrorMessage(err), 'CertificateManagement');
+      logger.warn(
+        '証明書の読み込みに失敗しました',
+        extractErrorMessage(err),
+        'CertificateManagement'
+      );
       setCertificates([]);
     } finally {
       setLoading(false);
@@ -238,7 +245,11 @@ pub async fn issue_certificate(domain: String, email: String, app_state: State<'
 
         showSuccess('コードをクリップボードにコピーしました');
       } catch (err) {
-        logger.warn('コードのコピーに失敗しました', extractErrorMessage(err), 'CertificateManagement');
+        logger.warn(
+          'コードのコピーに失敗しました',
+          extractErrorMessage(err),
+          'CertificateManagement'
+        );
         showError('コピーに失敗しました。ブラウザの権限を確認してください。');
       }
     },
@@ -341,7 +352,8 @@ pub async fn issue_certificate(domain: String, email: String, app_state: State<'
           <div className="integration-guide">
             <h3>acmeライブラリ統合ガイド</h3>
             <p>
-              下記のステップを順番に実施することで、Let&apos;s Encryptの証明書取得処理をアプリケーションに組み込めます。各ステップのチェックリストを活用し、漏れがないように進めてください。
+              下記のステップを順番に実施することで、Let&apos;s
+              Encryptの証明書取得処理をアプリケーションに組み込めます。各ステップのチェックリストを活用し、漏れがないように進めてください。
             </p>
             <ol className="integration-step-list">
               {integrationSteps.map(step => (
@@ -354,20 +366,27 @@ pub async fn issue_certificate(domain: String, email: String, app_state: State<'
                         className="integration-copy-button"
                         onClick={() => handleCopyCode(step.code || '', step.id)}
                       >
-                        {copiedCodeId === step.id ? 'コピー済み' : 'コードをコピー'}
+                        {copiedCodeId === step.id
+                          ? 'コピー済み'
+                          : 'コードをコピー'}
                       </button>
                     )}
                   </div>
                   <div className="integration-step-body">
                     {step.description.map((text, index) => (
-                      <p key={`${step.id}-desc-${index}`} className="integration-step-description">
+                      <p
+                        key={`${step.id}-desc-${index}`}
+                        className="integration-step-description"
+                      >
                         {text}
                       </p>
                     ))}
                     {step.code && (
                       <div className="integration-step-code">
                         {step.codeTitle && (
-                          <span className="integration-step-code-title">{step.codeTitle}</span>
+                          <span className="integration-step-code-title">
+                            {step.codeTitle}
+                          </span>
                         )}
                         <pre>
                           <code>{step.code}</code>

@@ -14,10 +14,11 @@ import type { ApiStatus } from '../utils/apiStatus';
 /**
  * デフォルトのポーリング設定
  */
-const DEFAULT_POLLING_OPTIONS: Omit<UsePollingOptions, 'interval' | 'enabled'> = {
-  minRequestInterval: MIN_REQUEST_INTERVAL,
-  skipWhenHidden: true,
-} as const;
+const DEFAULT_POLLING_OPTIONS: Omit<UsePollingOptions, 'interval' | 'enabled'> =
+  {
+    minRequestInterval: MIN_REQUEST_INTERVAL,
+    skipWhenHidden: true,
+  } as const;
 
 /**
  * ポーリング設定を作成するヘルパー関数
@@ -104,7 +105,7 @@ export function useApiStatus(
       // 処理開始時のapiIdを保存（非同期処理中に変更される可能性があるため）
       const targetApiId = apiId;
       const apis = await fetchApis(options);
-      
+
       // API一覧の取得に失敗した場合はスキップ
       if (!apis) {
         return;
@@ -120,7 +121,9 @@ export function useApiStatus(
       const newStatus = api ? convertApiStatus(api.status) : null;
 
       // 状態が変わらない場合は更新をスキップ（パフォーマンス最適化）
-      setStatus(prevStatus => (prevStatus === newStatus ? prevStatus : newStatus));
+      setStatus(prevStatus =>
+        prevStatus === newStatus ? prevStatus : newStatus
+      );
     },
     [apiId, fetchApis]
   );
@@ -168,7 +171,7 @@ export function useApiStatusList(
   const fetchStatuses = useCallback(
     async (options?: { force?: boolean }) => {
       const apis = await fetchApis(options);
-      
+
       // API一覧の取得に失敗した場合はスキップ
       if (!apis) {
         return;
@@ -207,4 +210,3 @@ export function useApiStatusList(
     [statuses, loading, error, refresh]
   );
 }
-

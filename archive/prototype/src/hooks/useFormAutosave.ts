@@ -31,10 +31,12 @@ export interface AutosaveData<T> {
 
 /**
  * フォームオートセーブ用カスタムフック
- * 
+ *
  * @param config - オートセーブ設定
  */
-export const useFormAutosave = <T,>(config: AutosaveConfig<T>): {
+export const useFormAutosave = <T>(
+  config: AutosaveConfig<T>
+): {
   /** 保存されたデータを復元 */
   restore: () => T | null;
   /** 保存されたデータをクリア */
@@ -80,6 +82,7 @@ export const useFormAutosave = <T,>(config: AutosaveConfig<T>): {
         clearTimeout(autosaveTimeoutRef.current);
       }
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [config.data, config.key, config.isValid, defaultDelay]);
 
   // 保存されたデータを復元
@@ -92,8 +95,9 @@ export const useFormAutosave = <T,>(config: AutosaveConfig<T>): {
         // 24時間以内の保存データのみ復元
         const savedTime = new Date(parsed.timestamp);
         const now = new Date();
-        const hoursDiff = (now.getTime() - savedTime.getTime()) / (1000 * 60 * 60);
-        
+        const hoursDiff =
+          (now.getTime() - savedTime.getTime()) / (1000 * 60 * 60);
+
         if (hoursDiff < 24 && parsed.data) {
           if (isDev()) {
             logger.debug('フォーム設定を自動復元しました', 'useFormAutosave');
@@ -107,7 +111,11 @@ export const useFormAutosave = <T,>(config: AutosaveConfig<T>): {
       }
     } catch (err) {
       // 復元エラーは無視
-      logger.warn('オートセーブからの復元に失敗しました', 'useFormAutosave', err);
+      logger.warn(
+        'オートセーブからの復元に失敗しました',
+        'useFormAutosave',
+        err
+      );
     }
     return null;
   };
@@ -124,4 +132,3 @@ export const useFormAutosave = <T,>(config: AutosaveConfig<T>): {
 
   return { restore, clear };
 };
-

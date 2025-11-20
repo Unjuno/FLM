@@ -21,10 +21,7 @@ export const FeatureDisplaySettings: React.FC<FeatureDisplaySettingsProps> = ({
   onSettingsChange,
 }) => {
   return (
-    <section
-      className="settings-section"
-      aria-labelledby="features-heading"
-    >
+    <section className="settings-section" aria-labelledby="features-heading">
       <h2 id="features-heading" className="settings-section-title">
         機能表示設定
       </h2>
@@ -52,4 +49,3 @@ export const FeatureDisplaySettings: React.FC<FeatureDisplaySettingsProps> = ({
     </section>
   );
 };
-

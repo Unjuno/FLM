@@ -35,4 +35,3 @@ export const ApiListLoading: React.FC<ApiListLoadingProps> = ({
     </AppLayout>
   );
 };
-

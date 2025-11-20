@@ -174,7 +174,9 @@ describe('Authentication API Tests', () => {
           try {
             await invoke('stop_api', { api_id: noAuthApiId });
             await invoke('delete_api', { api_id: noAuthApiId });
-          } catch {}
+          } catch {
+            // why: クリーンアップ失敗を無視（テスト環境のリソースリークを防ぐため）
+          }
         }
       }
     }, 30000);

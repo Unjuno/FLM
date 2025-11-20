@@ -13,13 +13,13 @@ export interface ConfirmDialogConfig {
 
 /**
  * 確認ダイアログの状態管理用カスタムフック
- * 
+ *
  * @returns 確認ダイアログの状態と操作関数
- * 
+ *
  * @example
  * ```tsx
  * const { isOpen, message, openDialog, closeDialog, handleConfirm, handleCancel } = useConfirmDialog();
- * 
+ *
  * const handleDelete = () => {
  *   openDialog({
  *     message: '削除しますか？',
@@ -34,8 +34,12 @@ export interface ConfirmDialogConfig {
 export const useConfirmDialog = () => {
   const [isOpen, setIsOpen] = useState(false);
   const [message, setMessage] = useState('');
-  const [onConfirmCallback, setOnConfirmCallback] = useState<(() => void) | null>(null);
-  const [onCancelCallback, setOnCancelCallback] = useState<(() => void) | null>(null);
+  const [onConfirmCallback, setOnConfirmCallback] = useState<
+    (() => void) | null
+  >(null);
+  const [onCancelCallback, setOnCancelCallback] = useState<(() => void) | null>(
+    null
+  );
 
   /**
    * 確認ダイアログを閉じる
@@ -102,4 +106,3 @@ export const useConfirmDialog = () => {
     handleCancel,
   };
 };
-

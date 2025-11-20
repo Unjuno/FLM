@@ -1,6 +1,12 @@
 // AlertSettings - アラート設定ページ
 
-import React, { useState, useEffect, useTransition, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useTransition,
+  useMemo,
+  useCallback,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { AlertThreshold } from '../components/performance/AlertThreshold';
@@ -85,11 +91,14 @@ export const AlertSettings: React.FC = () => {
   useGlobalKeyboardShortcuts();
 
   // パンくずリストの項目
-  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: t('header.settings') || '設定', path: '/settings' },
-    { label: t('alertSettings.title') || 'アラート設定' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(
+    () => [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('header.settings') || '設定', path: '/settings' },
+      { label: t('alertSettings.title') || 'アラート設定' },
+    ],
+    [t]
+  );
 
   // ESCキーで確認ダイアログを閉じる
   useEffect(() => {
@@ -152,9 +161,7 @@ export const AlertSettings: React.FC = () => {
         memory_usage: result.memory_usage_threshold !== null,
       });
     } catch (err) {
-      setError(
-        extractErrorMessage(err, '設定の読み込みに失敗しました')
-      );
+      setError(extractErrorMessage(err, '設定の読み込みに失敗しました'));
     } finally {
       setLoading(false);
     }
@@ -199,7 +206,14 @@ export const AlertSettings: React.FC = () => {
     } finally {
       setSaving(false);
     }
-  }, [selectedApiId, isGlobalSettings, settings, enabledStates, showSuccess, showError]);
+  }, [
+    selectedApiId,
+    isGlobalSettings,
+    settings,
+    enabledStates,
+    showSuccess,
+    showError,
+  ]);
 
   /**
    * 設定をリセット（デフォルト値に戻す）
@@ -299,9 +313,7 @@ export const AlertSettings: React.FC = () => {
             <h2 className="alert-settings-section-title">設定タイプ</h2>
             <div className="alert-settings-type-selector">
               <label
-                className={
-                  `alert-settings-type-option${isGlobalSettings ? ' selected' : ''}`
-                }
+                className={`alert-settings-type-option${isGlobalSettings ? ' selected' : ''}`}
                 aria-label="グローバル設定: すべてのAPIに適用"
               >
                 <input
@@ -312,9 +324,14 @@ export const AlertSettings: React.FC = () => {
                   aria-label="グローバル設定"
                 />
                 <div className="alert-settings-type-visual">
-                  <span className="alert-settings-type-indicator" aria-hidden="true" />
+                  <span
+                    className="alert-settings-type-indicator"
+                    aria-hidden="true"
+                  />
                   <div className="alert-settings-type-text">
-                    <span className="alert-settings-type-title">グローバル設定</span>
+                    <span className="alert-settings-type-title">
+                      グローバル設定
+                    </span>
                     <span className="alert-settings-type-description">
                       すべてのAPIに適用
                     </span>
@@ -322,9 +339,7 @@ export const AlertSettings: React.FC = () => {
                 </div>
               </label>
               <label
-                className={
-                  `alert-settings-type-option${!isGlobalSettings ? ' selected' : ''}`
-                }
+                className={`alert-settings-type-option${!isGlobalSettings ? ' selected' : ''}`}
                 aria-label="API個別設定: 選択したAPIにのみ適用"
               >
                 <input
@@ -335,9 +350,14 @@ export const AlertSettings: React.FC = () => {
                   aria-label="API個別設定"
                 />
                 <div className="alert-settings-type-visual">
-                  <span className="alert-settings-type-indicator" aria-hidden="true" />
+                  <span
+                    className="alert-settings-type-indicator"
+                    aria-hidden="true"
+                  />
                   <div className="alert-settings-type-text">
-                    <span className="alert-settings-type-title">API固有設定</span>
+                    <span className="alert-settings-type-title">
+                      API固有設定
+                    </span>
                     <span className="alert-settings-type-description">
                       選択したAPIにのみ適用
                     </span>
@@ -480,7 +500,9 @@ export const AlertSettings: React.FC = () => {
                   handleSave();
                 });
               }}
-              disabled={saving || (!isGlobalSettings && !selectedApiId) || isPending}
+              disabled={
+                saving || (!isGlobalSettings && !selectedApiId) || isPending
+              }
               type="button"
             >
               {saving ? '保存中...' : '保存'}
@@ -496,10 +518,7 @@ export const AlertSettings: React.FC = () => {
             aria-modal="true"
             aria-labelledby="confirm-dialog-title"
           >
-            <div
-              className="confirm-dialog"
-              role="document"
-            >
+            <div className="confirm-dialog" role="document">
               <h3 id="confirm-dialog-title">確認</h3>
               <p>{confirmDialog.message}</p>
               <div className="confirm-dialog-actions">

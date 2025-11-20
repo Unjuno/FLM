@@ -53,4 +53,3 @@ export const NotificationSettings: React.FC<NotificationSettingsProps> = ({
     </section>
   );
 };
-

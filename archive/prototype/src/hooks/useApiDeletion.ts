@@ -12,7 +12,10 @@ interface UseApiDeletionOptions {
 /**
  * API削除時の確認ダイアログ表示と削除実行を統一的に扱うカスタムフック
  */
-export const useApiDeletion = ({ deleteApi, openDialog }: UseApiDeletionOptions) => {
+export const useApiDeletion = ({
+  deleteApi,
+  openDialog,
+}: UseApiDeletionOptions) => {
   const { t } = useI18n();
 
   const confirmDelete = useCallback(
@@ -62,5 +65,3 @@ export const useApiDeletion = ({ deleteApi, openDialog }: UseApiDeletionOptions)
 
   return { confirmDelete };
 };
-
-

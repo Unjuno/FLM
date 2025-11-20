@@ -1,7 +1,13 @@
 // SchedulerSettings - スケジューラ設定ページ
 // 定期タスクの設定（モデルカタログ更新、自動バックアップ、証明書更新等）
 
-import React, { useState, useEffect, useTransition, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useTransition,
+  useMemo,
+  useCallback,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { useNotifications } from '../contexts/NotificationContext';
@@ -136,55 +142,61 @@ export const SchedulerSettings: React.FC = () => {
   /**
    * タスクを追加または更新
    */
-  const handleSaveTask = useCallback(async (task: ScheduleTask) => {
-    try {
-      setSaving(true);
+  const handleSaveTask = useCallback(
+    async (task: ScheduleTask) => {
+      try {
+        setSaving(true);
 
-      const taskIdentifier = task.id || `task-${Date.now()}`;
+        const taskIdentifier = task.id || `task-${Date.now()}`;
 
-      await safeInvoke('add_schedule_task', {
-        taskId: taskIdentifier,
-        taskType: task.task_type,
-        apiId: 'default',
-        intervalSeconds: task.interval_seconds,
-      });
+        await safeInvoke('add_schedule_task', {
+          taskId: taskIdentifier,
+          taskType: task.task_type,
+          apiId: 'default',
+          intervalSeconds: task.interval_seconds,
+        });
 
-      await safeInvoke('update_schedule_task', {
-        taskType: task.task_type,
-        enabled: task.enabled,
-        intervalSeconds: task.interval_seconds,
-      });
+        await safeInvoke('update_schedule_task', {
+          taskType: task.task_type,
+          enabled: task.enabled,
+          intervalSeconds: task.interval_seconds,
+        });
 
-      showSuccess('タスクを保存しました');
-      loadTasks();
-    } catch (err) {
-      showError(
-        err instanceof Error ? err.message : 'タスクの保存に失敗しました'
-      );
-    } finally {
-      setSaving(false);
-    }
-  }, [loadTasks, showSuccess, showError]);
+        showSuccess('タスクを保存しました');
+        loadTasks();
+      } catch (err) {
+        showError(
+          err instanceof Error ? err.message : 'タスクの保存に失敗しました'
+        );
+      } finally {
+        setSaving(false);
+      }
+    },
+    [loadTasks, showSuccess, showError]
+  );
 
   /**
    * タスクを開始
    */
-  const handleStartTask = useCallback(async (taskType: string) => {
-    try {
-      setSaving(true);
+  const handleStartTask = useCallback(
+    async (taskType: string) => {
+      try {
+        setSaving(true);
 
-      await safeInvoke('start_schedule_task', { task_type: taskType });
+        await safeInvoke('start_schedule_task', { task_type: taskType });
 
-      showSuccess('タスクを開始しました');
-      loadTasks();
-    } catch (err) {
-      showError(
-        err instanceof Error ? err.message : 'タスクの開始に失敗しました'
-      );
-    } finally {
-      setSaving(false);
-    }
-  }, [loadTasks, showSuccess, showError]);
+        showSuccess('タスクを開始しました');
+        loadTasks();
+      } catch (err) {
+        showError(
+          err instanceof Error ? err.message : 'タスクの開始に失敗しました'
+        );
+      } finally {
+        setSaving(false);
+      }
+    },
+    [loadTasks, showSuccess, showError]
+  );
 
   /**
    * タスクタイプの表示名を取得
@@ -216,11 +228,14 @@ export const SchedulerSettings: React.FC = () => {
   };
 
   // パンくずリストの項目
-  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: t('header.settings') || '設定', path: '/settings' },
-    { label: t('schedulerSettings.title') || 'スケジューラ設定' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(
+    () => [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('header.settings') || '設定', path: '/settings' },
+      { label: t('schedulerSettings.title') || 'スケジューラ設定' },
+    ],
+    [t]
+  );
 
   if (loading) {
     return (
@@ -309,7 +324,9 @@ export const SchedulerSettings: React.FC = () => {
                         onChange={e => {
                           const parsed = parseInt(e.target.value, 10);
                           const updatedTasks = [...tasks];
-                          updatedTasks[index].interval_seconds = isNaN(parsed) ? 3600 : parsed;
+                          updatedTasks[index].interval_seconds = isNaN(parsed)
+                            ? 3600
+                            : parsed;
                           setTasks(updatedTasks);
                         }}
                         disabled={saving}

@@ -76,9 +76,12 @@ describe('ApiEdit', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
     });
 
-    await waitFor(() => {
-      expect(screen.getByLabelText(/api名/i)).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByLabelText(/api名/i)).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
   });
 
   it('should validate form inputs', async () => {
@@ -90,9 +93,12 @@ describe('ApiEdit', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
     });
 
-    await waitFor(() => {
-      expect(screen.getByLabelText(/api名/i)).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByLabelText(/api名/i)).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     // API名を空にする
     const apiNameInput = screen.getByLabelText(/api名/i);
@@ -107,9 +113,14 @@ describe('ApiEdit', () => {
     });
 
     // バリデーションエラーが表示されることを確認
-    await waitFor(() => {
-      expect(screen.getByText(/api名を入力してください/i)).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText(/api名を入力してください/i)
+        ).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
   });
 
   it('should handle save API settings', async () => {
@@ -121,9 +132,12 @@ describe('ApiEdit', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
     });
 
-    await waitFor(() => {
-      expect(screen.getByLabelText(/api名/i)).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByLabelText(/api名/i)).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     // API名を変更
     const apiNameInput = screen.getByLabelText(/api名/i);
@@ -139,9 +153,15 @@ describe('ApiEdit', () => {
     });
 
     // update_apiコマンドが呼ばれることを確認
-    await waitFor(() => {
-      expect(safeInvoke).toHaveBeenCalledWith('update_api', expect.any(Object));
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(safeInvoke).toHaveBeenCalledWith(
+          'update_api',
+          expect.any(Object)
+        );
+      },
+      { timeout: 5000 }
+    );
   });
 
   it('should handle regenerate API key', async () => {
@@ -153,9 +173,12 @@ describe('ApiEdit', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
     });
 
-    await waitFor(() => {
-      expect(screen.getByText(/apiキーを再生成/i)).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText(/apiキーを再生成/i)).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     // 再生成ボタンをクリック
     const regenerateButton = screen.getByText(/apiキーを再生成/i);
@@ -164,9 +187,12 @@ describe('ApiEdit', () => {
     });
 
     // 確認ダイアログが表示されることを確認
-    await waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
   });
 
   it('should handle delete API', async () => {
@@ -178,9 +204,12 @@ describe('ApiEdit', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
     });
 
-    await waitFor(() => {
-      expect(screen.getByText(/apiを削除/i)).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText(/apiを削除/i)).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     // 削除ボタンをクリック
     const deleteButton = screen.getByText(/apiを削除/i);
@@ -189,9 +218,11 @@ describe('ApiEdit', () => {
     });
 
     // 確認ダイアログが表示されることを確認
-    await waitFor(() => {
-      expect(screen.getByRole('dialog')).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByRole('dialog')).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
   });
 });
-

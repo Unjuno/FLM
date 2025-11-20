@@ -87,4 +87,3 @@ export const ErrorLogFilters: React.FC<ErrorLogFiltersProps> = ({
     </section>
   );
 };
-

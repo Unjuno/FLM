@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: MIT
 // ApiInfo - API情報ページ
 
-import React, { useState, useEffect, useCallback, useMemo, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useRef,
+} from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { API_KEY, TIMEOUT } from '../constants/config';
@@ -48,30 +54,34 @@ export const ApiInfo: React.FC = () => {
   }, []);
 
   // API情報を取得する非同期操作
-  const loadApiInfoOperation = useCallback(async (): Promise<ApiInfoWithKey> => {
-    if (!id) {
-      throw new Error('API IDが指定されていません');
-    }
+  const loadApiInfoOperation =
+    useCallback(async (): Promise<ApiInfoWithKey> => {
+      if (!id) {
+        throw new Error('API IDが指定されていません');
+      }
 
-    // バックエンドのIPCコマンドを呼び出してAPI詳細を取得（APIキーを含む）
-    const apiDetails = await safeInvoke<ApiDetailsResponse>('get_api_details', {
-      apiId: id,
-    });
+      // バックエンドのIPCコマンドを呼び出してAPI詳細を取得（APIキーを含む）
+      const apiDetails = await safeInvoke<ApiDetailsResponse>(
+        'get_api_details',
+        {
+          apiId: id,
+        }
+      );
 
-    return {
-      id: apiDetails.id,
-      name: apiDetails.name,
-      endpoint: apiDetails.endpoint,
-      apiKey: apiDetails.api_key || undefined,
-      port: apiDetails.port,
-      model_name: apiDetails.model_name,
-      status: (apiDetails.status === 'running' ? 'running' : 'stopped') as
-        | 'running'
-        | 'stopped',
-      created_at: apiDetails.created_at,
-      updated_at: apiDetails.updated_at,
-    };
-  }, [id]);
+      return {
+        id: apiDetails.id,
+        name: apiDetails.name,
+        endpoint: apiDetails.endpoint,
+        apiKey: apiDetails.api_key || undefined,
+        port: apiDetails.port,
+        model_name: apiDetails.model_name,
+        status: (apiDetails.status === 'running' ? 'running' : 'stopped') as
+          | 'running'
+          | 'stopped',
+        created_at: apiDetails.created_at,
+        updated_at: apiDetails.updated_at,
+      };
+    }, [id]);
 
   // 非同期操作フックを使用
   const {
@@ -225,7 +235,9 @@ export const ApiInfo: React.FC = () => {
               >
                 <span className="section-title-with-icon">
                   エンドポイント
-                  <span className="section-title-icon" aria-hidden="true">❓</span>
+                  <span className="section-title-icon" aria-hidden="true">
+                    ❓
+                  </span>
                 </span>
               </Tooltip>
             </h2>
@@ -233,7 +245,9 @@ export const ApiInfo: React.FC = () => {
               <code className="endpoint-url">{apiInfo.endpoint}</code>
               <button
                 className="copy-button"
-                onClick={() => handleCopyToClipboard(apiInfo.endpoint, 'endpoint')}
+                onClick={() =>
+                  handleCopyToClipboard(apiInfo.endpoint, 'endpoint')
+                }
               >
                 {copied === 'endpoint' ? '✓ コピー済み' : '📋 コピー'}
               </button>
@@ -316,7 +330,9 @@ export const ApiInfo: React.FC = () => {
                 </pre>
                 <button
                   className="copy-button"
-                  onClick={() => handleCopyToClipboard(getSampleCode('curl'), 'curl')}
+                  onClick={() =>
+                    handleCopyToClipboard(getSampleCode('curl'), 'curl')
+                  }
                 >
                   {copied === 'curl' ? '✓ コピー済み' : '📋 コピー'}
                 </button>
@@ -345,7 +361,10 @@ export const ApiInfo: React.FC = () => {
                 <button
                   className="copy-button"
                   onClick={() =>
-                    handleCopyToClipboard(getSampleCode('javascript'), 'javascript')
+                    handleCopyToClipboard(
+                      getSampleCode('javascript'),
+                      'javascript'
+                    )
                   }
                 >
                   {copied === 'javascript' ? '✓ コピー済み' : '📋 コピー'}

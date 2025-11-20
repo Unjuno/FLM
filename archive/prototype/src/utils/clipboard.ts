@@ -5,7 +5,7 @@ import { toError } from './errorHandler';
 
 /**
  * クリップボードにテキストをコピーする
- * 
+ *
  * @param text コピーするテキスト
  * @returns 成功した場合はtrue、失敗した場合はfalse
  * @throws クリップボードへのアクセスが失敗した場合にエラーをスロー
@@ -13,7 +13,10 @@ import { toError } from './errorHandler';
 export async function copyToClipboard(text: string): Promise<boolean> {
   try {
     // モダンブラウザのClipboard APIを優先的に使用
-    if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+    if (
+      navigator.clipboard &&
+      typeof navigator.clipboard.writeText === 'function'
+    ) {
       await navigator.clipboard.writeText(text);
       return true;
     }
@@ -26,7 +29,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     textArea.style.top = '-9999px';
     textArea.setAttribute('readonly', '');
     document.body.appendChild(textArea);
-    
+
     // iOS Safari対応
     if (navigator.userAgent.match(/ipad|iphone/i)) {
       const range = document.createRange();
@@ -44,11 +47,11 @@ export async function copyToClipboard(text: string): Promise<boolean> {
     try {
       const successful = document.execCommand('copy');
       document.body.removeChild(textArea);
-      
+
       if (!successful) {
         throw new Error('execCommand("copy")が失敗しました');
       }
-      
+
       return true;
     } catch (err) {
       document.body.removeChild(textArea);
@@ -66,7 +69,7 @@ export async function copyToClipboard(text: string): Promise<boolean> {
 
 /**
  * クリップボードにテキストをコピーし、成功時にコールバックを実行
- * 
+ *
  * @param text コピーするテキスト
  * @param onSuccess 成功時のコールバック（オプション）
  * @param onError エラー時のコールバック（オプション）
@@ -84,4 +87,3 @@ export async function copyToClipboardWithCallback(
     onError?.(error);
   }
 }
-

@@ -1,6 +1,9 @@
 // webModelConfig-mock - webModelConfig.tsのモック（Jest環境でimport.metaを回避するため）
 
-import type { WebModelConfig, WebModelDefinition } from '../../src/types/webModel';
+import type {
+  WebModelConfig,
+  WebModelDefinition,
+} from '../../src/types/webModel';
 import { PORT_RANGE } from '../../src/constants/config';
 import { isDev } from './env-mock';
 
@@ -218,4 +221,3 @@ export function findModelByName(
     model => model.modelName === modelName && model.engine === engine
   );
 }
-

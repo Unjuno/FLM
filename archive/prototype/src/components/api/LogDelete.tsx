@@ -173,7 +173,11 @@ export const LogDelete: React.FC<LogDeleteProps> = ({
                 });
               }}
               disabled={
-                deleting || !apiId || !beforeDate || confirmText !== '削除' || isPending
+                deleting ||
+                !apiId ||
+                !beforeDate ||
+                confirmText !== '削除' ||
+                isPending
               }
               className="delete-button"
             >

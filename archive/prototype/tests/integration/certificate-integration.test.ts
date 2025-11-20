@@ -27,10 +27,7 @@ const testPort = 8444;
 describe('Certificate Integration Tests (TEST_EXECUTION_GUIDE)', () => {
   beforeAll(() => {
     // debug.tsをインポート（必要に応じて）
-    if (typeof require !== 'undefined') {
-      const { debugLog } = require('../setup/debug');
-      debugLog('証明書自動生成機能統合テストを開始します');
-    } else if (
+    if (
       process.env.NODE_ENV === 'development' ||
       process.env.JEST_DEBUG === '1'
     ) {
