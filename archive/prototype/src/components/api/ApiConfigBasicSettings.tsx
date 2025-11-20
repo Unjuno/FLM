@@ -153,7 +153,9 @@ export const ApiConfigBasicSettings: React.FC<ApiConfigBasicSettingsProps> = ({
             onChange={e => onConfigChange({ engineType: e.target.value })}
             disabled={loadingEngines || checkingEngine}
             {...(errors.engineType && { 'aria-invalid': 'true' })}
-            aria-describedby={errors.engineType ? 'api-engine-type-error' : undefined}
+            aria-describedby={
+              errors.engineType ? 'api-engine-type-error' : undefined
+            }
           >
             {availableEngines.map(engine => (
               <option key={engine} value={engine}>
@@ -170,7 +172,11 @@ export const ApiConfigBasicSettings: React.FC<ApiConfigBasicSettingsProps> = ({
             ))}
           </select>
           {errors.engineType && (
-            <span id="api-engine-type-error" className="form-error" role="alert">
+            <span
+              id="api-engine-type-error"
+              className="form-error"
+              role="alert"
+            >
               {errors.engineType}
             </span>
           )}
@@ -199,4 +205,3 @@ export const ApiConfigBasicSettings: React.FC<ApiConfigBasicSettingsProps> = ({
     </div>
   );
 };
-

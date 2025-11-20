@@ -2,7 +2,12 @@
 // tauri - Tauri環境の検出と安全なinvoke関数を提供
 
 import { invoke as tauriInvoke } from '@tauri-apps/api/core';
-import { parseError, logError, ErrorCategory, extractErrorMessage } from './errorHandler';
+import {
+  parseError,
+  logError,
+  ErrorCategory,
+  extractErrorMessage,
+} from './errorHandler';
 import { logger } from './logger';
 import { isDev as isDevEnvironment } from './env';
 
@@ -42,7 +47,10 @@ function getWebApiBaseUrl(): string | undefined {
         return `${protocol}//${hostname}:1420`;
       }
     } catch (error) {
-      logger.debug('[safeInvoke] window.location からの取得に失敗しました', error);
+      logger.debug(
+        '[safeInvoke] window.location からの取得に失敗しました',
+        error
+      );
     }
   }
 
@@ -65,20 +73,28 @@ export function isTauriAvailable(): boolean {
   const invokeIsFunction = typeof tauriInvoke === 'function';
   if (!invokeIsFunction) {
     if (isDevEnvironment()) {
-      logger.warn('[isTauriAvailable] tauriInvoke が関数ではありません', typeof tauriInvoke, 'tauri');
+      logger.warn(
+        '[isTauriAvailable] tauriInvoke が関数ではありません',
+        typeof tauriInvoke,
+        'tauri'
+      );
     }
     return false;
   }
-  
+
   // windowが存在するかチェック
   const hasWindow = typeof window !== 'undefined';
   if (!hasWindow) {
     if (isDevEnvironment()) {
-      logger.warn('[isTauriAvailable] window が undefined です', undefined, 'tauri');
+      logger.warn(
+        '[isTauriAvailable] window が undefined です',
+        undefined,
+        'tauri'
+      );
     }
     return false;
   }
-  
+
   // window.__TAURI__またはwindow.__TAURI_IPC__の存在をチェック（Tauri環境の必須条件）
   // Tauri 2.xでは__TAURI_IPC__も使用される可能性があるため、両方をチェック
   const hasTauriGlobal = '__TAURI__' in window;
@@ -87,7 +103,9 @@ export function isTauriAvailable(): boolean {
   if (!hasTauriGlobal && !hasTauriIpc) {
     // window.__TAURI__もwindow.__TAURI_IPC__も存在しない場合、ブラウザ環境と判断
     if (isDevEnvironment()) {
-      logger.debug('[isTauriAvailable] window.__TAURI__ と window.__TAURI_IPC__ が存在しません。ブラウザ環境と判断します。');
+      logger.debug(
+        '[isTauriAvailable] window.__TAURI__ と window.__TAURI_IPC__ が存在しません。ブラウザ環境と判断します。'
+      );
     }
     return false;
   }
@@ -95,9 +113,13 @@ export function isTauriAvailable(): boolean {
   // Tauri環境が利用可能
   if (isDevEnvironment()) {
     if (hasTauriGlobal) {
-      logger.debug('[isTauriAvailable] ✓ Tauri環境が利用可能です（window.__TAURI__ が利用可能）');
+      logger.debug(
+        '[isTauriAvailable] ✓ Tauri環境が利用可能です（window.__TAURI__ が利用可能）'
+      );
     } else if (hasTauriIpc) {
-      logger.debug('[isTauriAvailable] ✓ Tauri環境が利用可能です（window.__TAURI_IPC__ が利用可能）');
+      logger.debug(
+        '[isTauriAvailable] ✓ Tauri環境が利用可能です（window.__TAURI_IPC__ が利用可能）'
+      );
     }
   }
   return true;
@@ -173,9 +195,14 @@ export function clearInvokeCache(cmd?: string): void {
 function isDebugMode(): boolean {
   return (
     isDevEnvironment() ||
-    (typeof process !== 'undefined' && process.env && process.env.FLM_DEBUG === '1') ||
-    (typeof process !== 'undefined' && process.env && process.env.FLM_DEBUG === 'true') ||
-    (typeof window !== 'undefined' && (window as unknown as { FLM_DEBUG?: string }).FLM_DEBUG === '1')
+    (typeof process !== 'undefined' &&
+      process.env &&
+      process.env.FLM_DEBUG === '1') ||
+    (typeof process !== 'undefined' &&
+      process.env &&
+      process.env.FLM_DEBUG === 'true') ||
+    (typeof window !== 'undefined' &&
+      (window as unknown as { FLM_DEBUG?: string }).FLM_DEBUG === '1')
   );
 }
 
@@ -184,7 +211,7 @@ export async function safeInvoke<T = unknown>(
   args?: Record<string, unknown>
 ): Promise<T> {
   const debugLoggingEnabled = isDebugMode();
-  
+
   // 開発環境またはデバッグモードのみログ出力
   if (debugLoggingEnabled) {
     logger.debug(
@@ -198,18 +225,20 @@ export async function safeInvoke<T = unknown>(
     const cacheKey = args ? `${cmd}:${JSON.stringify(args)}` : cmd;
     const cached = invokeCache.get(cacheKey);
     const now = Date.now();
-    
+
     if (cached && now - cached.timestamp < CACHE_TTL) {
       // アクセス情報を更新
       cached.accessCount++;
       cached.lastAccess = now;
-      
+
       if (debugLoggingEnabled) {
-        logger.debug(`[safeInvoke] キャッシュから取得: ${cmd} (アクセス回数: ${cached.accessCount})`);
+        logger.debug(
+          `[safeInvoke] キャッシュから取得: ${cmd} (アクセス回数: ${cached.accessCount})`
+        );
       }
       return cached.data as T;
     }
-    
+
     // 期限切れのキャッシュを削除
     if (cached && now - cached.timestamp >= CACHE_TTL) {
       invokeCache.delete(cacheKey);
@@ -226,7 +255,7 @@ export async function safeInvoke<T = unknown>(
       if (debugLoggingEnabled) {
         logger.debug(`[safeInvoke] invoke実行中: ${cmd}`);
       }
-      
+
       // タイムアウト付きでIPC呼び出しを実行
       // 長時間かかる可能性のあるコマンドはタイムアウトを延長
       // install_engine（特にvLLM）は30分かかる可能性があるため、タイムアウトを10分に設定
@@ -239,42 +268,48 @@ export async function safeInvoke<T = unknown>(
       let timeoutId: ReturnType<typeof setTimeout> | undefined;
       const timeoutPromise = new Promise<never>((_, reject) => {
         timeoutId = setTimeout(() => {
-          reject(new Error(`IPC呼び出しがタイムアウトしました: ${cmd} (${timeoutMs}ms)`));
+          reject(
+            new Error(
+              `IPC呼び出しがタイムアウトしました: ${cmd} (${timeoutMs}ms)`
+            )
+          );
         }, timeoutMs);
       });
-      
+
       try {
         const result = await Promise.race([
           tauriInvoke<T>(cmd, args),
           timeoutPromise,
         ]);
-        
+
         // キャッシュに保存（読み取り専用コマンドのみ）
         if (CACHEABLE_COMMANDS.has(cmd)) {
           const cacheKey = args ? `${cmd}:${JSON.stringify(args)}` : cmd;
           const now = Date.now();
-          
+
           // キャッシュサイズ制限: LRU方式で古いエントリを削除
           if (invokeCache.size >= MAX_CACHE_SIZE) {
             // 最も古いアクセス時刻のエントリを削除
             let oldestKey: string | null = null;
             let oldestAccess = Infinity;
-            
+
             for (const [key, entry] of invokeCache.entries()) {
               if (entry.lastAccess < oldestAccess) {
                 oldestAccess = entry.lastAccess;
                 oldestKey = key;
               }
             }
-            
+
             if (oldestKey) {
               invokeCache.delete(oldestKey);
               if (debugLoggingEnabled) {
-                logger.debug(`[safeInvoke] キャッシュエントリを削除: ${oldestKey}`);
+                logger.debug(
+                  `[safeInvoke] キャッシュエントリを削除: ${oldestKey}`
+                );
               }
             }
           }
-          
+
           invokeCache.set(cacheKey, {
             data: result,
             timestamp: now,
@@ -282,7 +317,7 @@ export async function safeInvoke<T = unknown>(
             lastAccess: now,
           });
         }
-        
+
         if (debugLoggingEnabled) {
           logger.debug(`[safeInvoke] コマンド成功: ${cmd}`, result);
         }
@@ -295,15 +330,17 @@ export async function safeInvoke<T = unknown>(
     } catch (error) {
       // エラーオブジェクトの詳細を取得（parseErrorがTauriエラーを処理する）
       const errorInfo = parseError(error);
-      
+
       // エラーログを出力
       logger.error(`[safeInvoke] ✗ コマンドエラー: ${cmd}`, error, 'tauri');
-      
+
       if (debugLoggingEnabled) {
         // Tauriの構造化エラーをJSON形式で表示
         if (typeof error === 'object' && error !== null) {
           try {
-            logger.debug(`[safeInvoke] エラーオブジェクト (JSON): ${JSON.stringify(error, null, 2)}`);
+            logger.debug(
+              `[safeInvoke] エラーオブジェクト (JSON): ${JSON.stringify(error, null, 2)}`
+            );
           } catch {
             // JSON文字列化に失敗した場合は無視
           }
@@ -313,12 +350,12 @@ export async function safeInvoke<T = unknown>(
           logger.debug(`[safeInvoke] 技術的詳細:`, errorInfo.technicalDetails);
         }
       }
-      
+
       logError(errorInfo, `safeInvoke:${cmd}`);
-      
+
       // 開発環境では元のエラーメッセージも含める
       const finalMessage = errorInfo.message;
-      
+
       throw new Error(finalMessage);
     }
   }
@@ -348,7 +385,9 @@ export async function safeInvoke<T = unknown>(
       const data = (await response.json()) as FallbackInvokeResponse<T>;
 
       if ('error' in data && data.error) {
-        throw new Error(data.error.message || 'IPCフォールバックで未知のエラーが発生しました');
+        throw new Error(
+          data.error.message || 'IPCフォールバックで未知のエラーが発生しました'
+        );
       }
 
       if ('result' in data) {
@@ -357,14 +396,24 @@ export async function safeInvoke<T = unknown>(
 
       throw new Error('IPCフォールバックのレスポンス形式が不正です');
     } catch (error) {
-      logger.error(`[safeInvoke] フォールバック呼び出しでエラー発生: ${cmd}`, error, 'tauri');
+      logger.error(
+        `[safeInvoke] フォールバック呼び出しでエラー発生: ${cmd}`,
+        error,
+        'tauri'
+      );
       throw error instanceof Error
         ? error
-        : new Error(`IPCフォールバックで未知のエラーが発生しました: ${extractErrorMessage(error)}`);
+        : new Error(
+            `IPCフォールバックで未知のエラーが発生しました: ${extractErrorMessage(error)}`
+          );
     }
   }
 
-  logger.error('[safeInvoke] Tauri環境が利用できずフォールバックも無効です', undefined, 'tauri');
+  logger.error(
+    '[safeInvoke] Tauri環境が利用できずフォールバックも無効です',
+    undefined,
+    'tauri'
+  );
   throw new Error(
     'アプリケーションが正しく起動していません。Tauriアプリケーションを再起動するか、VITE_WEB_API_BASE_URL を設定してください。'
   );

@@ -1,6 +1,12 @@
 // ApiEdit - API編集ページ
 
-import React, { useState, useEffect, useTransition, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useTransition,
+  useMemo,
+  useCallback,
+} from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { ErrorMessage } from '../components/common/ErrorMessage';
@@ -65,32 +71,33 @@ export const ApiEdit: React.FC = () => {
   }, [t, settings.name, id]);
 
   // API設定を取得する操作
-  const loadApiSettingsOperation = useCallback(async (): Promise<ApiSettingsForm | null> => {
-    if (!id) {
-      return null;
-    }
+  const loadApiSettingsOperation =
+    useCallback(async (): Promise<ApiSettingsForm | null> => {
+      if (!id) {
+        return null;
+      }
 
-    // バックエンドのIPCコマンドを呼び出してAPI詳細を取得
-    const apiDetails = await safeInvoke<{
-      id: string;
-      name: string;
-      endpoint: string;
-      model_name: string;
-      port: number;
-      enable_auth: boolean;
-      status: string;
-      timeout_secs?: number | null;
-      created_at: string;
-      updated_at: string;
-    }>('get_api_details', { apiId: id });
+      // バックエンドのIPCコマンドを呼び出してAPI詳細を取得
+      const apiDetails = await safeInvoke<{
+        id: string;
+        name: string;
+        endpoint: string;
+        model_name: string;
+        port: number;
+        enable_auth: boolean;
+        status: string;
+        timeout_secs?: number | null;
+        created_at: string;
+        updated_at: string;
+      }>('get_api_details', { apiId: id });
 
-    return {
-      name: apiDetails.name,
-      port: apiDetails.port,
-      enableAuth: apiDetails.enable_auth,
-      timeout_secs: apiDetails.timeout_secs ?? null,
-    };
-  }, [id]);
+      return {
+        name: apiDetails.name,
+        port: apiDetails.port,
+        enableAuth: apiDetails.enable_auth,
+        timeout_secs: apiDetails.timeout_secs ?? null,
+      };
+    }, [id]);
 
   // 非同期操作フックを使用
   const {
@@ -180,7 +187,8 @@ export const ApiEdit: React.FC = () => {
 
     setConfirmDialog({
       isOpen: true,
-      message: 'APIキーを再生成すると、現在のAPIキーは無効になります。続行しますか？',
+      message:
+        'APIキーを再生成すると、現在のAPIキーは無効になります。続行しますか？',
       onConfirm: async () => {
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
         try {
@@ -202,7 +210,10 @@ export const ApiEdit: React.FC = () => {
           // 設定を再読み込みして反映
           loadApiSettings();
         } catch (err) {
-          const errorMessage = extractErrorMessage(err, 'APIキーの再生成に失敗しました');
+          const errorMessage = extractErrorMessage(
+            err,
+            'APIキーの再生成に失敗しました'
+          );
           showErrorNotification('APIキーの再生成に失敗しました', errorMessage);
           logger.error('APIキーの再生成に失敗しました', err, 'ApiEdit');
         } finally {
@@ -239,7 +250,10 @@ export const ApiEdit: React.FC = () => {
           navigate('/api/list');
           showSuccess('APIを削除しました');
         } catch (err) {
-          const errorMessage = extractErrorMessage(err, 'APIの削除に失敗しました');
+          const errorMessage = extractErrorMessage(
+            err,
+            'APIの削除に失敗しました'
+          );
           showErrorNotification('APIの削除に失敗しました', errorMessage);
           logger.error('APIの削除に失敗しました', err, 'ApiEdit');
         } finally {
@@ -284,11 +298,7 @@ export const ApiEdit: React.FC = () => {
         </header>
 
         {error && (
-              <ErrorMessage
-                message={error || ''}
-                type="api"
-                onClose={clearError}
-              />
+          <ErrorMessage message={error || ''} type="api" onClose={clearError} />
         )}
 
         <form
@@ -383,7 +393,8 @@ export const ApiEdit: React.FC = () => {
                 placeholder="未設定（グローバル設定を使用）"
               />
               <small className="form-hint">
-                1-600秒の範囲で指定してください。未設定の場合は設定画面のグローバルタイムアウト設定（デフォルト: 30秒）が使用されます。
+                1-600秒の範囲で指定してください。未設定の場合は設定画面のグローバルタイムアウト設定（デフォルト:
+                30秒）が使用されます。
               </small>
             </div>
           </div>

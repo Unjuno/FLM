@@ -88,7 +88,9 @@ const OllamaDetectionComponent: React.FC<OllamaDetectionProps> = ({
           </div>
         </div>
         {autoStatus === 'running' && (
-          <p className="auto-status-message">自動セットアップを実行しています...</p>
+          <p className="auto-status-message">
+            自動セットアップを実行しています...
+          </p>
         )}
         {autoStatus === 'completed' && !status?.running && (
           <p className="auto-status-message muted">
@@ -112,9 +114,7 @@ const OllamaDetectionComponent: React.FC<OllamaDetectionProps> = ({
                     </span>
                   )}
                 </div>
-                {step.message && (
-                  <p className="step-message">{step.message}</p>
-                )}
+                {step.message && <p className="step-message">{step.message}</p>}
               </div>
             ))}
           </div>

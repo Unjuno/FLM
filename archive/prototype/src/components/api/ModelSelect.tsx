@@ -134,9 +134,7 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
             ℹ️
           </span>
           <p>{t('modelSelect.empty')}</p>
-          <p className="empty-submessage">
-            {t('modelSelect.emptySubmessage')}
-          </p>
+          <p className="empty-submessage">{t('modelSelect.emptySubmessage')}</p>
           <button
             className="button primary"
             onClick={onCancel}
@@ -168,7 +166,9 @@ export const ModelSelect: React.FC<ModelSelectProps> = ({
                   }
                 }}
                 role="option"
-                aria-selected={selectedModelName === model.name ? "true" : "false"}
+                aria-selected={
+                  selectedModelName === model.name ? 'true' : 'false'
+                }
                 tabIndex={0}
                 aria-label={`モデル ${model.name}${selectedModelName === model.name ? '（選択中）' : ''}${model.size ? `、サイズ ${formatSize(model.size)}` : ''}${model.modified_at ? `、最終更新 ${new Date(model.modified_at).toLocaleDateString('ja-JP')}` : ''}`}
               >

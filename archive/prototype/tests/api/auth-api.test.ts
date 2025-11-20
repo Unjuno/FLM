@@ -171,10 +171,10 @@ describe('Authentication API Tests', () => {
       } catch (error) {
         console.warn('認証無効APIのテストをスキップ:', error);
         if (noAuthApiId) {
-          try {
-            await invoke('stop_api', { api_id: noAuthApiId });
-            await invoke('delete_api', { api_id: noAuthApiId });
-          } catch {}
+          await Promise.allSettled([
+            invoke('stop_api', { api_id: noAuthApiId }),
+            invoke('delete_api', { api_id: noAuthApiId }),
+          ]);
         }
       }
     }, 30000);

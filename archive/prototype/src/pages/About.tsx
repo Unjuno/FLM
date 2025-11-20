@@ -33,10 +33,13 @@ export const About: React.FC = () => {
   useGlobalKeyboardShortcuts();
 
   // パンくずリストの項目
-  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: 'このアプリについて' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(
+    () => [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: 'このアプリについて' },
+    ],
+    [t]
+  );
 
   // アプリケーション情報を取得
   useEffect(() => {
@@ -115,11 +118,11 @@ export const About: React.FC = () => {
           <section className="about-section">
             <h2 className="about-section-title">アプリケーション情報</h2>
             <div className="about-info-card">
-              <img 
-                src="/logo.png" 
-                alt="FLM" 
-                className="about-logo" 
-                width="64" 
+              <img
+                src="/logo.png"
+                alt="FLM"
+                className="about-logo"
+                width="64"
                 height="64"
                 aria-hidden="true"
               />

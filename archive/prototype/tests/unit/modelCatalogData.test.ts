@@ -140,18 +140,18 @@ describe('model catalog constants', () => {
       category: 'audio-generation',
       recommended: false,
     },
-    
+
     // 業界特化モデル追加（第3弾）
 
     // 軽量モデル追加（第3弾）
-    
+
     {
       name: 'micro-llm:latest',
       category: 'chat',
       recommended: true,
     },
     // マルチモーダル追加（第3弾）
-    
+
     {
       name: 'gen2:latest',
       category: 'image-generation',
@@ -182,11 +182,11 @@ describe('model catalog constants', () => {
     // ソフトウェア開発モデル
 
     // 検索・RAGモデル
-    
+
     // 感情・心理分析モデル
-    
+
     // ゲーム・エンターテインメントモデル
-    
+
     // その他特殊用途モデル
 
     {
@@ -194,9 +194,9 @@ describe('model catalog constants', () => {
       category: 'chat',
       recommended: true,
     },
-    
+
     // SEO・マーケティングモデル
-    
+
     // カスタマーサポートモデル
 
     // コード生成モデル（追加）
@@ -212,7 +212,7 @@ describe('model catalog constants', () => {
       recommended: true,
     },
     // 実用用途モデル
-    
+
     // その他追加モデル
     {
       name: 'phi-3:medium-4k',
@@ -230,7 +230,7 @@ describe('model catalog constants', () => {
       category: 'chat',
       recommended: true,
     },
-    
+
     {
       name: 'qwen2.5:7b',
       category: 'chat',
@@ -338,4 +338,3 @@ describe('model catalog constants', () => {
     }
   });
 });
-

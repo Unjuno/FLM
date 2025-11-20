@@ -85,10 +85,13 @@ export const Settings: React.FC = () => {
   };
 
   // パンくずリストの項目
-  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: t('settings.title') || '設定' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(
+    () => [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('settings.title') || '設定' },
+    ],
+    [t]
+  );
 
   if (loading) {
     return (
@@ -126,11 +129,7 @@ export const Settings: React.FC = () => {
 
         <div className="settings-content-wrapper">
           {error && (
-            <ErrorMessage
-              message={error}
-              type="general"
-              onClose={clearError}
-            />
+            <ErrorMessage message={error} type="general" onClose={clearError} />
           )}
 
           {successMessage && (

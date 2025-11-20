@@ -6,7 +6,7 @@
  * 指定した時間だけ待機するPromiseを返す
  * @param ms - 待機時間（ミリ秒）
  * @returns Promise<void>
- * 
+ *
  * @example
  * ```typescript
  * await delay(1000); // 1秒待機
@@ -31,9 +31,7 @@ export function withTimeout<T>(
   const timeoutPromise = new Promise<never>((_, reject) => {
     setTimeout(() => {
       reject(
-        new Error(
-          errorMessage || `操作がタイムアウトしました (${timeoutMs}ms)`
-        )
+        new Error(errorMessage || `操作がタイムアウトしました (${timeoutMs}ms)`)
       );
     }, timeoutMs);
   });
@@ -96,4 +94,3 @@ export class TimeoutManager {
     return this.timeouts.has(key);
   }
 }
-

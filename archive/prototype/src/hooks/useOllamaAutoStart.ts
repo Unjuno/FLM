@@ -46,7 +46,10 @@ export function useOllamaAutoStart(options: UseOllamaAutoStartOptions = {}) {
       );
 
       if (!status) {
-        logger.info('statusがnullのため、自動起動をスキップします', 'OllamaAutoStart');
+        logger.info(
+          'statusがnullのため、自動起動をスキップします',
+          'OllamaAutoStart'
+        );
         hasAttemptedStartRef.current = false;
         return;
       }
@@ -57,7 +60,10 @@ export function useOllamaAutoStart(options: UseOllamaAutoStartOptions = {}) {
       );
 
       if (status.running) {
-        logger.info('Ollamaは既に実行中です。フラグをリセットします', 'OllamaAutoStart');
+        logger.info(
+          'Ollamaは既に実行中です。フラグをリセットします',
+          'OllamaAutoStart'
+        );
         hasAttemptedStartRef.current = false;
         return;
       }
@@ -72,12 +78,18 @@ export function useOllamaAutoStart(options: UseOllamaAutoStartOptions = {}) {
       }
 
       if (isOllamaDetecting) {
-        logger.info('現在検出処理中のため、自動起動を保留します', 'OllamaAutoStart');
+        logger.info(
+          '現在検出処理中のため、自動起動を保留します',
+          'OllamaAutoStart'
+        );
         return;
       }
 
       if (hasAttemptedStartRef.current) {
-        logger.info('既に自動起動を試行中のため、今回はスキップします', 'OllamaAutoStart');
+        logger.info(
+          '既に自動起動を試行中のため、今回はスキップします',
+          'OllamaAutoStart'
+        );
         return;
       }
 
@@ -91,7 +103,10 @@ export function useOllamaAutoStart(options: UseOllamaAutoStartOptions = {}) {
           'OllamaAutoStart'
         );
         await start(ollamaPath || undefined);
-        logger.info('✓ Ollamaを自動起動しました。状態を再検出します', 'OllamaAutoStart');
+        logger.info(
+          '✓ Ollamaを自動起動しました。状態を再検出します',
+          'OllamaAutoStart'
+        );
 
         if (!cancelled) {
           await detect();
@@ -110,4 +125,3 @@ export function useOllamaAutoStart(options: UseOllamaAutoStartOptions = {}) {
     };
   }, [status, isOllamaDetecting, enabled, start, detect, handleError]);
 }
-

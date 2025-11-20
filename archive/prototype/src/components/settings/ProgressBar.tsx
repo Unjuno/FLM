@@ -16,10 +16,10 @@ interface ProgressBarProps {
 /**
  * プログレスバーコンポーネント（インラインスタイルなし）
  */
-export const ProgressBar: React.FC<ProgressBarProps> = ({ 
-  progress, 
+export const ProgressBar: React.FC<ProgressBarProps> = ({
+  progress,
   message,
-  className = 'settings-update-progress'
+  className = 'settings-update-progress',
 }) => {
   const progressRef = useRef<HTMLDivElement>(null);
 
@@ -44,9 +44,9 @@ export const ProgressBar: React.FC<ProgressBarProps> = ({
 /**
  * エンジン更新プログレスバーコンポーネント（インラインスタイルなし）
  */
-export const EngineProgressBar: React.FC<ProgressBarProps> = ({ 
-  progress, 
-  message 
+export const EngineProgressBar: React.FC<ProgressBarProps> = ({
+  progress,
+  message,
 }) => {
   const progressRef = useRef<HTMLDivElement>(null);
 
@@ -67,4 +67,3 @@ export const EngineProgressBar: React.FC<ProgressBarProps> = ({
     </div>
   );
 };
-

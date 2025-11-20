@@ -21,15 +21,22 @@ export interface DownloadProgress {
 /**
  * ダウンロードステータス
  */
-export type DownloadStatus = 'downloading' | 'paused' | 'verifying' | 'complete' | 'error';
+export type DownloadStatus =
+  | 'downloading'
+  | 'paused'
+  | 'verifying'
+  | 'complete'
+  | 'error';
 
 /**
  * モデルダウンロードロジックを管理するカスタムフック
  */
 export const useModelDownload = (onDownloadComplete?: () => void) => {
   const [downloadingModel, setDownloadingModel] = useState<string | null>(null);
-  const [downloadProgress, setDownloadProgress] = useState<DownloadProgress | null>(null);
-  const [downloadStatus, setDownloadStatus] = useState<DownloadStatus>('downloading');
+  const [downloadProgress, setDownloadProgress] =
+    useState<DownloadProgress | null>(null);
+  const [downloadStatus, setDownloadStatus] =
+    useState<DownloadStatus>('downloading');
 
   const downloadAbortControllerRef = useRef<AbortController | null>(null);
   const unsubscribeProgressRef = useRef<(() => void) | null>(null);
@@ -39,7 +46,9 @@ export const useModelDownload = (onDownloadComplete?: () => void) => {
   const handleDownload = useCallback(
     async (model: ModelInfo) => {
       if (!model.size) {
-        throw new Error('モデルサイズ情報がありません。このモデルは取得できません。');
+        throw new Error(
+          'モデルサイズ情報がありません。このモデルは取得できません。'
+        );
       }
 
       setDownloadingModel(model.name);
@@ -139,7 +148,9 @@ export const useModelDownload = (onDownloadComplete?: () => void) => {
         } else {
           finalStatus = 'error';
           setDownloadStatus('error');
-          throw new Error(`ダウンロードに失敗しました: ${extractErrorMessage(err, '不明なエラー')}`);
+          throw new Error(
+            `ダウンロードに失敗しました: ${extractErrorMessage(err, '不明なエラー')}`
+          );
         }
       } finally {
         // 完了またはエラー、一時停止以外の場合はクリーンアップ
@@ -160,7 +171,10 @@ export const useModelDownload = (onDownloadComplete?: () => void) => {
                 // ホットリロード時など、コールバックが見つからない場合は警告を抑制
                 if (process.env.NODE_ENV === 'development') {
                   // eslint-disable-next-line no-console
-                  console.debug('イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）', error);
+                  console.debug(
+                    'イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）',
+                    error
+                  );
                 }
               }
               unsubscribeProgressRef.current = null;
@@ -176,7 +190,10 @@ export const useModelDownload = (onDownloadComplete?: () => void) => {
                 // ホットリロード時など、コールバックが見つからない場合は警告を抑制
                 if (process.env.NODE_ENV === 'development') {
                   // eslint-disable-next-line no-console
-                  console.debug('イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）', error);
+                  console.debug(
+                    'イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）',
+                    error
+                  );
                 }
               }
               unsubscribeProgressRef.current = null;
@@ -209,7 +226,10 @@ export const useModelDownload = (onDownloadComplete?: () => void) => {
           // ホットリロード時など、コールバックが見つからない場合は警告を抑制
           if (process.env.NODE_ENV === 'development') {
             // eslint-disable-next-line no-console
-            console.debug('イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）', error);
+            console.debug(
+              'イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）',
+              error
+            );
           }
         }
         unsubscribeProgressRef.current = null;
@@ -220,16 +240,13 @@ export const useModelDownload = (onDownloadComplete?: () => void) => {
   }, [downloadingModel]);
 
   // ダウンロード再開（useCallbackでメモ化）
-  const handleResumeDownload = useCallback(
-    async () => {
-      if (pausedModelRef.current && downloadingModel) {
-        // 一時停止されたモデルでダウンロードを再開
-        // handleDownloadを呼び出すことで、既存のロジックを再利用
-        await handleDownload(pausedModelRef.current);
-      }
-    },
-    [downloadingModel, handleDownload]
-  );
+  const handleResumeDownload = useCallback(async () => {
+    if (pausedModelRef.current && downloadingModel) {
+      // 一時停止されたモデルでダウンロードを再開
+      // handleDownloadを呼び出すことで、既存のロジックを再利用
+      await handleDownload(pausedModelRef.current);
+    }
+  }, [downloadingModel, handleDownload]);
 
   // ダウンロードキャンセル（useCallbackでメモ化）
   const handleCancelDownload = useCallback(() => {
@@ -249,7 +266,10 @@ export const useModelDownload = (onDownloadComplete?: () => void) => {
         // ホットリロード時など、コールバックが見つからない場合は警告を抑制
         if (process.env.NODE_ENV === 'development') {
           // eslint-disable-next-line no-console
-          console.debug('イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）', error);
+          console.debug(
+            'イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）',
+            error
+          );
         }
       }
       unsubscribeProgressRef.current = null;
@@ -269,7 +289,10 @@ export const useModelDownload = (onDownloadComplete?: () => void) => {
           if (process.env.NODE_ENV === 'development') {
             // 開発環境では警告をログに記録するが、エラーとして扱わない
             // eslint-disable-next-line no-console
-            console.debug('イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）', error);
+            console.debug(
+              'イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）',
+              error
+            );
           }
         }
         unsubscribeProgressRef.current = null;
@@ -281,7 +304,10 @@ export const useModelDownload = (onDownloadComplete?: () => void) => {
           // AbortControllerのエラーも無視
           if (process.env.NODE_ENV === 'development') {
             // eslint-disable-next-line no-console
-            console.debug('AbortControllerのクリーンアップ中にエラーが発生しました（無視されます）', error);
+            console.debug(
+              'AbortControllerのクリーンアップ中にエラーが発生しました（無視されます）',
+              error
+            );
           }
         }
         downloadAbortControllerRef.current = null;
@@ -300,4 +326,3 @@ export const useModelDownload = (onDownloadComplete?: () => void) => {
     handleCancelDownload,
   };
 };
-

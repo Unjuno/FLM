@@ -60,7 +60,8 @@ export const ModelConverter: React.FC = () => {
 
     setConfirmDialog({
       isOpen: true,
-      message: 'モデル変換を開始しますか？この処理には時間がかかる場合があります。',
+      message:
+        'モデル変換を開始しますか？この処理には時間がかかる場合があります。',
       onConfirm: async () => {
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
         try {
@@ -91,7 +92,10 @@ export const ModelConverter: React.FC = () => {
           setOutputPath(path);
           showSuccess('モデル変換が完了しました');
         } catch (err) {
-          const errorMessage = extractErrorMessage(err, 'モデル変換に失敗しました');
+          const errorMessage = extractErrorMessage(
+            err,
+            'モデル変換に失敗しました'
+          );
           setError(errorMessage);
           showError(errorMessage);
         } finally {
@@ -162,7 +166,11 @@ export const ModelConverter: React.FC = () => {
       }
     } catch (err) {
       // エラーは静かに処理（手動入力にフォールバック）
-      logger.warn('ファイル選択ダイアログが利用できません', String(err), 'ModelConverter');
+      logger.warn(
+        'ファイル選択ダイアログが利用できません',
+        String(err),
+        'ModelConverter'
+      );
       showError(
         'ファイル選択ダイアログが利用できません。手動でパスを入力してください。'
       );
@@ -291,9 +299,12 @@ export const ModelConverter: React.FC = () => {
           <div className="progress-bar">
             <div
               className="progress-fill"
-              ref={(el) => {
+              ref={el => {
                 if (el) {
-                  el.style.setProperty('--progress-width', `${progress.progress}%`);
+                  el.style.setProperty(
+                    '--progress-width',
+                    `${progress.progress}%`
+                  );
                 }
               }}
             />

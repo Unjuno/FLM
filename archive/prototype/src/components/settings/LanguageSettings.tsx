@@ -24,19 +24,14 @@ export const LanguageSettings: React.FC<LanguageSettingsProps> = ({
   const { locale, t } = useI18n();
 
   return (
-    <section
-      className="settings-section"
-      aria-labelledby="language-heading"
-    >
+    <section className="settings-section" aria-labelledby="language-heading">
       <h2 id="language-heading" className="settings-section-title">
         {t('settings.language.title')}
       </h2>
       <div className="settings-group">
         <label htmlFor="language">
           {t('settings.language.label')}
-          <span className="settings-hint">
-            {t('settings.language.hint')}
-          </span>
+          <span className="settings-hint">{t('settings.language.hint')}</span>
         </label>
         <select
           id="language"
@@ -59,4 +54,3 @@ export const LanguageSettings: React.FC<LanguageSettingsProps> = ({
     </section>
   );
 };
-

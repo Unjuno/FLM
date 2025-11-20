@@ -8,9 +8,19 @@ import { renderHook, act } from '@testing-library/react';
 import { useForm, FormField } from '../../src/hooks/useForm';
 import { validate } from '../../src/utils/validation';
 
-// import.meta.envをモック（Jest環境用）
-// @ts-ignore
-global.import = {
+type GlobalWithImportMeta = typeof globalThis & {
+  import?: {
+    meta: {
+      env: {
+        DEV: boolean;
+      };
+    };
+  };
+};
+
+const importMetaMock = globalThis as GlobalWithImportMeta;
+
+importMetaMock.import = {
   meta: {
     env: {
       DEV: true,

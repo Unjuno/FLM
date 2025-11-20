@@ -31,7 +31,9 @@ jest.mock('../../src/contexts/NotificationContext', () => ({
     showWarning: jest.fn(),
     showError: jest.fn(),
   }),
-  NotificationProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  NotificationProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 
 // I18nContextをモック
@@ -41,7 +43,9 @@ jest.mock('../../src/contexts/I18nContext', () => ({
     locale: 'ja',
     setLocale: jest.fn(),
   }),
-  I18nProvider: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  I18nProvider: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 
 // useOllamaDetectionをモック

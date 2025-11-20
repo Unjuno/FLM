@@ -5,7 +5,7 @@ import { addToSet, removeFromSet } from '../utils/stateHelpers';
 
 /**
  * API選択状態管理用カスタムフック
- * 
+ *
  * @returns 選択状態と操作関数
  */
 export const useApiSelection = () => {
@@ -54,9 +54,12 @@ export const useApiSelection = () => {
   /**
    * 全選択状態かどうかを判定
    */
-  const isAllSelected = useCallback((totalCount: number): boolean => {
-    return selectedApiIds.size === totalCount && totalCount > 0;
-  }, [selectedApiIds]);
+  const isAllSelected = useCallback(
+    (totalCount: number): boolean => {
+      return selectedApiIds.size === totalCount && totalCount > 0;
+    },
+    [selectedApiIds]
+  );
 
   /**
    * 選択数を取得
@@ -73,4 +76,3 @@ export const useApiSelection = () => {
     isAllSelected,
   };
 };
-

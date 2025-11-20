@@ -344,7 +344,7 @@ export function canAutoFix(error: unknown): boolean {
   const errorInfo = parseError(error);
 
   switch (errorInfo.category) {
-    case ErrorCategory.OLLAMA:
+    case ErrorCategory.OLLAMA: {
       const errorMessage = errorInfo.message.toLowerCase();
       return (
         errorMessage.includes('見つかりません') ||
@@ -352,7 +352,8 @@ export function canAutoFix(error: unknown): boolean {
         errorMessage.includes('接続') ||
         errorMessage.includes('connection')
       );
-    case ErrorCategory.API:
+    }
+    case ErrorCategory.API: {
       const apiMessage = errorInfo.message.toLowerCase();
       return (
         (apiMessage.includes('port') &&
@@ -362,6 +363,7 @@ export function canAutoFix(error: unknown): boolean {
         apiMessage.includes('認証プロキシ') ||
         apiMessage.includes('auth proxy')
       );
+    }
     case ErrorCategory.MODEL:
     case ErrorCategory.NETWORK:
       return false; // モデルとネットワークエラーは自動修正不可

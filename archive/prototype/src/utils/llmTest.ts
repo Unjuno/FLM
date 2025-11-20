@@ -8,7 +8,7 @@ import { API_ENDPOINTS, HTTP_HEADERS } from '../constants/config';
 /**
  * エンドポイント文字列から実際のAPIリクエスト用のURLを抽出
  * 表示用の「または」を含む文字列から最初のURLを取得
- * 
+ *
  * @param endpoint エンドポイント文字列（例: "http://localhost:8083 または http://192.168.56.1:8083"）
  * @returns 実際のAPIリクエスト用のURL
  */
@@ -17,21 +17,27 @@ export function extractEndpointUrl(endpoint: string): string {
     logger.warn('エンドポイントが無効です', 'llmTest');
     return endpoint || '';
   }
-  
+
   // 「または」で分割して最初のURLを取得
   const parts = endpoint.split(' または ');
   let firstUrl = parts[0]?.trim() || '';
-  
+
   // 括弧内の説明文を除去（例: "(HTTP→HTTPS自動リダイレクト: ...)"）
   firstUrl = firstUrl.split(' (')[0].trim();
-  
+
   // URLの形式をチェック（http://またはhttps://で始まる）
-  if (firstUrl && (firstUrl.startsWith('http://') || firstUrl.startsWith('https://'))) {
+  if (
+    firstUrl &&
+    (firstUrl.startsWith('http://') || firstUrl.startsWith('https://'))
+  ) {
     // HTTPSエンドポイントをそのまま使用（自己署名証明書でも動作するように設定）
-    logger.debug(`エンドポイントを抽出: "${endpoint}" → "${firstUrl}"`, 'llmTest');
+    logger.debug(
+      `エンドポイントを抽出: "${endpoint}" → "${firstUrl}"`,
+      'llmTest'
+    );
     return firstUrl;
   }
-  
+
   // プロトコルが欠けている場合、ポート番号から推測して追加
   // 例: ":8082" または "localhost:8082" → "https://localhost:8082"
   if (firstUrl) {
@@ -54,35 +60,47 @@ export function extractEndpointUrl(endpoint: string): string {
             host = hostMatch[1];
           }
         }
-        
+
         // HTTPSエンドポイントとして構築
         const httpsUrl = `https://${host}:${port}`;
-        logger.debug(`エンドポイントを修正（プロトコル追加）: "${endpoint}" → "${httpsUrl}"`, 'llmTest');
+        logger.debug(
+          `エンドポイントを修正（プロトコル追加）: "${endpoint}" → "${httpsUrl}"`,
+          'llmTest'
+        );
         return httpsUrl;
       }
     }
-    
+
     // ポート番号のみの場合（例: "8082"）
     if (firstUrl.match(/^\d+$/)) {
       const port = parseInt(firstUrl, 10);
       if (port >= 8080 && port <= 65535) {
         const httpsUrl = `https://localhost:${port}`;
-        logger.debug(`エンドポイントを修正（プロトコルとホスト追加）: "${endpoint}" → "${httpsUrl}"`, 'llmTest');
+        logger.debug(
+          `エンドポイントを修正（プロトコルとホスト追加）: "${endpoint}" → "${httpsUrl}"`,
+          'llmTest'
+        );
         return httpsUrl;
       }
     }
-    
+
     // localhostまたはIPアドレスのみの場合
     if (firstUrl.match(/^(localhost|\d+\.\d+\.\d+\.\d+)$/)) {
       // デフォルトのHTTPSポート（8081）を使用
       const httpsUrl = `https://${firstUrl}:8081`;
-      logger.debug(`エンドポイントを修正（プロトコルとポート追加）: "${endpoint}" → "${httpsUrl}"`, 'llmTest');
+      logger.debug(
+        `エンドポイントを修正（プロトコルとポート追加）: "${endpoint}" → "${httpsUrl}"`,
+        'llmTest'
+      );
       return httpsUrl;
     }
   }
-  
+
   // URL形式でない場合はそのまま返す（エラーハンドリング）
-  logger.warn(`エンドポイントの抽出に失敗しました。元の値をそのまま使用: "${endpoint}"`, 'llmTest');
+  logger.warn(
+    `エンドポイントの抽出に失敗しました。元の値をそのまま使用: "${endpoint}"`,
+    'llmTest'
+  );
   return endpoint;
 }
 
@@ -110,7 +128,7 @@ export interface LLMTestOptions {
 
 /**
  * LLM APIにチャットリクエストを送信してテスト
- * 
+ *
  * @param options テストオプション
  * @returns テスト結果
  */
@@ -123,9 +141,13 @@ export async function testLLMExecution(
   try {
     // エンドポイント文字列から実際のURLを抽出
     const actualEndpoint = extractEndpointUrl(endpoint);
-    
+
     // エンドポイントが有効なURL形式か確認
-    if (!actualEndpoint || (!actualEndpoint.startsWith('http://') && !actualEndpoint.startsWith('https://'))) {
+    if (
+      !actualEndpoint ||
+      (!actualEndpoint.startsWith('http://') &&
+        !actualEndpoint.startsWith('https://'))
+    ) {
       logger.error(`無効なエンドポイントURL: "${actualEndpoint}"`, 'llmTest');
       return {
         success: false,
@@ -134,21 +156,26 @@ export async function testLLMExecution(
         error: `無効なエンドポイントURL: "${actualEndpoint}"。正しいURL形式（http://またはhttps://で始まる）を指定してください。`,
       };
     }
-    
+
     logger.info(`LLMテスト開始: ${actualEndpoint}`, 'llmTest');
-    logger.info(`モデル: ${modelName}, メッセージ: ${message.substring(0, 50)}...`, 'llmTest');
+    logger.info(
+      `モデル: ${modelName}, メッセージ: ${message.substring(0, 50)}...`,
+      'llmTest'
+    );
 
     const headers: Record<string, string> = {
       [HTTP_HEADERS.CONTENT_TYPE]: HTTP_HEADERS.CONTENT_TYPE_JSON,
     };
 
     if (apiKey) {
-      headers[HTTP_HEADERS.AUTHORIZATION] = `${HTTP_HEADERS.AUTHORIZATION_PREFIX}${apiKey}`;
+      headers[HTTP_HEADERS.AUTHORIZATION] =
+        `${HTTP_HEADERS.AUTHORIZATION_PREFIX}${apiKey}`;
     }
 
     // Tauri環境の場合はIPC経由でHTTPリクエストを送信（自己署名証明書の問題を回避）
-    const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-    
+    const isTauri =
+      typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+
     if (isTauri) {
       // IPC経由でHTTPリクエストを送信
       try {
@@ -163,9 +190,7 @@ export async function testLLMExecution(
             headers,
             body: JSON.stringify({
               model: modelName,
-              messages: [
-                { role: 'user', content: message }
-              ],
+              messages: [{ role: 'user', content: message }],
             }),
             timeout_secs: Math.floor(timeout / 1000),
           },
@@ -174,8 +199,12 @@ export async function testLLMExecution(
         // レスポンスを処理
         if (response.status >= 200 && response.status < 300) {
           const data = JSON.parse(response.body);
-          
-          if (!data.choices || !Array.isArray(data.choices) || data.choices.length === 0) {
+
+          if (
+            !data.choices ||
+            !Array.isArray(data.choices) ||
+            data.choices.length === 0
+          ) {
             return {
               success: false,
               responseTime: Date.now() - startTime,
@@ -220,7 +249,7 @@ export async function testLLMExecution(
           } catch {
             // JSON解析に失敗した場合はステータスコードのみ
           }
-          
+
           return {
             success: false,
             responseTime: Date.now() - startTime,
@@ -231,9 +260,16 @@ export async function testLLMExecution(
       } catch (ipcError) {
         const endTime = Date.now();
         const responseTime = endTime - startTime;
-        const errorMessage = ipcError instanceof Error ? ipcError.message : 'IPC経由のHTTPリクエストに失敗しました';
-        logger.error('LLMテスト失敗（IPC経由）', ipcError instanceof Error ? ipcError : new Error(String(ipcError)), 'llmTest');
-        
+        const errorMessage =
+          ipcError instanceof Error
+            ? ipcError.message
+            : 'IPC経由のHTTPリクエストに失敗しました';
+        logger.error(
+          'LLMテスト失敗（IPC経由）',
+          ipcError instanceof Error ? ipcError : new Error(String(ipcError)),
+          'llmTest'
+        );
+
         return {
           success: false,
           responseTime,
@@ -255,9 +291,7 @@ export async function testLLMExecution(
           headers,
           body: JSON.stringify({
             model: modelName,
-            messages: [
-              { role: 'user', content: message }
-            ],
+            messages: [{ role: 'user', content: message }],
           }),
           signal: controller.signal,
         }
@@ -286,7 +320,11 @@ export async function testLLMExecution(
 
       // レスポンスの構造を安全にチェック
       if (!data || !Array.isArray(data.choices) || data.choices.length === 0) {
-        logger.error('LLMテスト失敗: 無効なレスポンス', new Error('choicesが存在しません'), 'llmTest');
+        logger.error(
+          'LLMテスト失敗: 無効なレスポンス',
+          new Error('choicesが存在しません'),
+          'llmTest'
+        );
         return {
           success: false,
           responseTime,
@@ -301,7 +339,11 @@ export async function testLLMExecution(
         !firstChoice.message ||
         typeof firstChoice.message.content !== 'string'
       ) {
-        logger.error('LLMテスト失敗: 無効なレスポンス', new Error('message.contentが存在しません'), 'llmTest');
+        logger.error(
+          'LLMテスト失敗: 無効なレスポンス',
+          new Error('message.contentが存在しません'),
+          'llmTest'
+        );
         return {
           success: false,
           responseTime,
@@ -345,8 +387,13 @@ export async function testLLMExecution(
     const endTime = Date.now();
     const responseTime = endTime - startTime;
 
-    const errorMessage = err instanceof Error ? err.message : 'APIへのリクエストに失敗しました';
-    logger.error('LLMテスト失敗', err instanceof Error ? err : new Error(extractErrorMessage(err)), 'llmTest');
+    const errorMessage =
+      err instanceof Error ? err.message : 'APIへのリクエストに失敗しました';
+    logger.error(
+      'LLMテスト失敗',
+      err instanceof Error ? err : new Error(extractErrorMessage(err)),
+      'llmTest'
+    );
 
     // 接続エラーの詳細なメッセージ
     let detailedError = errorMessage;
@@ -364,7 +411,8 @@ export async function testLLMExecution(
         '3. ポート番号が正しいか確認してください（HTTPSポートは通常、HTTPポート+1です）\n' +
         '4. ファイアウォールがポートをブロックしていないか確認してください';
     } else if (errorMessage.includes('fetch')) {
-      detailedError = 'APIサーバーに接続できません。APIが起動しているか確認してください。';
+      detailedError =
+        'APIサーバーに接続できません。APIが起動しているか確認してください。';
     } else if (errorMessage.includes('CORS')) {
       detailedError = 'CORSエラーが発生しました。APIの設定を確認してください。';
     } else if (
@@ -391,7 +439,7 @@ export async function testLLMExecution(
 
 /**
  * 複数のメッセージでLLM APIをテスト
- * 
+ *
  * @param options テストオプション
  * @param messages テストメッセージの配列
  * @returns テスト結果の配列
@@ -420,7 +468,7 @@ export async function testLLMWithMultipleMessages(
 
 /**
  * API情報を取得してLLMテストを実行
- * 
+ *
  * @param apiId API ID
  * @param message テストメッセージ
  * @returns テスト結果
@@ -444,7 +492,7 @@ export async function testLLMByApiId(
       try {
         logger.info('APIが起動していないため、自動起動を試みます', 'llmTest');
         await safeInvoke('start_api', { apiId: apiId });
-        
+
         // 起動を待機（最大10秒）
         let retries = 0;
         const maxRetries = 20; // 0.5秒 × 20 = 10秒
@@ -453,7 +501,7 @@ export async function testLLMByApiId(
           const updatedDetails = await safeInvoke<{
             status: string;
           }>('get_api_details', { apiId: apiId });
-          
+
           if (updatedDetails.status === 'running') {
             logger.info('APIの自動起動に成功しました', 'llmTest');
             // 起動が確認できたので、API詳細を再取得
@@ -464,35 +512,43 @@ export async function testLLMByApiId(
               status: string;
               timeout_secs?: number | null;
             }>('get_api_details', { apiId: apiId });
-            
+
             // 起動したAPIでテストを実行
             return await testLLMExecution({
               endpoint: runningApiDetails.endpoint,
               apiKey: runningApiDetails.api_key || undefined,
               modelName: runningApiDetails.model_name,
               message,
-              timeout: runningApiDetails.timeout_secs 
-                ? runningApiDetails.timeout_secs * 1000 
+              timeout: runningApiDetails.timeout_secs
+                ? runningApiDetails.timeout_secs * 1000
                 : undefined,
             });
           }
           retries++;
         }
-        
+
         // 起動に失敗した場合
         return {
           success: false,
           responseTime: 0,
           message: '',
-          error: 'APIの自動起動に失敗しました。API一覧画面から手動で起動してください。',
+          error:
+            'APIの自動起動に失敗しました。API一覧画面から手動で起動してください。',
         };
       } catch (startError) {
-        logger.error('APIの自動起動中にエラーが発生しました', startError instanceof Error ? startError : new Error(String(startError)), 'llmTest');
+        logger.error(
+          'APIの自動起動中にエラーが発生しました',
+          startError instanceof Error
+            ? startError
+            : new Error(String(startError)),
+          'llmTest'
+        );
         return {
           success: false,
           responseTime: 0,
           message: '',
-          error: 'APIが起動していません。API一覧画面から手動で起動してから再度お試しください。',
+          error:
+            'APIが起動していません。API一覧画面から手動で起動してから再度お試しください。',
         };
       }
     }
@@ -521,7 +577,11 @@ export async function testLLMByApiId(
       timeout,
     });
   } catch (err) {
-    logger.error('API情報の取得に失敗', err instanceof Error ? err : new Error(extractErrorMessage(err)), 'llmTest');
+    logger.error(
+      'API情報の取得に失敗',
+      err instanceof Error ? err : new Error(extractErrorMessage(err)),
+      'llmTest'
+    );
     return {
       success: false,
       responseTime: 0,
@@ -530,4 +590,3 @@ export async function testLLMByApiId(
     };
   }
 }
-

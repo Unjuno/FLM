@@ -41,4 +41,3 @@ export function isTest(): boolean {
 export function isProd(): boolean {
   return getRuntimeMode() === 'production';
 }
-

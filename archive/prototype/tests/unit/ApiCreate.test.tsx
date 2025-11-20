@@ -58,9 +58,12 @@ describe('ApiCreate', () => {
       renderComponent();
     });
 
-    await waitFor(() => {
-      expect(screen.getByLabelText(/API名/i)).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByLabelText(/API名/i)).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
   });
 
   it('should handle form input', async () => {
@@ -68,9 +71,12 @@ describe('ApiCreate', () => {
       renderComponent();
     });
 
-    await waitFor(() => {
-      expect(screen.getByLabelText(/API名/i)).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByLabelText(/API名/i)).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     const nameInput = screen.getByLabelText(/API名/i);
     await act(async () => {
@@ -85,9 +91,12 @@ describe('ApiCreate', () => {
       renderComponent();
     });
 
-    await waitFor(() => {
-      expect(screen.getByLabelText(/API名/i)).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByLabelText(/API名/i)).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     const submitButton = screen.getByRole('button', { name: /作成/i });
     await act(async () => {
@@ -95,9 +104,12 @@ describe('ApiCreate', () => {
     });
 
     // バリデーションエラーが表示されることを確認（実際の実装に応じて調整）
-    await waitFor(() => {
-      expect(mockShowError).toHaveBeenCalled();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(mockShowError).toHaveBeenCalled();
+      },
+      { timeout: 5000 }
+    );
   });
 
   it('should handle API creation', async () => {
@@ -105,9 +117,12 @@ describe('ApiCreate', () => {
       renderComponent();
     });
 
-    await waitFor(() => {
-      expect(screen.getByLabelText(/API名/i)).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByLabelText(/API名/i)).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     const nameInput = screen.getByLabelText(/API名/i);
     const submitButton = screen.getByRole('button', { name: /作成/i });
@@ -118,9 +133,14 @@ describe('ApiCreate', () => {
     });
 
     // API作成が成功したことを確認
-    await waitFor(() => {
-      expect(safeInvoke).toHaveBeenCalledWith('create_api', expect.any(Object));
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(safeInvoke).toHaveBeenCalledWith(
+          'create_api',
+          expect.any(Object)
+        );
+      },
+      { timeout: 5000 }
+    );
   });
 });
-

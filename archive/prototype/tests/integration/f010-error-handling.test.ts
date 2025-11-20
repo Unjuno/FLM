@@ -20,7 +20,10 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
-import { cleanupTestApis, handleTauriAppNotRunningError } from '../setup/test-helpers';
+import {
+  cleanupTestApis,
+  handleTauriAppNotRunningError,
+} from '../setup/test-helpers';
 import { debugLog, debugWarn } from '../setup/debug';
 
 describe('F010 エラーハンドリングの改善 統合テスト', () => {
@@ -49,7 +52,6 @@ describe('F010 エラーハンドリングの改善 統合テスト', () => {
    */
   describe('1. エラーハンドリングの基本動作', () => {
     it('存在しないAPI IDでエラーが適切に処理される', async () => {
-
       // 存在しないAPI IDで詳細取得を試行
       await expect(
         invoke('get_api_details', {
@@ -72,7 +74,6 @@ describe('F010 エラーハンドリングの改善 統合テスト', () => {
     });
 
     it('無効なポート番号でエラーが適切に処理される', async () => {
-
       // 無効なポート番号（65536以上）でAPI作成を試行
       try {
         await invoke('create_api', {
@@ -95,7 +96,6 @@ describe('F010 エラーハンドリングの改善 統合テスト', () => {
     });
 
     it('既に使用されているポート番号でエラーが適切に処理される', async () => {
-
       // 最初のAPIを作成
       const firstApiId = await invoke<string>('create_api', {
         config: {
@@ -129,7 +129,6 @@ describe('F010 エラーハンドリングの改善 統合テスト', () => {
     });
 
     it('認証無効なAPIでAPIキー再生成時にエラーが適切に処理される', async () => {
-
       // 認証無効でAPIを作成
       const testApiId = await invoke<string>('create_api', {
         config: {
@@ -174,7 +173,6 @@ describe('F010 エラーハンドリングの改善 統合テスト', () => {
    */
   describe('2. エラーカテゴリ別の処理', () => {
     it('モデルエラーが適切に処理される', async () => {
-
       // 存在しないモデルでAPI作成を試行
       try {
         await invoke('create_api', {
@@ -197,7 +195,6 @@ describe('F010 エラーハンドリングの改善 統合テスト', () => {
     });
 
     it('データベースエラーが適切に処理される', async () => {
-
       // 無効なAPI IDで詳細取得を試行（データベースエラーが発生する可能性）
       try {
         await invoke('get_api_details', {
@@ -220,7 +217,6 @@ describe('F010 エラーハンドリングの改善 統合テスト', () => {
    */
   describe('3. エラーメッセージの形式', () => {
     it('エラーメッセージが非開発者向けに変換される', async () => {
-
       // 存在しないAPI IDで詳細取得を試行
       try {
         await invoke('get_api_details', {
@@ -237,7 +233,6 @@ describe('F010 エラーハンドリングの改善 統合テスト', () => {
     });
 
     it('エラーメッセージに具体的な情報が含まれる', async () => {
-
       // 認証無効なAPIでAPIキー再生成を試行
       const testApiId = await invoke<string>('create_api', {
         config: {
@@ -268,7 +263,6 @@ describe('F010 エラーハンドリングの改善 統合テスト', () => {
    */
   describe('4. 統合テスト: 複数のエラーケースの連続処理', () => {
     it('複数のエラーケースを連続して処理できる', async () => {
-
       const errors: string[] = [];
 
       // エラーケース1: 存在しないAPI ID

@@ -9,6 +9,7 @@ import {
   safeInvoke,
   checkTauriEnvironment,
 } from '../../src/utils/tauri';
+import { logger } from '../../src/utils/logger';
 
 // Tauri APIをモック
 const mockInvoke = jest.fn<(...args: unknown[]) => Promise<unknown>>();
@@ -183,10 +184,6 @@ describe('tauri.ts', () => {
   describe('checkTauriEnvironment関数', () => {
     it('Tauri環境が利用可能な場合、警告を表示しない', () => {
       checkTauriEnvironment('テスト機能');
-      // 警告が表示されないことを確認（logger.warnが呼ばれない）
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { logger } = require('../../src/utils/logger');
       expect(logger.warn).not.toHaveBeenCalled();
     });
 
@@ -208,9 +205,6 @@ describe('tauri.ts', () => {
       mockIsDev.mockReturnValue(false);
 
       checkTauriEnvironment('テスト機能');
-
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { logger } = require('../../src/utils/logger');
       expect(logger.warn).not.toHaveBeenCalled();
     });
 

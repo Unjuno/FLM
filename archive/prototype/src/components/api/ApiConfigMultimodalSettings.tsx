@@ -26,7 +26,9 @@ export interface ApiConfigMultimodalSettingsProps {
  * マルチモーダル設定セクション
  * 画像・音声・動画処理機能の設定
  */
-export const ApiConfigMultimodalSettings: React.FC<ApiConfigMultimodalSettingsProps> = ({
+export const ApiConfigMultimodalSettings: React.FC<
+  ApiConfigMultimodalSettingsProps
+> = ({
   multimodal,
   model,
   onMultimodalSettingChange,
@@ -262,4 +264,3 @@ export const ApiConfigMultimodalSettings: React.FC<ApiConfigMultimodalSettingsPr
     </div>
   );
 };
-

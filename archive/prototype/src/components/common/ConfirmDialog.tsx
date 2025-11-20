@@ -52,9 +52,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
         if (confirmButtonRef.current) {
           confirmButtonRef.current.focus();
         } else if (dialogRef.current) {
-          const focusableElements = dialogRef.current.querySelectorAll<HTMLElement>(
-            'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-          );
+          const focusableElements =
+            dialogRef.current.querySelectorAll<HTMLElement>(
+              'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+            );
           if (focusableElements.length > 0) {
             focusableElements[0].focus();
           }
@@ -81,9 +82,10 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
       if (event.key !== 'Tab') return;
 
-      const focusableElements = dialogRef.current!.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
+      const focusableElements =
+        dialogRef.current!.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
 
       if (focusableElements.length === 0) return;
 
@@ -111,6 +113,27 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     };
   }, [handleDialogDismiss, isOpen]);
 
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+      if (
+        dialogRef.current &&
+        !dialogRef.current.contains(event.target as Node)
+      ) {
+        handleDialogDismiss();
+      }
+    };
+
+    document.addEventListener('mousedown', handlePointerDown);
+    document.addEventListener('touchstart', handlePointerDown);
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown);
+      document.removeEventListener('touchstart', handlePointerDown);
+    };
+  }, [handleDialogDismiss, isOpen]);
+
   if (!isOpen) return null;
 
   const handleConfirmClick = () => {
@@ -130,21 +153,13 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
   const confirmButtonClassName = `confirm-button confirm ${confirmVariant}`;
 
   return (
-    <div
-      className="confirm-dialog-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-dialog-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          handleDialogDismiss();
-        }
-      }}
-    >
+    <div className="confirm-dialog-overlay">
       <div
         ref={dialogRef}
         className="confirm-dialog"
-        role="document"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="confirm-dialog-title"
       >
         <h3 id="confirm-dialog-title">{title}</h3>
         <p>{message}</p>

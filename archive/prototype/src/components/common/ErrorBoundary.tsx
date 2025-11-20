@@ -157,11 +157,11 @@ export class ErrorBoundary extends Component<
         <div className="error-boundary">
           <div className="error-boundary-container">
             <div className="error-boundary-header">
-              <img 
-                src="/logo.png" 
-                alt="FLM" 
-                className="error-boundary-logo" 
-                width="48" 
+              <img
+                src="/logo.png"
+                alt="FLM"
+                className="error-boundary-logo"
+                width="48"
                 height="48"
                 aria-hidden="true"
               />

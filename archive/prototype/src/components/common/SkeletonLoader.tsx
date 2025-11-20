@@ -69,16 +69,22 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
 
   // カスタムスタイル（CSS変数を使用してCSPに準拠）
   const customStyleRef = React.useRef<HTMLDivElement>(null);
-  
+
   React.useEffect(() => {
     if (customStyleRef.current) {
       if (width) {
         const widthValue = typeof width === 'number' ? `${width}px` : width;
-        customStyleRef.current.style.setProperty('--skeleton-width', widthValue);
+        customStyleRef.current.style.setProperty(
+          '--skeleton-width',
+          widthValue
+        );
       }
       if (height) {
         const heightValue = typeof height === 'number' ? `${height}px` : height;
-        customStyleRef.current.style.setProperty('--skeleton-height', heightValue);
+        customStyleRef.current.style.setProperty(
+          '--skeleton-height',
+          heightValue
+        );
       }
     }
   }, [width, height]);
@@ -101,7 +107,11 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
   const renderParagraph = () => (
     <div className="skeleton-paragraph-container" aria-hidden="true">
       {Array.from({ length: count }).map((_, index) => (
-        <div key={index} className={skeletonClassName} ref={index === 0 ? customStyleRef : undefined}>
+        <div
+          key={index}
+          className={skeletonClassName}
+          ref={index === 0 ? customStyleRef : undefined}
+        >
           <span className="skeleton-shimmer"></span>
         </div>
       ))}
@@ -267,4 +277,3 @@ export const SkeletonLoader: React.FC<SkeletonLoaderProps> = ({
       return renderText();
   }
 };
-
