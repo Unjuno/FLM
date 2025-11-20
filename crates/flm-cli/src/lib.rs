@@ -7,4 +7,3 @@ pub mod db;
 
 // Re-export for convenience
 pub use adapters::{SqliteConfigRepository, SqliteSecurityRepository};
-

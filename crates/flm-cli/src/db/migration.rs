@@ -12,7 +12,7 @@ use std::str::FromStr;
 /// the current working directory and going up to find the workspace root.
 fn find_migrations_path() -> Result<PathBuf, RepoError> {
     let current_dir = std::env::current_dir().map_err(|e| RepoError::IoError {
-        reason: format!("Failed to get current directory: {}", e),
+        reason: format!("Failed to get current directory: {e}"),
     })?;
 
     // Try common paths relative to workspace root
@@ -50,7 +50,7 @@ pub async fn migrate_config_db<P: AsRef<Path>>(db_path: P) -> Result<(), RepoErr
 
     let options = SqliteConnectOptions::from_str(path_str)
         .map_err(|e| RepoError::IoError {
-            reason: format!("Invalid database path: {}", e),
+            reason: format!("Invalid database path: {e}"),
         })?
         .create_if_missing(true);
 
@@ -59,23 +59,24 @@ pub async fn migrate_config_db<P: AsRef<Path>>(db_path: P) -> Result<(), RepoErr
         .connect_with(options)
         .await
         .map_err(|e| RepoError::IoError {
-            reason: format!("Failed to connect to config.db: {}", e),
+            reason: format!("Failed to connect to config.db: {e}"),
         })?;
 
     // Run migrations from flm-core/migrations directory
     // Find migrations path relative to workspace root
     let migrations_path = find_migrations_path()?;
-    let migrator = Migrator::new(&*migrations_path)
-        .await
-        .map_err(|e| RepoError::MigrationFailed {
-            reason: format!("Failed to create migrator: {}", e),
-        })?;
+    let migrator =
+        Migrator::new(&*migrations_path)
+            .await
+            .map_err(|e| RepoError::MigrationFailed {
+                reason: format!("Failed to create migrator: {e}"),
+            })?;
 
     migrator
         .run(&pool)
         .await
         .map_err(|e| RepoError::MigrationFailed {
-            reason: format!("Config DB migration failed: {}", e),
+            reason: format!("Config DB migration failed: {e}"),
         })?;
 
     Ok(())
@@ -98,7 +99,7 @@ pub async fn migrate_security_db<P: AsRef<Path>>(db_path: P) -> Result<(), RepoE
 
     let options = SqliteConnectOptions::from_str(path_str)
         .map_err(|e| RepoError::IoError {
-            reason: format!("Invalid database path: {}", e),
+            reason: format!("Invalid database path: {e}"),
         })?
         .create_if_missing(true);
 
@@ -107,25 +108,25 @@ pub async fn migrate_security_db<P: AsRef<Path>>(db_path: P) -> Result<(), RepoE
         .connect_with(options)
         .await
         .map_err(|e| RepoError::IoError {
-            reason: format!("Failed to connect to security.db: {}", e),
+            reason: format!("Failed to connect to security.db: {e}"),
         })?;
 
     // Run migrations from flm-core/migrations directory
     // Find migrations path relative to workspace root
     let migrations_path = find_migrations_path()?;
-    let migrator = Migrator::new(&*migrations_path)
-        .await
-        .map_err(|e| RepoError::MigrationFailed {
-            reason: format!("Failed to create migrator: {}", e),
-        })?;
+    let migrator =
+        Migrator::new(&*migrations_path)
+            .await
+            .map_err(|e| RepoError::MigrationFailed {
+                reason: format!("Failed to create migrator: {e}"),
+            })?;
 
     migrator
         .run(&pool)
         .await
         .map_err(|e| RepoError::MigrationFailed {
-            reason: format!("Security DB migration failed: {}", e),
+            reason: format!("Security DB migration failed: {e}"),
         })?;
 
     Ok(())
 }
-

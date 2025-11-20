@@ -30,7 +30,7 @@ impl SqliteSecurityRepository {
 
         let options = SqliteConnectOptions::from_str(path_str)
             .map_err(|e| RepoError::IoError {
-                reason: format!("Invalid database path: {}", e),
+                reason: format!("Invalid database path: {e}"),
             })?
             .create_if_missing(true);
 
@@ -39,7 +39,7 @@ impl SqliteSecurityRepository {
             .connect_with(options)
             .await
             .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to connect to security.db: {}", e),
+                reason: format!("Failed to connect to security.db: {e}"),
             })?;
 
         // Run migrations
@@ -72,7 +72,7 @@ impl SecurityRepository for SqliteSecurityRepository {
             .execute(&self.pool)
             .await
             .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to save API key: {}", e),
+                reason: format!("Failed to save API key: {e}"),
             })?;
 
             Ok(())
@@ -92,16 +92,18 @@ impl SecurityRepository for SqliteSecurityRepository {
             .fetch_optional(&self.pool)
             .await
             .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to fetch API key: {}", e),
+                reason: format!("Failed to fetch API key: {e}"),
             })?;
 
-            Ok(row.map(|(id, label, hash, created_at, revoked_at)| ApiKeyRecord {
-                id,
-                label,
-                hash,
-                created_at,
-                revoked_at,
-            }))
+            Ok(
+                row.map(|(id, label, hash, created_at, revoked_at)| ApiKeyRecord {
+                    id,
+                    label,
+                    hash,
+                    created_at,
+                    revoked_at,
+                }),
+            )
         })
     }
 
@@ -117,7 +119,7 @@ impl SecurityRepository for SqliteSecurityRepository {
             .fetch_all(&self.pool)
             .await
             .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to list API keys: {}", e),
+                reason: format!("Failed to list API keys: {e}"),
             })?;
 
             Ok(rows
@@ -145,7 +147,7 @@ impl SecurityRepository for SqliteSecurityRepository {
                 .execute(&self.pool)
                 .await
                 .map_err(|e| RepoError::IoError {
-                    reason: format!("Failed to revoke API key: {}", e),
+                    reason: format!("Failed to revoke API key: {e}"),
                 })?;
 
             Ok(())
@@ -167,7 +169,7 @@ impl SecurityRepository for SqliteSecurityRepository {
             .execute(&self.pool)
             .await
             .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to save policy: {}", e),
+                reason: format!("Failed to save policy: {e}"),
             })?;
 
             Ok(())
@@ -187,7 +189,7 @@ impl SecurityRepository for SqliteSecurityRepository {
             .fetch_optional(&self.pool)
             .await
             .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to fetch policy: {}", e),
+                reason: format!("Failed to fetch policy: {e}"),
             })?;
 
             Ok(row.map(|(id, policy_json, updated_at)| SecurityPolicy {
@@ -210,7 +212,7 @@ impl SecurityRepository for SqliteSecurityRepository {
             .fetch_all(&self.pool)
             .await
             .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to list policies: {}", e),
+                reason: format!("Failed to list policies: {e}"),
             })?;
 
             Ok(rows
@@ -224,4 +226,3 @@ impl SecurityRepository for SqliteSecurityRepository {
         })
     }
 }
-

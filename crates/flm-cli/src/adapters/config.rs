@@ -29,7 +29,7 @@ impl SqliteConfigRepository {
 
         let options = SqliteConnectOptions::from_str(path_str)
             .map_err(|e| RepoError::IoError {
-                reason: format!("Invalid database path: {}", e),
+                reason: format!("Invalid database path: {e}"),
             })?
             .create_if_missing(true);
 
@@ -38,7 +38,7 @@ impl SqliteConfigRepository {
             .connect_with(options)
             .await
             .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to connect to config.db: {}", e),
+                reason: format!("Failed to connect to config.db: {e}"),
             })?;
 
         // Run migrations
@@ -61,15 +61,13 @@ impl ConfigRepository for SqliteConfigRepository {
         })?;
 
         rt.block_on(async {
-            let row = sqlx::query_as::<_, (String,)>(
-                "SELECT value FROM settings WHERE key = ?",
-            )
-            .bind(key)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to get config: {}", e),
-            })?;
+            let row = sqlx::query_as::<_, (String,)>("SELECT value FROM settings WHERE key = ?")
+                .bind(key)
+                .fetch_optional(&self.pool)
+                .await
+                .map_err(|e| RepoError::IoError {
+                    reason: format!("Failed to get config: {e}"),
+                })?;
 
             Ok(row.map(|r| r.0))
         })
@@ -89,7 +87,7 @@ impl ConfigRepository for SqliteConfigRepository {
             .execute(&self.pool)
             .await
             .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to set config: {}", e),
+                reason: format!("Failed to set config: {e}"),
             })?;
 
             Ok(())
@@ -108,11 +106,10 @@ impl ConfigRepository for SqliteConfigRepository {
             .fetch_all(&self.pool)
             .await
             .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to list config: {}", e),
+                reason: format!("Failed to list config: {e}"),
             })?;
 
             Ok(rows)
         })
     }
 }
-
