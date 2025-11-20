@@ -8,6 +8,11 @@ import { render, screen, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { ModelSelection } from '../../src/components/api/ModelSelection';
 
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => jest.fn(),
+}));
+
 // Tauri IPCをモック
 const mockSafeInvoke = jest.fn();
 jest.mock('../../src/utils/tauri', () => ({
@@ -49,7 +54,22 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
-    mockSafeInvoke.mockResolvedValue({ models: [] });
+    mockSafeInvoke.mockImplementation((command: string) => {
+      if (command === 'get_available_engines') {
+        return Promise.resolve(['ollama']);
+      }
+      if (command === 'detect_engine') {
+        return Promise.resolve({
+          engine_type: 'ollama',
+          installed: true,
+          running: true,
+        });
+      }
+      if (command === 'get_ollama_models') {
+        return Promise.resolve({ models: [] });
+      }
+      return Promise.resolve({ models: [] });
+    });
     mockStartOllama.mockResolvedValue(undefined);
   });
 

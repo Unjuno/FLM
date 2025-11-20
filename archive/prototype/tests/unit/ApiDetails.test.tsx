@@ -79,9 +79,12 @@ describe('ApiDetails', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
     });
 
-    await waitFor(() => {
-      expect(screen.getByText('Test API')).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText('Test API')).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
   });
 
   it('should handle copy sample code', async () => {
@@ -93,9 +96,12 @@ describe('ApiDetails', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
     });
 
-    await waitFor(() => {
-      expect(screen.getByText('Test API')).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText('Test API')).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     // サンプルコードのコピーボタンを探す（タブが表示されている場合）
     const copyButtons = screen.queryAllByLabelText(/copy/i);
@@ -104,9 +110,12 @@ describe('ApiDetails', () => {
         await userEvent.click(copyButtons[0]);
       });
 
-      await waitFor(() => {
-        expect(mockShowSuccess).toHaveBeenCalled();
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(mockShowSuccess).toHaveBeenCalled();
+        },
+        { timeout: 5000 }
+      );
     }
   });
 
@@ -119,9 +128,12 @@ describe('ApiDetails', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
     });
 
-    await waitFor(() => {
-      expect(screen.getByText('Test API')).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText('Test API')).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     // APIキーを表示するボタンを探す
     const showKeyButton = screen.queryByText(/apiキーを表示/i);
@@ -131,9 +143,15 @@ describe('ApiDetails', () => {
       });
 
       // get_api_keyコマンドが呼ばれることを確認
-      await waitFor(() => {
-        expect(safeInvoke).toHaveBeenCalledWith('get_api_key', expect.any(Object));
-      }, { timeout: 5000 });
+      await waitFor(
+        () => {
+          expect(safeInvoke).toHaveBeenCalledWith(
+            'get_api_key',
+            expect.any(Object)
+          );
+        },
+        { timeout: 5000 }
+      );
     }
   });
 
@@ -146,9 +164,12 @@ describe('ApiDetails', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
     });
 
-    await waitFor(() => {
-      expect(screen.getByText('Test API')).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText('Test API')).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     // 編集ボタンを探す
     const editButton = screen.queryByText(/編集/i);
@@ -159,4 +180,3 @@ describe('ApiDetails', () => {
     }
   });
 });
-

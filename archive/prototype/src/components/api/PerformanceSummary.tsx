@@ -54,20 +54,20 @@ export const PerformanceSummary: React.FC<PerformanceSummaryProps> = ({
   refreshInterval = REFRESH_INTERVALS.PERFORMANCE,
 }) => {
   // サマリーを取得する非同期操作
-  const loadSummaryOperation = useCallback(async (): Promise<PerformanceSummary | null> => {
-    if (!apiId) {
-      return null;
-    }
+  const loadSummaryOperation =
+    useCallback(async (): Promise<PerformanceSummary | null> => {
+      if (!apiId) {
+        return null;
+      }
 
-    const request = {
-      api_id: apiId,
-      period: period,
-    };
-    return await safeInvoke<PerformanceSummary>(
-      'get_performance_summary',
-      { request }
-    );
-  }, [apiId, period]);
+      const request = {
+        api_id: apiId,
+        period: period,
+      };
+      return await safeInvoke<PerformanceSummary>('get_performance_summary', {
+        request,
+      });
+    }, [apiId, period]);
 
   // 非同期操作フックを使用
   const {

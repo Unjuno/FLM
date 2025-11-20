@@ -64,4 +64,3 @@ export function areStatusRecordsEqual(
   // すべてのキーが存在し、値が等しいかチェック
   return prevKeys.every(key => prev[key] === next[key]);
 }
-

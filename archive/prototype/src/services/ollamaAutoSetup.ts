@@ -92,10 +92,7 @@ export async function autoSetupOllama(
     onStepUpdate?.(steps);
   };
 
-  const setStep = (
-    id: AutoSetupStepId,
-    patch: Partial<AutoSetupStepState>
-  ) => {
+  const setStep = (id: AutoSetupStepId, patch: Partial<AutoSetupStepState>) => {
     steps = updateStep(steps, id, patch);
     emitUpdate();
   };
@@ -242,7 +239,9 @@ export async function autoSetupOllama(
     };
   } catch (error) {
     const message =
-      error instanceof Error ? error.message : 'Ollamaの自動セットアップに失敗しました';
+      error instanceof Error
+        ? error.message
+        : 'Ollamaの自動セットアップに失敗しました';
 
     // 最後にエラーになったステップを更新
     const runningStep = steps.find(step => step.status === 'running');
@@ -268,4 +267,3 @@ export async function autoSetupOllama(
     }
   }
 }
-

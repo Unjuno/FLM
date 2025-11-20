@@ -9,7 +9,7 @@ import { useForm, FormField } from '../../src/hooks/useForm';
 import { validate } from '../../src/utils/validation';
 
 // import.meta.envをモック（Jest環境用）
-// @ts-ignore
+// @ts-expect-error Node test environment does not provide import.meta
 global.import = {
   meta: {
     env: {

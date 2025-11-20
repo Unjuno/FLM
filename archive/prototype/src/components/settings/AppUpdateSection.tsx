@@ -27,10 +27,7 @@ export const AppUpdateSection: React.FC = () => {
   } = useAppUpdate({ autoCheck: false, showNotification: false });
 
   return (
-    <section
-      className="settings-section"
-      aria-labelledby="app-update-heading"
-    >
+    <section className="settings-section" aria-labelledby="app-update-heading">
       <h2 id="app-update-heading" className="settings-section-title">
         {t('settings.appUpdate.title') || 'アプリケーションアップデート'}
       </h2>
@@ -55,21 +52,19 @@ export const AppUpdateSection: React.FC = () => {
             )}
           </div>
           {error && (
-            <ErrorMessage
-              message={error}
-              type="api"
-              onClose={() => {}}
-            />
+            <ErrorMessage message={error} type="api" onClose={() => {}} />
           )}
           {progress && (
-            <ProgressBar 
+            <ProgressBar
               progress={progress.progress}
               message={progress.message ?? undefined}
             />
           )}
           {releaseNotes && updateAvailable && (
             <div className="settings-release-notes">
-              <h3>{t('settings.appUpdate.releaseNotes') || 'リリースノート'}</h3>
+              <h3>
+                {t('settings.appUpdate.releaseNotes') || 'リリースノート'}
+              </h3>
               <div className="settings-release-notes-content">
                 {releaseNotes}
               </div>
@@ -96,7 +91,8 @@ export const AppUpdateSection: React.FC = () => {
             >
               {installing
                 ? t('settings.appUpdate.installing') || 'インストール中...'
-                : t('settings.appUpdate.install') || 'アップデートをインストール'}
+                : t('settings.appUpdate.install') ||
+                  'アップデートをインストール'}
             </button>
           )}
         </div>
@@ -104,4 +100,3 @@ export const AppUpdateSection: React.FC = () => {
     </section>
   );
 };
-

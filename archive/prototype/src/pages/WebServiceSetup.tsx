@@ -41,10 +41,13 @@ export const WebServiceSetup: React.FC = () => {
   useGlobalKeyboardShortcuts();
 
   // パンくずリストの項目
-  const breadcrumbItems: BreadcrumbItem[] = React.useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: t('webServiceSetup.title') || 'Webサービスセットアップ' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = React.useMemo(
+    () => [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('webServiceSetup.title') || 'Webサービスセットアップ' },
+    ],
+    [t]
+  );
 
   // システムリソースを取得
   const loadSystemResources = useCallback(async () => {
@@ -193,7 +196,10 @@ export const WebServiceSetup: React.FC = () => {
             if (!mergedConfig.model_parameters) {
               mergedConfig.model_parameters = {};
             }
-            const modelParams = mergedConfig.model_parameters as Record<string, unknown>;
+            const modelParams = mergedConfig.model_parameters as Record<
+              string,
+              unknown
+            >;
             modelParams.memory = selectedModel.config.memory;
           }
 
@@ -332,14 +338,33 @@ export const WebServiceSetup: React.FC = () => {
                   <select
                     id="category"
                     value={requirements.category || ''}
-                    aria-label={t('webServiceSetup.category') || 'カテゴリを選択'}
+                    aria-label={
+                      t('webServiceSetup.category') || 'カテゴリを選択'
+                    }
                     onChange={e => {
                       const value = e.target.value;
-                      const validCategories = ['chat', 'code', 'translation', 'summarization', 'qa', 'vision', 'audio', 'multimodal', 'image-generation', 'audio-generation', 'embedding', 'video-generation', 'other'];
+                      const validCategories = [
+                        'chat',
+                        'code',
+                        'translation',
+                        'summarization',
+                        'qa',
+                        'vision',
+                        'audio',
+                        'multimodal',
+                        'image-generation',
+                        'audio-generation',
+                        'embedding',
+                        'video-generation',
+                        'other',
+                      ];
                       if (value === '' || validCategories.includes(value)) {
                         setRequirements({
                           ...requirements,
-                          category: value === '' ? undefined : value as WebServiceRequirements['category'],
+                          category:
+                            value === ''
+                              ? undefined
+                              : (value as WebServiceRequirements['category']),
                         });
                       }
                     }}

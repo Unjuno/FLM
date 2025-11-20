@@ -1,6 +1,12 @@
 // InstalledModelsList - インストール済みモデル一覧コンポーネント
 
-import React, { useState, useEffect, useMemo, useCallback, useTransition } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useMemo,
+  useCallback,
+  useTransition,
+} from 'react';
 import { safeInvoke } from '../../utils/tauri';
 import { useNotifications } from '../../contexts/NotificationContext';
 import { extractErrorMessage } from '../../utils/errorHandler';
@@ -174,10 +180,7 @@ export const InstalledModelsList: React.FC<InstalledModelsListProps> = ({
             await loadInstalledModels();
           } catch (err) {
             const errorMessage = extractErrorMessage(err, '不明なエラー');
-            showErrorNotification(
-              '削除エラー',
-              errorMessage
-            );
+            showErrorNotification('削除エラー', errorMessage);
           }
         },
         onCancel: () => {

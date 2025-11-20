@@ -1,6 +1,6 @@
 // LogDelete - ログ削除コンポーネント
 
-import React, { useState, useTransition, useEffect } from 'react';
+import React, { useState, useTransition } from 'react';
 import { safeInvoke } from '../../utils/tauri';
 import { Tooltip } from '../common/Tooltip';
 import { logger } from '../../utils/logger';
@@ -173,7 +173,11 @@ export const LogDelete: React.FC<LogDeleteProps> = ({
                 });
               }}
               disabled={
-                deleting || !apiId || !beforeDate || confirmText !== '削除' || isPending
+                deleting ||
+                !apiId ||
+                !beforeDate ||
+                confirmText !== '削除' ||
+                isPending
               }
               className="delete-button"
             >

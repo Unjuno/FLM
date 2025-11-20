@@ -10,7 +10,9 @@ interface ApiListEmptyStateProps {
 /**
  * APIが存在しない場合に表示する空状態コンポーネント
  */
-export const ApiListEmptyState: React.FC<ApiListEmptyStateProps> = ({ onCreate }) => {
+export const ApiListEmptyState: React.FC<ApiListEmptyStateProps> = ({
+  onCreate,
+}) => {
   const { t } = useI18n();
 
   return (
@@ -24,5 +26,3 @@ export const ApiListEmptyState: React.FC<ApiListEmptyStateProps> = ({ onCreate }
     </div>
   );
 };
-
-

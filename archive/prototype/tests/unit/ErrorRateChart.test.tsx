@@ -5,24 +5,24 @@
  */
 
 // ResizeObserverをモック（テスト実行前に設定が必要）
-// @ts-ignore
+// @ts-expect-error jsdom does not provide ResizeObserver
 if (
   typeof global !== 'undefined' &&
   typeof global.ResizeObserver === 'undefined'
 ) {
-  // @ts-ignore
+  // @ts-expect-error jsdom does not provide ResizeObserver
   global.ResizeObserver = class ResizeObserver {
     observe() {}
     unobserve() {}
     disconnect() {}
   };
 }
-// @ts-ignore
+// @ts-expect-error jsdom does not provide ResizeObserver
 if (
   typeof window !== 'undefined' &&
   typeof window.ResizeObserver === 'undefined'
 ) {
-  // @ts-ignore
+  // @ts-expect-error jsdom does not provide ResizeObserver
   window.ResizeObserver = class ResizeObserver {
     observe() {}
     unobserve() {}

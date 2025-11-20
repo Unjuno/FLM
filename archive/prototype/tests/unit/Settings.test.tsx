@@ -136,9 +136,7 @@ describe('Settings.tsx - ユニットテスト', () => {
     return render(
       <BrowserRouter>
         <ThemeProvider>
-          <I18nProvider>
-            {component}
-          </I18nProvider>
+          <I18nProvider>{component}</I18nProvider>
         </ThemeProvider>
       </BrowserRouter>
     );

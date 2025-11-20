@@ -2,7 +2,11 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
-import { cleanupTestApis, handleTauriAppNotRunningError, checkTauriAvailable } from '../setup/test-helpers';
+import {
+  cleanupTestApis,
+  handleTauriAppNotRunningError,
+  checkTauriAvailable,
+} from '../setup/test-helpers';
 import { debugLog, debugWarn } from '../setup/debug';
 
 /**
@@ -15,12 +19,15 @@ describe('コード生成モデル API テスト', () => {
 
   const codeGenerationModels = [
     { name: 'codellama:7b', description: 'CodeLlama 7B - コード生成モデル' },
-    { name: 'deepseek-coder:latest', description: 'DeepSeek Coder - コード生成モデル' },
+    {
+      name: 'deepseek-coder:latest',
+      description: 'DeepSeek Coder - コード生成モデル',
+    },
   ];
 
   beforeAll(async () => {
     debugLog('コード生成モデルAPIテストを開始します');
-    
+
     try {
       const result = await invoke<{
         id: string;
@@ -44,10 +51,15 @@ describe('コード生成モデル API テスト', () => {
       await new Promise(resolve => setTimeout(resolve, 3000));
     } catch (error) {
       if (handleTauriAppNotRunningError(error)) {
-        debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+        debugWarn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
-      debugWarn('コード生成API作成に失敗したため、このテストをスキップします:', error);
+      debugWarn(
+        'コード生成API作成に失敗したため、このテストをスキップします:',
+        error
+      );
     }
   });
 
@@ -66,7 +78,9 @@ describe('コード生成モデル API テスト', () => {
 
       const isTauriAvailable = await checkTauriAvailable();
       if (!isTauriAvailable) {
-        debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+        debugWarn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
@@ -83,14 +97,18 @@ describe('コード生成モデル API テスト', () => {
 
     it('コード生成モデルでチャットAPIが動作すること', async () => {
       if (!apiEndpoint || !apiKey) {
-        debugWarn('APIエンドポイントまたはAPIキーが設定されていないため、スキップします');
+        debugWarn(
+          'APIエンドポイントまたはAPIキーが設定されていないため、スキップします'
+        );
         expect(true).toBe(true);
         return;
       }
 
       const isTauriAvailable = await checkTauriAvailable();
       if (!isTauriAvailable) {
-        debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+        debugWarn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
@@ -125,15 +143,19 @@ describe('コード生成モデル API テスト', () => {
     it('コード生成モデルのカテゴリが正しく設定されていること', async () => {
       const isTauriAvailable = await checkTauriAvailable();
       if (!isTauriAvailable) {
-        debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+        debugWarn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
 
-      const models = await invoke<Array<{
-        name: string;
-        category?: string;
-      }>>('search_models', {
+      const models = await invoke<
+        Array<{
+          name: string;
+          category?: string;
+        }>
+      >('search_models', {
         engineType: 'ollama',
         category: 'code',
         limit: 10,
@@ -142,11 +164,8 @@ describe('コード生成モデル API テスト', () => {
       expect(models).toBeDefined();
       expect(Array.isArray(models)).toBe(true);
 
-      const codeModels = models.filter(
-        m => m.category === 'code'
-      );
+      const codeModels = models.filter(m => m.category === 'code');
       expect(codeModels.length).toBeGreaterThan(0);
     }, 10000);
   });
 });
-

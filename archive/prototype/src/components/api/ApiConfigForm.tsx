@@ -80,7 +80,9 @@ const ApiConfigFormComponent: React.FC<ApiConfigFormProps> = ({
         <ApiConfigBasicSettings
           config={config}
           errors={errors}
-          onConfigChange={(updates: Partial<ApiConfig>) => setConfig({ ...config, ...updates })}
+          onConfigChange={(updates: Partial<ApiConfig>) =>
+            setConfig({ ...config, ...updates })
+          }
           availableEngines={availableEngines}
           loadingEngines={loadingEngines}
           nameSuggesting={nameSuggesting}
@@ -99,7 +101,9 @@ const ApiConfigFormComponent: React.FC<ApiConfigFormProps> = ({
           errors={errors}
           onParameterChange={updateModelParameter}
           showAdvancedParams={showAdvancedParams}
-          onToggleAdvancedParams={() => setShowAdvancedParams(!showAdvancedParams)}
+          onToggleAdvancedParams={() =>
+            setShowAdvancedParams(!showAdvancedParams)
+          }
         />
 
         {/* メモリ・リソース設定セクション */}
@@ -108,21 +112,23 @@ const ApiConfigFormComponent: React.FC<ApiConfigFormProps> = ({
           errors={errors}
           onMemorySettingChange={updateMemorySetting}
           showMemorySettings={showMemorySettings}
-          onToggleMemorySettings={() => setShowMemorySettings(!showMemorySettings)}
+          onToggleMemorySettings={() =>
+            setShowMemorySettings(!showMemorySettings)
+          }
           onReset={() => {
-                    setConfig({
-                      ...config,
-                      modelParameters: {
-                        ...config.modelParameters,
-                        memory: {
-                          batch_size: MEMORY_SETTINGS.BATCH_SIZE.DEFAULT,
-                          use_mmap: true,
-                          use_mlock: false,
-                          low_mem: false,
-                        },
-                      },
-                    });
-                  }}
+            setConfig({
+              ...config,
+              modelParameters: {
+                ...config.modelParameters,
+                memory: {
+                  batch_size: MEMORY_SETTINGS.BATCH_SIZE.DEFAULT,
+                  use_mmap: true,
+                  use_mlock: false,
+                  low_mem: false,
+                },
+              },
+            });
+          }}
         />
 
         {/* マルチモーダル機能設定セクション */}
@@ -133,30 +139,24 @@ const ApiConfigFormComponent: React.FC<ApiConfigFormProps> = ({
           onMultimodalSettingChange={updateMultimodalSetting}
           showMultimodalSettings={showMultimodalSettings}
           onToggleMultimodalSettings={() =>
-                    setShowMultimodalSettings(!showMultimodalSettings)
-                  }
+            setShowMultimodalSettings(!showMultimodalSettings)
+          }
           onReset={() => {
-                        setConfig({
-                          ...config,
-                          multimodal: {
-                            enableVision: model.capabilities?.vision || false,
-                            enableAudio: model.capabilities?.audio || false,
-                            enableVideo: model.capabilities?.video || false,
+            setConfig({
+              ...config,
+              multimodal: {
+                enableVision: model.capabilities?.vision || false,
+                enableAudio: model.capabilities?.audio || false,
+                enableVideo: model.capabilities?.video || false,
                 maxImageSize: MULTIMODAL_SETTINGS.MAX_IMAGE_SIZE.DEFAULT,
                 maxAudioSize: MULTIMODAL_SETTINGS.MAX_AUDIO_SIZE.DEFAULT,
                 maxVideoSize: MULTIMODAL_SETTINGS.MAX_VIDEO_SIZE.DEFAULT,
-                            supportedImageFormats: [
-                              'jpg',
-                              'jpeg',
-                              'png',
-                              'gif',
-                              'webp',
-                            ],
-                            supportedAudioFormats: ['mp3', 'wav', 'ogg', 'm4a'],
-                            supportedVideoFormats: ['mp4', 'webm', 'mov'],
-                          },
-                        });
-                      }}
+                supportedImageFormats: ['jpg', 'jpeg', 'png', 'gif', 'webp'],
+                supportedAudioFormats: ['mp3', 'wav', 'ogg', 'm4a'],
+                supportedVideoFormats: ['mp4', 'webm', 'mov'],
+              },
+            });
+          }}
         />
 
         <div className="form-actions">
@@ -173,14 +173,18 @@ const ApiConfigFormComponent: React.FC<ApiConfigFormProps> = ({
 };
 
 // メモ化して不要な再レンダリングを防ぐ
-export const ApiConfigForm = React.memo(ApiConfigFormComponent, (prevProps, nextProps) => {
-  // プロップスが実際に変更された場合のみ再レンダリング
-  return (
-    prevProps.model.name === nextProps.model.name &&
-    prevProps.defaultConfig.name === nextProps.defaultConfig.name &&
-    prevProps.defaultConfig.port === nextProps.defaultConfig.port &&
-    prevProps.defaultConfig.engineType === nextProps.defaultConfig.engineType &&
-    prevProps.onSubmit === nextProps.onSubmit &&
-    prevProps.onBack === nextProps.onBack
-  );
-});
+export const ApiConfigForm = React.memo(
+  ApiConfigFormComponent,
+  (prevProps, nextProps) => {
+    // プロップスが実際に変更された場合のみ再レンダリング
+    return (
+      prevProps.model.name === nextProps.model.name &&
+      prevProps.defaultConfig.name === nextProps.defaultConfig.name &&
+      prevProps.defaultConfig.port === nextProps.defaultConfig.port &&
+      prevProps.defaultConfig.engineType ===
+        nextProps.defaultConfig.engineType &&
+      prevProps.onSubmit === nextProps.onSubmit &&
+      prevProps.onBack === nextProps.onBack
+    );
+  }
+);

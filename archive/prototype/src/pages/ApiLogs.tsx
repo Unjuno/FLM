@@ -1,6 +1,13 @@
 // ApiLogs - ログ一覧ページ
 
-import React, { useState, useEffect, useCallback, useMemo, useTransition, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+  useTransition,
+  useRef,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { AppLayout } from '../components/layout/AppLayout';
@@ -94,8 +101,10 @@ export const ApiLogs: React.FC = () => {
         return prev;
       });
     } catch (err) {
-      const errorMessage =
-        extractErrorMessage(err, t('apiLogs.messages.loadError'));
+      const errorMessage = extractErrorMessage(
+        err,
+        t('apiLogs.messages.loadError')
+      );
       logger.error(t('apiLogs.messages.loadError'), err, 'ApiLogs');
       setError(errorMessage);
       setLoading(false);
@@ -175,7 +184,10 @@ export const ApiLogs: React.FC = () => {
         setTotalLogs(result.total_count);
         setLogs(result.logs);
       } catch (err) {
-        const errorMessage = extractErrorMessage(err, 'ログの取得に失敗しました');
+        const errorMessage = extractErrorMessage(
+          err,
+          'ログの取得に失敗しました'
+        );
         logger.error('ログの取得に失敗しました', err, 'ApiLogs');
         setError(errorMessage);
         setLogs([]);
@@ -330,17 +342,20 @@ export const ApiLogs: React.FC = () => {
   }, [logs]);
 
   // フィルタ変更ハンドラ
-  const handleFilterChange = useCallback((newFilter: LogFilterState) => {
-    setFilter(newFilter);
-    setCurrentPage(1); // フィルタ変更時はページをリセット
-    
-    // タブの状態をフィルタに合わせて更新
-    if (newFilter.errorsOnly && activeTab !== 'errors') {
-      setActiveTab('errors');
-    } else if (!newFilter.errorsOnly && activeTab !== 'all') {
-      setActiveTab('all');
-    }
-  }, [activeTab]);
+  const handleFilterChange = useCallback(
+    (newFilter: LogFilterState) => {
+      setFilter(newFilter);
+      setCurrentPage(1); // フィルタ変更時はページをリセット
+
+      // タブの状態をフィルタに合わせて更新
+      if (newFilter.errorsOnly && activeTab !== 'errors') {
+        setActiveTab('errors');
+      } else if (!newFilter.errorsOnly && activeTab !== 'all') {
+        setActiveTab('all');
+      }
+    },
+    [activeTab]
+  );
 
   // ページネーション計算（useMemoでメモ化）
   const { totalPages, startPage, endPage } = useMemo(() => {
@@ -400,25 +415,53 @@ export const ApiLogs: React.FC = () => {
                 <table className="logs-table">
                   <thead>
                     <tr>
-                      <th><SkeletonLoader type="text" width="60px" /></th>
-                      <th><SkeletonLoader type="text" width="80px" /></th>
-                      <th><SkeletonLoader type="text" width="200px" /></th>
-                      <th><SkeletonLoader type="text" width="80px" /></th>
-                      <th><SkeletonLoader type="text" width="100px" /></th>
-                      <th><SkeletonLoader type="text" width="80px" /></th>
-                      <th><SkeletonLoader type="text" width="150px" /></th>
+                      <th>
+                        <SkeletonLoader type="text" width="60px" />
+                      </th>
+                      <th>
+                        <SkeletonLoader type="text" width="80px" />
+                      </th>
+                      <th>
+                        <SkeletonLoader type="text" width="200px" />
+                      </th>
+                      <th>
+                        <SkeletonLoader type="text" width="80px" />
+                      </th>
+                      <th>
+                        <SkeletonLoader type="text" width="100px" />
+                      </th>
+                      <th>
+                        <SkeletonLoader type="text" width="80px" />
+                      </th>
+                      <th>
+                        <SkeletonLoader type="text" width="150px" />
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
                     {Array.from({ length: 10 }).map((_, index) => (
                       <tr key={index}>
-                        <td><SkeletonLoader type="text" width="60px" /></td>
-                        <td><SkeletonLoader type="text" width="80px" /></td>
-                        <td><SkeletonLoader type="text" width="200px" /></td>
-                        <td><SkeletonLoader type="text" width="80px" /></td>
-                        <td><SkeletonLoader type="text" width="100px" /></td>
-                        <td><SkeletonLoader type="text" width="80px" /></td>
-                        <td><SkeletonLoader type="text" width="150px" /></td>
+                        <td>
+                          <SkeletonLoader type="text" width="60px" />
+                        </td>
+                        <td>
+                          <SkeletonLoader type="text" width="80px" />
+                        </td>
+                        <td>
+                          <SkeletonLoader type="text" width="200px" />
+                        </td>
+                        <td>
+                          <SkeletonLoader type="text" width="80px" />
+                        </td>
+                        <td>
+                          <SkeletonLoader type="text" width="100px" />
+                        </td>
+                        <td>
+                          <SkeletonLoader type="text" width="80px" />
+                        </td>
+                        <td>
+                          <SkeletonLoader type="text" width="150px" />
+                        </td>
                       </tr>
                     ))}
                   </tbody>
@@ -457,7 +500,9 @@ export const ApiLogs: React.FC = () => {
                   className={`auto-refresh-toggle ${autoRefresh ? 'active' : ''}`}
                   onClick={() => setAutoRefresh(!autoRefresh)}
                 >
-                  {autoRefresh ? t('apiLogs.autoRefresh.on') : t('apiLogs.autoRefresh.off')}
+                  {autoRefresh
+                    ? t('apiLogs.autoRefresh.on')
+                    : t('apiLogs.autoRefresh.off')}
                 </button>
               </Tooltip>
               <Tooltip content={t('apiLogs.refreshTooltip')}>
@@ -560,7 +605,10 @@ export const ApiLogs: React.FC = () => {
                   <LogDelete
                     apiId={selectedApiId}
                     onDeleteComplete={count => {
-                      logger.info(t('apiLogs.messages.deleteComplete', { count }), 'ApiLogs');
+                      logger.info(
+                        t('apiLogs.messages.deleteComplete', { count }),
+                        'ApiLogs'
+                      );
                       // ログ一覧を再読み込み
                       if (selectedApiId) {
                         loadLogs(selectedApiId, currentPage);
@@ -613,25 +661,41 @@ export const ApiLogs: React.FC = () => {
               </div>
             ) : (
               <>
-                <div className="logs-info" role="status" aria-live="polite" aria-atomic="false">
+                <div
+                  className="logs-info"
+                  role="status"
+                  aria-live="polite"
+                  aria-atomic="false"
+                >
                   <p>
                     {t('apiLogs.info.total', { total: totalLogs })}{' '}
-                    {t('apiLogs.info.matched', { count: filteredLogs.length > 0 ? filteredLogs.length : 0 })}
+                    {t('apiLogs.info.matched', {
+                      count: filteredLogs.length > 0 ? filteredLogs.length : 0,
+                    })}
                     {filteredLogs.length !== logs.length && (
                       <span className="filter-indicator">
                         {' '}
-                        {t('apiLogs.info.filtered', { total: logs.length, filtered: filteredLogs.length })}
+                        {t('apiLogs.info.filtered', {
+                          total: logs.length,
+                          filtered: filteredLogs.length,
+                        })}
                       </span>
                     )}
                   </p>
                 </div>
-                <div 
+                <div
                   className="logs-table-container virtual-scroll-container"
-                  ref={(el) => {
+                  ref={el => {
                     parentRef.current = el;
                     if (el) {
-                      el.style.setProperty('--virtual-height', shouldUseVirtualScroll ? '600px' : 'auto');
-                      el.style.setProperty('--virtual-overflow', shouldUseVirtualScroll ? 'auto' : 'visible');
+                      el.style.setProperty(
+                        '--virtual-height',
+                        shouldUseVirtualScroll ? '600px' : 'auto'
+                      );
+                      el.style.setProperty(
+                        '--virtual-overflow',
+                        shouldUseVirtualScroll ? 'auto' : 'visible'
+                      );
                     }
                   }}
                 >
@@ -648,13 +712,21 @@ export const ApiLogs: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody
-                      ref={(el) => {
+                      ref={el => {
                         if (el && shouldUseVirtualScroll) {
-                          el.style.setProperty('--virtual-height', `${rowVirtualizer.getTotalSize()}px`);
-                          el.style.setProperty('--virtual-position', 'relative');
+                          el.style.setProperty(
+                            '--virtual-height',
+                            `${rowVirtualizer.getTotalSize()}px`
+                          );
+                          el.style.setProperty(
+                            '--virtual-position',
+                            'relative'
+                          );
                         }
                       }}
-                      className={shouldUseVirtualScroll ? 'virtual-scroll-container' : ''}
+                      className={
+                        shouldUseVirtualScroll ? 'virtual-scroll-container' : ''
+                      }
                     >
                       {shouldUseVirtualScroll
                         ? rowVirtualizer.getVirtualItems().map(virtualRow => {
@@ -663,13 +735,22 @@ export const ApiLogs: React.FC = () => {
                               <tr
                                 key={log.id}
                                 className="log-row log-row-clickable virtual-scroll-item"
-                                ref={(el) => {
+                                ref={el => {
                                   if (el) {
                                     el.style.setProperty('--virtual-top', '0');
                                     el.style.setProperty('--virtual-left', '0');
-                                    el.style.setProperty('--virtual-width', '100%');
-                                    el.style.setProperty('--virtual-height', `${virtualRow.size}px`);
-                                    el.style.setProperty('--virtual-transform', `translateY(${virtualRow.start}px)`);
+                                    el.style.setProperty(
+                                      '--virtual-width',
+                                      '100%'
+                                    );
+                                    el.style.setProperty(
+                                      '--virtual-height',
+                                      `${virtualRow.size}px`
+                                    );
+                                    el.style.setProperty(
+                                      '--virtual-transform',
+                                      `translateY(${virtualRow.start}px)`
+                                    );
                                   }
                                 }}
                                 onClick={() => {
@@ -679,7 +760,10 @@ export const ApiLogs: React.FC = () => {
                                 }}
                               >
                                 <td className="log-id">
-                                  {log.id.substring(0, DISPLAY_LIMITS.LOG_ID_LENGTH)}
+                                  {log.id.substring(
+                                    0,
+                                    DISPLAY_LIMITS.LOG_ID_LENGTH
+                                  )}
                                   ...
                                 </td>
                                 <td>
@@ -723,58 +807,61 @@ export const ApiLogs: React.FC = () => {
                             );
                           })
                         : displayedLogs.map(log => (
-                        <tr
-                          key={log.id}
-                          className="log-row log-row-clickable"
-                          onClick={() => {
-                            startTransition(() => {
-                              handleLogClick(log);
-                            });
-                          }}
-                        >
-                          <td className="log-id">
-                            {log.id.substring(0, DISPLAY_LIMITS.LOG_ID_LENGTH)}
-                            ...
-                          </td>
-                          <td>
-                            <span
-                              className={`method-badge method-${getMethodColor(log.method)}`}
+                            <tr
+                              key={log.id}
+                              className="log-row log-row-clickable"
+                              onClick={() => {
+                                startTransition(() => {
+                                  handleLogClick(log);
+                                });
+                              }}
                             >
-                              {log.method}
-                            </span>
-                          </td>
-                          <td className="log-path">{log.path}</td>
-                          <td>
-                            <span
-                              className={`status-badge status-${getStatusColor(log.response_status)}`}
-                            >
-                              {getStatusText(log.response_status)}
-                            </span>
-                          </td>
-                          <td className="log-response-time">
-                            {formatResponseTime(log.response_time_ms)}
-                          </td>
-                          <td className="log-error">
-                            {log.error_message ? (
-                              <span
-                                className="error-indicator"
-                                title={log.error_message}
-                              >
-                                {log.error_message.substring(
+                              <td className="log-id">
+                                {log.id.substring(
                                   0,
-                                  DISPLAY_LIMITS.ERROR_MESSAGE_LENGTH
+                                  DISPLAY_LIMITS.LOG_ID_LENGTH
                                 )}
                                 ...
-                              </span>
-                            ) : (
-                              '-'
-                            )}
-                          </td>
-                          <td className="log-datetime">
-                            {formatDateTime(log.created_at)}
-                          </td>
-                        </tr>
-                      ))}
+                              </td>
+                              <td>
+                                <span
+                                  className={`method-badge method-${getMethodColor(log.method)}`}
+                                >
+                                  {log.method}
+                                </span>
+                              </td>
+                              <td className="log-path">{log.path}</td>
+                              <td>
+                                <span
+                                  className={`status-badge status-${getStatusColor(log.response_status)}`}
+                                >
+                                  {getStatusText(log.response_status)}
+                                </span>
+                              </td>
+                              <td className="log-response-time">
+                                {formatResponseTime(log.response_time_ms)}
+                              </td>
+                              <td className="log-error">
+                                {log.error_message ? (
+                                  <span
+                                    className="error-indicator"
+                                    title={log.error_message}
+                                  >
+                                    {log.error_message.substring(
+                                      0,
+                                      DISPLAY_LIMITS.ERROR_MESSAGE_LENGTH
+                                    )}
+                                    ...
+                                  </span>
+                                ) : (
+                                  '-'
+                                )}
+                              </td>
+                              <td className="log-datetime">
+                                {formatDateTime(log.created_at)}
+                              </td>
+                            </tr>
+                          ))}
                     </tbody>
                   </table>
                 </div>

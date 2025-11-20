@@ -24,7 +24,9 @@ jest.mock('../../src/utils/env', () => ({
 import { LogLevel, logger } from '../../src/utils/logger';
 
 // console.info, console.error, console.warn, console.debugをモック
-const mockConsoleInfo = jest.spyOn(console, 'info').mockImplementation(() => {});
+const mockConsoleInfo = jest
+  .spyOn(console, 'info')
+  .mockImplementation(() => {});
 const mockConsoleError = jest
   .spyOn(console, 'error')
   .mockImplementation(() => {});

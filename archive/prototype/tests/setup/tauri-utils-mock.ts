@@ -26,4 +26,3 @@ export const isTauriAvailable = (): boolean => {
     typeof (window as any).__TAURI__ !== 'undefined'
   );
 };
-

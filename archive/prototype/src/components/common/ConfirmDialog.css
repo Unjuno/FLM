@@ -6,7 +6,6 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -14,7 +13,23 @@
   padding: var(--spacing-md);
 }
 
+.confirm-dialog-backdrop {
+  position: absolute;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  border: none;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.confirm-dialog-backdrop:focus-visible {
+  outline: none;
+}
+
 .confirm-dialog {
+  position: relative;
+  z-index: 1;
   background-color: var(--color-bg-primary, #ffffff);
   border-radius: var(--radius-lg, 0.75rem);
   padding: var(--spacing-xl, 2rem);

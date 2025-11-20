@@ -36,10 +36,13 @@ export const OllamaSetup: React.FC = () => {
   const [downloadError, setDownloadError] = useState<string | null>(null);
 
   // パンくずリストの項目
-  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: t('ollamaSetup.title') || 'Ollamaセットアップ' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(
+    () => [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('ollamaSetup.title') || 'Ollamaセットアップ' },
+    ],
+    [t]
+  );
 
   const isRunning = Boolean(status?.running);
 
@@ -67,7 +70,11 @@ export const OllamaSetup: React.FC = () => {
   const handleRetry = useCallback(() => {
     setDownloadError(null);
     runAutoSetup().catch(err => {
-      logger.error('[OllamaSetup] 自動セットアップ再実行エラー', err instanceof Error ? err : new Error(extractErrorMessage(err)), 'OllamaSetup');
+      logger.error(
+        '[OllamaSetup] 自動セットアップ再実行エラー',
+        err instanceof Error ? err : new Error(extractErrorMessage(err)),
+        'OllamaSetup'
+      );
     });
   }, [runAutoSetup]);
 
@@ -82,7 +89,8 @@ export const OllamaSetup: React.FC = () => {
         <Breadcrumb items={breadcrumbItems} />
         <h1>{t('ollamaSetup.title') || 'Ollamaセットアップ'}</h1>
         <p className="setup-description">
-          {t('ollamaSetup.description') || 'FLMを使用するには、Ollamaが必要です。Ollamaを検出しています...'}
+          {t('ollamaSetup.description') ||
+            'FLMを使用するには、Ollamaが必要です。Ollamaを検出しています...'}
         </p>
 
         {/* 検出画面 */}
@@ -99,7 +107,10 @@ export const OllamaSetup: React.FC = () => {
             />
             {/* 検出エラーが発生した場合、または手動ダウンロードボタンを表示 */}
             {(detectionError ||
-              (!isDetecting && status && !status.installed && !status.portable) ||
+              (!isDetecting &&
+                status &&
+                !status.installed &&
+                !status.portable) ||
               autoStatus === 'error') && (
               <div className="setup-actions">
                 <button

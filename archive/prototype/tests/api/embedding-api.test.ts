@@ -2,7 +2,11 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
-import { cleanupTestApis, handleTauriAppNotRunningError, checkTauriAvailable } from '../setup/test-helpers';
+import {
+  cleanupTestApis,
+  handleTauriAppNotRunningError,
+  checkTauriAvailable,
+} from '../setup/test-helpers';
 import { debugLog, debugWarn } from '../setup/debug';
 
 /**
@@ -12,13 +16,16 @@ describe('埋め込みモデル API テスト', () => {
   let createdApiId: string | null = null;
 
   const embeddingModels = [
-    { name: 'nomic-embed-text:latest', description: 'Nomic Embed - 埋め込みモデル' },
+    {
+      name: 'nomic-embed-text:latest',
+      description: 'Nomic Embed - 埋め込みモデル',
+    },
     { name: 'bge-large:latest', description: 'BGE Large - 埋め込みモデル' },
   ];
 
   beforeAll(async () => {
     debugLog('埋め込みモデルAPIテストを開始します');
-    
+
     try {
       const result = await invoke<{
         id: string;
@@ -37,10 +44,15 @@ describe('埋め込みモデル API テスト', () => {
       createdApiId = result.id;
     } catch (error) {
       if (handleTauriAppNotRunningError(error)) {
-        debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+        debugWarn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
-      debugWarn('埋め込みAPI作成に失敗したため、このテストをスキップします:', error);
+      debugWarn(
+        '埋め込みAPI作成に失敗したため、このテストをスキップします:',
+        error
+      );
     }
   });
 
@@ -59,7 +71,9 @@ describe('埋め込みモデル API テスト', () => {
 
       const isTauriAvailable = await checkTauriAvailable();
       if (!isTauriAvailable) {
-        debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+        debugWarn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
@@ -79,15 +93,19 @@ describe('埋め込みモデル API テスト', () => {
     it('埋め込みモデルのカテゴリが正しく設定されていること', async () => {
       const isTauriAvailable = await checkTauriAvailable();
       if (!isTauriAvailable) {
-        debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+        debugWarn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
 
-      const models = await invoke<Array<{
-        name: string;
-        category?: string;
-      }>>('search_models', {
+      const models = await invoke<
+        Array<{
+          name: string;
+          category?: string;
+        }>
+      >('search_models', {
         engineType: 'ollama',
         category: 'embedding',
         limit: 10,
@@ -96,11 +114,8 @@ describe('埋め込みモデル API テスト', () => {
       expect(models).toBeDefined();
       expect(Array.isArray(models)).toBe(true);
 
-      const embeddingModels = models.filter(
-        m => m.category === 'embedding'
-      );
+      const embeddingModels = models.filter(m => m.category === 'embedding');
       expect(embeddingModels.length).toBeGreaterThan(0);
     }, 10000);
   });
 });
-

@@ -3,11 +3,22 @@
 /**
  * @jest-environment jsdom
  */
-import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
+import {
+  describe,
+  it,
+  expect,
+  jest,
+  beforeEach,
+  afterEach,
+} from '@jest/globals';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import React from 'react';
-import { ErrorBoundary } from '../../src/components/common/ErrorBoundary';
+import {
+  ErrorBoundary,
+  withErrorBoundary,
+} from '../../src/components/common/ErrorBoundary';
+import { logger } from '../../src/utils/logger';
 
 // loggerをモック
 jest.mock('../../src/utils/logger', () => ({
@@ -37,7 +48,9 @@ jest.mock('../../src/utils/tauri', () => ({
 const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
-  BrowserRouter: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  BrowserRouter: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 
 // autoFixとerrorHandlerをモック
@@ -110,8 +123,6 @@ describe('ErrorBoundary.tsx', () => {
 
   describe('エラー処理', () => {
     it('エラー情報をログに記録する', () => {
-      const { logger } = require('../../src/utils/logger');
-
       render(
         <ErrorBoundary>
           <ThrowError />
@@ -303,7 +314,7 @@ describe('ErrorBoundary.tsx', () => {
         // 複数の要素が存在する可能性があるため、getAllByTextを使用
         const errorMessages = screen.getAllByText(/エラーメッセージ/i);
         expect(errorMessages.length).toBeGreaterThan(0);
-        
+
         const stackTraces = screen.getAllByText(/スタックトレース/i);
         expect(stackTraces.length).toBeGreaterThan(0);
       } else {
@@ -315,9 +326,6 @@ describe('ErrorBoundary.tsx', () => {
 
   describe('withErrorBoundary HOC', () => {
     it('withErrorBoundaryでコンポーネントをラップできる', () => {
-      const {
-        withErrorBoundary,
-      } = require('../../src/components/common/ErrorBoundary');
       const TestComponent = () => <div>テストコンポーネント</div>;
       const WrappedComponent = withErrorBoundary(TestComponent);
 
@@ -327,9 +335,6 @@ describe('ErrorBoundary.tsx', () => {
     });
 
     it('ラップされたコンポーネントでエラーが発生した場合、ErrorBoundaryがキャッチする', () => {
-      const {
-        withErrorBoundary,
-      } = require('../../src/components/common/ErrorBoundary');
       const WrappedThrowError = withErrorBoundary(ThrowError);
 
       render(<WrappedThrowError />);

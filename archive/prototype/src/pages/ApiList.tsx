@@ -43,7 +43,12 @@ export const ApiList: React.FC = () => {
 
   // ローディング状態
   if (loading) {
-    return <ApiListLoading breadcrumbItems={breadcrumbItems} onRefresh={refreshApis} />;
+    return (
+      <ApiListLoading
+        breadcrumbItems={breadcrumbItems}
+        onRefresh={refreshApis}
+      />
+    );
   }
 
   return (

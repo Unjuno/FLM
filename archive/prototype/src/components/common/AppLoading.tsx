@@ -33,11 +33,11 @@ export const AppLoading: React.FC = () => {
     <div className="app-loading">
       <div className="app-loading-panel" role="status" aria-live="polite">
         <header className="app-loading-header">
-          <img 
-            src="/logo.png" 
-            alt="FLM" 
-            className="app-loading-logo" 
-            width="64" 
+          <img
+            src="/logo.png"
+            alt="FLM"
+            className="app-loading-logo"
+            width="64"
             height="64"
             aria-hidden="true"
           />
