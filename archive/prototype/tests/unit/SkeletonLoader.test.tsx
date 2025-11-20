@@ -33,7 +33,9 @@ describe('SkeletonLoader.tsx', () => {
     });
 
     it('段落スケルトンのスナップショット', () => {
-      const { container } = render(<SkeletonLoader type="paragraph" count={3} />);
+      const { container } = render(
+        <SkeletonLoader type="paragraph" count={3} />
+      );
       expect(container).toMatchSnapshot();
     });
 
@@ -63,7 +65,9 @@ describe('SkeletonLoader.tsx', () => {
     });
 
     it('APIリストスケルトンのスナップショット', () => {
-      const { container } = render(<SkeletonLoader type="api-list" count={2} />);
+      const { container } = render(
+        <SkeletonLoader type="api-list" count={2} />
+      );
       expect(container).toMatchSnapshot();
     });
 
@@ -80,11 +84,8 @@ describe('SkeletonLoader.tsx', () => {
     });
 
     it('アニメーション無効のスケルトンのスナップショット', () => {
-      const { container } = render(
-        <SkeletonLoader type="text" noAnimation />
-      );
+      const { container } = render(<SkeletonLoader type="text" noAnimation />);
       expect(container).toMatchSnapshot();
     });
   });
 });
-

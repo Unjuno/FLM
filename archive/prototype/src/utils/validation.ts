@@ -3,7 +3,10 @@
 /**
  * 翻訳関数の型定義
  */
-type TranslateFunction = (key: string, params?: Record<string, string | number>) => string;
+type TranslateFunction = (
+  key: string,
+  params?: Record<string, string | number>
+) => string;
 
 /**
  * グローバルな翻訳関数（デフォルトは日本語）
@@ -13,7 +16,9 @@ let globalTranslate: TranslateFunction | null = null;
 /**
  * 翻訳関数を設定
  */
-export function setValidationTranslateFunction(translate: TranslateFunction): void {
+export function setValidationTranslateFunction(
+  translate: TranslateFunction
+): void {
   globalTranslate = translate;
 }
 
@@ -31,7 +36,10 @@ function t(key: string, params?: Record<string, string | number>): string {
 /**
  * デフォルトの日本語メッセージを取得
  */
-function getDefaultMessage(key: string, params?: Record<string, string | number>): string {
+function getDefaultMessage(
+  key: string,
+  params?: Record<string, string | number>
+): string {
   const messages: Record<string, string> = {
     'errors.validation.required': 'この項目は必須です。',
     'errors.validation.minLength': `最低${params?.min || 0}文字以上入力してください。`,
@@ -40,20 +48,25 @@ function getDefaultMessage(key: string, params?: Record<string, string | number>
     'errors.validation.max': `最大値は${params?.max || 0}です。`,
     'errors.validation.pattern': '正しい形式で入力してください。',
     'errors.validation.emailRequired': 'メールアドレスを入力してください。',
-    'errors.validation.emailInvalid': '正しいメールアドレス形式で入力してください。',
+    'errors.validation.emailInvalid':
+      '正しいメールアドレス形式で入力してください。',
     'errors.validation.urlRequired': 'URLを入力してください。',
     'errors.validation.urlInvalid': '正しいURL形式で入力してください。',
     'errors.validation.numberRequired': '数値を入力してください。',
     'errors.validation.integerRequired': '整数を入力してください。',
     'errors.validation.positiveRequired': '正の数を入力してください。',
-    'errors.validation.passwordMinLength': 'パスワードは8文字以上である必要があります。',
-    'errors.validation.passwordUppercase': 'パスワードには大文字が含まれている必要があります。',
-    'errors.validation.passwordLowercase': 'パスワードには小文字が含まれている必要があります。',
-    'errors.validation.passwordNumber': 'パスワードには数字が含まれている必要があります。',
+    'errors.validation.passwordMinLength':
+      'パスワードは8文字以上である必要があります。',
+    'errors.validation.passwordUppercase':
+      'パスワードには大文字が含まれている必要があります。',
+    'errors.validation.passwordLowercase':
+      'パスワードには小文字が含まれている必要があります。',
+    'errors.validation.passwordNumber':
+      'パスワードには数字が含まれている必要があります。',
     'errors.validation.dateRequired': '日付を入力してください。',
     'errors.validation.dateInvalid': '正しい日付形式で入力してください。',
   };
-  
+
   let message = messages[key] || key;
   if (params) {
     Object.entries(params).forEach(([paramKey, paramValue]) => {

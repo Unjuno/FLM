@@ -76,7 +76,7 @@ export const useApiConfigForm = (
     data: config,
     key: `api_config_${model.name || 'new'}`,
     delay: 2000,
-    isValid: (data) => !!data.name,
+    isValid: data => !!data.name,
     metadata: { modelName: model.name },
   });
 
@@ -122,7 +122,10 @@ export const useApiConfigForm = (
   const prevPortRef = useRef<number | null>(null);
   useEffect(() => {
     // 初回実行時またはポートが実際に変更された場合のみ更新
-    if (prevPortRef.current === null || portManagement.port !== prevPortRef.current) {
+    if (
+      prevPortRef.current === null ||
+      portManagement.port !== prevPortRef.current
+    ) {
       if (portManagement.port !== config.port) {
         prevPortRef.current = portManagement.port;
         setConfig(prevConfig => ({
@@ -139,10 +142,14 @@ export const useApiConfigForm = (
   const prevAvailableEnginesRef = useRef<string[]>([]);
   useEffect(() => {
     // 利用可能なエンジンが実際に変更された場合のみ処理
-    const enginesChanged = 
-      prevAvailableEnginesRef.current.length !== engineManagement.availableEngines.length ||
-      prevAvailableEnginesRef.current.some((eng: string, idx: number) => eng !== engineManagement.availableEngines[idx]);
-    
+    const enginesChanged =
+      prevAvailableEnginesRef.current.length !==
+        engineManagement.availableEngines.length ||
+      prevAvailableEnginesRef.current.some(
+        (eng: string, idx: number) =>
+          eng !== engineManagement.availableEngines[idx]
+      );
+
     if (enginesChanged && engineManagement.availableEngines.length > 0) {
       prevAvailableEnginesRef.current = [...engineManagement.availableEngines];
       const currentEngine = config.engineType || 'ollama';
@@ -160,7 +167,10 @@ export const useApiConfigForm = (
 
   // API名生成のラッパー
   const suggestApiName = useCallback(async () => {
-    const generatedName = await nameGeneration.suggestApiName(config.name, model.name);
+    const generatedName = await nameGeneration.suggestApiName(
+      config.name,
+      model.name
+    );
     if (generatedName) {
       // 名前はコールバックで既に設定されている
     }
@@ -453,4 +463,3 @@ export const useApiConfigForm = (
     validate,
   };
 };
-

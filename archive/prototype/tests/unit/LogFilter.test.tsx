@@ -101,7 +101,8 @@ describe('LogFilter.tsx', () => {
     it('ステータスコードフィルターを表示する', () => {
       render(<LogFilter onFilterChange={mockOnFilterChange} />);
 
-      const statusCodeElements = screen.getAllByText(/ステータスコード|HTTP|200/i);
+      const statusCodeElements =
+        screen.getAllByText(/ステータスコード|HTTP|200/i);
       expect(statusCodeElements.length).toBeGreaterThan(0);
     });
 

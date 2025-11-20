@@ -208,35 +208,25 @@ beforeAll(() => {
 import '@testing-library/jest-dom';
 import { clearMockApiStorage } from './tauri-mock';
 
-// fetch APIのモック（jsdom環境ではデフォルトで提供されていない）
+// fetch APIのpolyfill（Node.js 18以降では利用可能、jsdom環境では必要に応じて設定）
+// Node.js 22ではfetchが利用可能なので、それを優先的に使用
 if (typeof globalThis.fetch === 'undefined') {
-  // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  (globalThis as any).fetch = async (
-    url: string | URL | Request,
-    init?: RequestInit
-  ): Promise<Response> => {
-    // モックレスポンスを返す
-    const mockResponse = {
-      ok: false,
-      status: 401,
-      statusText: 'Unauthorized',
-      headers: new Headers(),
-      json: async () => ({ error: { message: 'Unauthorized' } }),
-      text: async () => JSON.stringify({ error: { message: 'Unauthorized' } }),
-    } as Response;
-
-    return Promise.resolve(mockResponse);
-  };
-}
-
-// beforeAllでも設定（確実に利用可能にする）
-beforeAll(() => {
-  if (typeof globalThis.fetch === 'undefined') {
+  // Node.js 18以降のfetchを使用（利用可能な場合）
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const { fetch: nodeFetch } = require('undici');
+    if (nodeFetch) {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (globalThis as any).fetch = nodeFetch;
+    }
+  } catch {
+    // undiciが利用できない場合は、モックを提供
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (globalThis as any).fetch = async (
       url: string | URL | Request,
       init?: RequestInit
     ): Promise<Response> => {
+      // モックレスポンスを返す（実際のAPIテストでは使用されない）
       const mockResponse = {
         ok: false,
         status: 401,
@@ -249,6 +239,39 @@ beforeAll(() => {
 
       return Promise.resolve(mockResponse);
     };
+  }
+}
+
+// beforeAllでも設定（確実に利用可能にする）
+beforeAll(() => {
+  if (typeof globalThis.fetch === 'undefined') {
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const { fetch: nodeFetch } = require('undici');
+      if (nodeFetch) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (globalThis as any).fetch = nodeFetch;
+      }
+    } catch {
+      // undiciが利用できない場合は、モックを提供
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (globalThis as any).fetch = async (
+        url: string | URL | Request,
+        init?: RequestInit
+      ): Promise<Response> => {
+        const mockResponse = {
+          ok: false,
+          status: 401,
+          statusText: 'Unauthorized',
+          headers: new Headers(),
+          json: async () => ({ error: { message: 'Unauthorized' } }),
+          text: async () =>
+            JSON.stringify({ error: { message: 'Unauthorized' } }),
+        } as Response;
+
+        return Promise.resolve(mockResponse);
+      };
+    }
   }
 
   if (

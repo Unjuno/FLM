@@ -1,7 +1,13 @@
 // SPDX-License-Identifier: MIT
 // ApiCreate - API作成ページ
 
-import React, { useState, useEffect, useCallback, useRef, useMemo } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useRef,
+  useMemo,
+} from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { AppLayout } from '../components/layout/AppLayout';
 import { safeInvoke } from '../utils/tauri';
@@ -65,11 +71,14 @@ export const ApiCreate: React.FC = () => {
   const [pendingApiCreation, setPendingApiCreation] =
     useState<ApiConfig | null>(null);
 
-  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: t('header.apiList') || 'API一覧', path: '/api/list' },
-    { label: t('apiCreate.title') || '新しいAPIを作成' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(
+    () => [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('header.apiList') || 'API一覧', path: '/api/list' },
+      { label: t('apiCreate.title') || '新しいAPIを作成' },
+    ],
+    [t]
+  );
 
   // location.stateの重複処理を防ぐためのフラグ
   const processedStateRef = useRef<string | null>(null);
@@ -99,16 +108,16 @@ export const ApiCreate: React.FC = () => {
   // Ollamaの自動起動: 無限ループを防ぐため、前回のstatusを保持して変更時のみ処理
   const prevStatusRef = useRef<typeof status | null>(null);
   const statusRunningRef = useRef<boolean | null>(null);
-  
+
   useEffect(() => {
-    const statusChanged = 
+    const statusChanged =
       !prevStatusRef.current ||
       prevStatusRef.current.running !== status?.running ||
       prevStatusRef.current.installed !== status?.installed ||
       prevStatusRef.current.portable !== status?.portable;
-    
+
     const runningChanged = statusRunningRef.current !== status?.running;
-    
+
     if (!statusChanged || !runningChanged) {
       // 状態を更新（次回の比較用）
       if (status) {
@@ -116,7 +125,7 @@ export const ApiCreate: React.FC = () => {
       }
       return;
     }
-    
+
     prevStatusRef.current = status;
     if (status) {
       statusRunningRef.current = status.running;
@@ -167,7 +176,14 @@ export const ApiCreate: React.FC = () => {
     ensureOllamaRunning();
     // statusのrunningプロパティのみを依存配列に含める（高頻度レンダリングを防ぐ）
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [status?.running, status?.installed, status?.portable, start, resetProgress, isMounted]);
+  }, [
+    status?.running,
+    status?.installed,
+    status?.portable,
+    start,
+    resetProgress,
+    isMounted,
+  ]);
 
   // API作成を開始（カスタムフックを使用）
   const startApiCreation = useCallback(
@@ -247,26 +263,26 @@ export const ApiCreate: React.FC = () => {
           const hour = String(now.getHours()).padStart(2, '0');
           const minute = String(now.getMinutes()).padStart(2, '0');
           const baseApiName = `${modelName} API ${month}${day}_${hour}${minute}`;
-          
+
           // 使用可能なAPI名を検出
           const nameResult = await safeInvoke<{
             suggested_name: string;
             alternatives: string[];
             is_available: boolean;
           }>('suggest_api_name', { base_name: baseApiName });
-          
+
           // 使用可能なポート番号を検出
           const portResult = await safeInvoke<{
             recommended_port: number;
             is_available: boolean;
             alternative_ports: number[];
           }>('find_available_port', { start_port: 8080 });
-          
+
           logger.info(
             `推奨設定で作成: API名="${nameResult.suggested_name}", ポート=${portResult.recommended_port}`,
             'ApiCreate'
           );
-          
+
           const defaultConfig: ApiConfig = {
             name: nameResult.suggested_name,
             port: portResult.recommended_port,
@@ -287,7 +303,7 @@ export const ApiCreate: React.FC = () => {
           const hour = String(now.getHours()).padStart(2, '0');
           const minute = String(now.getMinutes()).padStart(2, '0');
           const apiName = `API ${month}${day}_${hour}${minute}`;
-          
+
           const defaultConfig: ApiConfig = {
             name: apiName,
             port: 8080,
@@ -383,7 +399,7 @@ export const ApiCreate: React.FC = () => {
   // APIを起動するハンドラー
   const handleStartApi = useCallback(async () => {
     if (!creationResult) return;
-    
+
     try {
       await safeInvoke('start_api', { apiId: creationResult.id });
       // 成功メッセージを表示（オプション）

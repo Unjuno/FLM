@@ -2,7 +2,11 @@
 
 import React, { useMemo, useTransition } from 'react';
 import { HTTP_STATUS } from '../../constants/config';
-import { formatDateTime, formatResponseTime, formatJSON } from '../../utils/formatters';
+import {
+  formatDateTime,
+  formatResponseTime,
+  formatJSON,
+} from '../../utils/formatters';
 import type { RequestLogInfo } from './LogDetail';
 import './LogDetail.css';
 
@@ -63,9 +67,7 @@ export const LogDetailContent: React.FC<LogDetailContentProps> = ({
           </div>
           <div className="detail-item">
             <span className="detail-label">メソッド:</span>
-            <span
-              className={`method-badge method-${log.method.toLowerCase()}`}
-            >
+            <span className={`method-badge method-${log.method.toLowerCase()}`}>
               {log.method}
             </span>
           </div>
@@ -133,9 +135,7 @@ export const LogDetailContent: React.FC<LogDetailContentProps> = ({
                 }}
                 disabled={isPending}
               >
-                {copiedField === 'request'
-                  ? '✓ コピーしました'
-                  : '📋 コピー'}
+                {copiedField === 'request' ? '✓ コピーしました' : '📋 コピー'}
               </button>
             )}
           </div>
@@ -182,4 +182,3 @@ export const LogDetailContent: React.FC<LogDetailContentProps> = ({
     </>
   );
 };
-

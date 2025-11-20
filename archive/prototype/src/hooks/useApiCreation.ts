@@ -201,10 +201,9 @@ export const useApiCreation = (
         // バックエンドのIPCコマンドを呼び出し
         // Rust側のApiCreateConfig構造体と一致させる
         // Tauriコマンドは引数名を`config`として期待している
-        const response = await safeInvoke<ApiCreateResponse>(
-          'create_api',
-          { config: apiCreatePayload }
-        );
+        const response = await safeInvoke<ApiCreateResponse>('create_api', {
+          config: apiCreatePayload,
+        });
 
         // レスポンスをApiCreationResultに変換
         const result: ApiCreationResult = {
@@ -253,11 +252,7 @@ export const useApiCreation = (
           err,
           'API作成中にエラーが発生しました'
         );
-        logger.error(
-          'API作成エラー',
-          toError(err),
-          'useApiCreation'
-        );
+        logger.error('API作成エラー', toError(err), 'useApiCreation');
 
         setError(errorMessage);
         setOriginalError(err);
@@ -287,4 +282,3 @@ export const useApiCreation = (
     resetProgress,
   };
 };
-

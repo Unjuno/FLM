@@ -83,19 +83,25 @@ export const ModelSelectionMain: React.FC<ModelSelectionMainProps> = ({
                     ? t('engine.vllm.notInstalled')
                     : selectedEngine === 'llama_cpp'
                       ? t('engine.llamaCpp.notInstalled')
-                      : t('engine.general.notInstalled', { engineName: ENGINE_NAMES[selectedEngine] || selectedEngine })
+                      : t('engine.general.notInstalled', {
+                          engineName:
+                            ENGINE_NAMES[selectedEngine] || selectedEngine,
+                        })
             }
             message={
-              (engineDetectionResult.message ||
-                (selectedEngine === 'ollama'
-                  ? t('engine.ollama.installMessage')
-                  : selectedEngine === 'lm_studio'
-                    ? t('engine.lmStudio.installMessage')
-                    : selectedEngine === 'vllm'
-                      ? t('engine.vllm.installMessage')
-                      : selectedEngine === 'llama_cpp'
-                        ? t('engine.llamaCpp.installMessage')
-                        : t('engine.general.installMessage', { engineName: ENGINE_NAMES[selectedEngine] || selectedEngine })))
+              engineDetectionResult.message ||
+              (selectedEngine === 'ollama'
+                ? t('engine.ollama.installMessage')
+                : selectedEngine === 'lm_studio'
+                  ? t('engine.lmStudio.installMessage')
+                  : selectedEngine === 'vllm'
+                    ? t('engine.vllm.installMessage')
+                    : selectedEngine === 'llama_cpp'
+                      ? t('engine.llamaCpp.installMessage')
+                      : t('engine.general.installMessage', {
+                          engineName:
+                            ENGINE_NAMES[selectedEngine] || selectedEngine,
+                        }))
             }
             dismissible={false}
           />
@@ -282,8 +288,7 @@ const ModelDetail: React.FC<ModelDetailProps> = ({
             )}
           </h2>
           {(selectedWebModel?.recommended ||
-            (localSelectedModel &&
-              isRecommended(localSelectedModel.name))) && (
+            (localSelectedModel && isRecommended(localSelectedModel.name))) && (
             <span className="detail-recommended-badge">推奨モデル</span>
           )}
         </div>
@@ -407,28 +412,25 @@ const WebModelDetailContent: React.FC<WebModelDetailContentProps> = ({
           </>
         )}
 
-        {selectedWebModel.useCases &&
-          selectedWebModel.useCases.length > 0 && (
-            <div className="detail-info-item full-width">
-              <span className="detail-info-label">使用例</span>
-              <div className="detail-info-value">
-                <ul className="use-cases-list">
-                  {selectedWebModel.useCases.map((useCase, index) => (
-                    <li key={index}>{useCase}</li>
-                  ))}
-                </ul>
-              </div>
+        {selectedWebModel.useCases && selectedWebModel.useCases.length > 0 && (
+          <div className="detail-info-item full-width">
+            <span className="detail-info-label">使用例</span>
+            <div className="detail-info-value">
+              <ul className="use-cases-list">
+                {selectedWebModel.useCases.map((useCase, index) => (
+                  <li key={index}>{useCase}</li>
+                ))}
+              </ul>
             </div>
-          )}
+          </div>
+        )}
       </div>
 
       <div className="detail-note">
         <p>
           <strong>推奨設定が自動適用されます</strong>
         </p>
-        <p>
-          このモデルはWebサイト用途に最適化された設定でAPIが作成されます。
-        </p>
+        <p>このモデルはWebサイト用途に最適化された設定でAPIが作成されます。</p>
       </div>
     </>
   );
@@ -483,7 +485,10 @@ const OllamaModelDetailContent: React.FC<OllamaModelDetailContentProps> = ({
           <div className="detail-info-item">
             <span className="detail-info-label">サイズ</span>
             <span className="detail-info-value">
-              {formatBytes(localSelectedModel.size, FORMATTING.DECIMAL_PLACES_SHORT)}
+              {formatBytes(
+                localSelectedModel.size,
+                FORMATTING.DECIMAL_PLACES_SHORT
+              )}
             </span>
           </div>
         )}
@@ -500,7 +505,8 @@ const OllamaModelDetailContent: React.FC<OllamaModelDetailContentProps> = ({
         <div className="detail-info-item">
           <span className="detail-info-label">カテゴリ</span>
           <span className="detail-info-value">
-            {localSelectedModel.family || getCategoryLabel(localSelectedModel.name)}
+            {localSelectedModel.family ||
+              getCategoryLabel(localSelectedModel.name)}
           </span>
         </div>
 
@@ -555,4 +561,3 @@ const OllamaModelDetailContent: React.FC<OllamaModelDetailContentProps> = ({
     </>
   );
 };
-

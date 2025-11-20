@@ -5,24 +5,24 @@
  */
 
 // ResizeObserverをモック（テスト実行前に設定が必要）
-// @ts-ignore
+// @ts-expect-error - ResizeObserver is not defined in test environment
 if (
   typeof global !== 'undefined' &&
   typeof global.ResizeObserver === 'undefined'
 ) {
-  // @ts-ignore
+  // @ts-expect-error - ResizeObserver is not defined in test environment
   global.ResizeObserver = class ResizeObserver {
     observe() {}
     unobserve() {}
     disconnect() {}
   };
 }
-// @ts-ignore
+// @ts-expect-error - ResizeObserver is not defined in test environment
 if (
   typeof window !== 'undefined' &&
   typeof window.ResizeObserver === 'undefined'
 ) {
-  // @ts-ignore
+  // @ts-expect-error - ResizeObserver is not defined in test environment
   window.ResizeObserver = class ResizeObserver {
     observe() {}
     unobserve() {}

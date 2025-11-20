@@ -25,7 +25,12 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
-import { cleanupTestApis, createTestApi, waitForApiStart, handleTauriAppNotRunningError } from '../setup/test-helpers';
+import {
+  cleanupTestApis,
+  createTestApi,
+  waitForApiStart,
+  handleTauriAppNotRunningError,
+} from '../setup/test-helpers';
 import { debugLog, debugWarn } from '../setup/debug';
 
 interface ApiInfo {
@@ -77,7 +82,10 @@ describe('F002 API利用機能 統合テスト', () => {
   /**
    * テスト用APIを作成（ヘルパー関数を使用）
    */
-  const createTestApiHelper = async (name: string, port: number): Promise<string> => {
+  const createTestApiHelper = async (
+    name: string,
+    port: number
+  ): Promise<string> => {
     try {
       const apiId = await createTestApi({
         name,
@@ -333,7 +341,10 @@ describe('F002 API利用機能 統合テスト', () => {
       // ステップ1: テスト用APIを作成
       let testApiId: string;
       try {
-        testApiId = await createTestApiHelper('F002 Test API Integration', 8090);
+        testApiId = await createTestApiHelper(
+          'F002 Test API Integration',
+          8090
+        );
       } catch (error) {
         if (handleTauriAppNotRunningError(error)) {
           return;

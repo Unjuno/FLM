@@ -41,8 +41,8 @@ export const LazyImage: React.FC<LazyImageProps> = ({
 
     // Intersection Observerを作成
     observerRef.current = new IntersectionObserver(
-      (entries) => {
-        entries.forEach((entry) => {
+      entries => {
+        entries.forEach(entry => {
           if (entry.isIntersecting) {
             // 画像が表示領域に入ったら読み込み
             setImageSrc(src);
@@ -81,8 +81,14 @@ export const LazyImage: React.FC<LazyImageProps> = ({
   // CSS変数を設定（監査レポートの推奨事項に基づき追加）
   useEffect(() => {
     if (styleRef.current) {
-      styleRef.current.style.setProperty('--lazy-image-opacity', isLoaded ? '1' : '0.5');
-      styleRef.current.style.setProperty('--lazy-image-transition', 'opacity 0.3s ease-in-out');
+      styleRef.current.style.setProperty(
+        '--lazy-image-opacity',
+        isLoaded ? '1' : '0.5'
+      );
+      styleRef.current.style.setProperty(
+        '--lazy-image-transition',
+        'opacity 0.3s ease-in-out'
+      );
     }
   }, [isLoaded]);
 
@@ -104,4 +110,3 @@ export const LazyImage: React.FC<LazyImageProps> = ({
     />
   );
 };
-

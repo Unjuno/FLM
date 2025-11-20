@@ -2,12 +2,16 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
-import { cleanupTestApis, handleTauriAppNotRunningError, checkTauriAvailable } from '../setup/test-helpers';
+import {
+  cleanupTestApis,
+  handleTauriAppNotRunningError,
+  checkTauriAvailable,
+} from '../setup/test-helpers';
 import { debugLog, debugWarn } from '../setup/debug';
 
 /**
  * 各モデルカテゴリのテスト
- * 
+ *
  * テスト対象カテゴリ:
  * - chat: チャットモデル
  * - code: コード生成モデル
@@ -33,11 +37,17 @@ describe('複数カテゴリモデル API テスト', () => {
     ],
     code: [
       { name: 'codellama:7b', description: 'CodeLlama 7B - コード生成モデル' },
-      { name: 'deepseek-coder:latest', description: 'DeepSeek Coder - コード生成モデル' },
+      {
+        name: 'deepseek-coder:latest',
+        description: 'DeepSeek Coder - コード生成モデル',
+      },
     ],
     'image-generation': [
       { name: 'flux:latest', description: 'Flux - 高品質画像生成モデル' },
-      { name: 'stable-diffusion-xl:latest', description: 'Stable Diffusion XL - 画像生成モデル' },
+      {
+        name: 'stable-diffusion-xl:latest',
+        description: 'Stable Diffusion XL - 画像生成モデル',
+      },
     ],
     'video-generation': [
       { name: 'gen2:latest', description: 'Gen-2 - 動画生成モデル' },
@@ -47,7 +57,10 @@ describe('複数カテゴリモデル API テスト', () => {
       { name: 'musicgen:latest', description: 'MusicGen - 音楽生成モデル' },
     ],
     embedding: [
-      { name: 'nomic-embed-text:latest', description: 'Nomic Embed - 埋め込みモデル' },
+      {
+        name: 'nomic-embed-text:latest',
+        description: 'Nomic Embed - 埋め込みモデル',
+      },
       { name: 'bge-large:latest', description: 'BGE Large - 埋め込みモデル' },
     ],
     vision: [
@@ -56,13 +69,19 @@ describe('複数カテゴリモデル API テスト', () => {
     ],
     multimodal: [
       { name: 'pixtral:latest', description: 'Pixtral - マルチモーダルモデル' },
-      { name: 'speechllm:7b', description: 'SpeechLLM - 音声と言語の統合モデル' },
+      {
+        name: 'speechllm:7b',
+        description: 'SpeechLLM - 音声と言語の統合モデル',
+      },
     ],
     translation: [
       { name: 'nllb-200:3.3b', description: 'NLLB-200 - 多言語翻訳モデル' },
     ],
     summarization: [
-      { name: 'mistral-summarize:latest', description: 'Mistral Summarize - 要約モデル' },
+      {
+        name: 'mistral-summarize:latest',
+        description: 'Mistral Summarize - 要約モデル',
+      },
     ],
     qa: [
       { name: 'medllama:latest', description: 'MedLlama - 医療質問応答モデル' },
@@ -89,7 +108,9 @@ describe('複数カテゴリモデル API テスト', () => {
             // Tauriアプリが起動していない場合はスキップ
             const isTauriAvailable = await checkTauriAvailable();
             if (!isTauriAvailable) {
-              debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+              debugWarn(
+                'Tauriアプリが起動していないため、このテストをスキップします'
+              );
               expect(true).toBe(true);
               return;
             }
@@ -130,11 +151,16 @@ describe('複数カテゴリモデル API テスト', () => {
               expect(apiInfo.name).toContain(category);
             } catch (error) {
               if (handleTauriAppNotRunningError(error)) {
-                debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+                debugWarn(
+                  'Tauriアプリが起動していないため、このテストをスキップします'
+                );
                 return;
               }
               // モデルがインストールされていない場合などはスキップ
-              debugWarn(`${name} でのAPI作成に失敗しました（モデルがインストールされていない可能性があります）:`, error);
+              debugWarn(
+                `${name} でのAPI作成に失敗しました（モデルがインストールされていない可能性があります）:`,
+                error
+              );
               expect(true).toBe(true); // テストをパス
             }
           }, 30000);
@@ -152,16 +178,20 @@ describe('複数カテゴリモデル API テスト', () => {
         // Tauriアプリが起動していない場合はスキップ
         const isTauriAvailable = await checkTauriAvailable();
         if (!isTauriAvailable) {
-          debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+          debugWarn(
+            'Tauriアプリが起動していないため、このテストをスキップします'
+          );
           expect(true).toBe(true);
           return;
         }
 
         try {
-          const models = await invoke<Array<{
-            name: string;
-            category?: string;
-          }>>('search_models', {
+          const models = await invoke<
+            Array<{
+              name: string;
+              category?: string;
+            }>
+          >('search_models', {
             engineType: 'ollama',
             category: category,
             limit: 10,
@@ -171,16 +201,16 @@ describe('複数カテゴリモデル API テスト', () => {
           expect(Array.isArray(models)).toBe(true);
 
           // カテゴリが一致するモデルが含まれていることを確認
-          const categoryModels = models.filter(
-            m => m.category === category
-          );
-          
+          const categoryModels = models.filter(m => m.category === category);
+
           // カテゴリが存在する場合は、少なくとも1つは見つかることを期待
           // （モデルがインストールされていない場合もあるため、0でもOK）
           expect(categoryModels.length).toBeGreaterThanOrEqual(0);
         } catch (error) {
           if (handleTauriAppNotRunningError(error)) {
-            debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+            debugWarn(
+              'Tauriアプリが起動していないため、このテストをスキップします'
+            );
             return;
           }
           debugWarn(`${category} カテゴリのモデル検索に失敗しました:`, error);
@@ -202,7 +232,9 @@ describe('複数カテゴリモデル API テスト', () => {
         // Tauriアプリが起動していない場合はスキップ
         const isTauriAvailable = await checkTauriAvailable();
         if (!isTauriAvailable) {
-          debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+          debugWarn(
+            'Tauriアプリが起動していないため、このテストをスキップします'
+          );
           expect(true).toBe(true);
           return;
         }
@@ -273,7 +305,9 @@ describe('複数カテゴリモデル API テスト', () => {
           }
         } catch (error) {
           if (handleTauriAppNotRunningError(error)) {
-            debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+            debugWarn(
+              'Tauriアプリが起動していないため、このテストをスキップします'
+            );
             return;
           }
           debugWarn(`${category} カテゴリのチャットAPIテストでエラー:`, error);
@@ -287,14 +321,22 @@ describe('複数カテゴリモデル API テスト', () => {
    * カテゴリ別のマルチモーダル設定テスト
    */
   describe('カテゴリ別マルチモーダル設定', () => {
-    const multimodalCategories = ['image-generation', 'video-generation', 'audio-generation', 'vision', 'multimodal'];
+    const multimodalCategories = [
+      'image-generation',
+      'video-generation',
+      'audio-generation',
+      'vision',
+      'multimodal',
+    ];
 
     multimodalCategories.forEach(category => {
       it(`${category} カテゴリでマルチモーダル設定が適用されること`, async () => {
         // Tauriアプリが起動していない場合はスキップ
         const isTauriAvailable = await checkTauriAvailable();
         if (!isTauriAvailable) {
-          debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+          debugWarn(
+            'Tauriアプリが起動していないため、このテストをスキップします'
+          );
           expect(true).toBe(true);
           return;
         }
@@ -311,7 +353,7 @@ describe('複数カテゴリモデル API テスト', () => {
 
         try {
           const multimodalConfig = getMultimodalConfig(category);
-          
+
           const result = await invoke<{
             id: string;
           }>('create_api', {
@@ -337,10 +379,15 @@ describe('複数カテゴリモデル API テスト', () => {
           expect(apiInfo.model_name).toBe(testModel.name);
         } catch (error) {
           if (handleTauriAppNotRunningError(error)) {
-            debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+            debugWarn(
+              'Tauriアプリが起動していないため、このテストをスキップします'
+            );
             return;
           }
-          debugWarn(`${category} カテゴリのマルチモーダル設定テストでエラー:`, error);
+          debugWarn(
+            `${category} カテゴリのマルチモーダル設定テストでエラー:`,
+            error
+          );
           expect(true).toBe(true); // テストをパス
         }
       }, 30000);
@@ -380,4 +427,3 @@ function getMultimodalConfig(category: string): Record<string, unknown> | null {
       return null;
   }
 }
-

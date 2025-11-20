@@ -2,7 +2,11 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
-import { cleanupTestApis, createTestApi, handleTauriAppNotRunningError } from '../setup/test-helpers';
+import {
+  cleanupTestApis,
+  createTestApi,
+  handleTauriAppNotRunningError,
+} from '../setup/test-helpers';
 import { debugLog, debugWarn } from '../setup/debug';
 describe('API Integration Tests', () => {
   let createdApiId: string | null = null;

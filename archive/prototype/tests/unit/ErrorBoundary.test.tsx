@@ -3,7 +3,14 @@
 /**
  * @jest-environment jsdom
  */
-import { describe, it, expect, jest, beforeEach, afterEach } from '@jest/globals';
+import {
+  describe,
+  it,
+  expect,
+  jest,
+  beforeEach,
+  afterEach,
+} from '@jest/globals';
 import { render, screen, fireEvent } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import React from 'react';
@@ -37,7 +44,9 @@ jest.mock('../../src/utils/tauri', () => ({
 const mockNavigate = jest.fn();
 jest.mock('react-router-dom', () => ({
   useNavigate: () => mockNavigate,
-  BrowserRouter: ({ children }: { children: React.ReactNode }) => <>{children}</>,
+  BrowserRouter: ({ children }: { children: React.ReactNode }) => (
+    <>{children}</>
+  ),
 }));
 
 // autoFixとerrorHandlerをモック
@@ -303,7 +312,7 @@ describe('ErrorBoundary.tsx', () => {
         // 複数の要素が存在する可能性があるため、getAllByTextを使用
         const errorMessages = screen.getAllByText(/エラーメッセージ/i);
         expect(errorMessages.length).toBeGreaterThan(0);
-        
+
         const stackTraces = screen.getAllByText(/スタックトレース/i);
         expect(stackTraces.length).toBeGreaterThan(0);
       } else {

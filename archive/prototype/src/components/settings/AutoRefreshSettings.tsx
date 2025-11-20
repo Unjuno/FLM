@@ -46,8 +46,7 @@ export const AutoRefreshSettings: React.FC<AutoRefreshSettingsProps> = ({
           max={AUTO_REFRESH.MAX_INTERVAL}
           step="5"
           value={
-            settings.auto_refresh_interval ||
-            AUTO_REFRESH.DEFAULT_INTERVAL
+            settings.auto_refresh_interval || AUTO_REFRESH.DEFAULT_INTERVAL
           }
           onChange={e => {
             const parsed = parseInt(e.target.value, 10);
@@ -65,4 +64,3 @@ export const AutoRefreshSettings: React.FC<AutoRefreshSettingsProps> = ({
     </section>
   );
 };
-

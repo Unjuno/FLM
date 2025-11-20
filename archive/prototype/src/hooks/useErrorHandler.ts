@@ -70,10 +70,7 @@ export function useErrorHandler(options: UseErrorHandlerOptions = {}) {
    * 非同期処理をラップしてエラーハンドリングを行う関数
    */
   const withErrorHandling = useCallback(
-    async <T>(
-      fn: () => Promise<T>,
-      context?: string
-    ): Promise<T | null> => {
+    async <T>(fn: () => Promise<T>, context?: string): Promise<T | null> => {
       try {
         return await fn();
       } catch (error) {
@@ -89,4 +86,3 @@ export function useErrorHandler(options: UseErrorHandlerOptions = {}) {
     withErrorHandling,
   };
 }
-

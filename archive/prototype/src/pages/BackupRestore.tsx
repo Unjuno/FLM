@@ -1,6 +1,12 @@
 // BackupRestore - バックアップ・復元ページ
 
-import React, { useState, useRef, useCallback, useTransition, useMemo } from 'react';
+import React, {
+  useState,
+  useRef,
+  useCallback,
+  useTransition,
+  useMemo,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { useGlobalKeyboardShortcuts } from '../hooks/useKeyboardShortcuts';
@@ -90,11 +96,14 @@ export const BackupRestore: React.FC = () => {
   useGlobalKeyboardShortcuts();
 
   // パンくずリストの項目
-  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: t('header.settings') || '設定', path: '/settings' },
-    { label: 'バックアップ・復元' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(
+    () => [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('header.settings') || '設定', path: '/settings' },
+      { label: 'バックアップ・復元' },
+    ],
+    [t]
+  );
 
   /**
    * バックアップを作成
@@ -118,14 +127,20 @@ export const BackupRestore: React.FC = () => {
       // 暗号化が有効な場合、パスワードを検証
       if (encryptBackup && !backupPassword) {
         setError('暗号化が有効です。パスワードを入力してください。');
-        showError('バックアップエラー', '暗号化が有効です。パスワードを入力してください。');
+        showError(
+          'バックアップエラー',
+          '暗号化が有効です。パスワードを入力してください。'
+        );
         setBackingUp(false);
         return;
       }
 
       if (encryptBackup && backupPassword.length < 8) {
         setError('パスワードは8文字以上である必要があります。');
-        showError('バックアップエラー', 'パスワードは8文字以上である必要があります。');
+        showError(
+          'バックアップエラー',
+          'パスワードは8文字以上である必要があります。'
+        );
         setBackingUp(false);
         return;
       }
@@ -166,7 +181,10 @@ export const BackupRestore: React.FC = () => {
       setSuccessMessage(message);
       showSuccess('バックアップを作成しました');
     } catch (err) {
-      const errorMessage = extractErrorMessage(err, 'バックアップの作成に失敗しました');
+      const errorMessage = extractErrorMessage(
+        err,
+        'バックアップの作成に失敗しました'
+      );
       setError(errorMessage);
       showError('バックアップの作成に失敗しました', errorMessage);
     } finally {
@@ -215,13 +233,21 @@ export const BackupRestore: React.FC = () => {
           const fileContent = await file.text();
 
           // 暗号化されたファイルかどうかを判定（.encrypted拡張子またはBase64形式）
-          const isEncrypted = file.name.endsWith('.encrypted') || 
-            (fileContent.length > 0 && /^[A-Za-z0-9+/=]+$/.test(fileContent.trim()) && fileContent.length > 100);
-          
+          const isEncrypted =
+            file.name.endsWith('.encrypted') ||
+            (fileContent.length > 0 &&
+              /^[A-Za-z0-9+/=]+$/.test(fileContent.trim()) &&
+              fileContent.length > 100);
+
           // 暗号化されたファイルの場合、パスワードが必要
           if (isEncrypted && !restorePassword) {
-            setError('このファイルは暗号化されています。パスワードを入力してください。');
-            showError('復元エラー', 'このファイルは暗号化されています。パスワードを入力してください。');
+            setError(
+              'このファイルは暗号化されています。パスワードを入力してください。'
+            );
+            showError(
+              '復元エラー',
+              'このファイルは暗号化されています。パスワードを入力してください。'
+            );
             setRestoring(false);
             return;
           }
@@ -260,8 +286,10 @@ export const BackupRestore: React.FC = () => {
             fileInputRef.current.value = '';
           }
         } catch (err) {
-          const errorMessage =
-            extractErrorMessage(err, 'バックアップの復元に失敗しました');
+          const errorMessage = extractErrorMessage(
+            err,
+            'バックアップの復元に失敗しました'
+          );
           setError(errorMessage);
           showError('バックアップの復元に失敗しました', errorMessage);
         } finally {
@@ -358,14 +386,14 @@ export const BackupRestore: React.FC = () => {
                   <li>リクエストログ（最新1000件）</li>
                 </ul>
               </div>
-              
+
               {/* 暗号化オプション */}
               <div className="backup-restore-options">
                 <label className="backup-restore-checkbox-label">
                   <input
                     type="checkbox"
                     checked={encryptBackup}
-                    onChange={(e) => {
+                    onChange={e => {
                       setEncryptBackup(e.target.checked);
                       if (!e.target.checked) {
                         setBackupPassword('');
@@ -378,7 +406,7 @@ export const BackupRestore: React.FC = () => {
                   />
                   <span>ファイルを暗号化する</span>
                 </label>
-                
+
                 {encryptBackup && (
                   <div className="backup-restore-password-section">
                     <label className="backup-restore-password-label">
@@ -386,7 +414,7 @@ export const BackupRestore: React.FC = () => {
                       <input
                         type="password"
                         value={backupPassword}
-                        onChange={(e) => setBackupPassword(e.target.value)}
+                        onChange={e => setBackupPassword(e.target.value)}
                         className="backup-restore-password-input"
                         placeholder="パスワードを入力"
                         minLength={8}
@@ -394,13 +422,14 @@ export const BackupRestore: React.FC = () => {
                     </label>
                     {showPasswordWarning && (
                       <p className="backup-restore-password-hint">
-                        ⚠️ パスワードを忘れるとバックアップファイルを復元できません。安全な場所に保管してください。
+                        ⚠️
+                        パスワードを忘れるとバックアップファイルを復元できません。安全な場所に保管してください。
                       </p>
                     )}
                   </div>
                 )}
               </div>
-              
+
               <button
                 className="backup-restore-button primary"
                 onClick={() => {
@@ -502,7 +531,7 @@ export const BackupRestore: React.FC = () => {
                   📁 バックアップファイルを選択
                 </button>
               </div>
-              
+
               {/* 復元時のパスワード入力 */}
               <div className="backup-restore-password-section">
                 <label className="backup-restore-password-label">
@@ -510,7 +539,7 @@ export const BackupRestore: React.FC = () => {
                   <input
                     type="password"
                     value={restorePassword}
-                    onChange={(e) => setRestorePassword(e.target.value)}
+                    onChange={e => setRestorePassword(e.target.value)}
                     className="backup-restore-password-input"
                     placeholder="暗号化されたファイルの場合はパスワードを入力"
                   />
@@ -585,10 +614,7 @@ export const BackupRestore: React.FC = () => {
           aria-modal="true"
           aria-labelledby="confirm-dialog-title"
         >
-          <div
-            className="confirm-dialog"
-            role="document"
-          >
+          <div className="confirm-dialog" role="document">
             <h3 id="confirm-dialog-title">確認</h3>
             <p style={{ whiteSpace: 'pre-line' }}>{confirmDialog.message}</p>
             <div className="confirm-dialog-actions">

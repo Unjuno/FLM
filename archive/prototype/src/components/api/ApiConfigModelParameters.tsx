@@ -12,7 +12,10 @@ import './ApiConfigForm.css';
 export interface ApiConfigModelParametersProps {
   modelParameters: ModelParameters;
   errors: { [key: string]: string };
-  onParameterChange: (key: keyof ModelParameters, value: number | undefined) => void;
+  onParameterChange: (
+    key: keyof ModelParameters,
+    value: number | undefined
+  ) => void;
   showAdvancedParams: boolean;
   onToggleAdvancedParams: () => void;
 }
@@ -21,7 +24,9 @@ export interface ApiConfigModelParametersProps {
  * モデル生成パラメータセクション
  * 温度、Top-p、Top-k、Max tokens、Repeat penaltyの設定
  */
-export const ApiConfigModelParameters: React.FC<ApiConfigModelParametersProps> = ({
+export const ApiConfigModelParameters: React.FC<
+  ApiConfigModelParametersProps
+> = ({
   modelParameters,
   errors,
   onParameterChange,
@@ -111,12 +116,12 @@ export const ApiConfigModelParameters: React.FC<ApiConfigModelParametersProps> =
                 min={MODEL_PARAMETERS.TOP_P.MIN}
                 max={MODEL_PARAMETERS.TOP_P.MAX}
                 step="0.01"
-                value={
-                  modelParameters?.top_p ?? MODEL_PARAMETERS.TOP_P.DEFAULT
-                }
+                value={modelParameters?.top_p ?? MODEL_PARAMETERS.TOP_P.DEFAULT}
                 onChange={e => {
                   const value =
-                    e.target.value === '' ? undefined : parseFloat(e.target.value);
+                    e.target.value === ''
+                      ? undefined
+                      : parseFloat(e.target.value);
                   onParameterChange('top_p', value);
                 }}
                 className={errors.top_p ? 'error' : ''}
@@ -151,7 +156,9 @@ export const ApiConfigModelParameters: React.FC<ApiConfigModelParametersProps> =
                 value={modelParameters?.top_k ?? MODEL_PARAMETERS.TOP_K.DEFAULT}
                 onChange={e => {
                   const value =
-                    e.target.value === '' ? undefined : parseInt(e.target.value, 10);
+                    e.target.value === ''
+                      ? undefined
+                      : parseInt(e.target.value, 10);
                   onParameterChange('top_k', value);
                 }}
                 className={errors.top_k ? 'error' : ''}
@@ -251,4 +258,3 @@ export const ApiConfigModelParameters: React.FC<ApiConfigModelParametersProps> =
     </div>
   );
 };
-

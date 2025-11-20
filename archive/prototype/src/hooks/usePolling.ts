@@ -81,7 +81,7 @@ export function usePolling(
     // enabledがfalseからtrueに変わった時、または最初からtrueの場合に実行
     const wasDisabled = !prevEnabledRef.current;
     const isFirstTime = !hasInitialLoadRef.current;
-    
+
     if (!skipInitialLoad && (wasDisabled || isFirstTime) && isFirstTime) {
       hasInitialLoadRef.current = true;
       fetchFnRef.current({ force: true });
@@ -116,4 +116,3 @@ export function usePolling(
     lastRequestTimeRef,
   };
 }
-

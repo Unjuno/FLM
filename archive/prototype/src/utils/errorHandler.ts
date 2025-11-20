@@ -6,7 +6,10 @@ import { logger } from './logger';
 /**
  * 翻訳関数の型定義
  */
-type TranslateFunction = (key: string, params?: Record<string, string | number>) => string;
+type TranslateFunction = (
+  key: string,
+  params?: Record<string, string | number>
+) => string;
 
 /**
  * グローバルな翻訳関数（デフォルトは日本語）
@@ -34,42 +37,69 @@ function t(key: string, params?: Record<string, string | number>): string {
 /**
  * デフォルトの日本語メッセージを取得
  */
-function getDefaultMessage(key: string, params?: Record<string, string | number>): string {
+function getDefaultMessage(
+  key: string,
+  params?: Record<string, string | number>
+): string {
   // 簡単なフォールバック実装
   const messages: Record<string, string> = {
     'errors.general.unexpected': '予期しないエラーが発生しました',
-    'errors.ollama.notFound': 'Ollamaが見つかりませんでした。ホーム画面から「Ollamaセットアップ」を実行してOllamaをダウンロードしてください。',
-    'errors.ollama.connectionFailed': 'Ollamaに接続できませんでした。Ollamaが起動しているか確認してください。',
-    'errors.ollama.startFailed': 'Ollamaの起動に失敗しました。Ollamaが正しくインストールされているか確認してください。',
-    'errors.ollama.general': 'Ollamaでエラーが発生しました。Ollamaの設定を確認してください。',
-    'errors.api.portInUse': 'このポート番号は既に使用されています。自動的に代替ポートが検出されますが、別のポート番号を手動で指定することもできます。',
+    'errors.ollama.notFound':
+      'Ollamaが見つかりませんでした。ホーム画面から「Ollamaセットアップ」を実行してOllamaをダウンロードしてください。',
+    'errors.ollama.connectionFailed':
+      'Ollamaに接続できませんでした。Ollamaが起動しているか確認してください。',
+    'errors.ollama.startFailed':
+      'Ollamaの起動に失敗しました。Ollamaが正しくインストールされているか確認してください。',
+    'errors.ollama.general':
+      'Ollamaでエラーが発生しました。Ollamaの設定を確認してください。',
+    'errors.api.portInUse':
+      'このポート番号は既に使用されています。自動的に代替ポートが検出されますが、別のポート番号を手動で指定することもできます。',
     'errors.api.portInvalid': `ポート番号は${params?.min || PORT_RANGE.MIN}から${params?.max || PORT_RANGE.MAX}の間の数字を入力してください。`,
-    'errors.api.portNotFound': '使用可能なポート番号が見つかりませんでした。他のアプリケーションが多くのポートを使用している可能性があります。不要なアプリケーションを終了してから再度お試しください。',
-    'errors.api.authProxyStartFailedPort': '認証プロキシの起動に失敗しました。ポート番号が既に使用されている可能性があります。別のポート番号を試してください。',
-    'errors.api.authProxyStartFailed': '認証プロキシの起動に失敗しました。アプリケーションを再起動してから再度お試しください。',
+    'errors.api.portNotFound':
+      '使用可能なポート番号が見つかりませんでした。他のアプリケーションが多くのポートを使用している可能性があります。不要なアプリケーションを終了してから再度お試しください。',
+    'errors.api.authProxyStartFailedPort':
+      '認証プロキシの起動に失敗しました。ポート番号が既に使用されている可能性があります。別のポート番号を試してください。',
+    'errors.api.authProxyStartFailed':
+      '認証プロキシの起動に失敗しました。アプリケーションを再起動してから再度お試しください。',
     'errors.api.general': 'APIでエラーが発生しました。設定を確認してください。',
-    'errors.model.notFound': 'モデルが見つかりませんでした。モデルをダウンロードしてから再度お試しください。',
-    'errors.model.downloadFailed': 'モデルのダウンロードに失敗しました。インターネット接続を確認してください。',
-    'errors.model.general': 'モデルでエラーが発生しました。モデルの設定を確認してください。',
-    'errors.database.locked': 'データベースが使用中です。しばらく待ってから再度お試しください。',
-    'errors.database.connectionFailed': 'データベースへの接続に失敗しました。アプリケーションを再起動してください。',
-    'errors.database.general': 'データベースでエラーが発生しました。アプリケーションを再起動してください。',
-    'errors.network.general': 'ネットワーク接続に問題があります。インターネット接続を確認してください。',
-    'errors.network.timeout': 'リクエストがタイムアウトしました。ネットワーク接続を確認してください。',
-    'errors.network.connectionFailed': 'ネットワーク接続に失敗しました。インターネット接続を確認してください。',
-    'errors.network.retryFailed': 'リトライ後も接続に失敗しました。ネットワーク接続を確認してください。',
-    'errors.permission.general': '必要な権限がありません。権限設定を確認してください。',
-    'errors.validation.general': '入力内容に誤りがあります。入力内容を確認してください。',
-    'errors.ollama.suggestion': 'Ollamaが正しくインストールされ、起動しているか確認してください。',
-    'errors.api.suggestion': 'ポート番号が既に使用されていないか、設定を確認してください。',
-    'errors.model.suggestion': 'モデルが正しくダウンロードされているか確認してください。',
+    'errors.model.notFound':
+      'モデルが見つかりませんでした。モデルをダウンロードしてから再度お試しください。',
+    'errors.model.downloadFailed':
+      'モデルのダウンロードに失敗しました。インターネット接続を確認してください。',
+    'errors.model.general':
+      'モデルでエラーが発生しました。モデルの設定を確認してください。',
+    'errors.database.locked':
+      'データベースが使用中です。しばらく待ってから再度お試しください。',
+    'errors.database.connectionFailed':
+      'データベースへの接続に失敗しました。アプリケーションを再起動してください。',
+    'errors.database.general':
+      'データベースでエラーが発生しました。アプリケーションを再起動してください。',
+    'errors.network.general':
+      'ネットワーク接続に問題があります。インターネット接続を確認してください。',
+    'errors.network.timeout':
+      'リクエストがタイムアウトしました。ネットワーク接続を確認してください。',
+    'errors.network.connectionFailed':
+      'ネットワーク接続に失敗しました。インターネット接続を確認してください。',
+    'errors.network.retryFailed':
+      'リトライ後も接続に失敗しました。ネットワーク接続を確認してください。',
+    'errors.permission.general':
+      '必要な権限がありません。権限設定を確認してください。',
+    'errors.validation.general':
+      '入力内容に誤りがあります。入力内容を確認してください。',
+    'errors.ollama.suggestion':
+      'Ollamaが正しくインストールされ、起動しているか確認してください。',
+    'errors.api.suggestion':
+      'ポート番号が既に使用されていないか、設定を確認してください。',
+    'errors.model.suggestion':
+      'モデルが正しくダウンロードされているか確認してください。',
     'errors.database.suggestion': 'アプリケーションを再起動してみてください。',
     'errors.network.suggestion': 'インターネット接続を確認してください。',
     'errors.permission.suggestion': '必要な権限があるか確認してください。',
     'errors.validation.suggestion': '入力内容を確認してください。',
-    'errors.suggestion.general': '問題が続く場合は、アプリケーションを再起動してみてください。',
+    'errors.suggestion.general':
+      '問題が続く場合は、アプリケーションを再起動してみてください。',
   };
-  
+
   let message = messages[key] || key;
   if (params) {
     Object.entries(params).forEach(([paramKey, paramValue]) => {
@@ -124,7 +154,7 @@ function extractTauriErrorMessage(error: unknown): string | null {
 
   if (typeof error === 'object' && error !== null) {
     const errorObj = error as Record<string, unknown>;
-    
+
     const errorTypes = [
       'OllamaError',
       'ApiError',
@@ -136,16 +166,20 @@ function extractTauriErrorMessage(error: unknown): string | null {
       'AuthError',
       'ConnectionError',
     ];
-    
+
     for (const errorType of errorTypes) {
-      if (errorType in errorObj && typeof errorObj[errorType] === 'object' && errorObj[errorType] !== null) {
+      if (
+        errorType in errorObj &&
+        typeof errorObj[errorType] === 'object' &&
+        errorObj[errorType] !== null
+      ) {
         const typedError = errorObj[errorType] as Record<string, unknown>;
         if (typeof typedError.message === 'string') {
           return typedError.message;
         }
       }
     }
-    
+
     if ('message' in errorObj && typeof errorObj.message === 'string') {
       return errorObj.message;
     }
@@ -172,11 +206,11 @@ function detectErrorCategory(errorMessage: string): {
   ) {
     return { category: ErrorCategory.GENERAL, retryable: false };
   }
-  
+
   if (errorMessage.includes('ollama')) {
     return { category: ErrorCategory.OLLAMA, retryable: false };
   }
-  
+
   if (
     errorMessage.includes('port') ||
     errorMessage.includes('api') ||
@@ -185,35 +219,23 @@ function detectErrorCategory(errorMessage: string): {
   ) {
     return { category: ErrorCategory.API, retryable: false };
   }
-  
-  if (
-    errorMessage.includes('model') ||
-    errorMessage.includes('ダウンロード')
-  ) {
+
+  if (errorMessage.includes('model') || errorMessage.includes('ダウンロード')) {
     return { category: ErrorCategory.MODEL, retryable: false };
   }
-  
-  if (
-    errorMessage.includes('database') ||
-    errorMessage.includes('sql')
-  ) {
+
+  if (errorMessage.includes('database') || errorMessage.includes('sql')) {
     return { category: ErrorCategory.DATABASE, retryable: false };
   }
-  
-  if (
-    errorMessage.includes('network') ||
-    errorMessage.includes('connection')
-  ) {
+
+  if (errorMessage.includes('network') || errorMessage.includes('connection')) {
     return { category: ErrorCategory.NETWORK, retryable: true };
   }
-  
-  if (
-    errorMessage.includes('permission') ||
-    errorMessage.includes('権限')
-  ) {
+
+  if (errorMessage.includes('permission') || errorMessage.includes('権限')) {
     return { category: ErrorCategory.PERMISSION, retryable: false };
   }
-  
+
   return { category: ErrorCategory.GENERAL, retryable: false };
 }
 
@@ -233,7 +255,7 @@ export function parseError(
   const tauriMessage = extractTauriErrorMessage(error);
   if (tauriMessage) {
     const errorMessage = tauriMessage.toLowerCase();
-    
+
     if (!category) {
       const detected = detectErrorCategory(errorMessage);
       finalCategory = detected.category;
@@ -329,7 +351,10 @@ function getUserFriendlyMessage(
         return t('errors.api.portInUse');
       }
       if (lowerMessage.includes('port') && lowerMessage.includes('invalid')) {
-        return t('errors.api.portInvalid', { min: PORT_RANGE.MIN, max: PORT_RANGE.MAX });
+        return t('errors.api.portInvalid', {
+          min: PORT_RANGE.MIN,
+          max: PORT_RANGE.MAX,
+        });
       }
       if (
         lowerMessage.includes('使用可能なポート') &&
@@ -389,10 +414,7 @@ function getUserFriendlyMessage(
       ) {
         return t('errors.network.connectionFailed');
       }
-      if (
-        lowerMessage.includes('retry') ||
-        lowerMessage.includes('リトライ')
-      ) {
+      if (lowerMessage.includes('retry') || lowerMessage.includes('リトライ')) {
         return t('errors.network.retryFailed');
       }
       return t('errors.network.general');
@@ -401,9 +423,7 @@ function getUserFriendlyMessage(
       return t('errors.permission.general');
 
     case ErrorCategory.VALIDATION:
-      return (
-        errorMessage || t('errors.validation.general')
-      );
+      return errorMessage || t('errors.validation.general');
 
     case ErrorCategory.GENERAL:
       // 未実装機能のエラーを検出
@@ -414,7 +434,10 @@ function getUserFriendlyMessage(
         lowerMessage.includes('将来実装予定')
       ) {
         // 元のエラーメッセージをそのまま返す（既に適切な説明が含まれている）
-        return errorMessage || 'この機能は現在未実装です。将来のバージョンで実装予定です。';
+        return (
+          errorMessage ||
+          'この機能は現在未実装です。将来のバージョンで実装予定です。'
+        );
       }
       return errorMessage || t('errors.general.unexpected');
 
@@ -498,7 +521,10 @@ export function logError(error: ErrorInfo, context?: string): void {
  * @param fallbackMessage - フォールバックメッセージ（デフォルト: '予期しないエラーが発生しました'）
  * @returns エラーメッセージ文字列
  */
-export function errorToString(error: unknown, fallbackMessage?: string): string {
+export function errorToString(
+  error: unknown,
+  fallbackMessage?: string
+): string {
   if (error instanceof Error) {
     return error.message;
   }
@@ -515,7 +541,10 @@ export function errorToString(error: unknown, fallbackMessage?: string): string 
  * @param fallbackMessage - フォールバックメッセージ（オプション）
  * @returns エラーメッセージ文字列
  */
-export function extractErrorMessage(error: unknown, fallbackMessage?: string): string {
+export function extractErrorMessage(
+  error: unknown,
+  fallbackMessage?: string
+): string {
   return errorToString(error, fallbackMessage);
 }
 
