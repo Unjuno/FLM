@@ -2,7 +2,7 @@
 // tauri - Tauri環境の検出と安全なinvoke関数を提供
 
 import { invoke as tauriInvoke } from '@tauri-apps/api/core';
-import { parseError, logError, ErrorCategory, extractErrorMessage } from './errorHandler';
+import { parseError, logError, extractErrorMessage } from './errorHandler';
 import { logger } from './logger';
 import { isDev as isDevEnvironment } from './env';
 

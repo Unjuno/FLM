@@ -1,5 +1,7 @@
 // webService - Webサイトサービス要件の型定義
 
+import { WebModelParameters, WebMemorySettings, WebMultimodalSettings } from './webModel';
+
 /**
  * Webサイトサービスの要件
  */
@@ -43,9 +45,9 @@ export interface ModelSelectionResult {
   config: {
     port: number;
     enableAuth: boolean;
-    modelParameters: Record<string, any>;
-    memory?: Record<string, any>;
-    multimodal?: Record<string, any>;
+    modelParameters: WebModelParameters;
+    memory?: WebMemorySettings;
+    multimodal?: WebMultimodalSettings;
   };
 }
 

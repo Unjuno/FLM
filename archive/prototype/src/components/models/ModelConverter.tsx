@@ -1,6 +1,6 @@
 // ModelConverter - モデル変換コンポーネント
 
-import React, { useState, useCallback, useTransition, useEffect } from 'react';
+import React, { useState, useCallback, useTransition } from 'react';
 import { safeInvoke } from '../../utils/tauri';
 import { listen } from '@tauri-apps/api/event';
 import { useNotifications } from '../../contexts/NotificationContext';

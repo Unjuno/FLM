@@ -172,7 +172,7 @@ export const BackupRestore: React.FC = () => {
     } finally {
       setBackingUp(false);
     }
-  }, [showSuccess, showError]);
+  }, [showSuccess, showError, encryptBackup, backupPassword]);
 
   /**
    * ファイル選択ダイアログを開く

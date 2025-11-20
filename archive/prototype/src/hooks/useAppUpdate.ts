@@ -117,7 +117,7 @@ export function useAppUpdate(options?: {
     } finally {
       setChecking(false);
     }
-  }, [showInfo, showWarning, options?.showNotification, hasNotified]);
+  }, [showInfo, showWarning, options?.showNotification, hasNotified, navigate]);
 
   /**
    * アップデートのインストール

@@ -100,7 +100,7 @@ export const ApiLogs: React.FC = () => {
       setError(errorMessage);
       setLoading(false);
     }
-  }, []);
+  }, [t]);
 
   // ログ一覧を取得（フィルタ対応）
   const loadLogs = useCallback(

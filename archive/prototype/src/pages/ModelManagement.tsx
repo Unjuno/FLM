@@ -24,14 +24,14 @@ export const ModelManagement: React.FC = () => {
   const location = useLocation();
   const { t } = useI18n();
   // URLパラメータからタブを取得
-  const getTabFromUrl = (): 'search' | 'installed' | 'huggingface' | 'modelfile' | 'converter' | 'sharing' => {
+  const getTabFromUrl = useCallback((): 'search' | 'installed' | 'huggingface' | 'modelfile' | 'converter' | 'sharing' => {
     const params = new URLSearchParams(location.search);
     const tab = params.get('tab');
     if (tab && ['search', 'installed', 'huggingface', 'modelfile', 'converter', 'sharing'].includes(tab)) {
       return tab as 'search' | 'installed' | 'huggingface' | 'modelfile' | 'converter' | 'sharing';
     }
     return 'search';
-  };
+  }, [location.search]);
 
   const [activeTab, setActiveTab] = useState<
     | 'search'
@@ -45,7 +45,7 @@ export const ModelManagement: React.FC = () => {
   // URLパラメータの変更を監視
   useEffect(() => {
     setActiveTab(getTabFromUrl());
-  }, [location.search]);
+  }, [getTabFromUrl]);
 
   // 遷移元の情報を取得（API作成画面から来た場合）
   const returnTo = location.state?.returnTo;

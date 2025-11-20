@@ -129,36 +129,6 @@ export const AlertSettings: React.FC = () => {
     loadApiList();
   }, [loadApiList]);
 
-  /**
-   * 設定を読み込む
-   */
-  const loadSettings = useCallback(async () => {
-    try {
-      setLoading(true);
-      setError(null);
-
-      const apiId = isGlobalSettings ? null : selectedApiId;
-      const result = await safeInvoke<AlertSettings>('get_alert_settings', {
-        api_id: apiId,
-      });
-
-      setSettings(result);
-
-      // 閾値が設定されている場合は有効、nullの場合は無効
-      setEnabledStates({
-        response_time: result.response_time_threshold !== null,
-        error_rate: result.error_rate_threshold !== null,
-        cpu_usage: result.cpu_usage_threshold !== null,
-        memory_usage: result.memory_usage_threshold !== null,
-      });
-    } catch (err) {
-      setError(
-        extractErrorMessage(err, '設定の読み込みに失敗しました')
-      );
-    } finally {
-      setLoading(false);
-    }
-  }, [isGlobalSettings, selectedApiId]);
 
   /**
    * 設定を保存する

@@ -80,7 +80,7 @@ export const useFormAutosave = <T,>(config: AutosaveConfig<T>): {
         clearTimeout(autosaveTimeoutRef.current);
       }
     };
-  }, [config.data, config.key, config.isValid, defaultDelay]);
+  }, [config.data, config.key, config.isValid, config.metadata, defaultDelay]);
 
   // 保存されたデータを復元
   const restore = (): T | null => {
