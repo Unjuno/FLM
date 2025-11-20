@@ -69,47 +69,72 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     }
   }, [isOpen]);
 
-  // アクセシビリティ: Tabキーでフォーカスをダイアログ内に閉じ込める（フォーカストラップ）
-  useEffect(() => {
-    if (!isOpen || !dialogRef.current) return;
+    // アクセシビリティ: Tabキーでフォーカスをダイアログ内に閉じ込める（フォーカストラップ）
+    useEffect(() => {
+      if (!isOpen || !dialogRef.current) return;
 
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') {
-        handleDialogDismiss();
-        return;
-      }
-
-      if (event.key !== 'Tab') return;
-
-      const focusableElements = dialogRef.current!.querySelectorAll<HTMLElement>(
-        'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
-      );
-
-      if (focusableElements.length === 0) return;
-
-      const firstElement = focusableElements[0];
-      const lastElement = focusableElements[focusableElements.length - 1];
-
-      if (event.shiftKey) {
-        // Shift+Tabで最初の要素から前へ移動しようとしたら、最後の要素に移動
-        if (document.activeElement === firstElement) {
-          event.preventDefault();
-          lastElement.focus();
+      const handleKeyDown = (event: KeyboardEvent) => {
+        if (event.key === 'Escape') {
+          handleDialogDismiss();
+          return;
         }
-      } else {
-        // Tabで最後の要素から次へ移動しようとしたら、最初の要素に移動
-        if (document.activeElement === lastElement) {
-          event.preventDefault();
-          firstElement.focus();
-        }
-      }
-    };
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => {
-      document.removeEventListener('keydown', handleKeyDown);
-    };
-  }, [handleDialogDismiss, isOpen]);
+        if (event.key !== 'Tab') return;
+
+        const focusableElements = dialogRef.current!.querySelectorAll<HTMLElement>(
+          'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+        );
+
+        if (focusableElements.length === 0) return;
+
+        const firstElement = focusableElements[0];
+        const lastElement = focusableElements[focusableElements.length - 1];
+
+        if (event.shiftKey) {
+          // Shift+Tabで最初の要素から前へ移動しようとしたら、最後の要素に移動
+          if (document.activeElement === firstElement) {
+            event.preventDefault();
+            lastElement.focus();
+          }
+        } else {
+          // Tabで最後の要素から次へ移動しようとしたら、最初の要素に移動
+          if (document.activeElement === lastElement) {
+            event.preventDefault();
+            firstElement.focus();
+          }
+        }
+      };
+
+      document.addEventListener('keydown', handleKeyDown);
+      return () => {
+        document.removeEventListener('keydown', handleKeyDown);
+      };
+    }, [handleDialogDismiss, isOpen]);
+
+    useEffect(() => {
+      if (!isOpen) return;
+
+      const handlePointerDown = (event: MouseEvent | TouchEvent) => {
+        if (!dialogRef.current) {
+          return;
+        }
+        const target = event.target;
+        if (!(target instanceof Node)) {
+          return;
+        }
+        if (!dialogRef.current.contains(target)) {
+          handleDialogDismiss();
+        }
+      };
+
+      document.addEventListener('mousedown', handlePointerDown);
+      document.addEventListener('touchstart', handlePointerDown);
+
+      return () => {
+        document.removeEventListener('mousedown', handlePointerDown);
+        document.removeEventListener('touchstart', handlePointerDown);
+      };
+    }, [handleDialogDismiss, isOpen]);
 
   if (!isOpen) return null;
 
@@ -127,25 +152,17 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
     }
   };
 
-  const confirmButtonClassName = `confirm-button confirm ${confirmVariant}`;
+    const confirmButtonClassName = `confirm-button confirm ${confirmVariant}`;
 
-  return (
-    <div
-      className="confirm-dialog-overlay"
-      role="dialog"
-      aria-modal="true"
-      aria-labelledby="confirm-dialog-title"
-      onClick={(e) => {
-        if (e.target === e.currentTarget) {
-          handleDialogDismiss();
-        }
-      }}
-    >
-      <div
-        ref={dialogRef}
-        className="confirm-dialog"
-        role="document"
-      >
+    return (
+      <div className="confirm-dialog-overlay">
+        <div
+          ref={dialogRef}
+          className="confirm-dialog"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="confirm-dialog-title"
+        >
         <h3 id="confirm-dialog-title">{title}</h3>
         <p>{message}</p>
         <div className="confirm-dialog-actions">

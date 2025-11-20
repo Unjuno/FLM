@@ -10,6 +10,16 @@ import * as https from 'https';
 import { ensureCertificateExists } from '../../src/backend/auth/certificate-generator.js';
 import { exec } from 'child_process';
 import { promisify } from 'util';
+import { debugLog } from '../setup/debug';
+
+const isTauriAvailable = Boolean(process.env.TAURI_APP_AVAILABLE);
+const describeIfTauri = isTauriAvailable ? describe : describe.skip;
+
+if (!isTauriAvailable) {
+  console.warn(
+    'Tauriアプリが起動していないため、certificate-integrationテストをスキップします'
+  );
+}
 
 const execAsync = promisify(exec);
 
@@ -24,27 +34,25 @@ const testPort = 8444;
 /**
  * 証明書自動生成機能統合テストスイート
  */
-describe('Certificate Integration Tests (TEST_EXECUTION_GUIDE)', () => {
+describeIfTauri('Certificate Integration Tests (TEST_EXECUTION_GUIDE)', () => {
   beforeAll(() => {
-    // debug.tsをインポート（必要に応じて）
-    if (typeof require !== 'undefined') {
-      const { debugLog } = require('../setup/debug');
-      debugLog('証明書自動生成機能統合テストを開始します');
-    } else if (
-      process.env.NODE_ENV === 'development' ||
-      process.env.JEST_DEBUG === '1'
-    ) {
-      console.log('証明書自動生成機能統合テストを開始します');
-    }
+      if (typeof debugLog === 'function') {
+        debugLog('証明書自動生成機能統合テストを開始します');
+      } else if (
+        process.env.NODE_ENV === 'development' ||
+        process.env.JEST_DEBUG === '1'
+      ) {
+        console.log('証明書自動生成機能統合テストを開始します');
+      }
 
-    testDataDir = path.join(os.tmpdir(), 'flm-test-cert-integration');
-    testCertDir = path.join(testDataDir, 'certificates');
-    process.env.FLM_DATA_DIR = testDataDir;
+      testDataDir = path.join(os.tmpdir(), 'flm-test-cert-integration');
+      testCertDir = path.join(testDataDir, 'certificates');
+      process.env.FLM_DATA_DIR = testDataDir;
 
-    if (!fs.existsSync(testCertDir)) {
-      fs.mkdirSync(testCertDir, { recursive: true });
-    }
-  });
+      if (!fs.existsSync(testCertDir)) {
+        fs.mkdirSync(testCertDir, { recursive: true });
+      }
+    });
 
   afterAll(() => {
     if (

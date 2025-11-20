@@ -4,32 +4,6 @@
  * @jest-environment jsdom
  */
 
-// ResizeObserverをモック（テスト実行前に設定が必要）
-// @ts-ignore
-if (
-  typeof global !== 'undefined' &&
-  typeof global.ResizeObserver === 'undefined'
-) {
-  // @ts-ignore
-  global.ResizeObserver = class ResizeObserver {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  };
-}
-// @ts-ignore
-if (
-  typeof window !== 'undefined' &&
-  typeof window.ResizeObserver === 'undefined'
-) {
-  // @ts-ignore
-  window.ResizeObserver = class ResizeObserver {
-    observe() {}
-    unobserve() {}
-    disconnect() {}
-  };
-}
-
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { render, screen } from '@testing-library/react';
 import '@testing-library/jest-dom';

@@ -218,15 +218,11 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   );
 
   // ローディング中は何も表示しない（またはローディング表示）
-  if (isLoading) {
-    return <>{children}</>; // 簡単な実装としてそのまま表示
-  }
-
-  return (
-    <ThemeContext.Provider value={contextValue}>
-      {children}
-    </ThemeContext.Provider>
-  );
+    return (
+      <ThemeContext.Provider value={contextValue}>
+        {children}
+      </ThemeContext.Provider>
+    );
 };
 
 /**

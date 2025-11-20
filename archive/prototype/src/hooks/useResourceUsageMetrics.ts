@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 // useResourceUsageMetrics - CPU/メモリ使用率取得用カスタムフック
 
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { safeInvoke } from '../utils/tauri';
 import { FORMATTING, LOCALE } from '../constants/config';
 import { useIsMounted } from './useIsMounted';
@@ -212,7 +212,13 @@ export const useResourceUsageMetrics = (
         setLoading(false);
       }
     }
-  }, [apiId, startDate, endDate, isMounted]);
+    }, [apiId, startDate, endDate, isMounted]);
+
+  useEffect(() => {
+    if (!autoRefresh) {
+      loadData({ force: true });
+    }
+  }, [autoRefresh, loadData]);
 
   // ポーリング設定
   usePolling(loadData, {

@@ -8,6 +8,15 @@ import * as os from 'os';
 import { cleanupTestApis, createTestApi, waitForApiStart, waitForApiStop, handleTauriAppNotRunningError } from '../setup/test-helpers';
 import { debugLog, debugWarn } from '../setup/debug';
 
+const isTauriAvailable = Boolean(process.env.TAURI_APP_AVAILABLE);
+const describeIfTauri = isTauriAvailable ? describe : describe.skip;
+
+if (!isTauriAvailable) {
+  console.warn(
+    'Tauriアプリが起動していないため、certificate-generationテストをスキップします'
+  );
+}
+
 /**
  * 証明書ファイルのパスを取得
  */
@@ -37,7 +46,7 @@ function getCertificatePaths(apiId: string): {
 /**
  * 証明書自動生成機能統合テストスイート
  */
-describe('証明書自動生成機能 統合テスト', () => {
+describeIfTauri('証明書自動生成機能 統合テスト', () => {
   let testApiId: string | null = null;
 
   beforeAll(() => {

@@ -28,6 +28,70 @@ const DEFAULT_PAGE_MARGIN = '1cm';
 const DEFAULT_FONT_SIZE = '12pt';
 const DEFAULT_LINE_HEIGHT = 1.5;
 
+const getEnvironmentWindow = (): Window => {
+  if (
+    typeof globalThis !== 'undefined' &&
+    (globalThis as Window & typeof globalThis).window
+  ) {
+    return (globalThis as Window & typeof globalThis).window;
+  }
+  return window;
+};
+
+const waitForPrintWindowReady = (target: Window | null): Promise<void> => {
+  return new Promise(resolve => {
+    if (!target) {
+      resolve();
+      return;
+    }
+
+    let handled = false;
+
+    const finalize = () => {
+      setTimeout(() => resolve(), PRINT_DELAY_MS);
+    };
+
+    const handleLoad = () => {
+      if (handled) {
+        return;
+      }
+      handled = true;
+
+      if (typeof target.removeEventListener === 'function') {
+        target.removeEventListener('load', handleLoad);
+      }
+
+      if ('onload' in target) {
+        try {
+          target.onload = null;
+        } catch {
+          // ignore read-only assignments
+        }
+      }
+
+      finalize();
+    };
+
+    if (typeof target.addEventListener === 'function') {
+      target.addEventListener('load', handleLoad);
+      handled = true;
+    }
+
+    if ('onload' in target) {
+      try {
+        target.onload = handleLoad;
+        handled = true;
+      } catch {
+        // ignore read-only assignments
+      }
+    }
+
+    if (!handled) {
+      finalize();
+    }
+  });
+};
+
 /**
  * エラーメッセージ
  */
@@ -141,14 +205,19 @@ const createPrintWindowHTML = (
  * @param callback コールバック関数
  * @param phase 実行フェーズ（'印刷前' | '印刷後'）
  */
-const safeExecuteCallback = async (
+const safeExecuteCallback = (
   callback?: () => void | Promise<void>,
   phase: string = '印刷'
-): Promise<void> => {
+): Promise<void> | void => {
   if (!callback) return;
   
   try {
-    await Promise.resolve(callback());
+    const result = callback();
+    if (result && typeof (result as Promise<void>).then === 'function') {
+      return (result as Promise<void>).catch(error => {
+        logger.error(ERROR_MESSAGES.CALLBACK_ERROR(phase), error, 'print');
+      });
+    }
   } catch (error) {
     logger.error(ERROR_MESSAGES.CALLBACK_ERROR(phase), error, 'print');
   }
@@ -177,7 +246,7 @@ const handleError = async (
  * 印刷を実行
  * @param options 印刷オプション
  */
-export const print = async (options: PrintOptions = {}): Promise<void> => {
+export const printElement = async (options: PrintOptions = {}): Promise<void> => {
   const {
     targetElement,
     title,
@@ -186,12 +255,15 @@ export const print = async (options: PrintOptions = {}): Promise<void> => {
     styles,
   } = options;
   
-  let printWindow: Window | null = null;
-  
-  try {
-    // 印刷前コールバックを実行
-    await safeExecuteCallback(beforePrint, '印刷前');
+    let printWindow: Window | null = null;
     
+    try {
+      // 印刷前コールバックを実行
+      const beforePrintResult = safeExecuteCallback(beforePrint, '印刷前');
+      if (beforePrintResult && typeof beforePrintResult.then === 'function') {
+        await beforePrintResult;
+      }
+      
     // 印刷対象のコンテンツを取得
     let content: string;
     
@@ -209,7 +281,10 @@ export const print = async (options: PrintOptions = {}): Promise<void> => {
     }
     
     // 印刷ウィンドウを開く
-    printWindow = window.open('', '_blank', 'width=800,height=600');
+    const targetWindow = getEnvironmentWindow();
+    printWindow = targetWindow.open
+      ? targetWindow.open('', '_blank')
+      : window.open('', '_blank');
     
     if (!printWindow) {
       logger.error(ERROR_MESSAGES.POPUP_BLOCKED(), '', 'print');
@@ -222,28 +297,34 @@ export const print = async (options: PrintOptions = {}): Promise<void> => {
     printWindow.document.close();
     
     // スタイルの読み込みと画像の読み込みを待つ
-    await new Promise<void>((resolve) => {
-      if (!printWindow) {
-        resolve();
-        return;
-      }
-      
-      printWindow.addEventListener('load', () => {
-        setTimeout(() => resolve(), PRINT_DELAY_MS);
-      });
-    });
+    await waitForPrintWindowReady(printWindow);
     
     // 印刷ダイアログを表示
-    printWindow.focus();
-    printWindow.print();
+    if (typeof printWindow?.focus === 'function') {
+      printWindow.focus();
+    }
+    if (typeof printWindow?.print === 'function') {
+      printWindow.print();
+    } else {
+      logger.warn('print API is unavailable in the current environment', 'print');
+    }
     
-    // 印刷ダイアログが閉じられるのを待つ
+      // 印刷ダイアログが閉じられるのを待つ
     setTimeout(() => {
       if (printWindow) {
         printWindow.close();
       }
-      safeExecuteCallback(afterPrint, '印刷後');
+        const afterPrintResult = safeExecuteCallback(afterPrint, '印刷後');
+        if (
+          afterPrintResult &&
+          typeof afterPrintResult.then === 'function'
+        ) {
+          afterPrintResult.catch(() => {
+            // 既にログ出力済み
+          });
+        }
     }, WINDOW_CLOSE_DELAY_MS);
+      console.log('printElement resolved');
     
   } catch (error) {
     logger.error(ERROR_MESSAGES.PRINT_FAILED(), error, 'print');
@@ -253,27 +334,15 @@ export const print = async (options: PrintOptions = {}): Promise<void> => {
 };
 
 /**
- * 現在のページを印刷
- */
-export const printCurrentPage = async (): Promise<void> => {
-  try {
-    window.print();
-  } catch (error) {
-    logger.error(ERROR_MESSAGES.PRINT_FAILED(), error, 'print');
-    throw error;
-  }
-};
-
-/**
  * 指定された要素を印刷
  * @param elementId 要素のID
  * @param options 印刷オプション
  */
-export const printElement = async (
+export const printElementById = async (
   elementId: string,
   options: Omit<PrintOptions, 'targetElement'> = {}
 ): Promise<void> => {
-  await print({ ...options, targetElement: elementId });
+  await printElement({ ...options, targetElement: elementId });
 };
 
 /**
@@ -287,5 +356,12 @@ export const printSelector = async (
   title?: string,
   options: Omit<PrintOptions, 'targetElement' | 'title'> = {}
 ): Promise<void> => {
-  await print({ ...options, targetElement: selector, title });
+  await printElement({ ...options, targetElement: selector, title });
+};
+
+export const printPage = async (
+  title?: string,
+  options: Omit<PrintOptions, 'targetElement' | 'title'> = {}
+): Promise<void> => {
+  await printElement({ ...options, title });
 };

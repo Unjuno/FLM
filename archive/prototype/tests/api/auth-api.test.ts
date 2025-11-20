@@ -170,12 +170,14 @@ describe('Authentication API Tests', () => {
         await invoke('delete_api', { api_id: noAuthApiId });
       } catch (error) {
         console.warn('認証無効APIのテストをスキップ:', error);
-        if (noAuthApiId) {
-          try {
-            await invoke('stop_api', { api_id: noAuthApiId });
-            await invoke('delete_api', { api_id: noAuthApiId });
-          } catch {}
-        }
+          if (noAuthApiId) {
+            try {
+              await invoke('stop_api', { api_id: noAuthApiId });
+              await invoke('delete_api', { api_id: noAuthApiId });
+            } catch (cleanupError) {
+              void cleanupError;
+            }
+          }
       }
     }, 30000);
   });

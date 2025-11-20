@@ -11,6 +11,7 @@ import {
   afterEach,
   jest,
 } from '@jest/globals';
+import React from 'react';
 import { createRoot, type Root } from 'react-dom/client';
 import { LogStatistics } from '../../src/components/api/LogStatistics';
 import * as tauriUtils from '../../src/utils/tauri';
@@ -23,7 +24,6 @@ jest.mock('../../src/contexts/I18nContext');
 // rechartsのモック（ResizeObserverエラーを回避）
 jest.mock('recharts', () => {
   // React 19のJSX変換を使用するため、React.createElementを使用
-  const React = require('react');
   return {
     BarChart: ({ children, ...props }: any) => {
       // dataKeyなどのrecharts専用プロップを除外

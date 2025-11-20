@@ -1,6 +1,6 @@
 // useIsMounted - コンポーネントのマウント状態を追跡するカスタムフック
 
-import { useEffect, useRef } from 'react';
+import { useCallback, useEffect, useRef } from 'react';
 
 /**
  * コンポーネントのマウント状態を追跡するカスタムフック
@@ -31,6 +31,6 @@ export const useIsMounted = (): (() => boolean) => {
     };
   }, []);
 
-  return () => isMountedRef.current;
+  return useCallback(() => isMountedRef.current, []);
 };
 

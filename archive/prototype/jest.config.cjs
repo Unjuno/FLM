@@ -38,20 +38,20 @@ module.exports = {
         // .tsxファイルも除外（jsdom環境で実行）
         '/tests/unit/.*\\.test\\.tsx$',
       ],
-      transform: {
-        '^.+\\.(ts|tsx)$': ['ts-jest', {
-          tsconfig: {
-            esModuleInterop: true,
-            allowSyntheticDefaultImports: true,
-            moduleResolution: 'node',
-          },
-        }],
-      },
-      moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
-      moduleNameMapper: {
-        '^@/(.*)$': '<rootDir>/src/$1',
-        '^(.+)\\.js$': '$1',
-      },
+        transform: {
+          '^.+\\.(ts|tsx)$': ['ts-jest', {
+            tsconfig: {
+              esModuleInterop: true,
+              allowSyntheticDefaultImports: true,
+              moduleResolution: 'node',
+            },
+          }],
+        },
+        moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
+        moduleNameMapper: {
+          '^@/(.*)$': '<rootDir>/src/$1',
+          '^(.+)\\.js$': '$1',
+        },
       globals: {
         'import.meta': {
           env: {
@@ -82,30 +82,34 @@ module.exports = {
         '<rootDir>/tests/api/**/*.test.ts',
         '<rootDir>/tests/security/**/*.test.ts'
       ],
-      transform: {
-        '^.+\\.(ts|tsx)$': ['ts-jest', {
-          tsconfig: '<rootDir>/tsconfig.test.json',
-        }],
-      },
-      moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
-      moduleNameMapper: {
-        '^@/(.*)$': '<rootDir>/src/$1',
-        '^(.+)\\.js$': '$1',
-        '\\.(css|less|scss|sass)$': '<rootDir>/tests/setup/cssMock.js',
-        '^@/utils/tauri$': '<rootDir>/tests/setup/tauri-utils-mock.ts',
-        '^../../utils/tauri$': '<rootDir>/tests/setup/tauri-utils-mock.ts',
-        '^../utils/tauri$': '<rootDir>/tests/setup/tauri-utils-mock.ts',
-        '^src/utils/tauri$': '<rootDir>/tests/setup/tauri-utils-mock.ts',
-        '^@/utils/env$': '<rootDir>/tests/setup/env-mock.ts',
-        '^../../utils/env$': '<rootDir>/tests/setup/env-mock.ts',
-        '^../utils/env$': '<rootDir>/tests/setup/env-mock.ts',
-        '^src/utils/env$': '<rootDir>/tests/setup/env-mock.ts',
-        '^@/utils/webModelConfig$': '<rootDir>/tests/setup/webModelConfig-mock.ts',
-        '^../../src/utils/webModelConfig$': '<rootDir>/tests/setup/webModelConfig-mock.ts',
-        '^../src/utils/webModelConfig$': '<rootDir>/tests/setup/webModelConfig-mock.ts',
-        '^src/utils/webModelConfig$': '<rootDir>/tests/setup/webModelConfig-mock.ts',
-        '^.*/utils/webModelConfig$': '<rootDir>/tests/setup/webModelConfig-mock.ts',
-      },
+        transform: {
+          '^.+\\.(ts|tsx)$': ['ts-jest', {
+            tsconfig: '<rootDir>/tsconfig.test.json',
+          }],
+        },
+        moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
+        moduleNameMapper: {
+          '^@/(.*)$': '<rootDir>/src/$1',
+          '^(.+)\\.js$': '$1',
+          '\\.(css|less|scss|sass)$': '<rootDir>/tests/setup/cssMock.js',
+          '^@/utils/tauri$': '<rootDir>/tests/setup/tauri-utils-mock.ts',
+          '^../../utils/tauri$': '<rootDir>/tests/setup/tauri-utils-mock.ts',
+          '^../../src/utils/tauri$': '<rootDir>/tests/setup/tauri-utils-mock.ts',
+          '^../utils/tauri$': '<rootDir>/tests/setup/tauri-utils-mock.ts',
+          '^../src/utils/tauri$': '<rootDir>/tests/setup/tauri-utils-mock.ts',
+          '^src/utils/tauri$': '<rootDir>/tests/setup/tauri-utils-mock.ts',
+          '^@/utils/env$': '<rootDir>/tests/setup/env-mock.ts',
+          '^../../utils/env$': '<rootDir>/tests/setup/env-mock.ts',
+          '^../../src/utils/env$': '<rootDir>/tests/setup/env-mock.ts',
+          '^../utils/env$': '<rootDir>/tests/setup/env-mock.ts',
+          '^../src/utils/env$': '<rootDir>/tests/setup/env-mock.ts',
+          '^src/utils/env$': '<rootDir>/tests/setup/env-mock.ts',
+          '^@/utils/webModelConfig$': '<rootDir>/tests/setup/webModelConfig-mock.ts',
+          '^../../src/utils/webModelConfig$': '<rootDir>/tests/setup/webModelConfig-mock.ts',
+          '^../src/utils/webModelConfig$': '<rootDir>/tests/setup/webModelConfig-mock.ts',
+          '^src/utils/webModelConfig$': '<rootDir>/tests/setup/webModelConfig-mock.ts',
+          '^.*/utils/webModelConfig$': '<rootDir>/tests/setup/webModelConfig-mock.ts',
+        },
       globals: {
         'import.meta': {
           env: {

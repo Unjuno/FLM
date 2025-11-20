@@ -8,16 +8,6 @@ import { renderHook, act } from '@testing-library/react';
 import { useForm, FormField } from '../../src/hooks/useForm';
 import { validate } from '../../src/utils/validation';
 
-// import.meta.envをモック（Jest環境用）
-// @ts-ignore
-global.import = {
-  meta: {
-    env: {
-      DEV: true,
-    },
-  },
-};
-
 describe('useForm.ts', () => {
   beforeEach(() => {
     jest.clearAllMocks();

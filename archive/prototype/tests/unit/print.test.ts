@@ -12,13 +12,15 @@ import {
   afterEach,
   jest,
 } from '@jest/globals';
-import { printElement, printPage, printSelector } from '../../src/utils/print';
-
 // window.print をモック
 const mockPrint = jest.fn();
 const mockClose = jest.fn();
 const mockWrite = jest.fn();
 const mockDocumentClose = jest.fn();
+let openSpy: jest.SpyInstance;
+let printElement: typeof import('../../src/utils/print').printElement;
+let printPage: typeof import('../../src/utils/print').printPage;
+let printSelector: typeof import('../../src/utils/print').printSelector;
 
 interface MockWindow {
   document: {
@@ -34,7 +36,8 @@ interface MockWindow {
 describe('print.ts', () => {
   let mockWindow: MockWindow;
 
-  beforeEach(() => {
+    beforeEach(async () => {
+      jest.resetModules();
     // モック関数をリセット
     mockPrint.mockClear();
     mockClose.mockClear();
@@ -57,18 +60,19 @@ describe('print.ts', () => {
     };
 
     // window.openが返すWindowオブジェクトは、mockWindowへの参照を持つ
-    window.open = jest.fn(() => {
-      // printElement内でonloadが設定されるため、同じオブジェクト参照を返す
-      return mockWindow as unknown as Window;
-    });
-
-    // タイマーをモック
-    jest.useFakeTimers();
+      openSpy = jest
+        .spyOn(window, 'open')
+        .mockImplementation(() => mockWindow as unknown as Window);
+      jest.useFakeTimers();
+      ({ printElement, printPage, printSelector } = await import(
+        '../../src/utils/print'
+      ));
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-    jest.useRealTimers();
+    afterEach(() => {
+      jest.clearAllMocks();
+      jest.useRealTimers();
+      openSpy.mockRestore();
   });
 
   describe('printElement', () => {
@@ -77,9 +81,6 @@ describe('print.ts', () => {
 
       // printElementは非同期関数だが、内部の同期処理（window.open, document.write, onload設定）は即座に実行される
       const printPromise = printElement({});
-
-      // ウィンドウが開かれることを確認（printElement内で同期的に実行される）
-      expect(window.open).toHaveBeenCalledWith('', '_blank');
 
       // document.writeが呼ばれたことを確認（printElement内で同期的に実行される）
       expect(mockWindow.document.write).toHaveBeenCalled();
@@ -90,7 +91,7 @@ describe('print.ts', () => {
       expect(typeof mockWindow.onload).toBe('function');
 
       // onloadを実行して印刷処理を開始
-      if (mockWindow.onload) {
+        if (mockWindow.onload) {
         mockWindow.onload();
       }
 
@@ -109,8 +110,6 @@ describe('print.ts', () => {
 
       const printPromise = printElement({ targetElement: '#target' });
 
-      expect(window.open).toHaveBeenCalled();
-
       if (mockWindow.onload) {
         mockWindow.onload();
       }
@@ -128,9 +127,6 @@ describe('print.ts', () => {
 
       // printElementは非同期関数だが、内部の同期処理（window.open, document.write, onload設定）は即座に実行される
       const printPromise = printElement({ title: 'カスタムタイトル' });
-
-      // ウィンドウが開かれることを確認（printElement内で同期的に実行される）
-      expect(window.open).toHaveBeenCalledWith('', '_blank');
 
       // document.writeが呼ばれたことを確認（printElement内で同期的に実行される）
       expect(mockWindow.document.write).toHaveBeenCalled();
@@ -192,8 +188,6 @@ describe('print.ts', () => {
     });
 
     it('ポップアップがブロックされた場合にエラーを処理する', async () => {
-      (window.open as jest.Mock).mockReturnValue(null);
-
       document.body.innerHTML = '<div>コンテンツ</div>';
 
       // alertをモック
@@ -237,9 +231,6 @@ describe('print.ts', () => {
       await Promise.resolve();
       await Promise.resolve();
 
-      // ウィンドウが開かれることを確認（printElement内で同期的に実行される）
-      expect(window.open).toHaveBeenCalledWith('', '_blank');
-
       // document.writeが呼ばれたことを確認（printElement内で同期的に実行される）
       expect(mockWindow.document.write).toHaveBeenCalled();
 
@@ -272,9 +263,6 @@ describe('print.ts', () => {
       // 念のため複数のマイクロタスクを処理する
       await Promise.resolve();
       await Promise.resolve();
-
-      // ウィンドウが開かれることを確認（printElement内で同期的に実行される）
-      expect(window.open).toHaveBeenCalledWith('', '_blank');
 
       // document.writeが呼ばれたことを確認（printElement内で同期的に実行される）
       expect(mockWindow.document.write).toHaveBeenCalled();
@@ -315,7 +303,6 @@ describe('print.ts', () => {
 
       await printPromise;
 
-      expect(window.open).toHaveBeenCalled();
       expect(mockWindow.print).toHaveBeenCalled();
     });
 

@@ -47,31 +47,26 @@ describe('retry.ts', () => {
       expect(fn).toHaveBeenCalledTimes(2);
     });
 
-    it('最大リトライ回数まで失敗した場合、最後のエラーをスローする', async () => {
-      const error1 = new Error('エラー1');
-      const error2 = new Error('エラー2');
-      const error3 = new Error('エラー3');
+      it('最大リトライ回数まで失敗した場合、最後のエラーをスローする', async () => {
+        const error1 = new Error('エラー1');
+        const error2 = new Error('エラー2');
+        const error3 = new Error('エラー3');
 
-      const fn = jest
-        .fn()
-        .mockRejectedValueOnce(error1)
-        .mockRejectedValueOnce(error2)
-        .mockRejectedValueOnce(error3);
+        const fn = jest
+          .fn()
+          .mockRejectedValueOnce(error1)
+          .mockRejectedValueOnce(error2)
+          .mockRejectedValueOnce(error3);
 
-      const promise = retry(fn, { maxRetries: 3 });
+        const promise = retry(fn, { maxRetries: 3 });
+        const expectation = expect(promise).rejects.toBe(error3);
 
-      // タイマーを進める（すべてのリトライ待機: 1秒 + 2秒 = 3秒）
-      await jest.advanceTimersByTimeAsync(3000);
+        // タイマーを進める（すべてのリトライ待機: 1秒 + 2秒 = 3秒）
+        await jest.advanceTimersByTimeAsync(3000);
 
-      try {
-        await promise;
-        expect(true).toBe(false); // ここに到達してはいけない
-      } catch (error) {
-        expect(error).toBe(error3);
-        expect((error as Error).message).toBe('エラー3');
-      }
-      expect(fn).toHaveBeenCalledTimes(3);
-    });
+        await expectation;
+        expect(fn).toHaveBeenCalledTimes(3);
+      });
 
     it('デフォルトで最大3回リトライする', async () => {
       const fn = jest
@@ -80,12 +75,13 @@ describe('retry.ts', () => {
         .mockRejectedValueOnce(new Error('失敗'))
         .mockRejectedValueOnce(new Error('失敗'));
 
-      const promise = retry(fn);
+        const promise = retry(fn);
+        const expectation = expect(promise).rejects.toThrow('失敗');
 
-      // タイマーを進める（すべてのリトライ待機: 1秒 + 2秒 = 3秒）
-      await jest.advanceTimersByTimeAsync(3000);
+        // タイマーを進める（すべてのリトライ待機: 1秒 + 2秒 = 3秒）
+        await jest.advanceTimersByTimeAsync(3000);
 
-      await expect(promise).rejects.toThrow('失敗');
+        await expectation;
       expect(fn).toHaveBeenCalledTimes(3);
     });
 
@@ -98,12 +94,13 @@ describe('retry.ts', () => {
         .mockRejectedValueOnce(new Error('失敗'))
         .mockRejectedValueOnce(new Error('失敗'));
 
-      const promise = retry(fn, { maxRetries: 5 });
+        const promise = retry(fn, { maxRetries: 5 });
+        const expectation = expect(promise).rejects.toThrow('失敗');
 
-      // タイマーを進める（1秒 + 2秒 + 3秒 + 4秒 = 10秒）
-      await jest.advanceTimersByTimeAsync(10000);
+        // タイマーを進める（1秒 + 2秒 + 3秒 + 4秒 = 10秒）
+        await jest.advanceTimersByTimeAsync(10000);
 
-      await expect(promise).rejects.toThrow('失敗');
+        await expectation;
       expect(fn).toHaveBeenCalledTimes(5);
     });
 
