@@ -1,0 +1,22 @@
+[package]
+name = "flm-cli"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "FLM CLI - Command-line interface"
+
+[[bin]]
+name = "flm"
+path = "src/main.rs"
+
+[dependencies]
+flm-core = { path = "../flm-core" }
+tokio = { workspace = true, features = ["rt-multi-thread", "macros"] }
+clap = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }

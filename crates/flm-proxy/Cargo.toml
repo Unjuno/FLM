@@ -1,0 +1,21 @@
+[package]
+name = "flm-proxy"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "FLM Proxy - HTTP(S) authentication proxy"
+
+[dependencies]
+flm-core = { path = "../flm-core" }
+tokio = { workspace = true }
+# HTTP dependencies temporarily disabled - will re-enable after Rust 1.83
+# axum = { workspace = true }
+# tower = { workspace = true }
+# tower-http = { workspace = true }
+# reqwest = { workspace = true }
+serde = { workspace = true }
+serde_json = { workspace = true }
+anyhow = { workspace = true }
+tracing = { workspace = true }

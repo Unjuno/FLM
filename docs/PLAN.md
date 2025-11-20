@@ -1,9 +1,12 @@
 # FLM Next Plan
 > Status: Canonical | Audience: All contributors | Updated: 2025-11-20
+> 
+> **⚠️ 実装状況**: Phase 0 進行中。`crates/` ディレクトリの初期セットアップを実施中。
 
 ## 背景
 - 既存プロトタイプは機能が肥大化し保守が困難になったため `archive/prototype/` に退避した
 - 本番版は「CLI → 最小UI → パッケージ」の段階的アプローチで再構築する
+- **注意**: `archive/prototype/` は参照専用であり、新規機能追加・バグ修正は行わない
 
 ## 基本方針
 1. **アプリケーションコア（Rust Domain）を唯一のビジネスロジック層**とし、CLI / UI / Proxy などはすべて薄いアダプタに徹する
@@ -15,6 +18,8 @@
 ## アーキテクチャ
 
 Rust ワークスペース構成（Domain / Application / Adapter を明確化）：
+
+> **実装状況**: 2025-11-20 時点で `crates/` ディレクトリを構築中。Phase 0 完了までは仕様のみ参照可能。
 
 ```
 flm/

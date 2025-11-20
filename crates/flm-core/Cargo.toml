@@ -1,0 +1,30 @@
+[package]
+name = "flm-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+description = "FLM Core Domain Layer - Business logic and abstract ports"
+
+[dependencies]
+# Async runtime
+tokio = { workspace = true }
+# Serialization
+serde = { workspace = true }
+serde_json = { workspace = true }
+# Database (temporarily commented - will add SQLite implementation later)
+# rusqlite = { workspace = true }
+# Cryptography
+aes-gcm = { workspace = true }
+sha2 = { workspace = true }
+# Error handling
+anyhow = { workspace = true }
+thiserror = { workspace = true }
+# Date/Time
+chrono = { workspace = true }
+# Others
+uuid = { workspace = true }
+async-trait = "0.1"
+
+[dev-dependencies]
