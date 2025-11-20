@@ -5,7 +5,6 @@
 use crate::domain::security::{ApiKeyMetadata, ApiKeyRecord, PlainAndHashedApiKey, SecurityPolicy};
 use crate::error::RepoError;
 use crate::ports::SecurityRepository;
-use argon2::Argon2;
 use chrono::Utc;
 use std::sync::Arc;
 
@@ -218,7 +217,7 @@ fn generate_key_id() -> String {
 /// * `Ok(String)` containing the hashed key
 /// * `Err(RepoError)` if hashing fails
 fn hash_api_key(plain_key: &str) -> Result<String, RepoError> {
-    use argon2::password_hash::{rand_core::OsRng, PasswordHash, PasswordHasher, SaltString};
+    use argon2::password_hash::{rand_core::OsRng, PasswordHasher, SaltString};
 
     let salt = SaltString::generate(&mut OsRng);
     let argon2 = Argon2::default();
