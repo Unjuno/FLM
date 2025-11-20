@@ -184,8 +184,8 @@ describe('tauri.ts', () => {
     it('Tauri環境が利用可能な場合、警告を表示しない', () => {
       checkTauriEnvironment('テスト機能');
       // 警告が表示されないことを確認（logger.warnが呼ばれない）
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      // 動的モジュール読み込みが必要なため、requireを使用
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { logger } = require('../../src/utils/logger');
       expect(logger.warn).not.toHaveBeenCalled();
     });
@@ -209,7 +209,8 @@ describe('tauri.ts', () => {
 
       checkTauriEnvironment('テスト機能');
 
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      // 動的モジュール読み込みが必要なため、requireを使用
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { logger } = require('../../src/utils/logger');
       expect(logger.warn).not.toHaveBeenCalled();
     });

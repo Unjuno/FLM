@@ -19,10 +19,15 @@ import * as i18nContext from '../../src/contexts/I18nContext';
 // モック設定
 jest.mock('../../src/utils/tauri');
 jest.mock('../../src/contexts/I18nContext');
+jest.mock('../../src/hooks/useIsMounted', () => ({
+  useIsMounted: () => () => true,
+}));
 
 // rechartsのモック（ResizeObserverエラーを回避）
 jest.mock('recharts', () => {
   // React 19のJSX変換を使用するため、React.createElementを使用
+  // 動的モジュール読み込みが必要なため、requireを使用
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const React = require('react');
   return {
     BarChart: ({ children, ...props }: any) => {

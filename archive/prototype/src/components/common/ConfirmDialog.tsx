@@ -129,7 +129,14 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
 
   const confirmButtonClassName = `confirm-button confirm ${confirmVariant}`;
 
+  const handleOverlayKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Escape') {
+      handleDialogDismiss();
+    }
+  };
+
   return (
+    // eslint-disable-next-line jsx-a11y/no-noninteractive-element-interactions
     <div
       className="confirm-dialog-overlay"
       role="dialog"
@@ -140,6 +147,8 @@ export const ConfirmDialog: React.FC<ConfirmDialogProps> = ({
           handleDialogDismiss();
         }
       }}
+      onKeyDown={handleOverlayKeyDown}
+      tabIndex={-1}
     >
       <div
         ref={dialogRef}

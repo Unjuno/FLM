@@ -28,6 +28,8 @@ describe('Certificate Integration Tests (TEST_EXECUTION_GUIDE)', () => {
   beforeAll(() => {
     // debug.tsをインポート（必要に応じて）
     if (typeof require !== 'undefined') {
+      // 動的モジュール読み込みが必要なため、requireを使用
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { debugLog } = require('../setup/debug');
       debugLog('証明書自動生成機能統合テストを開始します');
     } else if (

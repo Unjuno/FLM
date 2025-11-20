@@ -110,6 +110,8 @@ describe('ErrorBoundary.tsx', () => {
 
   describe('エラー処理', () => {
     it('エラー情報をログに記録する', () => {
+      // 動的モジュール読み込みが必要なため、requireを使用
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const { logger } = require('../../src/utils/logger');
 
       render(
@@ -315,6 +317,8 @@ describe('ErrorBoundary.tsx', () => {
 
   describe('withErrorBoundary HOC', () => {
     it('withErrorBoundaryでコンポーネントをラップできる', () => {
+      // 動的モジュール読み込みが必要なため、requireを使用
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const {
         withErrorBoundary,
       } = require('../../src/components/common/ErrorBoundary');
@@ -327,6 +331,8 @@ describe('ErrorBoundary.tsx', () => {
     });
 
     it('ラップされたコンポーネントでエラーが発生した場合、ErrorBoundaryがキャッチする', () => {
+      // 動的モジュール読み込みが必要なため、requireを使用
+      // eslint-disable-next-line @typescript-eslint/no-var-requires
       const {
         withErrorBoundary,
       } = require('../../src/components/common/ErrorBoundary');

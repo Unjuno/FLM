@@ -440,6 +440,7 @@ const ModelSelectionComponent: React.FC<ModelSelectionProps> = ({
     }
     // selectedModelはあるが、modelsがまだ読み込まれていない場合は何もしない
     // modelsが読み込まれるとこのuseEffectが再実行される
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedModel, models.length]);
 
   // モデル一覧を取得（useCallbackでメモ化）

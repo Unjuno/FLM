@@ -6,7 +6,7 @@ if (
   typeof global !== 'undefined' &&
   typeof global.ResizeObserver === 'undefined'
 ) {
-  // @ts-ignore
+  // @ts-expect-error - ResizeObserverをグローバルに追加
   global.ResizeObserver = class ResizeObserver {
     constructor(_callback?: ResizeObserverCallback) {}
     observe(_target: Element, _options?: ResizeObserverOptions) {}
@@ -18,7 +18,7 @@ if (
   typeof globalThis !== 'undefined' &&
   typeof (globalThis as any).ResizeObserver === 'undefined'
 ) {
-  // @ts-ignore
+  // @ts-expect-error - ResizeObserverをglobalThisに追加
   (globalThis as any).ResizeObserver = class ResizeObserver {
     constructor(_callback?: ResizeObserverCallback) {}
     observe(_target: Element, _options?: ResizeObserverOptions) {}
@@ -30,7 +30,7 @@ if (
   typeof window !== 'undefined' &&
   typeof (window as any).ResizeObserver === 'undefined'
 ) {
-  // @ts-ignore
+  // @ts-expect-error - ResizeObserverをwindowに追加
   (window as any).ResizeObserver = class ResizeObserver {
     constructor(_callback?: ResizeObserverCallback) {}
     observe(_target: Element, _options?: ResizeObserverOptions) {}
@@ -41,6 +41,8 @@ if (
 
 // TextEncoder/TextDecoderのポリフィル（react-router-domなどで必要）
 if (typeof globalThis.TextEncoder === 'undefined') {
+  // Node.js環境でのみ利用可能なutilモジュールを動的に読み込む
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { TextEncoder, TextDecoder } = require('util');
   globalThis.TextEncoder = TextEncoder;
   globalThis.TextDecoder = TextDecoder;

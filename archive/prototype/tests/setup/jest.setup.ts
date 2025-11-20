@@ -2,7 +2,7 @@
 
 // import.meta.envをグローバルにモック（すべてのテスト環境で使用可能）
 if (typeof global !== 'undefined') {
-  // @ts-ignore
+  // @ts-expect-error - import.metaはJest環境では存在しないため、グローバルに追加
   global.import = {
     meta: {
       env: {
@@ -26,7 +26,7 @@ if (
   typeof window !== 'undefined' &&
   typeof window.ResizeObserver === 'undefined'
 ) {
-  // @ts-ignore
+  // @ts-expect-error - ResizeObserverをwindowに追加
   window.ResizeObserver = class ResizeObserver {
     observe() {}
     unobserve() {}
@@ -40,6 +40,8 @@ if (
 
 // TextEncoder/TextDecoderのポリフィル（react-router-domなどで必要）
 if (typeof globalThis.TextEncoder === 'undefined') {
+  // Node.js環境でのみ利用可能なutilモジュールを動的に読み込む
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
   const { TextEncoder, TextDecoder } = require('util');
   globalThis.TextEncoder = TextEncoder;
   globalThis.TextDecoder = TextDecoder;

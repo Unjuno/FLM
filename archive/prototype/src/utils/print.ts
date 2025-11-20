@@ -228,9 +228,15 @@ export const print = async (options: PrintOptions = {}): Promise<void> => {
         return;
       }
       
-      printWindow.addEventListener('load', () => {
+      // jsdom環境や一部の環境ではaddEventListenerが存在しない場合がある
+      if (typeof printWindow.addEventListener === 'function') {
+        printWindow.addEventListener('load', () => {
+          setTimeout(() => resolve(), PRINT_DELAY_MS);
+        });
+      } else {
+        // addEventListenerが利用できない場合は、短い待機後に解決
         setTimeout(() => resolve(), PRINT_DELAY_MS);
-      });
+      }
     });
     
     // 印刷ダイアログを表示

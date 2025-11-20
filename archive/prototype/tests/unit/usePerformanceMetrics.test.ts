@@ -22,6 +22,11 @@ jest.mock('../../src/utils/tauri', () => ({
   clearInvokeCache: jest.fn(),
 }));
 
+// useIsMountedをモック
+jest.mock('../../src/hooks/useIsMounted', () => ({
+  useIsMounted: () => () => true,
+}));
+
 describe('usePerformanceMetrics.ts', () => {
   beforeEach(() => {
     jest.clearAllMocks();

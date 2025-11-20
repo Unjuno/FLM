@@ -102,7 +102,9 @@ export const ProgressDisplay: React.FC<ProgressDisplayProps> = ({
       return null;
     }
     return `${progress.current.toLocaleString()} / ${progress.total.toLocaleString()}`;
-  }, [progress.current, progress.total]);
+    // progress.currentとprogress.totalはmutableな値のため、progressオブジェクト全体を依存配列に含める
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [progress]);
 
   // 速度をフォーマット
   const formattedSpeed = useMemo(() => {
