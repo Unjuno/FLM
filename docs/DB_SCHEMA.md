@@ -1,5 +1,5 @@
 # SQLite Schema & Migration Strategy
-> Status: Canonical | Audience: Persistence / CLI engineers | Updated: 2025-11-18
+> Status: Canonical | Audience: Persistence / CLI engineers | Updated: 2025-11-20
 
 ## 1. ツール
 

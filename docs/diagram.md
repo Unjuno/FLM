@@ -1,5 +1,5 @@
 # FLM Architecture Diagram
-> Status: Canonical | Audience: All contributors | Updated: 2025-11-18
+> Status: Canonical | Audience: All contributors | Updated: 2025-11-20
 
 以下のマーメイド図は Rust コア / Adapters / External Dependencies の関係と依存方向を示します。
 

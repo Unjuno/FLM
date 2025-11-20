@@ -1,6 +1,8 @@
 # FLM Monorepo (Next Generation)
 
-> Status: WIP | Audience: All contributors | Updated: 2025-11-18
+> Status: WIP | Audience: All contributors | Updated: 2025-11-20
+
+**注意**: 本アプリケーションは**個人利用・シングルユーザー環境向け**です。マルチユーザー対応やロールベースアクセス制御（RBAC）機能は提供されていません。
 
 このリポジトリは、アーカイブ済みプロトタイプ (`archive/prototype/`) を置き換える次期実装です。旧アプリは `archive/prototype/` 以下に完全保管しており、参照専用です。新コアは以下の構成で進行中です。
 

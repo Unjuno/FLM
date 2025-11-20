@@ -1,6 +1,8 @@
 # FLM Proxy Specification
 > Status: Canonical | Audience: Proxy/Network engineers | Updated: 2025-11-20
 
+**注意**: 本プロキシ仕様は**個人利用・シングルユーザー環境向け**のアプリケーション向けです。マルチユーザー対応やロールベースアクセス制御（RBAC）機能は提供されていません。
+
 ## 1. 役割
 
 Axum/Hyper ベースの HTTP(S) プロキシ。以下の責務を担う:
@@ -137,6 +139,10 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 | `Dns01` | `acme_domain`, `acme_email`, `acme_dns_profile_id` | DNS プロバイダ資格情報は CLI/Tauri Wizard が OS キーチェーンに保存し、ProxyService は CLI 経由でトークンを受け取る。TXT レコード `_acme-challenge.{domain}` を生成し、検証後に削除する。 |
 
 - ACME 取得/更新のデフォルトタイムアウトは 90 秒。2 回連続で失敗した場合は `ProxyError::AcmeError` を CLI へ返す。
+- **ACME失敗時のフォールバック**: タイムアウトまたはエラーが発生した場合、CLI/UI は以下の順序でフォールバックを試行する:
+  1. 既存の証明書が有効期限内なら再利用（`security.db` の `certificates` テーブルを確認）
+  2. 再利用不可の場合は `dev-selfsigned` モードへの切り替えを提案（手動証明書インストールが必要）
+  3. ユーザーが拒否した場合は `local-http` モードで起動し、HTTPS なしで運用可能にする
 - CLI オプション `--challenge http-01|dns-01` と `--dns-profile <id>` は `ProxyConfig` に直結する。UI Setup Wizard でも同じフィールドを表示する。
 - HTTP-01 の場合、80/tcp が使用できない環境では CLI が自動的にポートフォワード（`netsh interface portproxy` / `iptables`）を設定し、終了時に戻す。DNS-01 はフォワード不要。
 - どちらのチャレンジでも証明書/秘密鍵は `security.db` にメタデータを保存し、実体ファイルは OS ごとの安全なパス（`%ProgramData%\flm\certs` 等）に配置する。

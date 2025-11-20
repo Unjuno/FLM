@@ -1,7 +1,8 @@
 # FLM Minimal UI Specification
-> Status: Canonical | Audience: UI engineers | Updated: 2025-11-18
+> Status: Canonical | Audience: UI engineers | Updated: 2025-11-20
 
 ## 1. 目的と基本方針
+- 対象ユーザー: 個人利用・シングルユーザー環境（マルチユーザー/RBAC非対応）
 - Phase 2 で実装する最小 UI の範囲と要件を明確化し、CLI と同等の機能を GUI から操作できるようにする。
 - 設定・状態取得・キー管理などのコア操作は Rust Core API（EngineService / ProxyService / SecurityService / ConfigService）を IPC 経由で呼び出し、CLI subprocess の起動は禁止。チャット疎通確認のみ Proxy の HTTP エンドポイントを直接呼び出す。
 - UI はステータス表示と操作トリガーに徹し、追加ロジックは持たない。

@@ -1,5 +1,5 @@
 # SECURITY_FIREWALL_GUIDE
-> Status: Canonical | Audience: UI backend / Ops | Updated: 2025-11-18
+> Status: Canonical | Audience: UI backend / Ops | Updated: 2025-11-20
 
 外部公開時に必要となる OS レベルのファイアウォール設定と、Setup Wizard Step 4 が自動生成・実行する処理を定義する。
 

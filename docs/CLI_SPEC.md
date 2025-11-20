@@ -1,8 +1,9 @@
 # FLM CLI Specification
-> Status: Canonical | Audience: CLI developers & QA | Updated: 2025-11-18
+> Status: Canonical | Audience: CLI developers & QA | Updated: 2025-11-20
 
 ## 1. 概要
 - 実行形式: `flm` (Rust 製単体バイナリ)
+- 対象ユーザー: 個人利用・シングルユーザー環境（マルチユーザー/RBAC非対応）
 - 目的: 既存エンジン検出、モデル参照、Rust製セキュアプロキシ制御、設定/セキュリティ管理を CLI で提供
 - 対応エンジン: Ollama / LM Studio / vLLM / llama.cpp
 - 依存: SQLite (`config.db`, `security.db`)、Rust コアライブラリ、対象エンジン本体

@@ -1,5 +1,5 @@
 # Engine Detection Specification
-> Status: Canonical | Audience: Engine adapter developers | Updated: 2025-11-18
+> Status: Canonical | Audience: Engine adapter developers | Updated: 2025-11-20
 
 ## 1. 検出ステップの標準テンプレート
 

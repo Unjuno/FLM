@@ -1,8 +1,9 @@
 # FLM Minimal Feature Specification
-> Status: Canonical | Audience: Product & Engineering leads | Updated: 2025-11-18
+> Status: Canonical | Audience: Product & Engineering leads | Updated: 2025-11-20
 
 ## 1. 概要
 - 対象: FLM 再構築版（Rust コア + 薄いアダプタ構成）
+- 対象ユーザー: 個人利用・シングルユーザー環境（マルチユーザー/RBAC非対応）
 - 目的: 既存インストール済み LLM エンジンを安全に外部公開できる最小構成を定義
 - スコープ外: モデルダウンロード/削除、大規模監視、複雑な RBAC、Node/Express 依存機能
 

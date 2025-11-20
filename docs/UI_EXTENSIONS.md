@@ -1,5 +1,5 @@
 # FLM UI Extensions (Post-Core Roadmap)
-> Status: Reference | Audience: Product & UI leads | Updated: 2025-11-18
+> Status: Reference | Audience: Product & UI leads | Updated: 2025-11-20
 
 Phase 1/2 でコア機能と最小UIを完成させた後に追加する機能を整理する。
 

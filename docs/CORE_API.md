@@ -1,6 +1,8 @@
 # FLM Core API Specification
 > Status: Canonical | Audience: Rust core engineers | Updated: 2025-11-20
 
+**注意**: 本API仕様は**個人利用・シングルユーザー環境向け**のアプリケーション向けです。マルチユーザー対応やロールベースアクセス制御（RBAC）機能は提供されていません。
+
 ## 1. Rust Workspace Modules
 
 ```
