@@ -1,0 +1,54 @@
+[workspace]
+members = [
+    "crates/flm-core",
+    "crates/flm-cli",
+    "crates/flm-proxy",
+    "crates/flm-engine-ollama",
+    "crates/flm-engine-vllm",
+    "crates/flm-engine-lmstudio",
+    "crates/flm-engine-llamacpp",
+]
+resolver = "2"
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["FLM Contributors"]
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/flm/flm"
+
+[workspace.dependencies]
+# Core dependencies
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+tokio = { version = "1.35", features = ["full"] }
+anyhow = "1.0"
+thiserror = "1.0"
+
+# Database
+sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "sqlite", "migrate"] }
+
+# HTTP/Proxy
+axum = "0.7"
+hyper = { version = "1.0", features = ["full"] }
+tower = "0.4"
+tower-http = { version = "0.5", features = ["cors", "trace"] }
+
+# Security
+argon2 = "0.5"
+ring = "0.17"
+
+# CLI
+clap = { version = "4.4", features = ["derive"] }
+
+# Dev dependencies are specified per crate, not in workspace
+
+[profile.release]
+opt-level = 3
+lto = true
+codegen-units = 1
+
+[profile.dev]
+opt-level = 0
+debug = true
+

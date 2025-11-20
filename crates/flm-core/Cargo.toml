@@ -1,0 +1,24 @@
+[package]
+name = "flm-core"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "flm_core"
+path = "src/lib.rs"
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+anyhow.workspace = true
+thiserror.workspace = true
+sqlx.workspace = true
+futures = "0.3"
+
+[dev-dependencies]
+tokio-test = "0.4"
+
