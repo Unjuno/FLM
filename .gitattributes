@@ -1,0 +1,5 @@
+# Archive directory - treat as binary to skip diffs in PR reviews
+# This prevents archive changes from appearing in PR diffs
+archive/prototype/** -diff -merge
+archive/prototype/** linguist-generated=true
+

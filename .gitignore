@@ -1,0 +1,35 @@
+# Archive directory - exclude build artifacts
+archive/prototype/node_modules/
+archive/prototype/target/
+archive/prototype/dist/
+archive/prototype/coverage/
+archive/prototype/.pnp
+archive/prototype/.pnp.js
+archive/prototype/*.log
+archive/prototype/npm-debug.log*
+archive/prototype/yarn-debug.log*
+archive/prototype/yarn-error.log*
+archive/prototype/test-results.txt
+archive/prototype/*.check_output*.txt
+archive/prototype/src-tauri/check_output*.txt
+archive/prototype/src-tauri/gen/
+archive/prototype/ersjunnyDesktopFLM
+archive/prototype/invalid-models-list.json
+archive/prototype/model-availability-check-results.json
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+
