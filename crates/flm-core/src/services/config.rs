@@ -3,38 +3,64 @@
 //! See `docs/CORE_API.md` section 5 for the complete specification.
 
 use crate::error::RepoError;
-#[allow(unused_imports)]
 use crate::ports::ConfigRepository;
 
 /// Config service
-pub struct ConfigService {
-    // TODO: Add config repository field
+///
+/// This service provides configuration management functionality.
+/// It delegates to a ConfigRepository for persistence.
+pub struct ConfigService<R>
+where
+    R: ConfigRepository,
+{
+    repo: R,
 }
 
-impl ConfigService {
+impl<R> ConfigService<R>
+where
+    R: ConfigRepository,
+{
     /// Create a new ConfigService
+    ///
+    /// # Arguments
+    /// * `repo` - The configuration repository to use
     #[allow(clippy::new_without_default)]
-    pub fn new(// TODO: Add config repository parameter
-    ) -> Self {
-        // TODO: Initialize with injected dependencies
-        Self {}
+    pub fn new(repo: R) -> Self {
+        Self { repo }
     }
 
     /// Get a config value
-    pub fn get(&self, _key: &str) -> Result<Option<String>, RepoError> {
-        // TODO: Implement config get
-        todo!("Implement config get")
+    ///
+    /// # Arguments
+    /// * `key` - The configuration key
+    ///
+    /// # Returns
+    /// * `Ok(Some(value))` if the key exists
+    /// * `Ok(None)` if the key does not exist
+    /// * `Err(RepoError)` if an error occurs
+    pub fn get(&self, key: &str) -> Result<Option<String>, RepoError> {
+        self.repo.get(key)
     }
 
     /// Set a config value
-    pub fn set(&self, _key: &str, _value: &str) -> Result<(), RepoError> {
-        // TODO: Implement config set
-        todo!("Implement config set")
+    ///
+    /// # Arguments
+    /// * `key` - The configuration key
+    /// * `value` - The configuration value
+    ///
+    /// # Returns
+    /// * `Ok(())` on success
+    /// * `Err(RepoError)` if an error occurs
+    pub fn set(&self, key: &str, value: &str) -> Result<(), RepoError> {
+        self.repo.set(key, value)
     }
 
     /// List all config values
+    ///
+    /// # Returns
+    /// * `Ok(Vec<(key, value)>)` on success
+    /// * `Err(RepoError)` if an error occurs
     pub fn list(&self) -> Result<Vec<(String, String)>, RepoError> {
-        // TODO: Implement config list
-        todo!("Implement config list")
+        self.repo.list()
     }
 }
