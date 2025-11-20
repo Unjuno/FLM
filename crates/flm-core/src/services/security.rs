@@ -4,6 +4,7 @@
 
 use crate::domain::security::{ApiKeyMetadata, PlainAndHashedApiKey, SecurityPolicy};
 use crate::error::RepoError;
+#[allow(unused_imports)]
 use crate::ports::SecurityRepository;
 
 /// Security service

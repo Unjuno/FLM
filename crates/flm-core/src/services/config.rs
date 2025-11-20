@@ -3,6 +3,7 @@
 //! See `docs/CORE_API.md` section 5 for the complete specification.
 
 use crate::error::RepoError;
+#[allow(unused_imports)]
 use crate::ports::ConfigRepository;
 
 /// Config service

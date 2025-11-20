@@ -22,23 +22,11 @@ pub enum EngineKind {
 }
 
 /// Engine capabilities
-#[derive(Clone, Debug, Serialize, Deserialize)]
+#[derive(Clone, Debug, Default, Serialize, Deserialize)]
 pub struct EngineCapabilities {
     pub chat: bool,
     pub chat_stream: bool,
     pub embeddings: bool,
     pub moderation: bool,
     pub tools: bool,
-}
-
-impl Default for EngineCapabilities {
-    fn default() -> Self {
-        Self {
-            chat: false,
-            chat_stream: false,
-            embeddings: false,
-            moderation: false,
-            tools: false,
-        }
-    }
 }

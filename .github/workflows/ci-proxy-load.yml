@@ -1,0 +1,26 @@
+name: CI Proxy Load Test
+
+on:
+  schedule:
+    # Run nightly
+    - cron: '0 2 * * *'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  load-test:
+    name: Proxy Load Test
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build proxy
+        run: cargo build --release -p flm-proxy
+      - name: Run load test
+        run: |
+          # TODO: Implement load test with k6 or wrk
+          # See docs/TEST_STRATEGY.md section 2.2
+          echo "Load test not yet implemented"
+

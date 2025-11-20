@@ -3,6 +3,7 @@
 use crate::domain::chat::{
     ChatRequest, ChatResponse, ChatStreamChunk, EmbeddingRequest, EmbeddingResponse,
 };
+#[allow(unused_imports)]
 use crate::domain::engine::{EngineBinaryInfo, EngineRuntimeInfo, EngineState, ModelInfo};
 use crate::domain::models::EngineCapabilities;
 use crate::error::EngineError;

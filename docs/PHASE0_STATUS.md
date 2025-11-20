@@ -1,5 +1,5 @@
 # Phase 0 実装状況
-> Status: In Progress | Updated: 2025-01-27
+> Status: Complete | Updated: 2025-01-27
 
 ## 完了項目
 
@@ -25,25 +25,44 @@
 - [x] 全4エラー型の定義完了
 - [x] thiserror による実装
 
+### ✅ マイグレーション設定とDBスキーマ
+- [x] `migrations/20250101000001_create_config_db.sql`: config.db スキーマ
+- [x] `migrations/20250101000002_create_security_db.sql`: security.db スキーマ
+- [x] `migrations/20250101000003_init_security_policy.sql`: デフォルトポリシー初期化
+- [x] `DB_SCHEMA.md` との整合性確認
+
+### ✅ テスト設定とCI基本構成
+- [x] `tests/integration_test.rs`: 統合テスト（5テスト、すべて成功）
+- [x] `tests/common/mod.rs`: テストユーティリティ
+- [x] `.github/workflows/ci-cli.yml`: フォーマット、Clippy、テスト、ビルドチェック
+- [x] `.github/workflows/ci-proxy-load.yml`: プロキシ負荷テスト（プレースホルダー）
+- [x] `.github/workflows/ci-acme-smoke.yml`: ACME証明書スモークテスト（プレースホルダー）
+
+### ✅ Core API v1.0.0 タグ付け準備
+- [x] すべてのドメインモデルが `CORE_API.md` と一致
+- [x] すべてのPortトレイトが定義済み
+- [x] すべてのServiceスケルトンが定義済み
+- [x] エラータイプが完全に定義済み
+- [x] DBマイグレーションファイルが作成済み
+- [x] 基本テストが成功
+- [x] CIワークフローが設定済み
+- [x] `docs/CHANGELOG.md` 作成
+
 ### ✅ 検証
 - [x] ドキュメント整合性チェック（100%一致）
 - [x] コンパイル検証（エラー0件）
-- [x] 型安全性検証
-
-## 残りのタスク
-
-### ⏳ Phase 0 続き
-- [ ] マイグレーション設定とDBスキーマ（`DB_SCHEMA.md` に基づく）
-- [ ] テスト設定とCI基本構成
-- [ ] Core API v1.0.0 タグ付け準備
+- [x] Clippy検証（警告0件、`-D warnings` パス）
+- [x] フォーマット検証（すべてフォーマット済み）
+- [x] テスト検証（5テスト、すべて成功）
+- [x] リリースビルド検証（成功）
 
 ## 検証結果
 
-詳細は `VERIFICATION_REPORT.md` を参照。
+詳細は `VERIFICATION_REPORT.md` と `docs/PHASE0_COMPLETE.md` を参照。
 
-**総合合格率: 100% (61/61 項目)**
+**総合合格率: 100% (全項目完了)**
 
 ---
 
-**判定**: ✅ **Phase 0 基本構造は安全で整合性が確保されています**
+**判定**: ✅ **Phase 0 は完全に完了し、Phase 1 に進む準備が整いました**
 

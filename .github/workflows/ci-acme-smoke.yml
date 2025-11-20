@@ -1,0 +1,29 @@
+name: CI ACME Smoke Test
+
+on:
+  schedule:
+    # Run nightly
+    - cron: '0 3 * * *'
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  acme-test:
+    name: ACME Certificate Test
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        challenge: [http-01, dns-01]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Build CLI
+        run: cargo build --release -p flm-cli
+      - name: Run ACME smoke test
+        run: |
+          # TODO: Implement ACME smoke test
+          # See docs/TEST_STRATEGY.md section 2.3
+          echo "ACME smoke test not yet implemented for challenge: ${{ matrix.challenge }}"
+

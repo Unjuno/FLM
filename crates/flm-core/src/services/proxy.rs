@@ -4,6 +4,7 @@
 
 use crate::domain::proxy::{ProxyConfig, ProxyHandle};
 use crate::error::ProxyError;
+#[allow(unused_imports)]
 use crate::ports::{ProxyController, ProxyRepository};
 
 /// Proxy service

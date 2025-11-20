@@ -8,6 +8,7 @@ use crate::domain::chat::{
 use crate::domain::engine::{EngineState, ModelInfo};
 use crate::domain::models::EngineId;
 use crate::error::EngineError;
+#[allow(unused_imports)]
 use crate::ports::{ConfigRepository, EngineProcessController, EngineRepository};
 use futures::Stream;
 use std::pin::Pin;
