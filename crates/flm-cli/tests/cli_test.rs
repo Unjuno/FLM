@@ -193,7 +193,7 @@ fn test_api_keys_create_and_list() {
 fn test_api_keys_revoke() {
     let (_temp_dir, _config_db, security_db) = create_temp_db_dir();
     let binary = get_flm_binary();
-    
+
     // Create an API key first
     let create_output = Command::new(&binary)
         .args([
@@ -206,13 +206,13 @@ fn test_api_keys_revoke() {
         ])
         .output()
         .expect("Failed to execute flm api-keys create");
-    
+
     assert!(
         create_output.status.success(),
         "flm api-keys create should succeed. stderr: {}",
         String::from_utf8_lossy(&create_output.stderr)
     );
-    
+
     // Extract the key ID from the output
     let create_stdout = String::from_utf8_lossy(&create_output.stdout);
     let key_id = create_stdout
@@ -225,7 +225,7 @@ fn test_api_keys_revoke() {
             }
         })
         .expect("Should find key ID in create output");
-    
+
     // Test api-keys revoke
     let output = Command::new(&binary)
         .args([
@@ -237,13 +237,13 @@ fn test_api_keys_revoke() {
         ])
         .output()
         .expect("Failed to execute flm api-keys revoke");
-    
+
     assert!(
         output.status.success(),
         "flm api-keys revoke should succeed. stderr: {}",
         String::from_utf8_lossy(&output.stderr)
     );
-    
+
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
         stdout.contains(&key_id),
@@ -255,7 +255,7 @@ fn test_api_keys_revoke() {
         "Output should indicate revocation. Got: {}",
         stdout
     );
-    
+
     // Verify the key is still in the list but marked as revoked
     let list_output = Command::new(&binary)
         .args([
@@ -266,12 +266,12 @@ fn test_api_keys_revoke() {
         ])
         .output()
         .expect("Failed to execute flm api-keys list");
-    
+
     assert!(
         list_output.status.success(),
         "flm api-keys list should succeed after revoke"
     );
-    
+
     let list_stdout = String::from_utf8_lossy(&list_output.stdout);
     assert!(
         list_stdout.contains(&key_id),
@@ -284,7 +284,7 @@ fn test_api_keys_revoke() {
 fn test_api_keys_rotate() {
     let (_temp_dir, _config_db, security_db) = create_temp_db_dir();
     let binary = get_flm_binary();
-    
+
     // Create an API key first
     let create_output = Command::new(&binary)
         .args([
@@ -297,13 +297,13 @@ fn test_api_keys_rotate() {
         ])
         .output()
         .expect("Failed to execute flm api-keys create");
-    
+
     assert!(
         create_output.status.success(),
         "flm api-keys create should succeed. stderr: {}",
         String::from_utf8_lossy(&create_output.stderr)
     );
-    
+
     // Extract the key ID from the output
     let create_stdout = String::from_utf8_lossy(&create_output.stdout);
     let original_key_id = create_stdout
@@ -316,7 +316,7 @@ fn test_api_keys_rotate() {
             }
         })
         .expect("Should find key ID in create output");
-    
+
     // Test api-keys rotate
     let output = Command::new(&binary)
         .args([
@@ -328,13 +328,13 @@ fn test_api_keys_rotate() {
         ])
         .output()
         .expect("Failed to execute flm api-keys rotate");
-    
+
     assert!(
         output.status.success(),
         "flm api-keys rotate should succeed. stderr: {}",
         String::from_utf8_lossy(&output.stderr)
     );
-    
+
     let stdout = String::from_utf8_lossy(&output.stdout);
     assert!(
         stdout.contains("rotated"),
@@ -351,7 +351,7 @@ fn test_api_keys_rotate() {
         "Output should indicate old key is revoked. Got: {}",
         stdout
     );
-    
+
     // Extract the new key ID from the output
     let new_key_id = stdout
         .lines()
@@ -363,12 +363,12 @@ fn test_api_keys_rotate() {
             }
         })
         .expect("Should find new key ID in rotate output");
-    
+
     assert_ne!(
         new_key_id, original_key_id,
         "New key ID should be different from original"
     );
-    
+
     // Verify both keys are in the list
     let list_output = Command::new(&binary)
         .args([
@@ -379,12 +379,12 @@ fn test_api_keys_rotate() {
         ])
         .output()
         .expect("Failed to execute flm api-keys list");
-    
+
     assert!(
         list_output.status.success(),
         "flm api-keys list should succeed after rotate"
     );
-    
+
     let list_stdout = String::from_utf8_lossy(&list_output.stdout);
     assert!(
         list_stdout.contains(&original_key_id),
