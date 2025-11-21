@@ -15,7 +15,7 @@ fn create_temp_db_dir() -> (TempDir, PathBuf, PathBuf) {
     (temp_dir, config_db, security_db)
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_config_service_integration() {
     let (_temp_dir, config_db, _security_db) = create_temp_db_dir();
 
@@ -37,7 +37,7 @@ async fn test_config_service_integration() {
     assert_eq!(items[0].1, "test_value");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_security_service_integration() {
     let (_temp_dir, _config_db, security_db) = create_temp_db_dir();
 
@@ -70,7 +70,7 @@ async fn test_security_service_integration() {
     assert!(revoked_key.revoked_at.is_some(), "Key should be revoked");
 }
 
-#[tokio::test]
+#[tokio::test(flavor = "multi_thread")]
 async fn test_security_service_rotate() {
     let (_temp_dir, _config_db, security_db) = create_temp_db_dir();
 

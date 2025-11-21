@@ -4,8 +4,11 @@ use flm_core::domain::security::{ApiKeyRecord, SecurityPolicy};
 use flm_core::error::RepoError;
 use flm_core::ports::SecurityRepository;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
+use std::future::Future;
 use std::path::Path;
 use std::str::FromStr;
+use tokio::runtime::{Handle, Runtime, RuntimeFlavor};
+use tokio::task;
 
 /// SQLite-based SecurityRepository implementation
 pub struct SqliteSecurityRepository {
@@ -67,11 +70,7 @@ impl SqliteSecurityRepository {
 
 impl SecurityRepository for SqliteSecurityRepository {
     fn save_api_key(&self, key: ApiKeyRecord) -> Result<(), RepoError> {
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
-        })?;
-
-        rt.block_on(async {
+        run_blocking(async {
             sqlx::query(
                 "INSERT OR REPLACE INTO api_keys (id, label, hash, created_at, revoked_at) VALUES (?, ?, ?, ?, ?)",
             )
@@ -91,11 +90,7 @@ impl SecurityRepository for SqliteSecurityRepository {
     }
 
     fn fetch_api_key(&self, id: &str) -> Result<Option<ApiKeyRecord>, RepoError> {
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
-        })?;
-
-        rt.block_on(async {
+        run_blocking(async {
             let row = sqlx::query_as::<_, (String, String, String, String, Option<String>)>(
                 "SELECT id, label, hash, created_at, revoked_at FROM api_keys WHERE id = ?",
             )
@@ -119,11 +114,7 @@ impl SecurityRepository for SqliteSecurityRepository {
     }
 
     fn list_api_keys(&self) -> Result<Vec<ApiKeyRecord>, RepoError> {
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
-        })?;
-
-        rt.block_on(async {
+        run_blocking(async {
             let rows = sqlx::query_as::<_, (String, String, String, String, Option<String>)>(
                 "SELECT id, label, hash, created_at, revoked_at FROM api_keys ORDER BY created_at DESC",
             )
@@ -147,11 +138,7 @@ impl SecurityRepository for SqliteSecurityRepository {
     }
 
     fn mark_api_key_revoked(&self, id: &str, revoked_at: &str) -> Result<(), RepoError> {
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
-        })?;
-
-        rt.block_on(async {
+        run_blocking(async {
             sqlx::query("UPDATE api_keys SET revoked_at = ? WHERE id = ?")
                 .bind(revoked_at)
                 .bind(id)
@@ -166,11 +153,7 @@ impl SecurityRepository for SqliteSecurityRepository {
     }
 
     fn save_policy(&self, policy: SecurityPolicy) -> Result<(), RepoError> {
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
-        })?;
-
-        rt.block_on(async {
+        run_blocking(async {
             sqlx::query(
                 "INSERT OR REPLACE INTO security_policies (id, policy_json, updated_at) VALUES (?, ?, ?)",
             )
@@ -188,11 +171,7 @@ impl SecurityRepository for SqliteSecurityRepository {
     }
 
     fn fetch_policy(&self, id: &str) -> Result<Option<SecurityPolicy>, RepoError> {
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
-        })?;
-
-        rt.block_on(async {
+        run_blocking(async {
             let row = sqlx::query_as::<_, (String, String, String)>(
                 "SELECT id, policy_json, updated_at FROM security_policies WHERE id = ?",
             )
@@ -212,11 +191,7 @@ impl SecurityRepository for SqliteSecurityRepository {
     }
 
     fn list_policies(&self) -> Result<Vec<SecurityPolicy>, RepoError> {
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
-        })?;
-
-        rt.block_on(async {
+        run_blocking(async {
             let rows = sqlx::query_as::<_, (String, String, String)>(
                 "SELECT id, policy_json, updated_at FROM security_policies ORDER BY updated_at DESC",
             )
@@ -236,4 +211,20 @@ impl SecurityRepository for SqliteSecurityRepository {
                 .collect())
         })
     }
+}
+
+fn run_blocking<F, T>(future: F) -> Result<T, RepoError>
+where
+    F: Future<Output = Result<T, RepoError>>,
+{
+    if let Ok(handle) = Handle::try_current() {
+        if handle.runtime_flavor() == RuntimeFlavor::MultiThread {
+            return task::block_in_place(|| handle.block_on(future));
+        }
+    }
+
+    let rt = Runtime::new().map_err(|e| RepoError::IoError {
+        reason: format!("Failed to create async runtime: {e}"),
+    })?;
+    rt.block_on(future)
 }
