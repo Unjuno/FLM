@@ -27,7 +27,7 @@ pub async fn execute_get(
 
     match service.get(&key)? {
         Some(value) => {
-            println!("{}", value);
+            println!("{value}");
         }
         None => {
             eprintln!("Key '{key}' not found");
@@ -74,7 +74,7 @@ pub async fn execute_list(db_path: Option<String>) -> Result<(), Box<dyn std::er
         println!("No configuration items found");
     } else {
         for (key, value) in items {
-            println!("{} = {}", key, value);
+            println!("{key} = {value}");
         }
     }
 
