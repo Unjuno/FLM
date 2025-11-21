@@ -63,10 +63,11 @@ async fn test_security_service_integration() {
     // Verify it's revoked
     let keys_after_revoke = service.list_api_keys().unwrap();
     assert_eq!(keys_after_revoke.len(), 1);
-    assert!(
-        keys_after_revoke[0].revoked_at.is_some(),
-        "Key should be revoked"
-    );
+    let revoked_key = keys_after_revoke
+        .iter()
+        .find(|k| k.id == result.record.id)
+        .expect("Revoked key should be in the list");
+    assert!(revoked_key.revoked_at.is_some(), "Key should be revoked");
 }
 
 #[tokio::test]
