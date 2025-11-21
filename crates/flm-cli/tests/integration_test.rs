@@ -62,7 +62,11 @@ async fn test_security_service_integration() {
 
     // Verify it's revoked
     let keys_after_revoke = service.list_api_keys().unwrap();
-    assert_eq!(keys_after_revoke.len(), 1); // Still in list, but revoked
+    assert_eq!(keys_after_revoke.len(), 1);
+    assert!(
+        keys_after_revoke[0].revoked_at.is_some(),
+        "Key should be revoked"
+    );
 }
 
 #[tokio::test]
@@ -84,8 +88,27 @@ async fn test_security_service_rotate() {
     assert_ne!(rotated.record.id, initial_id);
     assert_eq!(rotated.record.label, "original");
 
+    // Verify old key is revoked and new key exists
+    let all_keys = service.list_api_keys().unwrap();
+    assert_eq!(
+        all_keys.len(),
+        2,
+        "Should have both old (revoked) and new keys"
+    );
+
+    // Find old and new keys
+    let old_key_meta = all_keys.iter().find(|k| k.id == initial_id).unwrap();
+    let new_key_meta = all_keys.iter().find(|k| k.id == rotated.record.id).unwrap();
+
     // Verify old key is revoked
-    let old_key = service.list_api_keys().unwrap();
-    // Both old and new should be in the list
-    assert!(old_key.len() >= 1);
+    assert!(
+        old_key_meta.revoked_at.is_some(),
+        "Old key should be revoked"
+    );
+
+    // Verify new key is not revoked
+    assert!(
+        new_key_meta.revoked_at.is_none(),
+        "New key should not be revoked"
+    );
 }

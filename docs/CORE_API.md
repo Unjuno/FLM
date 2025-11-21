@@ -168,6 +168,7 @@ pub struct ApiKeyMetadata {
     pub id: String,
     pub label: String,
     pub created_at: String,
+    pub revoked_at: Option<String>, // ISO8601, None if not revoked
 }
 
 #[derive(Clone, Debug)]

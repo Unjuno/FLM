@@ -133,6 +133,7 @@ where
                 id: record.id,
                 label: record.label,
                 created_at: record.created_at,
+                revoked_at: record.revoked_at,
             })
             .collect())
     }

@@ -19,7 +19,8 @@ pub struct ApiKeyRecord {
 pub struct ApiKeyMetadata {
     pub id: String,
     pub label: String,
-    pub created_at: String, // ISO8601
+    pub created_at: String,         // ISO8601
+    pub revoked_at: Option<String>, // ISO8601, None if not revoked
 }
 
 /// Plain text API key with record (returned only on creation)

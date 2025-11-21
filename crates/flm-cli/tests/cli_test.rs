@@ -1,8 +1,10 @@
 //! CLI command tests
 //!
-//! These tests verify that CLI commands work correctly end-to-end.
+//! These tests verify that CLI commands work correctly end-to-end by executing
+//! the actual CLI binary and checking the output.
 
 use std::path::PathBuf;
+use std::process::Command;
 use tempfile::TempDir;
 
 /// Helper to create a temporary database directory
@@ -13,56 +15,177 @@ fn create_temp_db_dir() -> (TempDir, PathBuf, PathBuf) {
     (temp_dir, config_db, security_db)
 }
 
-#[tokio::test]
-async fn test_config_commands() {
+/// Get the path to the flm CLI binary
+fn get_flm_binary() -> PathBuf {
+    // In tests, the binary is built in target/debug or target/release
+    let target_dir = std::env::var("CARGO_TARGET_DIR")
+        .unwrap_or_else(|_| "target".to_string());
+    let profile = std::env::var("PROFILE").unwrap_or_else(|_| "debug".to_string());
+    PathBuf::from(target_dir).join(profile).join("flm")
+}
+
+#[test]
+fn test_config_set_and_get() {
     let (_temp_dir, config_db, _security_db) = create_temp_db_dir();
+    let binary = get_flm_binary();
     
-    // Test would require actual CLI execution
-    // For now, we test the underlying services
-    use flm_cli::adapters::SqliteConfigRepository;
-    use flm_core::services::ConfigService;
+    // Test config set
+    let output = Command::new(&binary)
+        .args([
+            "config",
+            "set",
+            "test_key",
+            "test_value",
+            "--db-path-config",
+            config_db.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute flm config set");
     
-    let repo = SqliteConfigRepository::new(&config_db).await.unwrap();
-    let service = ConfigService::new(repo);
+    assert!(
+        output.status.success(),
+        "flm config set should succeed. stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     
-    // Test set
-    service.set("test_key", "test_value").unwrap();
+    // Test config get
+    let output = Command::new(&binary)
+        .args([
+            "config",
+            "get",
+            "test_key",
+            "--db-path-config",
+            config_db.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute flm config get");
     
-    // Test get
-    let value = service.get("test_key").unwrap();
-    assert_eq!(value, Some("test_value".to_string()));
+    assert!(
+        output.status.success(),
+        "flm config get should succeed. stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     
-    // Test list
-    let items = service.list().unwrap();
-    assert_eq!(items.len(), 1);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.trim() == "test_value",
+        "Expected 'test_value', got '{}'",
+        stdout.trim()
+    );
 }
 
-#[tokio::test]
-async fn test_api_keys_commands() {
+#[test]
+fn test_config_list() {
+    let (_temp_dir, config_db, _security_db) = create_temp_db_dir();
+    let binary = get_flm_binary();
+    
+    // Set a few values
+    Command::new(&binary)
+        .args([
+            "config",
+            "set",
+            "key1",
+            "value1",
+            "--db-path-config",
+            config_db.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute flm config set");
+    
+    Command::new(&binary)
+        .args([
+            "config",
+            "set",
+            "key2",
+            "value2",
+            "--db-path-config",
+            config_db.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute flm config set");
+    
+    // Test config list
+    let output = Command::new(&binary)
+        .args([
+            "config",
+            "list",
+            "--db-path-config",
+            config_db.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute flm config list");
+    
+    assert!(
+        output.status.success(),
+        "flm config list should succeed. stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
+    
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("key1 = value1") && stdout.contains("key2 = value2"),
+        "List output should contain both keys. Got: {}",
+        stdout
+    );
+}
+
+#[test]
+fn test_api_keys_create_and_list() {
     let (_temp_dir, _config_db, security_db) = create_temp_db_dir();
+    let binary = get_flm_binary();
     
-    // Test would require actual CLI execution
-    // For now, we test the underlying services
-    use flm_cli::adapters::SqliteSecurityRepository;
-    use flm_core::services::SecurityService;
+    // Test api-keys create
+    let output = Command::new(&binary)
+        .args([
+            "api-keys",
+            "create",
+            "--label",
+            "test_key",
+            "--db-path-security",
+            security_db.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute flm api-keys create");
     
-    let repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
-    let service = SecurityService::new(repo);
+    assert!(
+        output.status.success(),
+        "flm api-keys create should succeed. stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     
-    // Test create
-    let result = service.create_api_key("test_key").unwrap();
-    assert!(!result.plain.is_empty());
-    assert_eq!(result.record.label, "test_key");
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("API Key created"),
+        "Output should indicate key creation. Got: {}",
+        stdout
+    );
+    assert!(
+        stdout.contains("test_key"),
+        "Output should contain label. Got: {}",
+        stdout
+    );
     
-    // Test list
-    let keys = service.list_api_keys().unwrap();
-    assert_eq!(keys.len(), 1);
+    // Test api-keys list
+    let output = Command::new(&binary)
+        .args([
+            "api-keys",
+            "list",
+            "--db-path-security",
+            security_db.to_str().unwrap(),
+        ])
+        .output()
+        .expect("Failed to execute flm api-keys list");
     
-    // Test revoke
-    service.revoke_api_key(&result.record.id).unwrap();
+    assert!(
+        output.status.success(),
+        "flm api-keys list should succeed. stderr: {}",
+        String::from_utf8_lossy(&output.stderr)
+    );
     
-    // Verify it's revoked
-    let keys_after = service.list_api_keys().unwrap();
-    assert_eq!(keys_after.len(), 1);
+    let stdout = String::from_utf8_lossy(&output.stdout);
+    assert!(
+        stdout.contains("test_key"),
+        "List output should contain the key. Got: {}",
+        stdout
+    );
 }
-
