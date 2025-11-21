@@ -25,7 +25,7 @@ pub async fn execute_get(
     let repo = SqliteConfigRepository::new(&db_path).await?;
     let service = ConfigService::new(repo);
 
-    match service.get(&key)? {
+    match service.get(&key).await? {
         Some(value) => {
             println!("{value}");
         }
@@ -52,7 +52,7 @@ pub async fn execute_set(
     let repo = SqliteConfigRepository::new(&db_path).await?;
     let service = ConfigService::new(repo);
 
-    service.set(&key, &value)?;
+    service.set(&key, &value).await?;
     println!("Set '{key}' = '{value}'");
 
     Ok(())
@@ -68,7 +68,7 @@ pub async fn execute_list(db_path: Option<String>) -> Result<(), Box<dyn std::er
     let repo = SqliteConfigRepository::new(&db_path).await?;
     let service = ConfigService::new(repo);
 
-    let items = service.list()?;
+    let items = service.list().await?;
 
     if items.is_empty() {
         println!("No configuration items found");

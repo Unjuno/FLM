@@ -5,7 +5,6 @@
 #[cfg(test)]
 mod tests {
     use flm_core::domain::*;
-    use flm_core::error::*;
 
     #[test]
     fn test_engine_state_serialization() {

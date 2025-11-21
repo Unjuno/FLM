@@ -39,8 +39,8 @@ where
     /// # Returns
     /// * `Ok(Vec<SecurityPolicy>)` on success
     /// * `Err(RepoError)` if an error occurs
-    pub fn list_policies(&self) -> Result<Vec<SecurityPolicy>, RepoError> {
-        self.repo.list_policies()
+    pub async fn list_policies(&self) -> Result<Vec<SecurityPolicy>, RepoError> {
+        self.repo.list_policies().await
     }
 
     /// Get a specific policy
@@ -52,8 +52,8 @@ where
     /// * `Ok(Some(policy))` if the policy exists
     /// * `Ok(None)` if the policy does not exist
     /// * `Err(RepoError)` if an error occurs
-    pub fn get_policy(&self, id: &str) -> Result<Option<SecurityPolicy>, RepoError> {
-        self.repo.fetch_policy(id)
+    pub async fn get_policy(&self, id: &str) -> Result<Option<SecurityPolicy>, RepoError> {
+        self.repo.fetch_policy(id).await
     }
 
     /// Set/update a security policy
@@ -64,8 +64,8 @@ where
     /// # Returns
     /// * `Ok(())` on success
     /// * `Err(RepoError)` if an error occurs
-    pub fn set_policy(&self, policy: SecurityPolicy) -> Result<(), RepoError> {
-        self.repo.save_policy(policy)
+    pub async fn set_policy(&self, policy: SecurityPolicy) -> Result<(), RepoError> {
+        self.repo.save_policy(policy).await
     }
 
     /// Create a new API key
@@ -80,7 +80,7 @@ where
     /// # Note
     /// The plain text key is only returned once on creation.
     /// It should be displayed to the user and then discarded.
-    pub fn create_api_key(&self, label: &str) -> Result<PlainAndHashedApiKey, RepoError> {
+    pub async fn create_api_key(&self, label: &str) -> Result<PlainAndHashedApiKey, RepoError> {
         // Generate a random API key
         let plain_key = generate_api_key();
 
@@ -99,7 +99,7 @@ where
         };
 
         // Save to repository
-        self.repo.save_api_key(record.clone())?;
+        self.repo.save_api_key(record.clone()).await?;
 
         Ok(PlainAndHashedApiKey {
             plain: plain_key,
@@ -115,9 +115,9 @@ where
     /// # Returns
     /// * `Ok(())` on success
     /// * `Err(RepoError)` if an error occurs
-    pub fn revoke_api_key(&self, id: &str) -> Result<(), RepoError> {
+    pub async fn revoke_api_key(&self, id: &str) -> Result<(), RepoError> {
         let revoked_at = Utc::now().to_rfc3339();
-        self.repo.mark_api_key_revoked(id, &revoked_at)
+        self.repo.mark_api_key_revoked(id, &revoked_at).await
     }
 
     /// List all API keys (metadata only, no hashes)
@@ -125,8 +125,8 @@ where
     /// # Returns
     /// * `Ok(Vec<ApiKeyMetadata>)` on success
     /// * `Err(RepoError)` if an error occurs
-    pub fn list_api_keys(&self) -> Result<Vec<ApiKeyMetadata>, RepoError> {
-        let records = self.repo.list_api_keys()?;
+    pub async fn list_api_keys(&self) -> Result<Vec<ApiKeyMetadata>, RepoError> {
+        let records = self.repo.list_api_keys().await?;
         Ok(records
             .into_iter()
             .map(|record| ApiKeyMetadata {
@@ -149,13 +149,13 @@ where
     /// # Returns
     /// * `Ok(PlainAndHashedApiKey)` containing the new plain text key and record
     /// * `Err(RepoError)` if an error occurs
-    pub fn rotate_api_key(
+    pub async fn rotate_api_key(
         &self,
         id: &str,
         new_label: Option<&str>,
     ) -> Result<PlainAndHashedApiKey, RepoError> {
         // Fetch the old key to get the label
-        let old_key = self.repo.fetch_api_key(id)?;
+        let old_key = self.repo.fetch_api_key(id).await?;
         let label = if let Some(new_label) = new_label {
             new_label.to_string()
         } else if let Some(ref old) = old_key {
@@ -167,10 +167,10 @@ where
         };
 
         // Revoke the old key
-        self.revoke_api_key(id)?;
+        self.revoke_api_key(id).await?;
 
         // Create a new key with the same or new label
-        self.create_api_key(&label)
+        self.create_api_key(&label).await
     }
 }
 

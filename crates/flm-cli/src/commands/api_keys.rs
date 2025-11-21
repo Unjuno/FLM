@@ -25,7 +25,7 @@ pub async fn execute_create(
     let repo = SqliteSecurityRepository::new(&db_path).await?;
     let service = SecurityService::new(repo);
 
-    let result = service.create_api_key(&label)?;
+    let result = service.create_api_key(&label).await?;
     println!("API Key created:");
     println!("  ID: {}", result.record.id);
     println!("  Label: {}", result.record.label);
@@ -45,7 +45,7 @@ pub async fn execute_list(db_path: Option<String>) -> Result<(), Box<dyn std::er
     let repo = SqliteSecurityRepository::new(&db_path).await?;
     let service = SecurityService::new(repo);
 
-    let keys = service.list_api_keys()?;
+    let keys = service.list_api_keys().await?;
 
     if keys.is_empty() {
         println!("No API keys found");
@@ -72,7 +72,7 @@ pub async fn execute_revoke(
     let repo = SqliteSecurityRepository::new(&db_path).await?;
     let service = SecurityService::new(repo);
 
-    service.revoke_api_key(&id)?;
+    service.revoke_api_key(&id).await?;
     println!("API key '{id}' revoked");
 
     Ok(())
@@ -92,7 +92,7 @@ pub async fn execute_rotate(
     let repo = SqliteSecurityRepository::new(&db_path).await?;
     let service = SecurityService::new(repo);
 
-    let result = service.rotate_api_key(&id, label.as_deref())?;
+    let result = service.rotate_api_key(&id, label.as_deref()).await?;
     println!("API Key rotated:");
     println!("  ID: {}", result.record.id);
     println!("  Label: {}", result.record.label);
