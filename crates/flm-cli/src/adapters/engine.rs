@@ -138,7 +138,10 @@ impl SqliteEngineRepository {
 
 impl EngineRepository for SqliteEngineRepository {
     fn list_registered(&self) -> Vec<Box<dyn LlmEngine>> {
-        let _engines = self.engines.read().unwrap();
+        // Handle poisoned lock gracefully
+        // If the lock is poisoned (e.g., a thread panicked while holding it),
+        // we can still access the data using into_inner()
+        let _engines = self.engines.read().unwrap_or_else(|e| e.into_inner());
         // Clone the engines (they are Arc-wrapped internally)
         // Note: This is a limitation - we can't actually clone trait objects
         // For now, we'll return an empty vector and handle this differently
@@ -147,7 +150,9 @@ impl EngineRepository for SqliteEngineRepository {
     }
 
     fn register(&self, engine: Box<dyn LlmEngine>) {
-        let mut engines = self.engines.write().unwrap();
+        // Handle poisoned lock gracefully
+        // If the lock is poisoned, we can still access the data using into_inner()
+        let mut engines = self.engines.write().unwrap_or_else(|e| e.into_inner());
         engines.push(engine);
     }
 }
