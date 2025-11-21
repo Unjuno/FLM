@@ -10,7 +10,7 @@ use std::str::FromStr;
 ///
 /// This function searches for the migrations directory starting from
 /// the current working directory and going up to find the workspace root.
-fn find_migrations_path() -> Result<PathBuf, RepoError> {
+pub fn find_migrations_path() -> Result<PathBuf, RepoError> {
     let current_dir = std::env::current_dir().map_err(|e| RepoError::IoError {
         reason: format!("Failed to get current directory: {e}"),
     })?;

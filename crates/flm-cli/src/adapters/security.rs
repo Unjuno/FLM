@@ -42,8 +42,19 @@ impl SqliteSecurityRepository {
                 reason: format!("Failed to connect to security.db: {e}"),
             })?;
 
-        // Run migrations
-        crate::db::migration::migrate_security_db(db_path).await?;
+        // Run migrations on the pool we just created
+        let migrations_path = crate::db::migration::find_migrations_path()?;
+        let migrator = sqlx::migrate::Migrator::new(&*migrations_path)
+            .await
+            .map_err(|e| RepoError::MigrationFailed {
+                reason: format!("Failed to create migrator: {e}"),
+            })?;
+        migrator
+            .run(&pool)
+            .await
+            .map_err(|e| RepoError::MigrationFailed {
+                reason: format!("Security DB migration failed: {e}"),
+            })?;
 
         Ok(Self { pool })
     }
