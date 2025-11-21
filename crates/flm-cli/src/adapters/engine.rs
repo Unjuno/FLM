@@ -138,16 +138,30 @@ impl SqliteEngineRepository {
 
 impl EngineRepository for SqliteEngineRepository {
     fn list_registered(&self) -> Vec<Box<dyn LlmEngine>> {
-        let _engines = self.engines.read().unwrap();
-        // Clone the engines (they are Arc-wrapped internally)
-        // Note: This is a limitation - we can't actually clone trait objects
-        // For now, we'll return an empty vector and handle this differently
+        // Note: This implementation currently returns an empty vector
+        // because we can't clone trait objects (Box<dyn LlmEngine>).
+        // The lock is acquired to ensure thread safety, but the engines
+        // are not actually returned due to the cloning limitation.
         // TODO: Refactor to use Arc<dyn LlmEngine> instead of Box<dyn LlmEngine>
+        if let Err(_) = self.engines.read() {
+            // If the lock is poisoned (another thread panicked while holding it),
+            // we log the error but continue with an empty vector.
+            // This is a safety measure to prevent cascading failures.
+            eprintln!("Warning: Engine registry lock is poisoned");
+        }
         Vec::new()
     }
 
     fn register(&self, engine: Box<dyn LlmEngine>) {
-        let mut engines = self.engines.write().unwrap();
+        let mut engines = match self.engines.write() {
+            Ok(guard) => guard,
+            Err(_) => {
+                // If the lock is poisoned, we can't safely register the engine.
+                // This indicates a serious system error (another thread panicked).
+                eprintln!("Error: Cannot register engine - registry lock is poisoned");
+                return;
+            }
+        };
         engines.push(engine);
     }
 }
