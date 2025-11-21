@@ -18,9 +18,14 @@ fn create_temp_db_dir() -> (TempDir, PathBuf, PathBuf) {
 /// Get the path to the flm CLI binary
 fn get_flm_binary() -> PathBuf {
     // In tests, the binary is built in target/debug or target/release
-    let target_dir = std::env::var("CARGO_TARGET_DIR").unwrap_or_else(|_| "target".to_string());
+    // Get the workspace root by navigating up from the manifest directory
+    let manifest_dir = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
+    let workspace_root = manifest_dir.parent().unwrap().parent().unwrap();
+    let target_dir = std::env::var("CARGO_TARGET_DIR")
+        .map(PathBuf::from)
+        .unwrap_or_else(|_| workspace_root.join("target"));
     let profile = std::env::var("PROFILE").unwrap_or_else(|_| "debug".to_string());
-    PathBuf::from(target_dir).join(profile).join("flm")
+    target_dir.join(profile).join("flm")
 }
 
 #[test]
