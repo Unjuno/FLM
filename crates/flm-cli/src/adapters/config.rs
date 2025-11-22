@@ -64,63 +64,44 @@ impl SqliteConfigRepository {
     }
 }
 
+#[async_trait::async_trait(?Send)]
 impl ConfigRepository for SqliteConfigRepository {
-    fn get(&self, key: &str) -> Result<Option<String>, RepoError> {
-        // Use tokio::runtime::Handle to run async code in sync context
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
+    async fn get(&self, key: &str) -> Result<Option<String>, RepoError> {
+        let row = sqlx::query_as::<_, (String,)>("SELECT value FROM settings WHERE key = ?")
+            .bind(key)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| RepoError::IoError {
+                reason: format!("Failed to get config: {e}"),
+            })?;
+
+        Ok(row.map(|r| r.0))
+    }
+
+    async fn set(&self, key: &str, value: &str) -> Result<(), RepoError> {
+        sqlx::query(
+            "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))",
+        )
+        .bind(key)
+        .bind(value)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to set config: {e}"),
         })?;
 
-        rt.block_on(async {
-            let row = sqlx::query_as::<_, (String,)>("SELECT value FROM settings WHERE key = ?")
-                .bind(key)
-                .fetch_optional(&self.pool)
+        Ok(())
+    }
+
+    async fn list(&self) -> Result<Vec<(String, String)>, RepoError> {
+        let rows =
+            sqlx::query_as::<_, (String, String)>("SELECT key, value FROM settings ORDER BY key")
+                .fetch_all(&self.pool)
                 .await
                 .map_err(|e| RepoError::IoError {
-                    reason: format!("Failed to get config: {e}"),
+                    reason: format!("Failed to list config: {e}"),
                 })?;
 
-            Ok(row.map(|r| r.0))
-        })
-    }
-
-    fn set(&self, key: &str, value: &str) -> Result<(), RepoError> {
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
-        })?;
-
-        rt.block_on(async {
-            sqlx::query(
-                "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))",
-            )
-            .bind(key)
-            .bind(value)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to set config: {e}"),
-            })?;
-
-            Ok(())
-        })
-    }
-
-    fn list(&self) -> Result<Vec<(String, String)>, RepoError> {
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
-        })?;
-
-        rt.block_on(async {
-            let rows = sqlx::query_as::<_, (String, String)>(
-                "SELECT key, value FROM settings ORDER BY key",
-            )
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to list config: {e}"),
-            })?;
-
-            Ok(rows)
-        })
+        Ok(rows)
     }
 }

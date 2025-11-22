@@ -3,8 +3,9 @@
 use crate::error::RepoError;
 
 /// Configuration repository trait
+#[async_trait::async_trait(?Send)]
 pub trait ConfigRepository {
-    fn get(&self, key: &str) -> Result<Option<String>, RepoError>;
-    fn set(&self, key: &str, value: &str) -> Result<(), RepoError>;
-    fn list(&self) -> Result<Vec<(String, String)>, RepoError>;
+    async fn get(&self, key: &str) -> Result<Option<String>, RepoError>;
+    async fn set(&self, key: &str, value: &str) -> Result<(), RepoError>;
+    async fn list(&self) -> Result<Vec<(String, String)>, RepoError>;
 }

@@ -24,14 +24,14 @@ async fn test_config_service_integration() {
     let service = ConfigService::new(repo);
 
     // Test set
-    service.set("test_key", "test_value").unwrap();
+    service.set("test_key", "test_value").await.unwrap();
 
     // Test get
-    let value = service.get("test_key").unwrap();
+    let value = service.get("test_key").await.unwrap();
     assert_eq!(value, Some("test_value".to_string()));
 
     // Test list
-    let items = service.list().unwrap();
+    let items = service.list().await.unwrap();
     assert_eq!(items.len(), 1);
     assert_eq!(items[0].0, "test_key");
     assert_eq!(items[0].1, "test_value");
@@ -46,22 +46,22 @@ async fn test_security_service_integration() {
     let service = SecurityService::new(repo);
 
     // Test create API key
-    let result = service.create_api_key("test_key").unwrap();
+    let result = service.create_api_key("test_key").await.unwrap();
     assert!(!result.plain.is_empty());
     assert!(!result.record.hash.is_empty());
     assert_eq!(result.record.label, "test_key");
 
     // Test list API keys
-    let keys = service.list_api_keys().unwrap();
+    let keys = service.list_api_keys().await.unwrap();
     assert_eq!(keys.len(), 1);
     assert_eq!(keys[0].id, result.record.id);
     assert_eq!(keys[0].label, "test_key");
 
     // Test revoke API key
-    service.revoke_api_key(&result.record.id).unwrap();
+    service.revoke_api_key(&result.record.id).await.unwrap();
 
     // Verify it's revoked
-    let keys_after_revoke = service.list_api_keys().unwrap();
+    let keys_after_revoke = service.list_api_keys().await.unwrap();
     assert_eq!(keys_after_revoke.len(), 1);
     let revoked_key = keys_after_revoke
         .iter()
@@ -79,18 +79,18 @@ async fn test_security_service_rotate() {
     let service = SecurityService::new(repo);
 
     // Create initial key
-    let initial = service.create_api_key("original").unwrap();
+    let initial = service.create_api_key("original").await.unwrap();
     let initial_id = initial.record.id.clone();
 
     // Rotate the key
-    let rotated = service.rotate_api_key(&initial_id, None).unwrap();
+    let rotated = service.rotate_api_key(&initial_id, None).await.unwrap();
 
     // Verify new key is different
     assert_ne!(rotated.record.id, initial_id);
     assert_eq!(rotated.record.label, "original");
 
     // Verify old key is revoked and new key exists
-    let all_keys = service.list_api_keys().unwrap();
+    let all_keys = service.list_api_keys().await.unwrap();
     assert_eq!(
         all_keys.len(),
         2,

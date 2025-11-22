@@ -38,8 +38,8 @@ where
     /// * `Ok(Some(value))` if the key exists
     /// * `Ok(None)` if the key does not exist
     /// * `Err(RepoError)` if an error occurs
-    pub fn get(&self, key: &str) -> Result<Option<String>, RepoError> {
-        self.repo.get(key)
+    pub async fn get(&self, key: &str) -> Result<Option<String>, RepoError> {
+        self.repo.get(key).await
     }
 
     /// Set a config value
@@ -51,8 +51,8 @@ where
     /// # Returns
     /// * `Ok(())` on success
     /// * `Err(RepoError)` if an error occurs
-    pub fn set(&self, key: &str, value: &str) -> Result<(), RepoError> {
-        self.repo.set(key, value)
+    pub async fn set(&self, key: &str, value: &str) -> Result<(), RepoError> {
+        self.repo.set(key, value).await
     }
 
     /// List all config values
@@ -60,7 +60,7 @@ where
     /// # Returns
     /// * `Ok(Vec<(key, value)>)` on success
     /// * `Err(RepoError)` if an error occurs
-    pub fn list(&self) -> Result<Vec<(String, String)>, RepoError> {
-        self.repo.list()
+    pub async fn list(&self) -> Result<Vec<(String, String)>, RepoError> {
+        self.repo.list().await
     }
 }

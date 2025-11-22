@@ -18,6 +18,7 @@ tokio = { workspace = true, features = ["full"] }
 anyhow.workspace = true
 clap.workspace = true
 sqlx = { workspace = true, features = ["runtime-tokio-native-tls", "sqlite", "migrate", "chrono"] }
+async-trait.workspace = true
 
 [dev-dependencies]
 tempfile = "3.8"

@@ -41,6 +41,9 @@ ring = "0.17"
 # CLI
 clap = { version = "4.4", features = ["derive"] }
 
+# Async
+async-trait = "0.1"
+
 # Dev dependencies are specified per crate, not in workspace
 
 [profile.release]
