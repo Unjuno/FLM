@@ -11,11 +11,11 @@ Phase 1/2 でコア機能と最小UIを完成させた後に追加する機能�
 ### 機能案
 - `Advanced` セクションで `temperature`, `max_tokens`, `stop`, `top_p`, `repeat_penalty` などを保存・再利用
 - エンジン固有設定（例: Ollama の `mixture`、vLLM の `tensor_parallel_size`）を動的フォームで表示
-- 設定を `profile` として保存（実装に着手する前に `docs/DB_SCHEMA.md` / `docs/CLI_SPEC.md` に `model_profiles` テーブルと関連コマンドを正式に追記する）
+- 設定を `profile` として保存（実装に着手する前に `docs/specs/DB_SCHEMA.md` / `docs/specs/CLI_SPEC.md` に `model_profiles` テーブルと関連コマンドを正式に追記する）
 
 ### 実装メモ
 - ModelInfo に `default_parameters` を拡張
-- `docs/PROXY_SPEC.md` にパラメータマッピング（OpenAI -> Engine）を追加
+- `docs/specs/PROXY_SPEC.md` にパラメータマッピング（OpenAI -> Engine）を追加
 
 ## 2. API個別プロンプトテンプレート
 
@@ -28,7 +28,7 @@ Phase 1/2 でコア機能と最小UIを完成させた後に追加する機能�
 - CLI: `flm api prompts set --api-id ...` といったコマンドで API 単位のテンプレ編集をサポート（導入時は CLI / DB 両方の仕様書を更新する）
 
 ### 実装メモ
-- `config.db` に `api_prompts` テーブルを追加（`api_id`, `template_text`, `updated_at`）※ 新テーブル追加時は `docs/DB_SCHEMA.md` / マイグレーション手順を先に整備する
+- `config.db` に `api_prompts` テーブルを追加（`api_id`, `template_text`, `updated_at`）※ 新テーブル追加時は `docs/specs/DB_SCHEMA.md` / マイグレーション手順を先に整備する
 - `EngineService::chat` 呼び出し前に API 指定のテンプレを `ChatRequest` に挿入
 - UI では APIカードごとに「Prompt」編集ボタンを配置し、モーダルで簡単に編集
 
@@ -45,18 +45,19 @@ Phase 1/2 でコア機能と最小UIを完成させた後に追加する機能�
 ## 4. 多言語対応 (i18n)
 
 ### 目的
-- 大衆向け配布を想定し、英語 / 日本語 / 将来追加言語で UI 操作やWizardガイドを共有できるようにする。
+- 大衆向け配布を想定し、英語 / 日本語で UI 操作やWizardガイドを共有できるようにする。
 
 ### 機能案
 - すべての UI 文言を i18n 辞書化（`locales/{lang}.json`）し、Runtime で切り替え可能にする。
 - Setup Wizard ・Securityガイドリンク・エラーメッセージを翻訳キーで管理し、テキスト量が多いステップは Markdown 描画を許可。
-- OS判定結果に応じて適切な言語の CLI コマンドを提示（例: 日本語UIではコメントも日本語、英語UIでは英語）。
+- OS判定結果に応じて適切な言語の CLI コマンドを提示（例: 日本語UIではコメントも日本語、英語UIでは英語）。**CLIコマンド自体は英語のまま**。
 - CLI/Tauri 双方で `preferred_language` 設定を `config.db` に保存し、UI 起動時に適用。
 
 ### 実装メモ
 - React/Tauri 側は `i18next` + `tauri-plugin-store` の組み合わせを予定。Rust Core には言語依存ロジックを持たせない。
-- 翻訳未定義キーはデフォルト英語をフォールバックし、Lint タスクでキー漏れを検出するスクリプトを追加。
-- `docs/UI_MINIMAL.md` のエラーメッセージ例は日本語/英語両方のキーを先に定義し、翻訳者に共有する。
+- **CLIは英語のみ**（技術者向けのため、実装の複雑さを避ける）。詳細は `docs/specs/I18N_SPEC.md` を参照。
+- 翻訳未定義キーはデフォルト日本語をフォールバックし、それでも見つからない場合は英語、最後にキー名をそのまま表示。Lint タスクでキー漏れを検出するスクリプトを追加。
+- `docs/specs/UI_MINIMAL.md` のエラーメッセージ例は日本語/英語両方のキーを先に定義し、翻訳者に共有する。
 
 ## 5. UI 自動テスト & シナリオ
 

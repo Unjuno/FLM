@@ -20,7 +20,7 @@ flm <command> [subcommand] [options]
 - JSON 出力/IPCポリシー:
   - すべての JSON 出力は `{ "version": "1.0", "data": { ... } }` 形式で返し、`version` の major が変化した場合のみ breaking change とみなす。
   - CLI が UI/Proxy へ IPC で結果を渡す際は `serde` の `deny_unknown_fields` を避け、未知フィールドを無視できるよう `#[serde(default)]` を付与。これにより Core でフィールド追加しても下位互換を維持できる。
-  - DTO スキーマは `docs/CORE_API.md` のデータモデルと 1:1 で対応させ、変更時は両ドキュメントを同じ変更セットで更新する。
+  - DTO スキーマは `docs/specs/CORE_API.md` のデータモデルと 1:1 で対応させ、変更時は両ドキュメントを同じ変更セットで更新する。
 
 ## 3. コマンド一覧
 
@@ -50,7 +50,7 @@ Rust製セキュアプロキシを起動し、Forward先を検出済みエンジ
 - `packaged-ca`: パッケージに同梱されたルートCA証明書を使用。インストール時にOS信頼ストアへ自動登録されるため、ブラウザ警告なしでHTTPS利用可能。大衆向け配布に最適。Phase 3 で実装予定
 - `https-acme`: ACME(Let's Encrypt等)で証明書を取得してHTTPS提供。インターネット公開時の既定モード（ドメイン所有者だけでなく、DNS-01/HTTP-01 を補助して一般ユーザーも利用可能）
 
-その他仕様（詳細は `docs/PROXY_SPEC.md`）:
+その他仕様（詳細は `docs/specs/PROXY_SPEC.md`）:
 - Forward 先ホストは検出済みエンジンに固定し任意URLへの転送を禁止
 - 設定は `config.db` / `security.db` に保存され、再起動時に再利用
 
@@ -67,11 +67,23 @@ Rust製セキュアプロキシを起動し、Forward先を検出済みエンジ
   "data": {
     "status": "running",
     "mode": "local-http",
-    "endpoint": "http://0.0.0.0:8080",
+    "listen_addr": "0.0.0.0:8080",
+    "endpoints": {
+      "localhost": "http://localhost:8080",
+      "local_network": "http://192.168.1.100:8080"
+    },
     "pid": 12345
   }
 }
 ```
+
+**エンドポイントURL表示の注意**:
+- `listen_addr` は技術的なバインドアドレス（`0.0.0.0:8080`）であり、実際に使用するURLではない
+- `endpoints` フィールドに、ユーザーが実際に使用可能なURLを提供:
+  - `localhost`: ローカルアクセス用（`http://localhost:{port}` または `https://localhost:{https_port}`）
+  - `local_network`: 同一ネットワーク内アクセス用（実際のローカルIPアドレスを使用）
+  - `external`: 外部アクセス用（`acme_domain` が設定されている場合のみ、`https://{domain}:{https_port}`）
+- 詳細は `docs/specs/CORE_API.md` の「ProxyHandle のユーザー向けエンドポイントURL生成」セクションを参照
 
 ### 3.4 `flm proxy stop`
 指定プロファイル/ポートのプロキシを停止し、Graceful shutdown を確認。
@@ -147,7 +159,7 @@ flm chat --model flm://ollama/llama3:8b --prompt "Hello" --stream
 ```
 
 ### 3.11 `flm model-profiles` （Phase3予定）
-モデルごとの詳細設定（`docs/UI_EXTENSIONS.md` セクション1）を CLI から管理する。
+モデルごとの詳細設定（`docs/specs/UI_EXTENSIONS.md` セクション1）を CLI から管理する。
 
 - `flm model-profiles list [--engine <id>] [--model <id>]`
 - `flm model-profiles save --engine <id> --model <id> --label <name> --params ./profile.json`
@@ -162,10 +174,10 @@ flm chat --model flm://ollama/llama3:8b --prompt "Hello" --stream
 - `flm api prompts show --api-id <id>`
 - `flm api prompts set --api-id <id> --file ./prompt.txt`
 
-テンプレは `config.db` の `api_prompts` テーブルに保存し、`EngineService::chat` 呼び出し前に適用される。CLI は `version` と `updated_at` を保存し、後方互換のため JSON schema を `docs/CORE_API.md` と同期させる。
+テンプレは `config.db` の `api_prompts` テーブルに保存し、`EngineService::chat` 呼び出し前に適用される。CLI は `version` と `updated_at` を保存し、後方互換のため JSON schema を `docs/specs/CORE_API.md` と同期させる。
 
 ### 3.13 `flm migrate legacy`
-アーカイブ済みプロトタイプ（`archive/prototype/`）からデータを新スキーマへ移行するユーティリティ。`docs/PLAN.md` / `docs/DB_SCHEMA.md` のデータ移行戦略と同じ手順を実行する。
+アーカイブ済みプロトタイプ（`archive/prototype/`）からデータを新スキーマへ移行するユーティリティ。`docs/planning/PLAN.md` / `docs/specs/DB_SCHEMA.md` のデータ移行戦略と同じ手順を実行する。
 
 - `flm migrate legacy --source <path> --tmp <dir>`: 旧 SQLite / JSON をパースし、`config.db` / `security.db` へ取り込むための `.sql` + `.json` を `<tmp>` に生成。デフォルトは `./tmp/flm-migrate-<timestamp>`。
 - `flm migrate legacy --source <path> --apply`: 変換に加えて自動バックアップ（`flm security backup create` と同じロケーション）を取得し、検証後に本番 DB を置き換える。整合性チェックに失敗した場合は自動ロールバックして終了コード 1 を返す。
@@ -208,7 +220,7 @@ flm check --verbose
 | `MIGRATION_FAILED` | `RepoError::MigrationFailed` | DB マイグレーション失敗 | 2 |
 | `IO_ERROR` | `RepoError::IoError` | ファイル I/O エラー | 2 |
 
-- エラーコードは `docs/CORE_API.md` のエラー型定義と 1:1 で対応し、CLI は Core のエラーを適切なコードに変換する。
+- エラーコードは `docs/specs/CORE_API.md` のエラー型定義と 1:1 で対応し、CLI は Core のエラーを適切なコードに変換する。
 
 ## 5. SQLite 設定
 - 既定パス:
@@ -229,5 +241,5 @@ flm check --verbose
 
 ---
 
-この仕様は `docs/PLAN.md` / `docs/FEATURE_SPEC.md` と連動し、コマンド実装前に更新する。
+この仕様は `docs/planning/PLAN.md` / `docs/specs/FEATURE_SPEC.md` と連動し、コマンド実装前に更新する。
 

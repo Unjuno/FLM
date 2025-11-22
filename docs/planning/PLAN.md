@@ -45,23 +45,23 @@ flm/
     SECURITY_FIREWALL_GUIDE.md  # Firewall自動化ガイド
 ```
 
-詳細なアーキテクチャ図は `docs/diagram.md` を参照してください。
+詳細なアーキテクチャ図は `docs/planning/diagram.md` を参照してください。
 
 - Domain層 (`flm-core`) は純粋ロジックと抽象ポートのみ保持し、HTTP/DB/FSなどインフラ依存コードは Application/Adapter 層へ追い出す
 - CLI・UI・Proxy はすべて Domain API を介して機能を呼び出す
 - Proxy 実装も Rust (Axum/Hyper) で統一し、Express 実装はアーカイブに移行
 - HTTPS は「ローカルHTTP + 外部HTTPS」をフェーズ分けし、ローカル検証は `local-http`、外部公開は 既定で `https-acme`（ACME / 既存 CA 署名証明書）を使用し、自己署名 (`dev-selfsigned`) は LAN / 開発用途に限定する
-- Domain / Application / Adapter の責務境界は `docs/CORE_API.md` に詳細記載
-- 外部公開フローは UI Setup Wizard で一元化し、Firewall 設定は `docs/SECURITY_FIREWALL_GUIDE.md` のテンプレートを **プレビュー + 手動適用** を基本とし、管理者権限を自動取得できる場合のみオプションで自動適用する。権限不足時やヘッドレス環境では CLI スクリプトとチェックリストを提示する
+- Domain / Application / Adapter の責務境界は `docs/specs/CORE_API.md` に詳細記載
+- 外部公開フローは UI Setup Wizard で一元化し、Firewall 設定は `docs/guides/SECURITY_FIREWALL_GUIDE.md` のテンプレートを **プレビュー + 手動適用** を基本とし、管理者権限を自動取得できる場合のみオプションで自動適用する。権限不足時やヘッドレス環境では CLI スクリプトとチェックリストを提示する
 
 ## 使用要素の整理
 
 ### コア機能
 - **既存エンジン利用**: Ollama / LM Studio / vLLM / llama.cpp を自動検出し、稼働状態を統一APIで扱う
 - **認証プロキシ**: Rust (Axum/Hyper) 製の HTTPS／認証レイヤー。Node実装はアーカイブ
-- **証明書管理**: 初期フェーズはローカルHTTP (`local-http`) をデフォルト。外部公開時は ACME / Let's Encrypt (`https-acme`) を推奨し、自己署名 (`dev-selfsigned`) を選択する場合はルート証明書配布・信頼設定・ローテーション手順を `docs/PROXY_SPEC.md` / `docs/SECURITY_FIREWALL_GUIDE.md` に従って実施。Phase 3 のパッケージング時には `packaged-ca` モードを実装し、インストール時にルートCA証明書をOS信頼ストアへ自動登録する方式を提供（大衆向け配布に最適）
+- **証明書管理**: 初期フェーズはローカルHTTP (`local-http`) をデフォルト。外部公開時は ACME / Let's Encrypt (`https-acme`) を推奨し、自己署名 (`dev-selfsigned`) を選択する場合はルート証明書配布・信頼設定・ローテーション手順を `docs/specs/PROXY_SPEC.md` / `docs/guides/SECURITY_FIREWALL_GUIDE.md` に従って実施。Phase 3 のパッケージング時には `packaged-ca` モードを実装し、インストール時にルートCA証明書をOS信頼ストアへ自動登録する方式を提供（大衆向け配布に最適）
 - **HTTPS方針**: ドメインを持たない利用者でも ACME を利用できるように CLI/Wizard から DNS-01 / HTTP-01 を補助し、自己署名はオフライン/LAN 限定モードとして明確に区別する。パッケージ版では `packaged-ca` モードを既定とし、証明書の自動インストールによりブラウザ警告なしでHTTPS利用を可能にする
-- **設定保存**: SQLite を用途別に分割 (`config.db`, `security.db`) し、`security.db` は OS キーチェーン（DPAPI / Keychain / libsecret）で暗号化鍵を保護、600相当の権限設定、バックアップ/復旧フロー、APIキーのローテーション自動化を `docs/DB_SCHEMA.md` / `docs/SECURITY_FIREWALL_GUIDE.md` に記載。`config.db` / `security.db` のマイグレーション失敗時は読み取り専用のセーフモードで起動できるようにする
+- **設定保存**: SQLite を用途別に分割 (`config.db`, `security.db`) し、`security.db` は OS キーチェーン（DPAPI / Keychain / libsecret）で暗号化鍵を保護、600相当の権限設定、バックアップ/復旧フロー、APIキーのローテーション自動化を `docs/specs/DB_SCHEMA.md` / `docs/guides/SECURITY_FIREWALL_GUIDE.md` に記載。`config.db` / `security.db` のマイグレーション失敗時は読み取り専用のセーフモードで起動できるようにする
 - **セキュリティ**: IPホワイトリスト、APIキーのローテーション、レート制限、CORS、Forward先ホスト固定を最小構成要件に含め、SecurityPolicy は Phase1/2 ではグローバルID `"default"` のみ扱う
     - **security.db ガバナンス**: 
         - 暗号化鍵は OS キーチェーン (DPAPI/macOS Keychain/libsecret) から取得し、起動ごとに memory-only で展開。鍵ローテーション時は新ファイルへマイグレーション→差し替え→旧ファイル secure delete。 
@@ -70,7 +70,7 @@ flm/
         - ログや証明書メタデータは最小限のみ保存し、ファイアウォール等の昇格ログは `logs/security/firewall-*.log` で管理する（DBと分離）。
 
 ### CLI
-- `flm engines detect` : 対応エンジンを検出して JSON を出力（成功状態は `InstalledOnly`, `RunningHealthy`, `RunningDegraded`, `ErrorNetwork`, `ErrorApi` など `docs/ENGINE_DETECT.md` 参照）
+- `flm engines detect` : 対応エンジンを検出して JSON を出力（成功状態は `InstalledOnly`, `RunningHealthy`, `RunningDegraded`, `ErrorNetwork`, `ErrorApi` など `docs/specs/ENGINE_DETECT.md` 参照）
 - `flm models list` : エンジン種別に応じた API（Ollama: `/api/tags`, その他: `/v1/models`）で利用可能モデルを取得。モデルIDは `flm://{engine_id}/{model_name}` に正規化
 - `flm proxy start` : Rust製セキュアプロキシを起動（HTTPローカル→HTTPS/ACME設定はオプション）
 - `flm proxy stop` : プロキシのプロセス管理
@@ -78,7 +78,7 @@ flm/
 - `flm config set/get` : 設定DBへの読み書き
 - `flm api-keys *` : APIキー生成／一覧／ローテーション（security DB を利用）
 - `flm security policy` : IPホワイトリストやCORS設定を確認・変更
-- `flm chat` / `flm chat --stream` : OpenAI互換APIに対して直接疎通するCLI（Proxy変換ルールは `docs/PROXY_SPEC.md` 参照）
+- `flm chat` / `flm chat --stream` : OpenAI互換APIに対して直接疎通するCLI（Proxy変換ルールは `docs/specs/PROXY_SPEC.md` 参照）
 
 ### UI
 - Rustコアを IPC 経由で呼び出し、状態表示と最低限の操作のみ提供
@@ -88,17 +88,17 @@ flm/
 ### 配布
 - CLI バイナリ: 単体配布用に Cargo build (Rust) + Node/Electron 依存なし
 - Tauri アプリ: Rustコアを直接リンクし、共有ロジックを再利用
-- ドキュメント: `README.md`, `docs/PLAN.md`, `docs/CLI_SPEC.md`, `docs/UI_MINIMAL.md`
+- ドキュメント: `README.md`, `docs/planning/PLAN.md`, `docs/specs/CLI_SPEC.md`, `docs/specs/UI_MINIMAL.md`
 
 ## フェーズ
 
 ### Phase 0: ベース整備
 - リポジトリの初期化（Rustワークスペース、Lint/Format 設定）
 - アーカイブとの区別を README に追記
-- Rustコアライブラリ（ドメインレイヤー）の骨格を作成し、CLI/UI/Proxyが利用するAPIを定義（詳細は `docs/CORE_API.md`）
+- Rustコアライブラリ（ドメインレイヤー）の骨格を作成し、CLI/UI/Proxyが利用するAPIを定義（詳細は `docs/specs/CORE_API.md`）
 - Domain/Ports と Application/Adapters の責務境界を `CORE_API.md` と `diagram.md` に反映
-- エンジン検出仕様 (`docs/ENGINE_DETECT.md`)、DBスキーマ＋マイグレーション (`docs/DB_SCHEMA.md`)、プロキシ仕様 (`docs/PROXY_SPEC.md`)、移行ガイド (`docs/MIGRATION_GUIDE.md`)、テスト戦略 (`docs/TEST_STRATEGY.md`) を完成させ、**Core API / Proxy / DB Schema を `v1.0.0` としてタグ付け・署名し、以降の変更は ADR + バージョンアップでのみ許可**  
-  - フリーズ手順: (1) `docs/*` に最終版を反映 → (2) `core-api-v1.0.0` タグを GPG 署名で作成 → (3) 変更要望は `docs/templates/ADR_TEMPLATE.md` で提出 → (4) 承認後に `docs/VERSIONING_POLICY.md` に従ってマイナー/パッチバージョンを更新
+- エンジン検出仕様 (`docs/specs/ENGINE_DETECT.md`)、DBスキーマ＋マイグレーション (`docs/specs/DB_SCHEMA.md`)、プロキシ仕様 (`docs/specs/PROXY_SPEC.md`)、移行ガイド (`docs/guides/MIGRATION_GUIDE.md`)、テスト戦略 (`docs/guides/TEST_STRATEGY.md`) を完成させ、**Core API / Proxy / DB Schema を `v1.0.0` としてタグ付け・署名し、以降の変更は ADR + バージョンアップでのみ許可**  
+  - フリーズ手順: (1) `docs/*` に最終版を反映 → (2) `core-api-v1.0.0` タグを GPG 署名で作成 → (3) 変更要望は `docs/templates/ADR_TEMPLATE.md` で提出 → (4) 承認後に `docs/guides/VERSIONING_POLICY.md` に従ってマイナー/パッチバージョンを更新
 - UI モックの検討は Phase2 以降に回し、Phase0では Core API 固定を優先
 - 旧 `archive/prototype/` から `config.json` / SQLite 等のデータをエクスポートする移行計画（変換スクリプト、ロールバック手順、テストデータ）を策定
 
@@ -126,6 +126,7 @@ flm/
   - インストール時にOS信頼ストアへ自動登録（UAC/sudo確認あり）
   - サーバー証明書は起動時に自動生成（ルートCAで署名、SANにRFC1918範囲を含める）
   - アンインストール時に証明書削除オプションを提供
+- **セキュリティ対策**: パッケージングのセキュリティ対策（コード署名、ハッシュ値の公開、ビルド環境の保護、インストール時の検証、配布チャネルの保護）の詳細は `docs/specs/PROXY_SPEC.md` セクション10.6を参照。検証手順は `docs/guides/SECURITY_FIREWALL_GUIDE.md` セクション9を参照。
 - リリースノートを作成し、CLI 単体版も配布
 
 ## データ移行戦略
@@ -135,17 +136,17 @@ flm/
   3. `--apply` でのみ本番 DB を置換。適用前に自動バックアップ (`*.bak`) を作成し、失敗時は自動的にロールバック。  
   4. 移行ログと差分レポートを `logs/migrations/<ts>.log` に保存。
 - 検証手順: 移行後に `flm check` を実行し、APIキー件数/ラベル、SecurityPolicy の JSON、ProxyProfile のポート値が旧バージョンと一致することを確認。  
-- 失敗時ワークフロー: (1) 変換ステップで例外が発生 → CLI が詳細ログを表示し、データを変更せず終了。 (2) 適用後に整合性チェックで失敗 → 自動ロールバックし、バックアップから復元。 (3) ロールバック不能な場合、手動復旧手順を `docs/DB_SCHEMA.md` の「バックアップ/復元」節に従って実施。
+- 失敗時ワークフロー: (1) 変換ステップで例外が発生 → CLI が詳細ログを表示し、データを変更せず終了。 (2) 適用後に整合性チェックで失敗 → 自動ロールバックし、バックアップから復元。 (3) ロールバック不能な場合、手動復旧手順を `docs/specs/DB_SCHEMA.md` の「バックアップ/復元」節に従って実施。
 
 ## 成果物
 - `README.md`: アーカイブとの区別と最新手順
-- `docs/PLAN.md`: 本ドキュメント
-- CLI コマンド仕様: `docs/CLI_SPEC.md`（Phase1で作成）
-- UI ワイヤーフレーム: `docs/UI_MINIMAL.md`（Phase2で作成、Setup Wizard + Firewall Automation を含む）
-- Firewall 設定ガイド: `docs/SECURITY_FIREWALL_GUIDE.md`
-- 移行ガイド: `docs/MIGRATION_GUIDE.md`
-- バージョン管理ポリシー: `docs/VERSIONING_POLICY.md`
-- テスト戦略: `docs/TEST_STRATEGY.md`
+- `docs/planning/PLAN.md`: 本ドキュメント
+- CLI コマンド仕様: `docs/specs/CLI_SPEC.md`（Phase1で作成）
+- UI ワイヤーフレーム: `docs/specs/UI_MINIMAL.md`（Phase2で作成、Setup Wizard + Firewall Automation を含む）
+- Firewall 設定ガイド: `docs/guides/SECURITY_FIREWALL_GUIDE.md`
+- 移行ガイド: `docs/guides/MIGRATION_GUIDE.md`
+- バージョン管理ポリシー: `docs/guides/VERSIONING_POLICY.md`
+- テスト戦略: `docs/guides/TEST_STRATEGY.md`
 - 手動UIシナリオ: `tests/ui-scenarios.md`
 - ADR テンプレート: `docs/templates/ADR_TEMPLATE.md`
 
@@ -155,7 +156,7 @@ flm/
 - セキュリティ設定（IP/CORS/APIキー）を含む統合テストを確立
 - UI は主要操作 3 ケースの手動テスト手順（`tests/ui-scenarios.md` 参照）を残し、IPC経路をユニットテスト
 - 受入メトリクスは GitHub Actions / self-hosted runners 上の OS 行列（Windows 11, macOS Sonoma, Ubuntu 22.04）で自動計測し、負荷テスト（100 req/min）は専用ベンチマークジョブ＋モックエンジンで継続的に検証する。CI マトリクス:
-    - `ci-cli` ワークフロー: {OS × Engine} = (Win/macOS/Linux) × (Ollama/vLLM/LM Studio/llama.cpp mock)。`flm engines detect`, `flm models list`, `flm proxy start/stop`, `flm proxy status` を実行し、SSE/非SSE を確認（詳細は `docs/TEST_STRATEGY.md`）。
+    - `ci-cli` ワークフロー: {OS × Engine} = (Win/macOS/Linux) × (Ollama/vLLM/LM Studio/llama.cpp mock)。`flm engines detect`, `flm models list`, `flm proxy start/stop`, `flm proxy status` を実行し、SSE/非SSE を確認（詳細は `docs/guides/TEST_STRATEGY.md`）。
     - `ci-proxy-load` ワークフロー: Linux self-hosted runnerで vLLM + mock engines を起動し、`wrk`/`k6` による 100 req/min (チャット + embeddings) を 10 分間流し、P95 レイテンシとエラー率を記録。結果は GitHub Actions artifacts + Grafana snapshot に保管。
     - `ci-acme-smoke` ワークフロー: nightly で staging ACME サーバと接続し、DNS-01/HTTP-01 モードをそれぞれ実行。82 分以内に証明書取得完了しない場合は失敗として issue を自動作成。
 - Phaseごとの合格基準:
@@ -171,9 +172,9 @@ flm/
 - [ ] Rust製認証プロキシサービスの骨格実装
 - [ ] UI モックの設計
 - [ ] データベース分割（config/security）のマイグレーション設計
-- [ ] docs/CORE_API.md / PROXY_SPEC.md / ENGINE_DETECT.md / DB_SCHEMA.md の初版確定
-- [ ] Setup Wizard + Firewall Automation を Windows/macOS/Linux で検証（`docs/SECURITY_FIREWALL_GUIDE.md` 参照）
-- [ ] UI 多言語対応の設計（`docs/UI_EXTENSIONS.md` セクション4）
+- [ ] docs/specs/CORE_API.md / PROXY_SPEC.md / ENGINE_DETECT.md / DB_SCHEMA.md の初版確定
+- [ ] Setup Wizard + Firewall Automation を Windows/macOS/Linux で検証（`docs/guides/SECURITY_FIREWALL_GUIDE.md` 参照）
+- [ ] UI 多言語対応の設計（`docs/specs/UI_EXTENSIONS.md` セクション4）
 
 ---
 

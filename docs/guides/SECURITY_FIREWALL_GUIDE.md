@@ -177,6 +177,83 @@ ls -la /usr/local/share/ca-certificates/flm-ca.crt
 
 ルートCA証明書の有効期限（10年）が近づいた場合、新バージョンのインストールで新しいルートCAが自動的に配布されます。アプリ起動時に期限切れ警告が表示される場合は、最新版へのアップデートを推奨します。
 
+## 9. パッケージングのセキュリティ検証
+
+### 9.1 ダウンロード後の検証
+
+パッケージをダウンロードした後、以下の方法で整合性を検証することを推奨します。
+
+#### ハッシュ値の確認
+
+**Windows**:
+```powershell
+certutil -hashfile flm-installer.exe SHA256
+# 出力されたハッシュ値を公式サイトの値と比較
+```
+
+**macOS/Linux**:
+```bash
+shasum -a 256 flm-installer.dmg
+# または
+sha256sum flm-installer.dmg
+# 出力されたハッシュ値を公式サイトの値と比較
+```
+
+#### 署名の確認
+
+**Windows**:
+1. インストーラファイルを右クリック
+2. 「プロパティ」を選択
+3. 「デジタル署名」タブを確認
+4. 署名が有効であることを確認
+
+**macOS**:
+```bash
+codesign -vv flm-installer.dmg
+# 出力に "satisfies its Designated Requirement" と表示されれば有効
+```
+
+**Linux** (将来実装):
+```bash
+gpg --verify flm-installer.AppImage.asc flm-installer.AppImage
+```
+
+### 9.2 インストール時の確認
+
+インストール中に表示される確認ダイアログを必ず確認してください:
+
+* **証明書のインストール確認**: 「FLM Local CA 証明書を信頼しますか？」というダイアログが表示された場合、信頼できるソースからのインストールであることを確認してから「はい」を選択
+* **管理者権限の確認**: UAC/sudo の確認が表示された場合、インストーラが管理者権限を要求している理由を理解してから許可
+
+### 9.3 インストール後の検証
+
+インストール後、以下の方法で証明書が正しくインストールされたことを確認できます:
+
+**Windows**:
+```powershell
+Get-ChildItem Cert:\LocalMachine\Root | 
+  Where-Object { $_.Subject -like "*FLM Local CA*" }
+```
+
+**macOS**:
+```bash
+security find-certificate -c "FLM Local CA" -a /Library/Keychains/System.keychain
+```
+
+**Linux**:
+```bash
+ls -la /usr/local/share/ca-certificates/flm-ca.crt
+```
+
+### 9.4 セキュリティインシデント時の対応
+
+パッケージの改ざんや秘密鍵の漏洩が疑われる場合:
+
+1. **即座にインストールを中止**: 疑わしいパッケージはインストールしない
+2. **公式サイトで確認**: 公式サイトでセキュリティ情報を確認
+3. **証明書の削除**: 既にインストール済みの場合は、セクション8.2の手順で証明書を削除
+4. **報告**: セキュリティインシデントを報告（GitHub Issues またはセキュリティ連絡先）
+
 ---
 このガイドは Phase2 以降も随時更新する。
 

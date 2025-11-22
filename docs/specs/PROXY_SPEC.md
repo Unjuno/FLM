@@ -121,7 +121,7 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 **ポート設定**: `--port` で指定した値は HTTP 用ポートとして扱い、HTTPS は `port + 1` をデフォルトとする（例: 8080/8081）。
 
 **証明書管理**:
-- `dev-selfsigned`: Wizard/CLI が生成したルート証明書をクライアント OS／ブラウザに手動でインポート。ローテーション期限・撤去手順は `docs/SECURITY_FIREWALL_GUIDE.md` に従う。
+- `dev-selfsigned`: Wizard/CLI が生成したルート証明書をクライアント OS／ブラウザに手動でインポート。ローテーション期限・撤去手順は `docs/guides/SECURITY_FIREWALL_GUIDE.md` に従う。
 - `https-acme`: ACME 証明書は `security.db` にパスと更新日時を保存。タイムアウト・リトライ戦略は後述。
 - `packaged-ca`: ルートCA証明書はビルド時に生成し、インストーラに同梱。サーバー証明書は起動時に自動生成（ルートCAで署名）。インストール時にOS信頼ストアへ自動登録。
 
@@ -131,7 +131,7 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 
 ### 6.3 ACME チャレンジ詳細
 
-`ProxyConfig` の `acme_challenge` / `acme_dns_profile_id` フィールドは `docs/CORE_API.md` で定義された通りに解釈する。Proxy 実装では以下の要件を満たす:
+`ProxyConfig` の `acme_challenge` / `acme_dns_profile_id` フィールドは `docs/specs/CORE_API.md` で定義された通りに解釈する。Proxy 実装では以下の要件を満たす:
 
 | モード | 必須フィールド | 追加要件 |
 |--------|---------------|----------|
@@ -146,6 +146,28 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 - CLI オプション `--challenge http-01|dns-01` と `--dns-profile <id>` は `ProxyConfig` に直結する。UI Setup Wizard でも同じフィールドを表示する。
 - HTTP-01 の場合、80/tcp が使用できない環境では CLI が自動的にポートフォワード（`netsh interface portproxy` / `iptables`）を設定し、終了時に戻す。DNS-01 はフォワード不要。
 - どちらのチャレンジでも証明書/秘密鍵は `security.db` にメタデータを保存し、実体ファイルは OS ごとの安全なパス（`%ProgramData%\flm\certs` 等）に配置する。
+
+### 6.4 HTTPポートの扱いとセキュリティ
+
+**https-acme モード**:
+- HTTPポート（`port`）は、ACME HTTP-01チャレンジ用の `/.well-known/acme-challenge/*` エンドポイントのみを処理
+- 証明書取得後は、すべてのHTTPリクエストをHTTPS（`port + 1`）に301リダイレクト
+- 通常のAPIエンドポイント（`/v1/*`）はHTTPポートでは処理しない（セキュリティ上の理由）
+- HTTPリクエストには `Strict-Transport-Security: max-age=31536000; includeSubDomains` ヘッダーを追加
+
+**dev-selfsigned / packaged-ca モード**:
+- HTTPポート（`port`）は、すべてのリクエストをHTTPS（`port + 1`）に301リダイレクト
+- ACMEチャレンジは不要なため、HTTPポートはリダイレクト専用
+- セキュリティヘッダー（`Strict-Transport-Security` 等）をHTTPリダイレクトレスポンスに追加
+
+**local-http モード**:
+- HTTPポートのみを使用（HTTPSポートは起動しない）
+- ローカルネットワーク限定のため、ファイアウォール設定が必須
+
+**セキュリティ上の注意**:
+- HTTPポートが公開されていても、実際のAPI通信はHTTPS経由になるよう設計
+- ユーザーが誤ってHTTPでアクセスしても、自動的にHTTPSにリダイレクトされる
+- APIキーなどの認証情報は、HTTPS経由でのみ送信されることを保証
 
 ## 7. エラー・ログポリシー
 
@@ -166,7 +188,7 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 
 Proxy / UI / CLI は `SecurityPolicy.policy_json` に以下のキーが存在する前提で動作する。
 
-**JSONスキーマの定義**: `docs/CORE_API.md` の「SecurityPolicy エッジケース」セクションを参照（唯一の定義源）。
+**JSONスキーマの定義**: `docs/specs/CORE_API.md` の「SecurityPolicy エッジケース」セクションを参照（唯一の定義源）。
 
 **バリデーションルール**（`CORE_API.md` より）:
 - `ip_whitelist`: CIDR/IPv4/IPv6 文字列の配列。空配列 `[]` または省略時は IP 制限無効（すべて許可）。`null` は無効として扱う。
@@ -182,7 +204,7 @@ Proxy / UI / CLI は `SecurityPolicy.policy_json` に以下のキーが存在す
 * ビルド時に一度だけ自己署名ルートCA証明書を生成（例: `FLM Local CA`）
 * 公開鍵 (`flm-ca.crt`) をインストーラに同梱
 * 秘密鍵 (`flm-ca.key`) はビルド環境のシークレットとして管理（漏洩時は再生成）
-* 証明書の有効期限は10年を推奨（ローテーション戦略は `docs/SECURITY_FIREWALL_GUIDE.md` 参照）
+* 証明書の有効期限は10年を推奨（ローテーション戦略は `docs/guides/SECURITY_FIREWALL_GUIDE.md` 参照）
 
 ### 10.2 サーバー証明書の自動生成
 
@@ -203,13 +225,65 @@ Proxy / UI / CLI は `SecurityPolicy.policy_json` に以下のキーが存在す
 ### 10.4 アンインストール時の削除
 
 * アンインストーラで証明書を削除するオプションを提供
-* 手動削除手順も `docs/SECURITY_FIREWALL_GUIDE.md` に記載
+* 手動削除手順も `docs/guides/SECURITY_FIREWALL_GUIDE.md` に記載
 
 ### 10.5 ローテーション戦略
 
 * ルートCA証明書の期限切れ前に警告を表示（アプリ起動時）
 * 新バージョンのインストールで新しいルートCAを配布
 * 緊急時は `flm-ca.key` を使って新CAを生成し、アップデートで配布
+
+### 10.6 パッケージングのセキュリティ対策
+
+#### 10.6.1 コード署名
+
+パッケージ版のインストーラは、プラットフォームごとに適切なコード署名を実装する:
+
+* **Windows**: Tauri Signing Private Key を使用してインストーラにデジタル署名（`.github/workflows/build.yml` で `TAURI_SIGNING_PRIVATE_KEY` を使用）
+* **macOS**: Apple Developer Certificate を使用してインストーラに署名（`.github/workflows/build.yml` で `APPLE_CERTIFICATE`, `APPLE_SIGNING_IDENTITY` を使用）
+* **Linux**: GPG署名（将来実装予定）
+
+署名の検証:
+* Windows: インストーラのプロパティで「デジタル署名」タブを確認
+* macOS: `codesign -vv flm-installer.dmg` で検証
+* Linux: `gpg --verify flm-installer.AppImage.asc` で検証（将来実装）
+
+#### 10.6.2 ハッシュ値の公開
+
+パッケージの整合性を検証するため、公式サイトにSHA256ハッシュ値を公開する:
+
+* ダウンロードページに各プラットフォームのハッシュ値を表示
+* ユーザーにダウンロード後の検証を推奨
+* ハッシュ値の計算方法:
+  * Windows: `certutil -hashfile flm-installer.exe SHA256`
+  * macOS/Linux: `shasum -a 256 flm-installer.dmg`
+
+#### 10.6.3 ビルド環境の保護
+
+秘密鍵とビルドプロセスの保護:
+
+* **秘密鍵の管理**: `flm-ca.key` は GitHub Secrets で管理し、ビルド環境に直接保存しない
+* **アクセス制限**: ビルド環境へのアクセスを最小限に制限
+* **監査ログ**: ビルドプロセスとシークレットアクセスのログを記録
+* **漏洩時の対応**: 秘密鍵が漏洩した場合は即座に再生成し、新しいルートCA証明書を配布
+
+#### 10.6.4 インストール時の検証
+
+インストーラ内で証明書の整合性を検証する:
+
+* 証明書のフィンガープリントを検証（ビルド時に埋め込まれた期待値と比較）
+* 予期しない証明書のインストールを検出
+* インストールログを記録（`logs/security/install-<timestamp>.log`）
+* 検証失敗時はインストールを中止し、エラーメッセージを表示
+
+#### 10.6.5 配布チャネルの保護
+
+パッケージの配布チャネルを保護する:
+
+* **公式配布元**: GitHub Releases を公式配布チャネルとして使用
+* **HTTPS配布**: すべてのダウンロードはHTTPS経由で提供
+* **改ざん検知**: 配布チャネルの改ざんを検知する仕組み（将来実装予定）
+* **警告**: 公式サイト以外からのダウンロードを警告
 
 ## 11. 未決事項
 

@@ -1,5 +1,5 @@
 # FLM Core API Specification
-> Status: Canonical | Audience: Rust core engineers | Updated: 2025-11-20
+> Status: Canonical | Audience: Rust core engineers | Updated: 2025-01-XX
 
 **注意**: 本API仕様は**個人利用・シングルユーザー環境向け**のアプリケーション向けです。マルチユーザー対応やロールベースアクセス制御（RBAC）機能は提供されていません。
 
@@ -223,6 +223,40 @@ pub struct ProxyHandle {
     pub last_error: Option<String>,
 }
 
+/// ProxyHandle のユーザー向けエンドポイントURL生成
+///
+/// **重要**: `listen_addr` は技術的なバインドアドレス（例: `0.0.0.0:8080`）であり、
+/// ユーザーが実際に使用するURLではない。UI/CLI は以下のルールでユーザー向けURLを生成する必要がある。
+///
+/// **ユーザー向けURL生成ルール**:
+/// - `listen_addr` が `0.0.0.0` または `::` の場合:
+///   - ローカルアクセス用: `http://localhost:{port}` または `https://localhost:{https_port}`
+///   - 同一ネットワーク内アクセス用: `http://{local_ip}:{port}` または `https://{local_ip}:{https_port}`
+///     （`local_ip` は OS のネットワークインターフェースから取得した実際のIPアドレス）
+/// - `acme_domain` が設定されている場合（https-acme / packaged-ca モード）:
+///   - 外部アクセス用: `https://{acme_domain}:{https_port}`
+/// - `listen_addr` が特定のIPアドレスの場合:
+///   - そのIPアドレスをそのまま使用
+///
+/// **実装例**:
+/// ```rust
+/// fn user_friendly_endpoints(handle: &ProxyHandle) -> UserFriendlyEndpoints {
+///     let localhost_url = format!("http://localhost:{}", handle.port);
+///     let local_ip = get_local_ip_address(); // OS から取得
+///     let local_network_url = local_ip.map(|ip| format!("http://{}:{}", ip, handle.port));
+///     let external_url = handle.acme_domain.as_ref().and_then(|domain| {
+///         handle.https_port.map(|port| format!("https://{}:{}", domain, port))
+///     });
+///     UserFriendlyEndpoints { localhost_url, local_network_url, external_url }
+/// }
+/// ```
+///
+/// **UI表示の推奨**:
+/// - `0.0.0.0` をそのまま表示しない（大衆向けUIでは理解困難）
+/// - 用途別（ローカル/同一ネットワーク/外部）に分けて表示
+/// - 各URLに「コピー」ボタンを配置
+/// - 説明文を追加（例: "このPCからアクセス"、"同じネットワーク内の他のデバイスから"）
+
 #[derive(Clone, Debug)]
 pub struct SecurityPolicy {
     pub id: String,
@@ -366,7 +400,7 @@ pub enum HttpError {
 - `cors.allowed_origins`: 許可Origin配列。空配列 `[]` は `*`（すべて許可）として扱う。省略時は `*`。
 - `rate_limit`: `rpm`（per API key）と任意の `burst`。省略時はレート制限無効。`rpm` が 0 の場合は無効として扱う。`burst` が省略時は `rpm` と同じ値を使用。
 
-**参照**: Proxy/UI/CLI はこのスキーマを基準に「設定済みか」を判定し、Proxy は同じキーを参照して制御する。詳細は `docs/PROXY_SPEC.md` セクション9を参照。
+**参照**: Proxy/UI/CLI はこのスキーマを基準に「設定済みか」を判定し、Proxy は同じキーを参照して制御する。詳細は `docs/specs/PROXY_SPEC.md` セクション9を参照。
 
 ## 3. `LlmEngine` Trait
 
@@ -395,12 +429,12 @@ pub trait LlmEngine: Send + Sync {
 ## 4. ポート（抽象インターフェイス）
 
 ```rust
-pub trait EngineRepository {
-    fn list_registered(&self) -> Vec<Box<dyn LlmEngine>>;
-    fn register(&self, engine: Box<dyn LlmEngine>);
+pub trait EngineRepository: Send + Sync {
+    fn list_registered(&self) -> Vec<Arc<dyn LlmEngine>>;
+    fn register(&self, engine: Arc<dyn LlmEngine>);
 }
 
-pub trait EngineProcessController {
+pub trait EngineProcessController: Send + Sync {
     fn detect_binaries(&self) -> Vec<EngineBinaryInfo>;
     fn detect_running(&self) -> Vec<EngineRuntimeInfo>;
 }
@@ -411,32 +445,43 @@ pub trait HttpClient: Send + Sync {
     fn stream(&self, req: HttpRequest) -> Result<HttpStream, HttpError>;
 }
 
-pub trait ConfigRepository {
-    fn get(&self, key: &str) -> Result<Option<String>, RepoError>;
-    fn set(&self, key: &str, value: &str) -> Result<(), RepoError>;
-    fn list(&self) -> Result<Vec<(String, String)>, RepoError>;
+#[async_trait]
+pub trait ConfigRepository: Send + Sync {
+    async fn get(&self, key: &str) -> Result<Option<String>, RepoError>;
+    async fn set(&self, key: &str, value: &str) -> Result<(), RepoError>;
+    async fn list(&self) -> Result<Vec<(String, String)>, RepoError>;
 }
 
-pub trait SecurityRepository {
-    fn save_api_key(&self, key: ApiKeyRecord) -> Result<(), RepoError>;
-    fn fetch_api_key(&self, id: &str) -> Result<Option<ApiKeyRecord>, RepoError>;
-    fn list_api_keys(&self) -> Result<Vec<ApiKeyRecord>, RepoError>;
-    fn mark_api_key_revoked(&self, id: &str, revoked_at: &str) -> Result<(), RepoError>;
-    fn save_policy(&self, policy: SecurityPolicy) -> Result<(), RepoError>;
-    fn fetch_policy(&self, id: &str) -> Result<Option<SecurityPolicy>, RepoError>;
-    fn list_policies(&self) -> Result<Vec<SecurityPolicy>, RepoError>;
+#[async_trait]
+pub trait SecurityRepository: Send + Sync {
+    async fn save_api_key(&self, key: ApiKeyRecord) -> Result<(), RepoError>;
+    async fn fetch_api_key(&self, id: &str) -> Result<Option<ApiKeyRecord>, RepoError>;
+    async fn list_api_keys(&self) -> Result<Vec<ApiKeyRecord>, RepoError>;
+    /// List only active (non-revoked) API keys
+    ///
+    /// This is an optimization for `verify_api_key()` to avoid checking revoked keys.
+    /// Default implementation filters `list_api_keys()` results, but implementations
+    /// can override this to use a more efficient database query.
+    async fn list_active_api_keys(&self) -> Result<Vec<ApiKeyRecord>, RepoError>;
+    async fn mark_api_key_revoked(&self, id: &str, revoked_at: &str) -> Result<(), RepoError>;
+    async fn save_policy(&self, policy: SecurityPolicy) -> Result<(), RepoError>;
+    async fn fetch_policy(&self, id: &str) -> Result<Option<SecurityPolicy>, RepoError>;
+    async fn list_policies(&self) -> Result<Vec<SecurityPolicy>, RepoError>;
 }
 
-pub trait ProxyController {
-    fn start(&self, config: ProxyConfig) -> Result<ProxyHandle, ProxyError>;
-    fn stop(&self, handle: ProxyHandle) -> Result<(), ProxyError>;
+#[async_trait]
+pub trait ProxyController: Send + Sync {
+    async fn start(&self, config: ProxyConfig) -> Result<ProxyHandle, ProxyError>;
+    async fn stop(&self, handle: ProxyHandle) -> Result<(), ProxyError>;
+    async fn status(&self) -> Result<Vec<ProxyHandle>, ProxyError>;
 }
 
-pub trait ProxyRepository {
-    fn save_profile(&self, profile: ProxyProfile) -> Result<(), RepoError>;
-    fn load_profile(&self, id: &str) -> Result<Option<ProxyProfile>, RepoError>;
-    fn list_profiles(&self) -> Result<Vec<ProxyProfile>, RepoError>;
-    fn list_active_handles(&self) -> Result<Vec<ProxyHandle>, RepoError>;
+#[async_trait]
+pub trait ProxyRepository: Send + Sync {
+    async fn save_profile(&self, profile: ProxyProfile) -> Result<(), RepoError>;
+    async fn load_profile(&self, id: &str) -> Result<Option<ProxyProfile>, RepoError>;
+    async fn list_profiles(&self) -> Result<Vec<ProxyProfile>, RepoError>;
+    async fn list_active_handles(&self) -> Result<Vec<ProxyHandle>, RepoError>;
 }
 ```
 
@@ -469,9 +514,9 @@ pub struct ProxyService {
 }
 
 impl ProxyService {
-    pub fn start(&self, config: ProxyConfig) -> Result<ProxyHandle, ProxyError>;
-    pub fn stop(&self, handle: ProxyHandle) -> Result<(), ProxyError>;
-    pub fn status(&self) -> Result<Vec<ProxyHandle>, ProxyError>;
+    pub async fn start(&self, config: ProxyConfig) -> Result<ProxyHandle, ProxyError>;
+    pub async fn stop(&self, handle: ProxyHandle) -> Result<(), ProxyError>;
+    pub async fn status(&self) -> Result<Vec<ProxyHandle>, ProxyError>;
 }
 
 pub struct SecurityService {
@@ -479,18 +524,19 @@ pub struct SecurityService {
 }
 
 impl SecurityService {
-    pub fn list_policies(&self) -> Result<Vec<SecurityPolicy>, RepoError>;
-    pub fn get_policy(&self, id: &str) -> Result<Option<SecurityPolicy>, RepoError>;
-    pub fn set_policy(&self, policy: SecurityPolicy) -> Result<(), RepoError>;
+    pub async fn list_policies(&self) -> Result<Vec<SecurityPolicy>, RepoError>;
+    pub async fn get_policy(&self, id: &str) -> Result<Option<SecurityPolicy>, RepoError>;
+    pub async fn set_policy(&self, policy: SecurityPolicy) -> Result<(), RepoError>;
 
-    pub fn create_api_key(&self, label: &str) -> Result<PlainAndHashedApiKey, RepoError>;
-    pub fn revoke_api_key(&self, id: &str) -> Result<(), RepoError>;
-    pub fn list_api_keys(&self) -> Result<Vec<ApiKeyMetadata>, RepoError>;
-    pub fn rotate_api_key(
+    pub async fn create_api_key(&self, label: &str) -> Result<PlainAndHashedApiKey, RepoError>;
+    pub async fn revoke_api_key(&self, id: &str) -> Result<(), RepoError>;
+    pub async fn list_api_keys(&self) -> Result<Vec<ApiKeyMetadata>, RepoError>;
+    pub async fn rotate_api_key(
         &self,
         id: &str,
         new_label: Option<&str>,
     ) -> Result<PlainAndHashedApiKey, RepoError>;
+    pub async fn verify_api_key(&self, plain_key: &str) -> Result<Option<ApiKeyRecord>, RepoError>;
 }
 
 pub struct ConfigService {
@@ -498,9 +544,9 @@ pub struct ConfigService {
 }
 
 impl ConfigService {
-    pub fn get(&self, key: &str) -> Result<Option<String>, RepoError>;
-    pub fn set(&self, key: &str, value: &str) -> Result<(), RepoError>;
-    pub fn list(&self) -> Result<Vec<(String, String)>, RepoError>;
+    pub async fn get(&self, key: &str) -> Result<Option<String>, RepoError>;
+    pub async fn set(&self, key: &str, value: &str) -> Result<(), RepoError>;
+    pub async fn list(&self) -> Result<Vec<(String, String)>, RepoError>;
 }
 ```
 
@@ -533,7 +579,7 @@ impl ConfigService {
 ### DTO/IPC 互換性ポリシー
 - CLI/UI/Proxy が Core へ渡す DTO は `serde` ベースの JSON でシリアライズされ、`version` フィールド（例: `{"version":"1.0","data":{...}}`）を付与する。Reverse 互換は `major` が一致する限り保証し、`minor` アップデートではフィールド追加のみ行う。
 - `ProxyHandle`, `SecurityPolicy`, `ApiKeyMetadata` など外部に露出する構造体は `#[non_exhaustive]` で定義し、未知フィールドを無視できるよう CLI/UI 側で `serde(default)` を設定する。
-- IPC 追加時は `docs/CLI_SPEC.md` / `docs/UI_MINIMAL.md` に JSON Schema（必須フィールド/型）を追記し、`CORE_API.md` の該当データモデルを参照させる。これにより CLI がサブコマンド増設しても UI/Proxy で schema drift が起きない。
+- IPC 追加時は `docs/specs/CLI_SPEC.md` / `docs/specs/UI_MINIMAL.md` に JSON Schema（必須フィールド/型）を追記し、`CORE_API.md` の該当データモデルを参照させる。これにより CLI がサブコマンド増設しても UI/Proxy で schema drift が起きない。
 
 ## 7. ACME 設定詳細
 

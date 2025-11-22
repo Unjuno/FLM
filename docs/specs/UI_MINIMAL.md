@@ -16,6 +16,17 @@
 | Proxy Status | 現在のモード/ポート/ACMEドメイン/Listenアドレス、Start/Stop ボタン | `ProxyService::status` |
 | Security Alerts | APIキー数、IPホワイトリスト設定、レート制限設定の有無など | `SecurityService::list_api_keys`, `SecurityService::list_policies` |
 
+**Proxy Status のエンドポイントURL表示**:
+- `ProxyHandle.listen_addr` が `0.0.0.0` または `::` の場合、技術的なバインドアドレスをそのまま表示しない
+- ユーザー向けに実際に使用可能なURLを表示:
+  - **ローカルアクセス用**: `http://localhost:{port}` または `https://localhost:{https_port}`
+  - **同一ネットワーク内アクセス用**: `http://{local_ip}:{port}` または `https://{local_ip}:{https_port}`
+    （`local_ip` は OS のネットワークインターフェースから取得した実際のIPアドレス、例: `192.168.1.100`）
+  - **外部アクセス用**（`acme_domain` が設定されている場合）: `https://{acme_domain}:{https_port}`
+- 各URLに「コピー」ボタンを配置
+- 用途別に説明文を追加（例: "このPCからアクセス"、"同じネットワーク内の他のデバイスから"、"インターネット経由でアクセス"）
+- 詳細は `docs/specs/CORE_API.md` の「ProxyHandle のユーザー向けエンドポイントURL生成」セクションを参照
+
 ### API Setup
 - モデル選択 (`flm://engine/model` 形式のドロップダウン)、エンジン再検出ボタン。
 - APIキー管理：一覧表示、新規作成（作成直後のみ平文キーを表示）、失効。
@@ -36,10 +47,11 @@
      - 選択内容は `ProxyService::start` に引き渡し、ACME 再試行・手動証明書アップロード・自己署名ルート配布手順を案内する。
   3. **Security Policy**: IPホワイトリスト/CORS/RateLimit フォームを `SecurityService::set_policy` で確定。入力時に RFC1918/リンクローカルのみの場合は警告を出し、「手動で公開IPを追加してください」と案内する（`ip_whitelist` のバリデーションは UI 側で実施）。
   4. **Firewall Automation**: クライアントOSを自動検出し（Tauri側 Native API）、`ProxyService::status` で得た全待受ポート（例: 8080/8081）と `SecurityPolicy.policy_json` 内の `ip_whitelist`（IPv4/IPv6 CIDR 可）に応じたコマンドスクリプト（PowerShell, pfctl, ufw/firewalld 等）を生成。  
-     - デフォルトは「プレビュー + コピー/保存」で、常に `docs/SECURITY_FIREWALL_GUIDE.md` の手動手順を提示。HTTP/HTTPS 両ポートと複数 IP を網羅したスクリプトを出力する。  
+     - デフォルトは「プレビュー + コピー/保存」で、常に `docs/guides/SECURITY_FIREWALL_GUIDE.md` の手動手順を提示。HTTP/HTTPS 両ポートと複数 IP を網羅したスクリプトを出力する。  
      - 「管理者権限で適用」を選択した場合のみ UAC/sudo プロンプトを表示し、`ipc.system_firewall_apply(script, shell)` で昇格実行する。適用結果（stdout/stderr/exit_code）に加えてロールバック用スクリプトを自動保存し、結果ログを `AppData/flm/logs/security/firewall-*.log`（OS 標準アプリデータ配下、権限 700/600）へ追記する。  
      - 権限拒否・ヘッドレス環境では手動実行のみを案内し、Wizard 上で「適用済み」を明示的にチェックできるようにする（IPv6 / HTTP-only の場合も同じ）。
 - Wizard 完了後に `SecurityService::get_policy` / `ProxyService::status` を再取得し、ダッシュボードへサマリカードを表示する。
+- 完了画面では、ユーザー向けエンドポイントURL（`0.0.0.0` ではなく `localhost` や実際のIPアドレス）とAPIキーを表示し、コピーボタンを提供する。
 
 ## 3. ワイヤーフレーム（テキスト）
 ```
@@ -82,7 +94,7 @@ Setup Wizard
 
 ### Adapter専用 IPC (Firewall)
 - `system_firewall_preview/apply` は Core API には含まれない。Tauri バックエンド（Adapter層）が OS 判定・昇格を実装し、Domain とは疎結合に保つ。
-- Core との接点は Proxy/Policy 情報の取得のみで、Firewall コマンドは `docs/SECURITY_FIREWALL_GUIDE.md` のテンプレートを参照して生成・実行する。生成/適用結果の永続ログはファイルベース（`logs/security/firewall-*.log`）に統一し、`security.db` の `audit_logs` には書き込まない。
+- Core との接点は Proxy/Policy 情報の取得のみで、Firewall コマンドは `docs/guides/SECURITY_FIREWALL_GUIDE.md` のテンプレートを参照して生成・実行する。生成/適用結果の永続ログはファイルベース（`logs/security/firewall-*.log`）に統一し、`security.db` の `audit_logs` には書き込まない。
 
 ## 5. UX / エラーハンドリングポリシー
 - ロード状態を視覚的に示す（Engine table skeleton、ボタン disabled など）。
@@ -90,7 +102,7 @@ Setup Wizard
 - APIキー作成後は平文キーを一度だけ表示し、閉じたら再表示不可。
 - Advanced JSON 編集は「本当に編集するか」警告と Core バリデーションを必須にする。
 - 開発者向けデバッグモードを用意し、IPC リクエスト/レスポンスを確認可能にする（任意）。
-- Setup Wizard 成功時は「Proxy/TLS 有効」「IPホワイトリスト適用」「ファイアウォール適用済みOSコマンド」の3項目をバッジ表示し、失敗ケースでは該当ステップのみ再実行できる UI（例: Step 4 だけやり直し）を提供。UAC/sudo拒否は「権限不足」エラーとして扱い、ガイドリンク (`docs/SECURITY_FIREWALL_GUIDE.md`) をその場で提示する。
+- Setup Wizard 成功時は「Proxy/TLS 有効」「IPホワイトリスト適用」「ファイアウォール適用済みOSコマンド」の3項目をバッジ表示し、失敗ケースでは該当ステップのみ再実行できる UI（例: Step 4 だけやり直し）を提供。UAC/sudo拒否は「権限不足」エラーとして扱い、ガイドリンク (`docs/guides/SECURITY_FIREWALL_GUIDE.md`) をその場で提示する。
 
 ## 6. Firewall Automation IPC
 - `system_firewall_preview`  

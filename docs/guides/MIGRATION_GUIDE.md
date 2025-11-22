@@ -66,7 +66,7 @@ crates/
 | `config.json.proxy.port` | `config.db.proxy_profiles.port` | HTTPS は `port+1` を暗黙使用（`ProxyHandle.https_port` に記録） |
 | `certs/*.pem` | `security.db.certificates` | ACME メタデータ + 実体ファイルパスを格納 |
 
-詳細スキーマは `docs/DB_SCHEMA.md` を参照。
+詳細スキーマは `docs/specs/DB_SCHEMA.md` を参照。
 
 ## 5. 失敗シナリオ
 | シナリオ | 検知方法 | CLI 挙動 |
@@ -88,5 +88,5 @@ crates/
 
 ## 8. 保守
 - サンプルデータは `archive/prototype/` の最新タグから 6 ヶ月ごとに更新
-- 重大変更（Core API `MAJOR` 変更など）は ADR で承認し、本ガイドと `docs/DB_SCHEMA.md` を同時更新
+- 重大変更（Core API `MAJOR` 変更など）は ADR で承認し、本ガイドと `docs/specs/DB_SCHEMA.md` を同時更新
 

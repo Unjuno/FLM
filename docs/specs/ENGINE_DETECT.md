@@ -19,7 +19,7 @@
 | ErrorNetwork       | 連続3回以上のタイムアウト/ネットワーク失敗                          |
 | ErrorApi           | HTTP 200 だが JSON 解析エラー、必須フィールド欠落など                |
 
-状態遷移は `docs/CORE_API.md` の EngineStatus 遷移規則に従う。
+状態遷移は `docs/specs/CORE_API.md` の EngineStatus 遷移規則に従う。
 
 ## 2. 各エンジンの検出仕様
 
@@ -47,5 +47,5 @@
 1. `flm-engine-<name>` crate を追加
 2. `LlmEngine` trait を実装
 3. `EngineRegistry` に登録するモジュールを追加
-4. `docs/ENGINE_DETECT.md` にステップを追記
+4. `docs/specs/ENGINE_DETECT.md` にステップを追記
 

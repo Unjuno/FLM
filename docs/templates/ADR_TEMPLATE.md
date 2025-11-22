@@ -10,7 +10,7 @@
 
 ## 1. Context
 - 現状の課題、制約、目標値を列挙
-- 関連ドキュメント（`docs/CORE_API.md`、`docs/PLAN.md` 等）をリンク
+- 関連ドキュメント（`docs/specs/CORE_API.md`、`docs/planning/PLAN.md` 等）をリンク
 - 影響範囲（CLI / Proxy / UI / DB / Ops）を明記
 
 ## 2. Decision
@@ -35,7 +35,7 @@
 3. リスク低減策 / ロールバック手順
 
 ## 6. Validation
-- 必須テスト（`docs/TEST_STRATEGY.md` 参照）の一覧
+- 必須テスト（`docs/guides/TEST_STRATEGY.md` 参照）の一覧
 - 手動シナリオ（`tests/ui-scenarios.md` 等）の更新要否
 
 ## 7. Sign-off

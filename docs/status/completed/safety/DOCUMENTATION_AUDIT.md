@@ -14,20 +14,20 @@
 | ドキュメント | 状態 | 備考 |
 |------------|------|------|
 | `README.md` | ✅ 存在 | 個人利用の記述追加済み、日付統一済み |
-| `docs/PLAN.md` | ✅ 存在 | Phase 0/1/2/3 の計画が明確 |
-| `docs/FEATURE_SPEC.md` | ✅ 存在 | 機能要件が明確 |
-| `docs/CORE_API.md` | ✅ 存在 | Rust Domain層のAPI仕様が完全 |
-| `docs/PROXY_SPEC.md` | ✅ 存在 | HTTP Proxy実装仕様が完全 |
-| `docs/ENGINE_DETECT.md` | ✅ 存在 | エンジン検出ロジックが明確 |
-| `docs/DB_SCHEMA.md` | ✅ 存在 | スキーマ＋マイグレーション指針が完全 |
-| `docs/MIGRATION_GUIDE.md` | ✅ 存在 | 旧プロトタイプからの移行手順が明確 |
-| `docs/TEST_STRATEGY.md` | ✅ 存在 | CI/負荷/手動テストの方針が明確 |
-| `docs/VERSIONING_POLICY.md` | ✅ 存在 | Core/API/CLI/Proxyのバージョン管理が明確 |
+| `docs/planning/PLAN.md` | ✅ 存在 | Phase 0/1/2/3 の計画が明確 |
+| `docs/specs/FEATURE_SPEC.md` | ✅ 存在 | 機能要件が明確 |
+| `docs/specs/CORE_API.md` | ✅ 存在 | Rust Domain層のAPI仕様が完全 |
+| `docs/specs/PROXY_SPEC.md` | ✅ 存在 | HTTP Proxy実装仕様が完全 |
+| `docs/specs/ENGINE_DETECT.md` | ✅ 存在 | エンジン検出ロジックが明確 |
+| `docs/specs/DB_SCHEMA.md` | ✅ 存在 | スキーマ＋マイグレーション指針が完全 |
+| `docs/guides/MIGRATION_GUIDE.md` | ✅ 存在 | 旧プロトタイプからの移行手順が明確 |
+| `docs/guides/TEST_STRATEGY.md` | ✅ 存在 | CI/負荷/手動テストの方針が明確 |
+| `docs/guides/VERSIONING_POLICY.md` | ✅ 存在 | Core/API/CLI/Proxyのバージョン管理が明確 |
 | `docs/templates/ADR_TEMPLATE.md` | ✅ 存在 | 変更管理テンプレートが存在 |
-| `docs/diagram.md` | ✅ 存在 | アーキテクチャ図が存在 |
-| `docs/SECURITY_FIREWALL_GUIDE.md` | ✅ 存在 | Firewall自動化ガイドが完全 |
-| `docs/CLI_SPEC.md` | ✅ 存在 | CLIコマンド仕様が完全 |
-| `docs/UI_MINIMAL.md` | ✅ 存在 | Phase2 UI仕様が完全 |
+| `docs/planning/diagram.md` | ✅ 存在 | アーキテクチャ図が存在 |
+| `docs/guides/SECURITY_FIREWALL_GUIDE.md` | ✅ 存在 | Firewall自動化ガイドが完全 |
+| `docs/specs/CLI_SPEC.md` | ✅ 存在 | CLIコマンド仕様が完全 |
+| `docs/specs/UI_MINIMAL.md` | ✅ 存在 | Phase2 UI仕様が完全 |
 | `tests/ui-scenarios.md` | ✅ 存在 | 手動テストシナリオが存在 |
 
 **Phase 0 整備率: 16/16 (100%)**
@@ -36,7 +36,7 @@
 
 | ドキュメント | 状態 | 備考 |
 |------------|------|------|
-| `docs/UI_EXTENSIONS.md` | ✅ 存在 | 将来拡張の参考（Phase 3以降） |
+| `docs/specs/UI_EXTENSIONS.md` | ✅ 存在 | 将来拡張の参考（Phase 3以降） |
 
 ---
 
@@ -44,7 +44,7 @@
 
 ### ✅ 技術仕様の完全性
 
-#### Core API (`docs/CORE_API.md`)
+#### Core API (`docs/specs/CORE_API.md`)
 - ✅ Rust trait定義（`LlmEngine`, ポートtrait）が完全
 - ✅ データモデル（`EngineState`, `ChatRequest`, `SecurityPolicy`等）が完全
 - ✅ サービスAPI（`EngineService`, `ProxyService`, `SecurityService`）のシグネチャが明確
@@ -52,7 +52,7 @@
 - ✅ 非同期処理方針（タイムアウト、キャンセレーション、リトライ）が記載
 - ⚠️ 実装例（tokio::timeout, AbortHandle等）は実装時に参照可能（問題なし）
 
-#### Proxy仕様 (`docs/PROXY_SPEC.md`)
+#### Proxy仕様 (`docs/specs/PROXY_SPEC.md`)
 - ✅ ルーティングルール（`/v1/*`, `/engine/*`）が明確
 - ✅ 認証・ポリシー適用の順序が明確
 - ✅ TLS/HTTPSモード（4モード）の説明が完全
@@ -60,19 +60,19 @@
 - ✅ ACME失敗時のフォールバック手順が追加済み
 - ✅ SecurityPolicy JSONスキーマが`CORE_API.md`を参照する形に統一済み
 
-#### CLI仕様 (`docs/CLI_SPEC.md`)
+#### CLI仕様 (`docs/specs/CLI_SPEC.md`)
 - ✅ 全コマンドの仕様が明確
 - ✅ エラーコードとExit Codeの対応表が存在
 - ✅ JSON出力形式が統一（`{"version":"1.0","data":{...}}`）
 - ✅ DTOスキーマが`CORE_API.md`と1:1対応
 
-#### DBスキーマ (`docs/DB_SCHEMA.md`)
+#### DBスキーマ (`docs/specs/DB_SCHEMA.md`)
 - ✅ `config.db`と`security.db`のスキーマが完全
 - ✅ マイグレーション戦略が明確
 - ✅ バックアップ/復旧手順が記載
 - ⚠️ 読み取り専用モードの動作仕様は簡潔だが実装可能（問題なし）
 
-#### エンジン検出 (`docs/ENGINE_DETECT.md`)
+#### エンジン検出 (`docs/specs/ENGINE_DETECT.md`)
 - ✅ 検出ステップの標準テンプレートが明確
 - ✅ 各エンジン（Ollama/vLLM/LM Studio/llama.cpp）の検出仕様が完全
 - ✅ 状態遷移は`CORE_API.md`を参照する形に整理済み
@@ -192,11 +192,11 @@ V2のドキュメントは、開発を開始するのに十分な整備率を達
    - `flm://` URI形式、`EngineStatus`、`ProxyMode`等の用語を集約
    - 新規参加者の理解を助ける
 
-2. **IPC実装例の追加** (`docs/UI_MINIMAL.md`)
+2. **IPC実装例の追加** (`docs/specs/UI_MINIMAL.md`)
    - Tauriコマンドの実装例（Rust側・TypeScript側）を追加
    - Phase 2開始時に追加可能
 
-3. **読み取り専用モードの詳細仕様** (`docs/DB_SCHEMA.md`)
+3. **読み取り専用モードの詳細仕様** (`docs/specs/DB_SCHEMA.md`)
    - どの操作がブロックされるかを明記
    - 実装時に追加可能
 

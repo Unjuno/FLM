@@ -38,7 +38,7 @@
 ## 4. バージョン管理
 
 - migration ファイル命名例: `migrations/20250101_create_settings.sql`
-- `docs/DB_SCHEMA.md` には最新版の schema を常に記載し、差分が生じたら migration ファイルを追加
+- `docs/specs/DB_SCHEMA.md` には最新版の schema を常に記載し、差分が生じたら migration ファイルを追加
 - Phase1/2では `security_policies` に `id = "default"` の1行のみを保持し、初期化時に空ポリシーを挿入する
 
 ## 5. データ保護
@@ -58,7 +58,7 @@
 - 復旧手順: CLI `flm security backup restore --file <bak>` で暗号化バックアップを戻し → `sqlx::migrate!()` を再実行 → `flm check` で整合性を確認。バックアップと実 DB のバージョンが不一致の場合は復元を中断し、ユーザーへ警告する。
 
 ## 7. Post-MVP スキーマ（UI拡張向け）
-Phase3 以降に実装する UI Extensions に備えて、以下のテーブルを追加予定。実装時は `docs/UI_EXTENSIONS.md` に記載された機能と同期し、マイグレーションを追加する。
+Phase3 以降に実装する UI Extensions に備えて、以下のテーブルを追加予定。実装時は `docs/specs/UI_EXTENSIONS.md` に記載された機能と同期し、マイグレーションを追加する。
 
 | テーブル | 用途 | 主要カラム |
 |----------|------|------------|
@@ -67,5 +67,5 @@ Phase3 以降に実装する UI Extensions に備えて、以下のテーブル�
 
 - どちらのテーブルも `config.db` に配置し、`EngineService` / `ConfigService` からアクセスする。
 - バージョニング: `model_profiles.version`, `api_prompts.version` を設け、今後の schema 変更時に後方互換を確保。
-- CLI コマンド (`flm model-profiles`, `flm api prompts …`) と同時に導入し、Phase3 ブランチでマイグレーションファイルを追加する。追加前に `docs/CLI_SPEC.md` を更新して利用方法を定義すること。
+- CLI コマンド (`flm model-profiles`, `flm api prompts …`) と同時に導入し、Phase3 ブランチでマイグレーションファイルを追加する。追加前に `docs/specs/CLI_SPEC.md` を更新して利用方法を定義すること。
 

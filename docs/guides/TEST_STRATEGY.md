@@ -72,5 +72,5 @@
 ## 7. Update Process
 1. 仕様変更時は対象セクションを更新し、`Updated:` を書き換え
 2. 新しいテストシナリオは `tests/ui-scenarios.md` にリンク
-3. Phase 完了後は結果を `docs/EVALUATION_REPORT.md` に追記
+3. Phase 完了後は結果を `docs/status/EVALUATION_REPORT.md` に追記
 

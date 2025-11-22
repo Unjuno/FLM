@@ -15,7 +15,7 @@
 - Proxy も Rust (Axum/Hyper 等) で実装し、旧 Express 実装はアーカイブ
 - エンジン抽象 `LlmEngine` が Ollama / LM Studio / vLLM / llama.cpp をプラガブルに扱う
 - ネットワークモード: `local-http`（CLIデフォルト） / `https-acme`（インターネット公開時の既定） / `dev-selfsigned`（LAN/検証用途の例外的モード、手動インストール必要） / `packaged-ca`（Phase 3 で実装、パッケージ版の既定、証明書自動インストール）を提供
-- 仕様詳細は `docs/CORE_API.md`, `docs/PROXY_SPEC.md`, `docs/ENGINE_DETECT.md`, `docs/DB_SCHEMA.md` に分割して管理
+- 仕様詳細は `docs/specs/CORE_API.md`, `docs/specs/PROXY_SPEC.md`, `docs/specs/ENGINE_DETECT.md`, `docs/specs/DB_SCHEMA.md` に分割して管理
 
 ---
 
@@ -47,7 +47,7 @@
 - ログ仕様: request_id, timestamp, client_id, engine, endpoint, latency(ms), status_code, error_type を JSON Lines で記録
 - HTTPS/TLS: CLI デフォルトは `local-http`（ローカル利用向け）。インターネット公開時は `https-acme` を既定モードとし、`dev-selfsigned` は LAN / テスト / ドメイン非所持ユーザーに限定した暫定モードとして扱う（Wizard/CLI がルート証明書配布と撤去手順を案内）。Phase 3 のパッケージ版では `packaged-ca` を既定とし、インストール時に証明書が自動登録されるためブラウザ警告なしでHTTPS利用可能（大衆向け配布に最適）。
 - SecurityPolicy は Phase1/2 ではグローバルに1件（ID=`"default"`）のみを扱う
-- ルーティング、ストリーミング、ミドルウェア順序は `docs/PROXY_SPEC.md` を参照
+- ルーティング、ストリーミング、ミドルウェア順序は `docs/specs/PROXY_SPEC.md` を参照
 
 ---
 
@@ -66,7 +66,7 @@
   1. **Dashboard**: エンジン状態 / プロキシ状態 / セキュリティ警告
   2. **API Setup**: モデル選択、APIキー管理、ポリシー設定
   3. **Chat Tester**: `/v1/chat/completions` を用いた疎通確認
-- **Setup Wizard (External Publish)**: Dashboard から起動できるステッパーで Proxy モード選択（パッケージ版は `packaged-ca` を既定、CLI版は `https-acme` を推奨、`dev-selfsigned` は開発用途）、SecurityPolicy 設定、Firewall コマンド自動生成を案内。Firewall スクリプトは `docs/SECURITY_FIREWALL_GUIDE.md` に沿って自動/手動適用をサポート
+- **Setup Wizard (External Publish)**: Dashboard から起動できるステッパーで Proxy モード選択（パッケージ版は `packaged-ca` を既定、CLI版は `https-acme` を推奨、`dev-selfsigned` は開発用途）、SecurityPolicy 設定、Firewall コマンド自動生成を案内。Firewall スクリプトは `docs/guides/SECURITY_FIREWALL_GUIDE.md` に沿って自動/手動適用をサポート
 - UI テスト: コンポーネント単位 + IPCモック、主要ユーザーフローを手動テスト記録
 
 ---
@@ -79,6 +79,7 @@
   - インストール時にOS信頼ストアへ自動登録（Windows: PowerShell, macOS/Linux: shell script）
   - サーバー証明書は起動時に自動生成（SANにRFC1918範囲を含める）
   - アンインストール時に証明書削除オプションを提供
+- **セキュリティ対策**: パッケージングのセキュリティ対策（コード署名、ハッシュ値の公開、ビルド環境の保護、インストール時の検証、配布チャネルの保護）の詳細は `docs/specs/PROXY_SPEC.md` セクション10.6を参照。検証手順は `docs/guides/SECURITY_FIREWALL_GUIDE.md` セクション9を参照。
 - README / SECURITY_POLICY / PLAN / CLI_SPEC / UI_MINIMAL を更新し、アーカイブ版との差分を明示
 
 ---
@@ -90,7 +91,7 @@
 - 依存ライブラリは Rust 標準 + 必須クレート（tokio / axum / hyper / openssl 等）に限定
 - ログ出力はローカル JSON Lines のみにし、外部送信機能は Phase3 以降
 - CI は Windows / Linux / macOS で CLI と Proxy の統合テストを実行
-- Phase完了条件は `docs/PLAN.md` のメトリクスを参照
+- Phase完了条件は `docs/planning/PLAN.md` のメトリクスを参照
 
 ---
 
@@ -102,5 +103,5 @@
 
 ---
 
-この機能書は `docs/PLAN.md` と連動して定期的に更新する。
+この機能書は `docs/planning/PLAN.md` と連動して定期的に更新する。
 

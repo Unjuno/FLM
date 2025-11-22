@@ -11,7 +11,7 @@
 **修正**:
 - `crates/flm-core/src/domain/security.rs`: `ApiKeyMetadata`に`revoked_at: Option<String>`を追加
 - `crates/flm-core/src/services/security.rs`: `list_api_keys()`で`revoked_at`を含めるように修正
-- `docs/CORE_API.md`: API仕様を更新
+- `docs/specs/CORE_API.md`: API仕様を更新
 
 ### 2. 統合テストでrevoke状態を厳密に検証 ✅
 
@@ -64,7 +64,7 @@
 2. `crates/flm-core/src/services/security.rs` - `list_api_keys()`で`revoked_at`を含める
 3. `crates/flm-cli/tests/integration_test.rs` - revoke検証とrotate検証を強化
 4. `crates/flm-cli/tests/cli_test.rs` - 実際のCLIコマンド実行に変更
-5. `docs/CORE_API.md` - API仕様を更新
+5. `docs/specs/CORE_API.md` - API仕様を更新
 
 ---
 

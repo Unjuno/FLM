@@ -56,9 +56,8 @@
 - [x] すべてのテストが成功（3 passed）
 
 ### 8. ドキュメント ✅
-- [x] `docs/CHANGELOG.md`: 変更履歴の初期化
-- [x] `docs/PHASE0_STATUS.md`: Phase 0 の進捗状況
-- [x] `VERIFICATION_REPORT.md`: 実装検証レポート
+- [x] `docs/changelog/CHANGELOG.md`: 変更履歴の初期化
+- [x] `docs/status/PHASE0_COMPLETE.md`: Phase 0 の完了報告
 
 ## 検証結果
 
