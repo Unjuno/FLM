@@ -1,5 +1,5 @@
 # FLM Core API Specification
-> Status: Canonical | Audience: Rust core engineers | Updated: 2025-01-XX
+> Status: Canonical | Audience: Rust core engineers | Updated: 2025-01-27
 
 **注意**: 本API仕様は**個人利用・シングルユーザー環境向け**のアプリケーション向けです。マルチユーザー対応やロールベースアクセス制御（RBAC）機能は提供されていません。
 
@@ -195,6 +195,16 @@ pub enum AcmeChallengeKind {
 pub struct ProxyConfig {
     pub mode: ProxyMode,
     pub port: u16,
+    /// Listen address (IP address to bind to, e.g., "127.0.0.1" or "0.0.0.0")
+    /// Default: "127.0.0.1" (localhost only) for security
+    /// Use "0.0.0.0" only when external access is explicitly needed
+    #[serde(default = "default_listen_addr")]
+    pub listen_addr: String,
+    /// Trusted proxy IP addresses (for X-Forwarded-For header validation)
+    /// If empty, X-Forwarded-For and X-Real-IP headers are ignored (direct connection assumed)
+    /// Only IPs from trusted proxies are used for client IP extraction
+    #[serde(default)]
+    pub trusted_proxy_ips: Vec<String>,
     pub acme_email: Option<String>,
     pub acme_domain: Option<String>,
     pub acme_challenge: Option<AcmeChallengeKind>,
@@ -376,6 +386,8 @@ pub enum HttpError {
 
 - `mode`: すべてのバリアントが有効。`HttpsAcme` の場合は `acme_email` と `acme_domain` が必須。
 - `port`: 1-65535 の範囲。0 は無効。HTTPS を有効にするモードでは `port + 1` が TLS リスニングポートとして予約されるため、両方のポートが空いていることを CLI で検証する。
+- `listen_addr`: バインドするIPアドレス（例: "127.0.0.1" または "0.0.0.0"）。デフォルトは "127.0.0.1"（セキュリティのためlocalhostのみ）。外部アクセスが必要な場合のみ "0.0.0.0" を使用する。有効なIPv4/IPv6アドレス形式である必要がある。
+- `trusted_proxy_ips`: X-Forwarded-For ヘッダーの検証に使用する信頼できるプロキシのIPアドレスリスト。空の場合は X-Forwarded-For と X-Real-IP ヘッダーを無視し、直接接続とみなす。信頼できるプロキシからのIPのみがクライアントIP抽出に使用される。
 - `acme_email`: `HttpsAcme` モード時のみ必須。RFC5322 準拠のメールアドレス形式。
 - `acme_domain`: `HttpsAcme` モード時のみ必須。FQDN 形式（例: `example.com`）。ワイルドカードは Phase 3 以降。
 - `acme_challenge`: 省略時は `Http01`。`Dns01` を指定する場合は `acme_dns_profile_id` も必須。
@@ -429,9 +441,10 @@ pub trait LlmEngine: Send + Sync {
 ## 4. ポート（抽象インターフェイス）
 
 ```rust
+#[async_trait]
 pub trait EngineRepository: Send + Sync {
-    fn list_registered(&self) -> Vec<Arc<dyn LlmEngine>>;
-    fn register(&self, engine: Arc<dyn LlmEngine>);
+    async fn list_registered(&self) -> Vec<Arc<dyn LlmEngine>>;
+    async fn register(&self, engine: Arc<dyn LlmEngine>);
 }
 
 pub trait EngineProcessController: Send + Sync {
@@ -498,15 +511,64 @@ pub struct EngineService {
 }
 
 impl EngineService {
-    pub fn detect_engines(&self) -> Result<Vec<EngineState>, EngineError>;
-    pub fn list_models(&self, engine_id: EngineId) -> Result<Vec<ModelInfo>, EngineError>;
-    pub fn chat(&self, req: ChatRequest) -> Result<ChatResponse, EngineError>;
-    pub fn chat_stream(
+    pub fn new(
+        process_controller: Box<dyn EngineProcessController>,
+        http_client: Box<dyn HttpClient>,
+        engine_repo: Box<dyn EngineRepository>,
+    ) -> Self;
+    pub async fn detect_engines(&self) -> Result<Vec<EngineState>, EngineError>;
+    pub async fn list_models(&self, engine_id: EngineId) -> Result<Vec<ModelInfo>, EngineError>;
+    pub async fn chat(&self, req: ChatRequest) -> Result<ChatResponse, EngineError>;
+    pub async fn chat_stream(
         &self,
         req: ChatRequest,
     ) -> Result<Pin<Box<dyn Stream<Item = Result<ChatStreamChunk, EngineError>> + Send>>, EngineError>;
-    pub fn embeddings(&self, req: EmbeddingRequest) -> Result<EmbeddingResponse, EngineError>;
+    pub async fn embeddings(&self, req: EmbeddingRequest) -> Result<EmbeddingResponse, EngineError>;
 }
+```
+
+**使用例**:
+
+```rust
+use flm_core::services::EngineService;
+use flm_core::ports::{EngineProcessController, HttpClient, EngineRepository};
+use flm_core::domain::chat::{ChatRequest, ChatMessage, ChatRole};
+
+// 1. EngineServiceの初期化
+let process_controller: Box<dyn EngineProcessController> = Box::new(DefaultEngineProcessController::new());
+let http_client: Box<dyn HttpClient> = Box::new(ReqwestHttpClient::new()?);
+let engine_repo: Box<dyn EngineRepository> = Box::new(SqliteEngineRepository::new(&db_path).await?);
+let engine_service = EngineService::new(process_controller, http_client, engine_repo);
+
+// 2. エンジンの検出
+let engines = engine_service.detect_engines().await?;
+for engine in engines {
+    println!("Engine: {} - Status: {:?}", engine.id, engine.status);
+}
+
+// 3. モデル一覧の取得
+let models = engine_service.list_models("ollama".to_string()).await?;
+for model in models {
+    println!("Model: {} - {}", model.model_id, model.display_name);
+}
+
+// 4. チャットリクエストの送信
+let chat_request = ChatRequest {
+    engine_id: "ollama".to_string(),
+    model_id: "flm://ollama/llama2".to_string(),
+    messages: vec![
+        ChatMessage {
+            role: ChatRole::User,
+            content: "Hello, how are you?".to_string(),
+        }
+    ],
+    stream: false,
+    temperature: Some(0.7),
+    max_tokens: Some(100),
+    stop: Vec::new(),
+};
+let response = engine_service.chat(chat_request).await?;
+println!("Response: {:?}", response.messages);
 
 pub struct ProxyService {
     proxy_repo: ProxyRepository,
@@ -514,16 +576,59 @@ pub struct ProxyService {
 }
 
 impl ProxyService {
+    pub fn new(
+        controller: Arc<dyn ProxyController>,
+        repository: Arc<dyn ProxyRepository>,
+    ) -> Self;
     pub async fn start(&self, config: ProxyConfig) -> Result<ProxyHandle, ProxyError>;
     pub async fn stop(&self, handle: ProxyHandle) -> Result<(), ProxyError>;
     pub async fn status(&self) -> Result<Vec<ProxyHandle>, ProxyError>;
 }
+```
+
+**使用例**:
+
+```rust
+use flm_core::services::ProxyService;
+use flm_core::domain::proxy::{ProxyConfig, ProxyMode};
+use flm_core::ports::{ProxyController, ProxyRepository};
+use std::sync::Arc;
+
+// 1. ProxyServiceの初期化
+let controller: Arc<dyn ProxyController> = Arc::new(AxumProxyController::new());
+let repository: Arc<dyn ProxyRepository> = Arc::new(SqliteProxyRepository::new(&db_path).await?);
+let proxy_service = ProxyService::new(controller, repository);
+
+// 2. プロキシの起動（ローカルHTTPモード）
+let config = ProxyConfig {
+    mode: ProxyMode::LocalHttp,
+    port: 8080,
+    listen_addr: "127.0.0.1".to_string(),
+    trusted_proxy_ips: Vec::new(),
+    acme_email: None,
+    acme_domain: None,
+    acme_challenge: None,
+    acme_dns_profile_id: None,
+};
+let handle = proxy_service.start(config).await?;
+println!("Proxy started: {} on port {}", handle.id, handle.port);
+
+// 3. プロキシの状態確認
+let handles = proxy_service.status().await?;
+for handle in handles {
+    println!("Proxy {}: running={}, port={}", handle.id, handle.running, handle.port);
+}
+
+// 4. プロキシの停止
+proxy_service.stop(handle).await?;
+println!("Proxy stopped");
 
 pub struct SecurityService {
     security_repo: SecurityRepository,
 }
 
 impl SecurityService {
+    pub fn new(security_repo: impl SecurityRepository) -> Self;
     pub async fn list_policies(&self) -> Result<Vec<SecurityPolicy>, RepoError>;
     pub async fn get_policy(&self, id: &str) -> Result<Option<SecurityPolicy>, RepoError>;
     pub async fn set_policy(&self, policy: SecurityPolicy) -> Result<(), RepoError>;
@@ -538,15 +643,89 @@ impl SecurityService {
     ) -> Result<PlainAndHashedApiKey, RepoError>;
     pub async fn verify_api_key(&self, plain_key: &str) -> Result<Option<ApiKeyRecord>, RepoError>;
 }
+```
+
+**使用例**:
+
+```rust
+use flm_core::services::SecurityService;
+use flm_core::domain::proxy::SecurityPolicy;
+use flm_core::ports::SecurityRepository;
+
+// 1. SecurityServiceの初期化
+let security_repo = SqliteSecurityRepository::new(&db_path).await?;
+let security_service = SecurityService::new(security_repo);
+
+// 2. APIキーの作成
+let api_key_result = security_service.create_api_key("my-api-key").await?;
+println!("Created API key: {}", api_key_result.plain);
+println!("Key ID: {}", api_key_result.record.id);
+
+// 3. APIキーの一覧取得
+let keys = security_service.list_api_keys().await?;
+for key in keys {
+    println!("API Key: {} - Created: {}", key.id, key.created_at);
+}
+
+// 4. セキュリティポリシーの設定
+let policy_json = serde_json::json!({
+    "ip_whitelist": ["127.0.0.1", "192.168.0.0/16"],
+    "cors": { "allowed_origins": ["https://example.com"] },
+    "rate_limit": { "rpm": 60, "burst": 10 }
+}).to_string();
+let policy = SecurityPolicy {
+    id: "default".to_string(),
+    policy_json,
+    updated_at: chrono::Utc::now().to_rfc3339(),
+};
+security_service.set_policy(policy).await?;
+
+// 5. APIキーの検証
+let verified = security_service.verify_api_key(&api_key_result.plain).await?;
+if let Some(record) = verified {
+    println!("API key is valid: {}", record.id);
+}
+
+// 6. APIキーのローテーション
+let rotated = security_service.rotate_api_key(&api_key_result.record.id, Some("new-label")).await?;
+println!("New API key: {}", rotated.plain);
 
 pub struct ConfigService {
     config_repo: ConfigRepository,
 }
 
 impl ConfigService {
+    pub fn new(config_repo: impl ConfigRepository) -> Self;
     pub async fn get(&self, key: &str) -> Result<Option<String>, RepoError>;
     pub async fn set(&self, key: &str, value: &str) -> Result<(), RepoError>;
     pub async fn list(&self) -> Result<Vec<(String, String)>, RepoError>;
+}
+```
+
+**使用例**:
+
+```rust
+use flm_core::services::ConfigService;
+use flm_core::ports::ConfigRepository;
+
+// 1. ConfigServiceの初期化
+let config_repo = SqliteConfigRepository::new(&db_path).await?;
+let config_service = ConfigService::new(config_repo);
+
+// 2. 設定値の取得
+let value = config_service.get("engine.timeout").await?;
+if let Some(v) = value {
+    println!("Engine timeout: {}", v);
+}
+
+// 3. 設定値の設定
+config_service.set("engine.timeout", "30").await?;
+println!("Set engine.timeout to 30");
+
+// 4. すべての設定の一覧取得
+let all_configs = config_service.list().await?;
+for (key, value) in all_configs {
+    println!("{} = {}", key, value);
 }
 ```
 
@@ -618,3 +797,14 @@ impl ConfigService {
 
 これらにより、Phase 1 完了前に ACME の要件（DNS-01/HTTP-01）が明文化され、CLI/Proxy/UI すべてが同じ設定項目を共有できる。
 
+---
+
+**関連ドキュメント**:
+- `docs/planning/PLAN.md` - プロジェクト計画
+- `docs/planning/diagram.md` - アーキテクチャ図
+- `docs/specs/CLI_SPEC.md` - CLI仕様（Core APIを使用）
+- `docs/specs/PROXY_SPEC.md` - プロキシ仕様（Core APIを使用）
+- `docs/specs/UI_MINIMAL.md` - UI最小仕様（Core APIを使用）
+- `docs/specs/ENGINE_DETECT.md` - エンジン検出仕様
+- `docs/specs/DB_SCHEMA.md` - データベーススキーマ
+- `docs/guides/VERSIONING_POLICY.md` - バージョニングポリシー（v1.0.0凍結）

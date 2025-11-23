@@ -70,7 +70,20 @@ export interface WebModelDefinition {
   modelName: string;
   engine: string;
   description: string;
-  category: 'chat' | 'code' | 'translation' | 'summarization' | 'qa' | 'vision' | 'audio' | 'multimodal' | 'image-generation' | 'audio-generation' | 'embedding' | 'video-generation' | 'other';
+  category:
+    | 'chat'
+    | 'code'
+    | 'translation'
+    | 'summarization'
+    | 'qa'
+    | 'vision'
+    | 'audio'
+    | 'multimodal'
+    | 'image-generation'
+    | 'audio-generation'
+    | 'embedding'
+    | 'video-generation'
+    | 'other';
   capabilities?: WebModelCapabilities;
   size?: number;
   recommended?: boolean;

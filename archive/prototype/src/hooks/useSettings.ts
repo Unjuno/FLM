@@ -144,9 +144,7 @@ export const useSettings = (): UseSettingsReturn => {
         successMessageTimeoutRef.current = null;
       }, TIMEOUT.SUCCESS_MESSAGE);
     } catch (err) {
-      setError(
-        extractErrorMessage(err, t('settings.messages.resetError'))
-      );
+      setError(extractErrorMessage(err, t('settings.messages.resetError')));
     } finally {
       setSaving(false);
     }
@@ -158,33 +156,39 @@ export const useSettings = (): UseSettingsReturn => {
   }, []);
 
   // テーマ変更ハンドラー
-  const handleThemeChange = useCallback(async (newTheme: 'light' | 'dark' | 'auto') => {
-    try {
-      await setTheme(newTheme);
-      setSettings(prev => ({ ...prev, theme: newTheme }));
-      setSuccessMessage(t('settings.messages.themeChangeSuccess'));
-      if (successMessageTimeoutRef.current) {
-        clearTimeout(successMessageTimeoutRef.current);
+  const handleThemeChange = useCallback(
+    async (newTheme: 'light' | 'dark' | 'auto') => {
+      try {
+        await setTheme(newTheme);
+        setSettings(prev => ({ ...prev, theme: newTheme }));
+        setSuccessMessage(t('settings.messages.themeChangeSuccess'));
+        if (successMessageTimeoutRef.current) {
+          clearTimeout(successMessageTimeoutRef.current);
+        }
+        successMessageTimeoutRef.current = setTimeout(() => {
+          setSuccessMessage(null);
+          successMessageTimeoutRef.current = null;
+        }, TIMEOUT.ERROR_MESSAGE);
+      } catch (err) {
+        setError(
+          err instanceof Error
+            ? err.message
+            : t('settings.messages.themeChangeError')
+        );
       }
-      successMessageTimeoutRef.current = setTimeout(() => {
-        setSuccessMessage(null);
-        successMessageTimeoutRef.current = null;
-      }, TIMEOUT.ERROR_MESSAGE);
-    } catch (err) {
-      setError(
-        err instanceof Error
-          ? err.message
-          : t('settings.messages.themeChangeError')
-      );
-    }
-  }, [setTheme, t]);
+    },
+    [setTheme, t]
+  );
 
   // 言語変更ハンドラー
-  const handleLanguageChange = useCallback(async (language: string) => {
-    setSettings(prev => ({ ...prev, language }));
-    // I18nコンテキストも即座に更新
-    await setLocale(language as 'ja' | 'en');
-  }, [setLocale]);
+  const handleLanguageChange = useCallback(
+    async (language: string) => {
+      setSettings(prev => ({ ...prev, language }));
+      // I18nコンテキストも即座に更新
+      await setLocale(language as 'ja' | 'en');
+    },
+    [setLocale]
+  );
 
   // テーマが変更されたときに設定を更新
   useEffect(() => {
@@ -234,4 +238,3 @@ export const useSettings = (): UseSettingsReturn => {
     clearSuccessMessage,
   };
 };
-

@@ -54,7 +54,10 @@ export const CloudSyncSettings: React.FC<CloudSyncSettingsProps> = ({
     if (!config.device_id) {
       try {
         // デバイスIDの使用が許可されているかチェック
-        const settings = await safeInvoke<{ device_id_enabled?: boolean }>('get_app_settings', {});
+        const settings = await safeInvoke<{ device_id_enabled?: boolean }>(
+          'get_app_settings',
+          {}
+        );
         if (settings.device_id_enabled !== false) {
           const deviceId = await safeInvoke<string>('generate_device_id');
           setConfig(prev => ({ ...prev, device_id: deviceId }));

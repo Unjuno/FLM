@@ -19,10 +19,7 @@ export type ApiStatus = 'running' | 'preparing' | 'stopped' | 'error';
  * @param t - 翻訳関数
  * @returns ステータスに対応するテキスト
  */
-export function getStatusText(
-  status: ApiStatus,
-  t: TranslateFunction
-): string {
+export function getStatusText(status: ApiStatus, t: TranslateFunction): string {
   switch (status) {
     case 'running':
       return t('apiList.status.running');
@@ -36,4 +33,3 @@ export function getStatusText(
       return status;
   }
 }
-

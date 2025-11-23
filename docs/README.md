@@ -51,14 +51,14 @@ docs/
 
 ### `audit/` - 監査レポート
 
-プロジェクトの監査レポートが含まれています。
+プロジェクトの監査レポートが含まれています。詳細は `audit/README.md` を参照してください。
 
-- **CORE_API_AUDIT.md** - Core API監査レポート
-- **CLI_AUDIT.md** - CLI監査レポート
-- **SECURITY_AUDIT_PHASE1.md** - Phase 1セキュリティ監査
-- **README.md** - 監査計画と概要
-
-詳細は `audit/README.md` を参照してください。
+- **CORE_API_AUDIT.md** - Core API監査レポート（完了）
+- **CORE_API_AUDIT_COMPLETE.md** - Core API監査完了サマリー
+- **CLI_AUDIT.md** - CLI監査レポート（未実施）
+- **SECURITY_AUDIT_PHASE1.md** - Phase 1セキュリティ監査（未実施）
+- **COMPREHENSIVE_SECURITY_AUDIT.md** - 包括的セキュリティ監査（完了）
+- **SECURITY_FIXES_IMPLEMENTED.md** - セキュリティ修正実装（完了）
 
 ### `changelog/` - 変更履歴
 
@@ -66,27 +66,29 @@ docs/
 
 ### `guides/` - ガイド・マニュアル
 
-実装や運用に関するガイドです。
+実装や運用に関するガイドです。詳細は `guides/README.md` を参照してください。
 
-- **SECURITY_FIREWALL_GUIDE.md** - セキュリティ・ファイアウォール設定ガイド
-- **MIGRATION_GUIDE.md** - 移行ガイド
-- **TEST_STRATEGY.md** - テスト戦略
+- **SECURITY_BOTNET_PROTECTION.md** - ボットネット対策ガイド（ユーザー向け）
+- **SECURITY_FIREWALL_GUIDE.md** - ファイアウォール設定ガイド
+- **MIGRATION_GUIDE.md** - 移行ガイド（Draft）
+- **TEST_STRATEGY.md** - テスト戦略（Draft）
 - **VERSIONING_POLICY.md** - バージョニングポリシー
 
 ### `planning/` - プロジェクト計画
 
-プロジェクトの計画と設計ドキュメントです。
+プロジェクトの計画と設計ドキュメントです。詳細は `planning/README.md` を参照してください。
 
 - **PLAN.md** - メインプロジェクト計画（**必読**）
 - **diagram.md** - アーキテクチャ図
+- **BOTNET_PROTECTION_IMPLEMENTATION_PLAN.md** - ボットネット対策実装計画（開発者向け）
 - **HACKER_NEWS_PREP.md** - Hacker News投稿準備ガイド
 
 ### `specs/` - 仕様書
 
-各コンポーネントの詳細仕様です。
+各コンポーネントの詳細仕様です。詳細は `specs/README.md` を参照してください。
 
-- **CORE_API.md** - コアAPI仕様
-- **CLI_SPEC.md** - CLI仕様
+- **CORE_API.md** - コアAPI仕様（v1.0.0で凍結）
+- **CLI_SPEC.md** - CLIコマンド仕様
 - **PROXY_SPEC.md** - プロキシ仕様
 - **UI_MINIMAL.md** - UI最小仕様
 - **UI_EXTENSIONS.md** - UI拡張仕様
@@ -98,13 +100,19 @@ docs/
 
 ### `status/` - 進捗・完了レポート
 
-プロジェクトの進捗状況と完了レポートです。
+プロジェクトの進捗状況と完了レポートです。詳細は `status/README.md` を参照してください。
 
 - **active/** - 現在進行中または参照中のレポート
+  - `NEXT_STEPS.md` - 次の作業ステップ
+  - `BOTNET_PROTECTION_PLAN.md` - ボットネット対策実装計画の進捗
+  - `PROXY_SERVICE_PHASE2_PROGRESS.md` - ProxyService Phase 2の実装進捗
 - **completed/** - 完了済みのレポート
-- **README.md** - ステータスレポートの詳細説明
-
-詳細は `status/README.md` を参照してください。
+  - `phases/` - フェーズ完了レポート
+  - `tasks/` - タスク完了レポート（`FINAL_SUMMARY.md`推奨）
+  - `tests/` - テストレポート
+  - `safety/` - 安全性・監査レポート
+  - `proxy/` - ProxyServiceレポート
+  - `fixes/` - バグ修正レポート
 
 ### `templates/` - テンプレート
 

@@ -1,6 +1,13 @@
 // AlertHistory - アラート履歴ページ
 
-import React, { useState, useEffect, useCallback, useTransition, useMemo, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useTransition,
+  useMemo,
+  useRef,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useVirtualizer } from '@tanstack/react-virtual';
 import { safeInvoke } from '../utils/tauri';
@@ -70,11 +77,14 @@ export const AlertHistory: React.FC = () => {
   useGlobalKeyboardShortcuts();
 
   // パンくずリストの項目
-  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: t('header.settings') || '設定', path: '/settings' },
-    { label: t('alertHistory.title') || 'アラート履歴' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(
+    () => [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('header.settings') || '設定', path: '/settings' },
+      { label: t('alertHistory.title') || 'アラート履歴' },
+    ],
+    [t]
+  );
 
   /**
    * API一覧を読み込む
@@ -94,7 +104,10 @@ export const AlertHistory: React.FC = () => {
           'AlertHistory'
         );
       }
-      showError(t('alertHistory.messages.apiListError'), t('alertHistory.messages.apiListErrorMessage'));
+      showError(
+        t('alertHistory.messages.apiListError'),
+        t('alertHistory.messages.apiListErrorMessage')
+      );
     }
   }, [t, showError]);
 
@@ -121,7 +134,10 @@ export const AlertHistory: React.FC = () => {
 
       setAlerts(result);
     } catch (err) {
-      const errorMessage = extractErrorMessage(err, t('alertHistory.messages.loadError'));
+      const errorMessage = extractErrorMessage(
+        err,
+        t('alertHistory.messages.loadError')
+      );
       setError(errorMessage);
       showError(t('alertHistory.messages.loadError'), errorMessage);
     } finally {
@@ -181,7 +197,10 @@ export const AlertHistory: React.FC = () => {
         showSuccess(t('alertHistory.messages.resolveSuccess'));
         loadAlertHistory(); // 履歴を再読み込み
       } catch (err) {
-        const errorMessage = extractErrorMessage(err, t('alertHistory.messages.resolveError'));
+        const errorMessage = extractErrorMessage(
+          err,
+          t('alertHistory.messages.resolveError')
+        );
         setError(errorMessage);
         showError(t('alertHistory.messages.resolveError'), errorMessage);
       }
@@ -197,7 +216,9 @@ export const AlertHistory: React.FC = () => {
 
     setConfirmDialog({
       isOpen: true,
-      message: t('alertHistory.messages.resolveMultipleConfirm', { count: selectedAlerts.size }),
+      message: t('alertHistory.messages.resolveMultipleConfirm', {
+        count: selectedAlerts.size,
+      }),
       confirmVariant: 'primary',
       onConfirm: async () => {
         setConfirmDialog(prev => ({ ...prev, isOpen: false }));
@@ -208,13 +229,21 @@ export const AlertHistory: React.FC = () => {
           setSelectedAlerts(new Set()); // 選択をクリア
           showSuccess(
             t('alertHistory.messages.resolveMultipleSuccess'),
-            t('alertHistory.messages.resolveMultipleSuccessMessage', { count: resolvedCount })
+            t('alertHistory.messages.resolveMultipleSuccessMessage', {
+              count: resolvedCount,
+            })
           );
           loadAlertHistory(); // 履歴を再読み込み
         } catch (err) {
-          const errorMessage = extractErrorMessage(err, t('alertHistory.messages.resolveMultipleError'));
+          const errorMessage = extractErrorMessage(
+            err,
+            t('alertHistory.messages.resolveMultipleError')
+          );
           setError(errorMessage);
-          showError(t('alertHistory.messages.resolveMultipleError'), errorMessage);
+          showError(
+            t('alertHistory.messages.resolveMultipleError'),
+            errorMessage
+          );
         }
       },
       onCancel: () => {
@@ -263,9 +292,7 @@ export const AlertHistory: React.FC = () => {
             {t('alertHistory.backToHome')}
           </button>
           <h1 className="alert-history-title">{t('alertHistory.title')}</h1>
-          <p className="alert-history-subtitle">
-            {t('alertHistory.subtitle')}
-          </p>
+          <p className="alert-history-subtitle">{t('alertHistory.subtitle')}</p>
         </header>
 
         {error && (
@@ -313,7 +340,9 @@ export const AlertHistory: React.FC = () => {
               onClick={handleResolveMultiple}
               type="button"
             >
-              {t('alertHistory.resolveMultiple', { count: selectedAlerts.size })}
+              {t('alertHistory.resolveMultiple', {
+                count: selectedAlerts.size,
+              })}
             </button>
           )}
           <button
@@ -332,20 +361,29 @@ export const AlertHistory: React.FC = () => {
             </div>
           ) : (
             <div
-              ref={(el) => {
+              ref={el => {
                 parentRef.current = el;
                 if (el) {
-                  el.style.setProperty('--virtual-height', shouldUseVirtualScroll ? '600px' : 'auto');
-                  el.style.setProperty('--virtual-overflow', shouldUseVirtualScroll ? 'auto' : 'visible');
+                  el.style.setProperty(
+                    '--virtual-height',
+                    shouldUseVirtualScroll ? '600px' : 'auto'
+                  );
+                  el.style.setProperty(
+                    '--virtual-overflow',
+                    shouldUseVirtualScroll ? 'auto' : 'visible'
+                  );
                 }
               }}
               className="alert-history-list virtual-scroll-container"
             >
               {shouldUseVirtualScroll ? (
                 <div
-                  ref={(el) => {
+                  ref={el => {
                     if (el) {
-                      el.style.setProperty('--virtual-height', `${rowVirtualizer.getTotalSize()}px`);
+                      el.style.setProperty(
+                        '--virtual-height',
+                        `${rowVirtualizer.getTotalSize()}px`
+                      );
                       el.style.setProperty('--virtual-width', '100%');
                       el.style.setProperty('--virtual-position', 'relative');
                     }
@@ -358,107 +396,117 @@ export const AlertHistory: React.FC = () => {
                       <div
                         key={alert.id}
                         className="virtual-scroll-item"
-                        ref={(el) => {
+                        ref={el => {
                           if (el) {
                             el.style.setProperty('--virtual-top', '0');
                             el.style.setProperty('--virtual-left', '0');
                             el.style.setProperty('--virtual-width', '100%');
-                            el.style.setProperty('--virtual-height', `${virtualRow.size}px`);
-                            el.style.setProperty('--virtual-transform', `translateY(${virtualRow.start}px)`);
+                            el.style.setProperty(
+                              '--virtual-height',
+                              `${virtualRow.size}px`
+                            );
+                            el.style.setProperty(
+                              '--virtual-transform',
+                              `translateY(${virtualRow.start}px)`
+                            );
                           }
                         }}
                       >
                         <div
                           className={`alert-history-item ${alert.resolved_at ? 'resolved' : 'unresolved'}`}
                         >
-                  <div className="alert-history-item-header">
-                    <div className="alert-history-item-type">
-                      {!alert.resolved_at && (
-                        <label className="alert-history-item-checkbox-label">
-                          <input
-                            type="checkbox"
-                            checked={selectedAlerts.has(alert.id)}
-                            onChange={e => {
-                              const newSelected = new Set(selectedAlerts);
-                              if (e.target.checked) {
-                                newSelected.add(alert.id);
-                              } else {
-                                newSelected.delete(alert.id);
-                              }
-                              setSelectedAlerts(newSelected);
-                            }}
-                            className="alert-history-item-checkbox"
-                            aria-label={`アラート ${alert.id} を選択`}
-                          />
-                          <span className="sr-only">アラートを選択</span>
-                        </label>
-                      )}
-                      <span>{getAlertTypeLabel(alert.alert_type)}</span>
-                    </div>
-                    <div className="alert-history-item-actions">
-                      <div className="alert-history-item-status">
-                        {alert.resolved_at ? (
-                          <span className="status-badge resolved">
-                            解決済み
-                          </span>
-                        ) : (
-                          <span className="status-badge unresolved">
-                            未解決
-                          </span>
-                        )}
-                      </div>
-                      {!alert.resolved_at && (
-                        <button
-                          className="alert-history-resolve-button"
-                          onClick={() => {
-                            startTransition(() => {
-                              handleResolve(alert.id);
-                            });
-                          }}
-                          type="button"
-                          title={t('alertHistory.actions.resolveTitle')}
-                          disabled={isPending}
-                        >
-                          {t('alertHistory.actions.resolve')}
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                  <div className="alert-history-item-body">
-                    <div className="alert-history-item-api">
-                      API: {apiNames.get(alert.api_id) || alert.api_id}
-                    </div>
-                    <div className="alert-history-item-message">
-                      {alert.message}
-                    </div>
-                    <div className="alert-history-item-details">
-                      <span>
-                        現在値: {alert.current_value.toFixed(2)}
-                        {alert.alert_type === 'error_rate'
-                          ? '%'
-                          : alert.alert_type === 'response_time'
-                            ? 'ms'
-                            : '%'}
-                      </span>
-                      <span>
-                        閾値: {alert.threshold.toFixed(2)}
-                        {alert.alert_type === 'error_rate'
-                          ? '%'
-                          : alert.alert_type === 'response_time'
-                            ? 'ms'
-                            : '%'}
-                      </span>
-                    </div>
-                    <div className="alert-history-item-timestamp">
-                      検出時刻: {formatDateTime(alert.timestamp)}
-                      {alert.resolved_at && (
-                        <span className="resolved-timestamp">
-                          {' | 解決時刻: '}
-                          {formatDateTime(alert.resolved_at)}
-                        </span>
-                      )}
-                    </div>
-                  </div>
+                          <div className="alert-history-item-header">
+                            <div className="alert-history-item-type">
+                              {!alert.resolved_at && (
+                                <label className="alert-history-item-checkbox-label">
+                                  <input
+                                    type="checkbox"
+                                    checked={selectedAlerts.has(alert.id)}
+                                    onChange={e => {
+                                      const newSelected = new Set(
+                                        selectedAlerts
+                                      );
+                                      if (e.target.checked) {
+                                        newSelected.add(alert.id);
+                                      } else {
+                                        newSelected.delete(alert.id);
+                                      }
+                                      setSelectedAlerts(newSelected);
+                                    }}
+                                    className="alert-history-item-checkbox"
+                                    aria-label={`アラート ${alert.id} を選択`}
+                                  />
+                                  <span className="sr-only">
+                                    アラートを選択
+                                  </span>
+                                </label>
+                              )}
+                              <span>{getAlertTypeLabel(alert.alert_type)}</span>
+                            </div>
+                            <div className="alert-history-item-actions">
+                              <div className="alert-history-item-status">
+                                {alert.resolved_at ? (
+                                  <span className="status-badge resolved">
+                                    解決済み
+                                  </span>
+                                ) : (
+                                  <span className="status-badge unresolved">
+                                    未解決
+                                  </span>
+                                )}
+                              </div>
+                              {!alert.resolved_at && (
+                                <button
+                                  className="alert-history-resolve-button"
+                                  onClick={() => {
+                                    startTransition(() => {
+                                      handleResolve(alert.id);
+                                    });
+                                  }}
+                                  type="button"
+                                  title={t('alertHistory.actions.resolveTitle')}
+                                  disabled={isPending}
+                                >
+                                  {t('alertHistory.actions.resolve')}
+                                </button>
+                              )}
+                            </div>
+                          </div>
+                          <div className="alert-history-item-body">
+                            <div className="alert-history-item-api">
+                              API: {apiNames.get(alert.api_id) || alert.api_id}
+                            </div>
+                            <div className="alert-history-item-message">
+                              {alert.message}
+                            </div>
+                            <div className="alert-history-item-details">
+                              <span>
+                                現在値: {alert.current_value.toFixed(2)}
+                                {alert.alert_type === 'error_rate'
+                                  ? '%'
+                                  : alert.alert_type === 'response_time'
+                                    ? 'ms'
+                                    : '%'}
+                              </span>
+                              <span>
+                                閾値: {alert.threshold.toFixed(2)}
+                                {alert.alert_type === 'error_rate'
+                                  ? '%'
+                                  : alert.alert_type === 'response_time'
+                                    ? 'ms'
+                                    : '%'}
+                              </span>
+                            </div>
+                            <div className="alert-history-item-timestamp">
+                              検出時刻: {formatDateTime(alert.timestamp)}
+                              {alert.resolved_at && (
+                                <span className="resolved-timestamp">
+                                  {' | 解決時刻: '}
+                                  {formatDateTime(alert.resolved_at)}
+                                </span>
+                              )}
+                            </div>
+                          </div>
                         </div>
                       </div>
                     );

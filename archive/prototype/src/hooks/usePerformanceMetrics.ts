@@ -64,97 +64,98 @@ export const usePerformanceMetrics = (
   const isMounted = useIsMounted();
 
   // データを取得
-  const loadData = useCallback(async (_options?: { force?: boolean }) => {
-    if (!isMounted()) return;
-
-    if (isBlank(apiId)) {
-      if (isMounted()) {
-        setData([]);
-        setLoading(false);
-        setError(null);
-      }
-      return;
-    }
-
-    try {
+  const loadData = useCallback(
+    async (_options?: { force?: boolean }) => {
       if (!isMounted()) return;
 
-      setLoading(true);
-      setError(null);
-
-      const request = {
-        api_id: apiId,
-        metric_type: metricType,
-        start_date: startDate || null,
-        end_date: endDate || null,
-      };
-
-      const result = await safeInvoke<PerformanceMetricInfo[]>(
-        'get_performance_metrics',
-        { request }
-      );
-
-      if (!isMounted()) return;
-
-      const safeMetrics: PerformanceMetricInfo[] = Array.isArray(result)
-        ? result
-        : [];
-
-      // データを時間順にソートし、グラフ用フォーマットに変換
-      const validMetrics = safeMetrics.filter(metric => {
-        if (
-          !metric.timestamp ||
-          typeof metric.value !== 'number' ||
-          isNaN(metric.value)
-        ) {
-          return false;
+      if (isBlank(apiId)) {
+        if (isMounted()) {
+          setData([]);
+          setLoading(false);
+          setError(null);
         }
-        const timestamp = new Date(metric.timestamp).getTime();
-        return !isNaN(timestamp);
-      });
+        return;
+      }
 
-      const sortedData = validMetrics
-        .sort(
-          (a, b) =>
-            new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
-        )
-        .map(metric => {
-          let formattedValue = metric.value;
+      try {
+        if (!isMounted()) return;
 
-          // 値のフォーマット関数が提供されている場合は適用
-          if (valueFormatter) {
-            formattedValue = valueFormatter(metric.value);
-          } else {
-            // デフォルト: 整数値に丸める
-            formattedValue = Math.round(metric.value);
+        setLoading(true);
+        setError(null);
+
+        const request = {
+          api_id: apiId,
+          metric_type: metricType,
+          start_date: startDate || null,
+          end_date: endDate || null,
+        };
+
+        const result = await safeInvoke<PerformanceMetricInfo[]>(
+          'get_performance_metrics',
+          { request }
+        );
+
+        if (!isMounted()) return;
+
+        const safeMetrics: PerformanceMetricInfo[] = Array.isArray(result)
+          ? result
+          : [];
+
+        // データを時間順にソートし、グラフ用フォーマットに変換
+        const validMetrics = safeMetrics.filter(metric => {
+          if (
+            !metric.timestamp ||
+            typeof metric.value !== 'number' ||
+            isNaN(metric.value)
+          ) {
+            return false;
           }
-
-          return {
-            time: new Date(metric.timestamp).toLocaleTimeString(
-              LOCALE.DEFAULT,
-              {
-                hour: '2-digit',
-                minute: '2-digit',
-                second: '2-digit',
-              }
-            ),
-            value: formattedValue,
-          };
+          const timestamp = new Date(metric.timestamp).getTime();
+          return !isNaN(timestamp);
         });
 
-      if (!isMounted()) return;
-      setData(sortedData);
-    } catch (err) {
-      if (!isMounted()) return;
-      setError(
-        extractErrorMessage(err) || 'データの取得に失敗しました'
-      );
-    } finally {
-      if (isMounted()) {
-        setLoading(false);
+        const sortedData = validMetrics
+          .sort(
+            (a, b) =>
+              new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime()
+          )
+          .map(metric => {
+            let formattedValue = metric.value;
+
+            // 値のフォーマット関数が提供されている場合は適用
+            if (valueFormatter) {
+              formattedValue = valueFormatter(metric.value);
+            } else {
+              // デフォルト: 整数値に丸める
+              formattedValue = Math.round(metric.value);
+            }
+
+            return {
+              time: new Date(metric.timestamp).toLocaleTimeString(
+                LOCALE.DEFAULT,
+                {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                  second: '2-digit',
+                }
+              ),
+              value: formattedValue,
+            };
+          });
+
+        if (!isMounted()) return;
+        setData(sortedData);
+      } catch (err) {
+        if (!isMounted()) return;
+        setError(extractErrorMessage(err) || 'データの取得に失敗しました');
+      } finally {
+        if (isMounted()) {
+          setLoading(false);
+        }
       }
-    }
-  }, [apiId, metricType, startDate, endDate, valueFormatter, isMounted]);
+    },
+    [apiId, metricType, startDate, endDate, valueFormatter, isMounted]
+  );
 
   // ポーリング設定
   usePolling(loadData, {

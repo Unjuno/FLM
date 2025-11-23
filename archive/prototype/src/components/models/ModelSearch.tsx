@@ -30,7 +30,20 @@ interface ModelInfo {
   description?: string;
   size?: number;
   parameters?: number;
-  category?: 'chat' | 'code' | 'translation' | 'summarization' | 'qa' | 'vision' | 'audio' | 'multimodal' | 'image-generation' | 'audio-generation' | 'embedding' | 'video-generation' | 'other';
+  category?:
+    | 'chat'
+    | 'code'
+    | 'translation'
+    | 'summarization'
+    | 'qa'
+    | 'vision'
+    | 'audio'
+    | 'multimodal'
+    | 'image-generation'
+    | 'audio-generation'
+    | 'embedding'
+    | 'video-generation'
+    | 'other';
   recommended?: boolean;
   author?: string;
   license?: string;
@@ -429,14 +442,38 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
         label: t('modelSearch.filters.options.category.summarization'),
       },
       { value: 'qa', label: t('modelSearch.filters.options.category.qa') },
-      { value: 'vision', label: t('modelSearch.filters.options.category.vision') },
-      { value: 'audio', label: t('modelSearch.filters.options.category.audio') },
-      { value: 'multimodal', label: t('modelSearch.filters.options.category.multimodal') },
-      { value: 'image-generation', label: t('modelSearch.filters.options.category.image-generation') },
-      { value: 'audio-generation', label: t('modelSearch.filters.options.category.audio-generation') },
-      { value: 'embedding', label: t('modelSearch.filters.options.category.embedding') },
-      { value: 'video-generation', label: t('modelSearch.filters.options.category.video-generation') },
-      { value: 'other', label: t('modelSearch.filters.options.category.other') },
+      {
+        value: 'vision',
+        label: t('modelSearch.filters.options.category.vision'),
+      },
+      {
+        value: 'audio',
+        label: t('modelSearch.filters.options.category.audio'),
+      },
+      {
+        value: 'multimodal',
+        label: t('modelSearch.filters.options.category.multimodal'),
+      },
+      {
+        value: 'image-generation',
+        label: t('modelSearch.filters.options.category.image-generation'),
+      },
+      {
+        value: 'audio-generation',
+        label: t('modelSearch.filters.options.category.audio-generation'),
+      },
+      {
+        value: 'embedding',
+        label: t('modelSearch.filters.options.category.embedding'),
+      },
+      {
+        value: 'video-generation',
+        label: t('modelSearch.filters.options.category.video-generation'),
+      },
+      {
+        value: 'other',
+        label: t('modelSearch.filters.options.category.other'),
+      },
     ],
     [t]
   );
@@ -451,7 +488,9 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
   const virtualScrollInnerRef = useRef<HTMLDivElement | null>(null);
 
   // インストール済みモデル一覧を取得
-  const [installedModels, setInstalledModels] = useState<Set<string>>(new Set());
+  const [installedModels, setInstalledModels] = useState<Set<string>>(
+    new Set()
+  );
   const [favoriteModels, setFavoriteModels] = useState<Set<string>>(new Set());
   const [engineStatus, setEngineStatus] = useState<{
     installed: boolean;
@@ -472,7 +511,11 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
       >('get_installed_models');
       setInstalledModels(new Set(installed.map(m => m.name)));
     } catch (err) {
-      logger.warn('インストール済みモデルの取得に失敗しました', extractErrorMessage(err), 'ModelSearch');
+      logger.warn(
+        'インストール済みモデルの取得に失敗しました',
+        extractErrorMessage(err),
+        'ModelSearch'
+      );
     }
   }, []);
 
@@ -485,30 +528,44 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
         setFavoriteModels(new Set(favorites));
       }
     } catch (err) {
-      logger.warn('お気に入りモデルの読み込みに失敗しました', extractErrorMessage(err), 'ModelSearch');
+      logger.warn(
+        'お気に入りモデルの読み込みに失敗しました',
+        extractErrorMessage(err),
+        'ModelSearch'
+      );
     }
   }, []);
 
   // お気に入りモデルを保存
   const saveFavoriteModels = useCallback((favorites: Set<string>) => {
     try {
-      localStorage.setItem('favorite_models', JSON.stringify(Array.from(favorites)));
+      localStorage.setItem(
+        'favorite_models',
+        JSON.stringify(Array.from(favorites))
+      );
       setFavoriteModels(favorites);
     } catch (err) {
-      logger.warn('お気に入りモデルの保存に失敗しました', extractErrorMessage(err), 'ModelSearch');
+      logger.warn(
+        'お気に入りモデルの保存に失敗しました',
+        extractErrorMessage(err),
+        'ModelSearch'
+      );
     }
   }, []);
 
   // お気に入りに追加/削除
-  const toggleFavorite = useCallback((modelName: string) => {
-    const newFavorites = new Set(favoriteModels);
-    if (newFavorites.has(modelName)) {
-      newFavorites.delete(modelName);
-    } else {
-      newFavorites.add(modelName);
-    }
-    saveFavoriteModels(newFavorites);
-  }, [favoriteModels, saveFavoriteModels]);
+  const toggleFavorite = useCallback(
+    (modelName: string) => {
+      const newFavorites = new Set(favoriteModels);
+      if (newFavorites.has(modelName)) {
+        newFavorites.delete(modelName);
+      } else {
+        newFavorites.add(modelName);
+      }
+      saveFavoriteModels(newFavorites);
+    },
+    [favoriteModels, saveFavoriteModels]
+  );
 
   // エンジン状態を確認
   const checkEngineStatus = useCallback(async (engineType: string) => {
@@ -522,14 +579,18 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
         path?: string | null;
         message?: string | null;
       }>('detect_engine', { engineType });
-      
+
       setEngineStatus({
         installed: result.installed,
         running: result.running,
         message: result.message || undefined,
       });
     } catch (err) {
-      logger.warn('エンジン状態の確認に失敗しました', extractErrorMessage(err), 'ModelSearch');
+      logger.warn(
+        'エンジン状態の確認に失敗しました',
+        extractErrorMessage(err),
+        'ModelSearch'
+      );
       setEngineStatus({
         installed: false,
         running: false,
@@ -541,26 +602,36 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
   }, []);
 
   // エンジンを起動
-  const handleStartEngine = useCallback(async (engineType: string) => {
-    try {
-      setStartingEngine(true);
-      await safeInvoke('start_engine', {
-        engineType: engineType,
-        config: null,
-      });
-      
-      // 起動後、少し待ってから状態を再確認
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      await checkEngineStatus(engineType);
-      
-      showInfo('エンジンが起動しました');
-    } catch (err) {
-      logger.error('エンジンの起動に失敗しました', extractErrorMessage(err), 'ModelSearch');
-      showInfo('エンジンの起動に失敗しました: ' + extractErrorMessage(err), 'error');
-    } finally {
-      setStartingEngine(false);
-    }
-  }, [checkEngineStatus, showInfo]);
+  const handleStartEngine = useCallback(
+    async (engineType: string) => {
+      try {
+        setStartingEngine(true);
+        await safeInvoke('start_engine', {
+          engineType: engineType,
+          config: null,
+        });
+
+        // 起動後、少し待ってから状態を再確認
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        await checkEngineStatus(engineType);
+
+        showInfo('エンジンが起動しました');
+      } catch (err) {
+        logger.error(
+          'エンジンの起動に失敗しました',
+          extractErrorMessage(err),
+          'ModelSearch'
+        );
+        showInfo(
+          'エンジンの起動に失敗しました: ' + extractErrorMessage(err),
+          'error'
+        );
+      } finally {
+        setStartingEngine(false);
+      }
+    },
+    [checkEngineStatus, showInfo]
+  );
 
   // モデル一覧を取得（useCallbackでメモ化）
   const loadModels = useCallback(async () => {
@@ -597,7 +668,9 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
             // パラメータ数を数値に変換（例: "8B" -> 8000000000）
             let parameters: number | undefined = undefined;
             if (model.parameters) {
-              const paramMatch = model.parameters.match(/(\d+(?:\.\d+)?)\s*[bB]/);
+              const paramMatch = model.parameters.match(
+                /(\d+(?:\.\d+)?)\s*[bB]/
+              );
               if (paramMatch) {
                 const num = parseFloat(paramMatch[1]);
                 parameters = Math.round(num * 1_000_000_000);
@@ -631,12 +704,15 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
         setModels(createFallbackModels());
       }
     } catch (err) {
-      const errorMessage = extractErrorMessage(err, 'モデル一覧の取得に失敗しました');
+      const errorMessage = extractErrorMessage(
+        err,
+        'モデル一覧の取得に失敗しました'
+      );
       setError(errorMessage);
-      
+
       // エラーの詳細情報を設定
       const errorLower = errorMessage.toLowerCase();
-      const isEngineError = 
+      const isEngineError =
         errorLower.includes('起動') ||
         errorLower.includes('接続') ||
         errorLower.includes('running') ||
@@ -647,22 +723,22 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
         errorLower.includes('実行中か確認') ||
         errorLower.includes('not running') ||
         errorLower.includes('起動していません');
-      
-      const isRetryable = 
+
+      const isRetryable =
         errorLower.includes('timeout') ||
         errorLower.includes('タイムアウト') ||
         errorLower.includes('network') ||
         errorLower.includes('ネットワーク') ||
         errorLower.includes('connection') ||
         errorLower.includes('接続');
-      
+
       const engineName = ENGINE_NAMES[selectedEngine] || selectedEngine;
       const suggestion = isEngineError
         ? `${engineName}が起動していない可能性があります。エンジン管理ページから起動してください。`
         : isRetryable
-        ? 'ネットワークエラーの可能性があります。しばらく待ってから再試行してください。'
-        : 'エラーが発生しました。ページをリロードするか、しばらく待ってから再度お試しください。';
-      
+          ? 'ネットワークエラーの可能性があります。しばらく待ってから再試行してください。'
+          : 'エラーが発生しました。ページをリロードするか、しばらく待ってから再度お試しください。';
+
       setErrorDetails({
         message: errorMessage,
         retryable: isRetryable,
@@ -680,12 +756,12 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
 
   useEffect(() => {
     checkEngineStatus(selectedEngine);
-    
+
     // エンジン状態を定期的に更新（30秒ごと）
     const interval = setInterval(() => {
       checkEngineStatus(selectedEngine);
     }, 30000);
-    
+
     return () => clearInterval(interval);
   }, [selectedEngine, checkEngineStatus]);
 
@@ -887,157 +963,155 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
   );
 
   // モデルダウンロード開始（useCallbackでメモ化）
-  const handleDownload = useCallback(
-    async (model: ModelInfo) => {
-      if (!model.size) {
-        setError('モデルサイズ情報がありません。このモデルは取得できません。');
-        return;
-      }
+  const handleDownload = useCallback(async (model: ModelInfo) => {
+    if (!model.size) {
+      setError('モデルサイズ情報がありません。このモデルは取得できません。');
+      return;
+    }
 
-      setDownloadingModel(model.name);
-      setDownloadStatus('downloading');
-      setDownloadProgress({
-        progress: 0,
-        speed: 0,
-        remaining: 0,
-        downloaded: 0,
-        total: model.size,
+    setDownloadingModel(model.name);
+    setDownloadStatus('downloading');
+    setDownloadProgress({
+      progress: 0,
+      speed: 0,
+      remaining: 0,
+      downloaded: 0,
+      total: model.size,
+    });
+
+    const abortController = new AbortController();
+    downloadAbortControllerRef.current = abortController;
+
+    // 最終ステータスを追跡するローカル変数（finallyブロックで使用）
+    let finalStatus:
+      | 'downloading'
+      | 'paused'
+      | 'verifying'
+      | 'complete'
+      | 'error' = 'downloading';
+
+    // ステータス文字列を内部ステータスにマッピングするヘルパー関数
+    const mapStatus = (
+      status: string
+    ): 'downloading' | 'paused' | 'verifying' | 'complete' | 'error' => {
+      if (status === 'completed' || status === 'success') return 'complete';
+      if (status === 'paused') return 'paused';
+      if (status === 'verifying') return 'verifying';
+      if (status === 'error' || status === 'failed') return 'error';
+      return 'downloading';
+    };
+
+    try {
+      // 進捗イベントリスナーを設定
+      const unsubscribe = await listen<{
+        status: string;
+        progress: number;
+        downloaded_bytes: number;
+        total_bytes: number;
+        speed_bytes_per_sec: number;
+        message?: string | null;
+      }>('model_download_progress', event => {
+        if (abortController.signal.aborted) {
+          return;
+        }
+
+        const { status, downloaded_bytes, total_bytes, speed_bytes_per_sec } =
+          event.payload;
+
+        const downloaded = downloaded_bytes || 0;
+        const total = total_bytes || model.size || 0;
+        const speed = speed_bytes_per_sec || 0;
+        const remaining =
+          speed > 0 && total > 0 ? (total - downloaded) / speed : 0;
+        const progressPercent = total > 0 ? (downloaded / total) * 100 : 0;
+
+        // ステータスをマッピング
+        const mappedStatus = mapStatus(status);
+        finalStatus = mappedStatus;
+
+        setDownloadStatus(mappedStatus);
+        setDownloadProgress({
+          progress: mappedStatus === 'complete' ? 100 : progressPercent,
+          downloaded,
+          speed,
+          remaining: mappedStatus === 'complete' ? 0 : remaining,
+          total: total || model.size || 0,
+        });
       });
 
-      const abortController = new AbortController();
-      downloadAbortControllerRef.current = abortController;
+      unsubscribeProgressRef.current = unsubscribe;
 
-      // 最終ステータスを追跡するローカル変数（finallyブロックで使用）
-      let finalStatus:
+      // 実際のIPCコマンドを呼び出し
+      await safeInvoke('download_model', {
+        modelName: model.name,
+      });
+
+      // ダウンロード完了通知
+      if (!abortController.signal.aborted) {
+        if ('Notification' in window && Notification.permission === 'granted') {
+          new Notification('取得完了', {
+            body: `${model.name} の取得が完了しました`,
+            icon: '/icon.png',
+          });
+        }
+      }
+    } catch (err) {
+      // Abortエラーは一時停止によるものなので、エラーとして扱わない
+      if (abortController.signal.aborted) {
+        finalStatus = 'paused';
+        setDownloadStatus('paused');
+        // 一時停止時はモデル情報を保持
+        pausedModelRef.current = model;
+      } else {
+        const errorMessage = extractErrorMessage(err, '不明なエラー');
+        finalStatus = 'error';
+        setDownloadStatus('error');
+        setError(`ダウンロードに失敗しました: ${errorMessage}`);
+      }
+    } finally {
+      // 完了またはエラー、一時停止以外の場合はクリーンアップ
+      // finalStatusはイベントハンドラー内で更新されるため、型アサーションを使用
+      const status = finalStatus as
         | 'downloading'
         | 'paused'
         | 'verifying'
         | 'complete'
-        | 'error' = 'downloading';
+        | 'error';
 
-      // ステータス文字列を内部ステータスにマッピングするヘルパー関数
-      const mapStatus = (
-        status: string
-      ): 'downloading' | 'paused' | 'verifying' | 'complete' | 'error' => {
-        if (status === 'completed' || status === 'success') return 'complete';
-        if (status === 'paused') return 'paused';
-        if (status === 'verifying') return 'verifying';
-        if (status === 'error' || status === 'failed') return 'error';
-        return 'downloading';
-      };
-
-      try {
-        // 進捗イベントリスナーを設定
-        const unsubscribe = await listen<{
-          status: string;
-          progress: number;
-          downloaded_bytes: number;
-          total_bytes: number;
-          speed_bytes_per_sec: number;
-          message?: string | null;
-        }>('model_download_progress', event => {
-          if (abortController.signal.aborted) {
-            return;
-          }
-
-          const { status, downloaded_bytes, total_bytes, speed_bytes_per_sec } =
-            event.payload;
-
-          const downloaded = downloaded_bytes || 0;
-          const total = total_bytes || model.size || 0;
-          const speed = speed_bytes_per_sec || 0;
-          const remaining =
-            speed > 0 && total > 0 ? (total - downloaded) / speed : 0;
-          const progressPercent = total > 0 ? (downloaded / total) * 100 : 0;
-
-          // ステータスをマッピング
-          const mappedStatus = mapStatus(status);
-          finalStatus = mappedStatus;
-
-          setDownloadStatus(mappedStatus);
-          setDownloadProgress({
-            progress: mappedStatus === 'complete' ? 100 : progressPercent,
-            downloaded,
-            speed,
-            remaining: mappedStatus === 'complete' ? 0 : remaining,
-            total: total || model.size || 0,
-          });
-        });
-
-        unsubscribeProgressRef.current = unsubscribe;
-
-        // 実際のIPCコマンドを呼び出し
-        await safeInvoke('download_model', {
-          modelName: model.name,
-        });
-
-        // ダウンロード完了通知
-        if (!abortController.signal.aborted) {
-          if (
-            'Notification' in window &&
-            Notification.permission === 'granted'
-          ) {
-            new Notification('取得完了', {
-              body: `${model.name} の取得が完了しました`,
-              icon: '/icon.png',
-            });
-          }
-        }
-      } catch (err) {
-        // Abortエラーは一時停止によるものなので、エラーとして扱わない
-        if (abortController.signal.aborted) {
-          finalStatus = 'paused';
-          setDownloadStatus('paused');
-          // 一時停止時はモデル情報を保持
-          pausedModelRef.current = model;
-        } else {
-          const errorMessage = extractErrorMessage(err, '不明なエラー');
-          finalStatus = 'error';
-          setDownloadStatus('error');
-          setError(`ダウンロードに失敗しました: ${errorMessage}`);
-        }
-      } finally {
-        // 完了またはエラー、一時停止以外の場合はクリーンアップ
-        // finalStatusはイベントハンドラー内で更新されるため、型アサーションを使用
-        const status = finalStatus as
-          | 'downloading'
-          | 'paused'
-          | 'verifying'
-          | 'complete'
-          | 'error';
-
-        // 一時停止時はモデル情報とAbortControllerを保持（再開時に使用）
-        if (status === 'paused') {
-          // 一時停止時はモデル情報を保持
-          pausedModelRef.current = model;
-          // イベントリスナーは既にhandlePauseDownloadで解除されている
-        } else {
-          // イベントリスナーを解除
-          if (unsubscribeProgressRef.current) {
-            try {
-              unsubscribeProgressRef.current();
-            } catch (error) {
-              // ホットリロード時など、コールバックが見つからない場合は警告を抑制
-              if (process.env.NODE_ENV === 'development') {
-                logger.debug('イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）', error, 'ModelSearch');
-              }
+      // 一時停止時はモデル情報とAbortControllerを保持（再開時に使用）
+      if (status === 'paused') {
+        // 一時停止時はモデル情報を保持
+        pausedModelRef.current = model;
+        // イベントリスナーは既にhandlePauseDownloadで解除されている
+      } else {
+        // イベントリスナーを解除
+        if (unsubscribeProgressRef.current) {
+          try {
+            unsubscribeProgressRef.current();
+          } catch (error) {
+            // ホットリロード時など、コールバックが見つからない場合は警告を抑制
+            if (process.env.NODE_ENV === 'development') {
+              logger.debug(
+                'イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）',
+                error,
+                'ModelSearch'
+              );
             }
-            unsubscribeProgressRef.current = null;
           }
-
-          if (status !== 'complete' && status !== 'error') {
-            setDownloadingModel(null);
-            setDownloadProgress(null);
-          }
-
-          pausedModelRef.current = null;
-          downloadAbortControllerRef.current = null;
+          unsubscribeProgressRef.current = null;
         }
-        // インストール済みリストの更新は別のuseEffectで処理されるため、ここでは何もしない
+
+        if (status !== 'complete' && status !== 'error') {
+          setDownloadingModel(null);
+          setDownloadProgress(null);
+        }
+
+        pausedModelRef.current = null;
+        downloadAbortControllerRef.current = null;
       }
-    },
-    []
-  );
+      // インストール済みリストの更新は別のuseEffectで処理されるため、ここでは何もしない
+    }
+  }, []);
 
   // ダウンロード完了時のモデルリスト更新をクリーンアップ
   useEffect(() => {
@@ -1078,7 +1152,11 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
         } catch (error) {
           // ホットリロード時など、コールバックが見つからない場合は警告を抑制
           if (process.env.NODE_ENV === 'development') {
-            logger.debug('イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）', error, 'ModelSearch');
+            logger.debug(
+              'イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）',
+              error,
+              'ModelSearch'
+            );
           }
         }
         unsubscribeProgressRef.current = null;
@@ -1114,7 +1192,11 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
       } catch (error) {
         // ホットリロード時など、コールバックが見つからない場合は警告を抑制
         if (process.env.NODE_ENV === 'development') {
-          logger.debug('イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）', error, 'ModelSearch');
+          logger.debug(
+            'イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）',
+            error,
+            'ModelSearch'
+          );
         }
       }
       unsubscribeProgressRef.current = null;
@@ -1132,7 +1214,11 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
           // これは開発環境でのみ発生する問題で、本番環境では問題にならない
           if (process.env.NODE_ENV === 'development') {
             // 開発環境では警告をログに記録するが、エラーとして扱わない
-            logger.debug('イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）', error, 'ModelSearch');
+            logger.debug(
+              'イベントリスナーのクリーンアップ中にエラーが発生しました（無視されます）',
+              error,
+              'ModelSearch'
+            );
           }
         }
         unsubscribeProgressRef.current = null;
@@ -1143,7 +1229,11 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
         } catch (error) {
           // AbortControllerのエラーも無視
           if (process.env.NODE_ENV === 'development') {
-            logger.debug('AbortControllerのクリーンアップ中にエラーが発生しました（無視されます）', error, 'ModelSearch');
+            logger.debug(
+              'AbortControllerのクリーンアップ中にエラーが発生しました（無視されます）',
+              error,
+              'ModelSearch'
+            );
           }
         }
         downloadAbortControllerRef.current = null;
@@ -1186,13 +1276,19 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
                 <option value="llama_cpp">{ENGINE_NAMES.llama_cpp}</option>
               </select>
               {ENGINE_DESCRIPTIONS[selectedEngine] && (
-                <div className="engine-description-tooltip" title={ENGINE_DESCRIPTIONS[selectedEngine]}>
+                <div
+                  className="engine-description-tooltip"
+                  title={ENGINE_DESCRIPTIONS[selectedEngine]}
+                >
                   <span className="info-icon">ℹ️</span>
                 </div>
               )}
             </div>
             {engineStatus && (
-              <div className="engine-status-indicator" title={engineStatus.message}>
+              <div
+                className="engine-status-indicator"
+                title={engineStatus.message}
+              >
                 {engineStatus.running ? (
                   <span className="status-icon running">🟢</span>
                 ) : engineStatus.installed ? (
@@ -1202,9 +1298,7 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
                 )}
               </div>
             )}
-            {checkingEngine && (
-              <span className="engine-checking">⏳</span>
-            )}
+            {checkingEngine && <span className="engine-checking">⏳</span>}
           </div>
           <div className="search-input-wrapper">
             <input
@@ -1230,7 +1324,9 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
             onClick={loadModels}
             className="sidebar-refresh-button"
             title="更新"
-          >          </button>
+          >
+            {' '}
+          </button>
         </div>
 
         {/* エンジン情報表示 */}
@@ -1251,7 +1347,9 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
 
         {/* エンジン状態メッセージ */}
         {engineStatus && !engineStatus.running && (
-          <div className={`engine-status-message ${engineStatus.installed ? 'warning' : 'error'}`}>
+          <div
+            className={`engine-status-message ${engineStatus.installed ? 'warning' : 'error'}`}
+          >
             <div className="status-message-icon">
               {engineStatus.installed ? '⚠️' : '❌'}
             </div>
@@ -1348,13 +1446,17 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
         </div>
 
         {/* モデル一覧（コンパクト） */}
-        <div 
+        <div
           ref={parentRef}
           className={`sidebar-model-list ${shouldUseVirtualScroll ? 'virtual-scroll-container' : ''}`}
-          style={shouldUseVirtualScroll ? {
-            height: '600px',
-            overflow: 'auto',
-          } : undefined}
+          style={
+            shouldUseVirtualScroll
+              ? {
+                  height: '600px',
+                  overflow: 'auto',
+                }
+              : undefined
+          }
         >
           {filteredModels.length === 0 && !loading && (
             <div className="sidebar-empty">
@@ -1375,13 +1477,19 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
                   <div
                     key={`${selectedEngine}-${model.name}-${virtualRow.index}`}
                     className={`sidebar-model-item virtual-scroll-item ${selectedModel?.name === model.name ? 'active' : ''} ${model.recommended ? 'recommended' : ''} ${installedModels.has(model.name) ? 'installed' : ''} ${favoriteModels.has(model.name) ? 'favorite' : ''}`}
-                    ref={(el) => {
+                    ref={el => {
                       if (el) {
                         el.style.setProperty('--virtual-top', '0');
                         el.style.setProperty('--virtual-left', '0');
                         el.style.setProperty('--virtual-width', '100%');
-                        el.style.setProperty('--virtual-height', `${virtualRow.size}px`);
-                        el.style.setProperty('--virtual-transform', `translateY(${virtualRow.start}px)`);
+                        el.style.setProperty(
+                          '--virtual-height',
+                          `${virtualRow.size}px`
+                        );
+                        el.style.setProperty(
+                          '--virtual-transform',
+                          `translateY(${virtualRow.start}px)`
+                        );
                       }
                     }}
                     onClick={() => setSelectedModel(model)}
@@ -1398,10 +1506,20 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
                     <div className="sidebar-model-name">{model.name}</div>
                     <div className="sidebar-model-meta">
                       {favoriteModels.has(model.name) && (
-                        <span className="sidebar-favorite-badge" title="お気に入り">⭐</span>
+                        <span
+                          className="sidebar-favorite-badge"
+                          title="お気に入り"
+                        >
+                          ⭐
+                        </span>
                       )}
                       {installedModels.has(model.name) && (
-                        <span className="sidebar-installed-badge" title="インストール済み">✓</span>
+                        <span
+                          className="sidebar-installed-badge"
+                          title="インストール済み"
+                        >
+                          ✓
+                        </span>
                       )}
                       {model.size && (
                         <span className="sidebar-model-size">
@@ -1438,10 +1556,17 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
                 <div className="sidebar-model-name">{model.name}</div>
                 <div className="sidebar-model-meta">
                   {favoriteModels.has(model.name) && (
-                    <span className="sidebar-favorite-badge" title="お気に入り">⭐</span>
+                    <span className="sidebar-favorite-badge" title="お気に入り">
+                      ⭐
+                    </span>
                   )}
                   {installedModels.has(model.name) && (
-                    <span className="sidebar-installed-badge" title="インストール済み">✓</span>
+                    <span
+                      className="sidebar-installed-badge"
+                      title="インストール済み"
+                    >
+                      ✓
+                    </span>
                   )}
                   {model.size && (
                     <span className="sidebar-model-size">
@@ -1471,11 +1596,15 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
               setError(null);
               setErrorDetails(null);
             }}
-            onRetry={errorDetails.retryable ? () => {
-              setError(null);
-              setErrorDetails(null);
-              loadModels();
-            } : undefined}
+            onRetry={
+              errorDetails.retryable
+                ? () => {
+                    setError(null);
+                    setErrorDetails(null);
+                    loadModels();
+                  }
+                : undefined
+            }
             suggestion={errorDetails.suggestion}
           />
         )}
@@ -1579,8 +1708,16 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
                   <button
                     className={`favorite-button ${favoriteModels.has(selectedModel.name) ? 'active' : ''}`}
                     onClick={() => toggleFavorite(selectedModel.name)}
-                    title={favoriteModels.has(selectedModel.name) ? 'お気に入りから削除' : 'お気に入りに追加'}
-                    aria-label={favoriteModels.has(selectedModel.name) ? 'お気に入りから削除' : 'お気に入りに追加'}
+                    title={
+                      favoriteModels.has(selectedModel.name)
+                        ? 'お気に入りから削除'
+                        : 'お気に入りに追加'
+                    }
+                    aria-label={
+                      favoriteModels.has(selectedModel.name)
+                        ? 'お気に入りから削除'
+                        : 'お気に入りに追加'
+                    }
                   >
                     {favoriteModels.has(selectedModel.name) ? '⭐' : '☆'}
                   </button>
@@ -1608,7 +1745,9 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
                         handleDownload(selectedModel);
                       });
                     }}
-                    disabled={downloadingModel === selectedModel.name || isPending}
+                    disabled={
+                      downloadingModel === selectedModel.name || isPending
+                    }
                   >
                     {downloadingModel === selectedModel.name ? (
                       <>
@@ -1626,13 +1765,22 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
                   <div className="engine-install-info">
                     <p className="info-message">
                       {selectedEngine === 'lm_studio' && (
-                        <>LM Studioでは、LM Studioアプリ内でモデルをダウンロードしてください。このアプリからは検索のみ可能です。</>
+                        <>
+                          LM Studioでは、LM
+                          Studioアプリ内でモデルをダウンロードしてください。このアプリからは検索のみ可能です。
+                        </>
                       )}
                       {selectedEngine === 'vllm' && (
-                        <>vLLMでは、Hugging Faceからモデルをダウンロードするか、vLLMサーバーを起動する際にモデルパスを指定してください。</>
+                        <>
+                          vLLMでは、Hugging
+                          Faceからモデルをダウンロードするか、vLLMサーバーを起動する際にモデルパスを指定してください。
+                        </>
                       )}
                       {selectedEngine === 'llama_cpp' && (
-                        <>llama.cppでは、Hugging Faceからモデルをダウンロードするか、llama.cppサーバーを起動する際にモデルパスを指定してください。</>
+                        <>
+                          llama.cppでは、Hugging
+                          Faceからモデルをダウンロードするか、llama.cppサーバーを起動する際にモデルパスを指定してください。
+                        </>
                       )}
                     </p>
                     <button
@@ -1705,14 +1853,18 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
                 {selectedModel.author && (
                   <div className="detail-info-item">
                     <span className="detail-info-label">作成者</span>
-                    <span className="detail-info-value">{selectedModel.author}</span>
+                    <span className="detail-info-value">
+                      {selectedModel.author}
+                    </span>
                   </div>
                 )}
 
                 {selectedModel.license && (
                   <div className="detail-info-item">
                     <span className="detail-info-label">ライセンス</span>
-                    <span className="detail-info-value">{selectedModel.license}</span>
+                    <span className="detail-info-value">
+                      {selectedModel.license}
+                    </span>
                   </div>
                 )}
 
@@ -1720,11 +1872,14 @@ export const ModelSearch: React.FC<ModelSearchProps> = ({
                   <div className="detail-info-item">
                     <span className="detail-info-label">更新日</span>
                     <span className="detail-info-value">
-                      {new Date(selectedModel.modified_at).toLocaleDateString('ja-JP', {
-                        year: 'numeric',
-                        month: 'long',
-                        day: 'numeric',
-                      })}
+                      {new Date(selectedModel.modified_at).toLocaleDateString(
+                        'ja-JP',
+                        {
+                          year: 'numeric',
+                          month: 'long',
+                          day: 'numeric',
+                        }
+                      )}
                     </span>
                   </div>
                 )}

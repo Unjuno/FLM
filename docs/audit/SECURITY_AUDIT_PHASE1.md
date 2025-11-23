@@ -133,5 +133,13 @@
 
 ---
 
-**最終更新**: 2025-11-20
+**関連ドキュメント**:
+- `docs/specs/CORE_API.md` - Core API仕様
+- `docs/specs/DB_SCHEMA.md` - データベーススキーマ
+- `docs/guides/SECURITY_FIREWALL_GUIDE.md` - セキュリティガイド
+- `docs/guides/SECURITY_BOTNET_PROTECTION.md` - ボットネット対策ガイド
+- `docs/planning/BOTNET_PROTECTION_IMPLEMENTATION_PLAN.md` - ボットネット対策実装計画
+- `docs/audit/COMPREHENSIVE_SECURITY_AUDIT.md` - 包括的セキュリティ監査
+- `docs/audit/SECURITY_FIXES_IMPLEMENTED.md` - セキュリティ修正実装
 
+**最終更新**: 2025-11-20

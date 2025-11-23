@@ -115,11 +115,7 @@ export function useFormSubmit<T>(options: UseFormSubmitOptions<T>) {
       } catch (error) {
         const errorMessage =
           extractErrorMessage(error) ?? '不明なエラーが発生しました';
-        logger.error(
-          `${componentName} - 送信エラー`,
-          error,
-          componentName
-        );
+        logger.error(`${componentName} - 送信エラー`, error, componentName);
 
         // エラーコールバック
         if (onError) {
@@ -134,4 +130,3 @@ export function useFormSubmit<T>(options: UseFormSubmitOptions<T>) {
     handleSubmit,
   };
 }
-

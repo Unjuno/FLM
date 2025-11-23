@@ -122,7 +122,8 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
         return {
           icon: '',
           title: 'Ollamaのエラー',
-          defaultSuggestion: 'Ollamaが正しくインストールされ、起動しているか確認してください。',
+          defaultSuggestion:
+            'Ollamaが正しくインストールされ、起動しているか確認してください。',
           detailedSteps: [
             '1. Ollamaがインストールされているか確認してください',
             '2. Ollamaサービスが起動しているか確認してください（タスクマネージャーまたはプロセス一覧で確認）',
@@ -134,7 +135,8 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
         return {
           icon: '',
           title: 'APIのエラー',
-          defaultSuggestion: 'ポート番号が既に使用されていないか、設定を確認してください。',
+          defaultSuggestion:
+            'ポート番号が既に使用されていないか、設定を確認してください。',
           detailedSteps: [
             '1. 設定画面でポート番号を確認してください',
             '2. 別のアプリケーションが同じポートを使用していないか確認してください',
@@ -146,7 +148,8 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
         return {
           icon: '',
           title: 'モデルのエラー',
-          defaultSuggestion: 'モデルが正しくダウンロードされているか確認してください。',
+          defaultSuggestion:
+            'モデルが正しくダウンロードされているか確認してください。',
           detailedSteps: [
             '1. モデル管理画面でモデルがインストールされているか確認してください',
             '2. モデルがインストールされていない場合は、「モデルをダウンロード」ボタンからダウンロードしてください',
@@ -206,7 +209,8 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
         return {
           icon: '',
           title: 'エラー',
-          defaultSuggestion: '問題が続く場合は、アプリケーションを再起動してみてください。',
+          defaultSuggestion:
+            '問題が続く場合は、アプリケーションを再起動してみてください。',
           detailedSteps: [
             '1. アプリケーションを再起動してください',
             '2. エラーメッセージの内容を確認してください',
@@ -292,9 +296,7 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
 
   return (
     <>
-      <div
-        className={`error-message error-${type}`}
-      >
+      <div className={`error-message error-${type}`}>
         <div className="error-header">
           <span className="error-icon" aria-hidden="true">
             {errorInfo.icon}
@@ -325,70 +327,70 @@ export const ErrorMessage: React.FC<ErrorMessageProps> = ({
           )}
         </div>
         <div className="error-actions">
-        {canFix && (
-          <button
-            className="error-auto-fix-button"
-            onClick={handleAutoFix}
-            disabled={isFixing}
-            aria-label="エラーを自動修正する"
-            type="button"
-          >
-            {isFixing ? (
-              <>
-                <span className="spinner" aria-hidden="true"></span> 修正中...
-              </>
-            ) : (
-              <>自動修正</>
-            )}
-          </button>
-        )}
-        {onRetry && (
-          <button
-            className="error-retry-button"
-            onClick={onRetry}
-            aria-label="操作を再試行する"
-            type="button"
-          >
-            もう一度試す
-          </button>
-        )}
-        <button
-          className="error-help-button"
-          onClick={() => navigate(`/help?errorType=${type}`)}
-          aria-label="ヘルプページを開く"
-          type="button"
-        >
-          ヘルプを見る
-        </button>
-      </div>
-      {fixResult && (
-        <div
-          className={`error-fix-result ${fixResult.success ? 'success' : 'failure'}`}
-        >
-          {fixResult.success ? (
-            <div className="fix-success-message">
-              <span aria-hidden="true"></span> {fixResult.fixDescription}
-            </div>
-          ) : (
-            <div className="fix-failure-message">
-              <span aria-hidden="true">×</span> {fixResult.fixDescription}
-            </div>
+          {canFix && (
+            <button
+              className="error-auto-fix-button"
+              onClick={handleAutoFix}
+              disabled={isFixing}
+              aria-label="エラーを自動修正する"
+              type="button"
+            >
+              {isFixing ? (
+                <>
+                  <span className="spinner" aria-hidden="true"></span> 修正中...
+                </>
+              ) : (
+                <>自動修正</>
+              )}
+            </button>
           )}
+          {onRetry && (
+            <button
+              className="error-retry-button"
+              onClick={onRetry}
+              aria-label="操作を再試行する"
+              type="button"
+            >
+              もう一度試す
+            </button>
+          )}
+          <button
+            className="error-help-button"
+            onClick={() => navigate(`/help?errorType=${type}`)}
+            aria-label="ヘルプページを開く"
+            type="button"
+          >
+            ヘルプを見る
+          </button>
+        </div>
+        {fixResult && (
+          <div
+            className={`error-fix-result ${fixResult.success ? 'success' : 'failure'}`}
+          >
+            {fixResult.success ? (
+              <div className="fix-success-message">
+                <span aria-hidden="true"></span> {fixResult.fixDescription}
+              </div>
+            ) : (
+              <div className="fix-failure-message">
+                <span aria-hidden="true">×</span> {fixResult.fixDescription}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+      {errorInfo.detailedSteps && errorInfo.detailedSteps.length > 0 && (
+        <div className="error-detailed-steps" aria-label="解決手順">
+          <div className="steps-title">解決手順:</div>
+          <ul className="steps-list">
+            {errorInfo.detailedSteps.map((step, index) => (
+              <li key={index} className="step-item">
+                {step}
+              </li>
+            ))}
+          </ul>
         </div>
       )}
-    </div>
-    {errorInfo.detailedSteps && errorInfo.detailedSteps.length > 0 && (
-      <div className="error-detailed-steps" aria-label="解決手順">
-        <div className="steps-title">解決手順:</div>
-        <ul className="steps-list">
-          {errorInfo.detailedSteps.map((step, index) => (
-            <li key={index} className="step-item">
-              {step}
-            </li>
-          ))}
-        </ul>
-      </div>
-    )}
     </>
   );
 };

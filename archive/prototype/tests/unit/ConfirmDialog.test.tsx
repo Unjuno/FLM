@@ -114,7 +114,9 @@ describe('ConfirmDialog.tsx', () => {
       );
 
       expect(screen.getByRole('button', { name: /削除/i })).toBeInTheDocument();
-      expect(screen.getByRole('button', { name: /やめる/i })).toBeInTheDocument();
+      expect(
+        screen.getByRole('button', { name: /やめる/i })
+      ).toBeInTheDocument();
     });
   });
 
@@ -205,4 +207,3 @@ describe('ConfirmDialog.tsx', () => {
     });
   });
 });
-

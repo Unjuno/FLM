@@ -1,0 +1,20 @@
+# Rust toolchain configuration for FLM
+#
+# This project requires nightly Rust for edition 2024 support.
+# Some crates (e.g., home/base64ct) require edition 2024, which is only available in nightly.
+#
+# To use this toolchain:
+#   rustup toolchain install nightly
+#   cargo +nightly build
+#
+# Or set nightly as default:
+#   rustup default nightly
+#
+[toolchain]
+channel = "nightly"
+components = ["rustfmt", "clippy"]
+targets = []
+
+# Note: Once edition 2024 lands on stable, we can switch back to stable
+# and remove the home crate pin if applicable.
+

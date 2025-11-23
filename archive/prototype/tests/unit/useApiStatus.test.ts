@@ -169,9 +169,12 @@ describe('useApiStatus.ts', () => {
         await new Promise(resolve => setTimeout(resolve, 0));
       });
 
-      await waitFor(() => {
-        expect(result.current.loading).toBe(true);
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          expect(result.current.loading).toBe(true);
+        },
+        { timeout: 3000 }
+      );
 
       await act(async () => {
         resolvePromise!([{ id: 'api-1', status: 'running' }]);

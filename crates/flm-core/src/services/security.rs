@@ -253,25 +253,27 @@ where
     ///
     /// # Security Note
     /// To prevent timing attacks, this function verifies all keys before returning.
-    /// However, for performance reasons with many keys, we still return early on match.
-    /// For stronger protection, consider using a hash-based lookup (future enhancement).
+    /// This ensures that the verification time is constant regardless of which key matches,
+    /// preventing attackers from inferring key positions or existence through timing analysis.
     pub async fn verify_api_key(&self, plain_key: &str) -> Result<Option<ApiKeyRecord>, RepoError> {
         // Get only active (non-revoked) API keys for better performance
         let records = self.repo.list_active_api_keys().await?;
 
-        // Check each key
-        // Note: Early return on match is acceptable here because:
-        // 1. Argon2 verification itself is constant-time
-        // 2. The number of keys is typically small
-        // 3. For better timing attack protection with many keys, consider hash-based lookup
+        // Check all keys to prevent timing attacks
+        // We verify all keys before returning to ensure constant-time verification
+        // regardless of which key (if any) matches
+        let mut matched_record: Option<ApiKeyRecord> = None;
         for record in records {
             // Verify the hash using Argon2 (hash is already in the record)
+            // Argon2 verification itself is constant-time, but we still verify all keys
+            // to prevent timing information leakage about key position
             if verify_api_key_hash(plain_key, &record.hash)? {
-                return Ok(Some(record));
+                matched_record = Some(record.clone());
             }
         }
 
-        Ok(None)
+        // Return result only after all keys have been verified
+        Ok(matched_record)
     }
 }
 

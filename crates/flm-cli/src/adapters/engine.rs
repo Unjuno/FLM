@@ -3,12 +3,12 @@
 //! This adapter implements the EngineRepository trait for managing engine registrations
 //! and caching engine states in config.db.
 
+use async_trait::async_trait;
 use flm_core::domain::engine::EngineState;
 use flm_core::error::RepoError;
 use flm_core::ports::{EngineRepository, LlmEngine};
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
 use std::path::Path;
-use std::str::FromStr;
 use std::sync::{Arc, RwLock};
 
 /// SQLite-based EngineRepository implementation
@@ -18,7 +18,7 @@ use std::sync::{Arc, RwLock};
 pub struct SqliteEngineRepository {
     pool: SqlitePool,
     // In-memory registry of LlmEngine instances
-    engines: Arc<RwLock<Vec<Box<dyn LlmEngine>>>>,
+    engines: Arc<RwLock<Vec<Arc<dyn LlmEngine>>>>,
 }
 
 impl SqliteEngineRepository {
@@ -37,10 +37,8 @@ impl SqliteEngineRepository {
                 reason: "Invalid database path (non-UTF8)".to_string(),
             })?;
 
-        let options = SqliteConnectOptions::from_str(path_str)
-            .map_err(|e| RepoError::IoError {
-                reason: format!("Invalid database path: {e}"),
-            })?
+        let options = SqliteConnectOptions::new()
+            .filename(path_str)
             .create_if_missing(true);
 
         let pool = SqlitePoolOptions::new()
@@ -52,13 +50,7 @@ impl SqliteEngineRepository {
             })?;
 
         // Run migrations on the pool we just created
-        let migrations_path = crate::db::migration::find_migrations_path()?;
-        let migrator = sqlx::migrate::Migrator::new(&*migrations_path)
-            .await
-            .map_err(|e| RepoError::MigrationFailed {
-                reason: format!("Failed to create migrator: {e}"),
-            })?;
-        migrator
+        sqlx::migrate!("../flm-core/migrations")
             .run(&pool)
             .await
             .map_err(|e| RepoError::MigrationFailed {
@@ -101,6 +93,7 @@ impl SqliteEngineRepository {
     ///
     /// # Arguments
     /// * `engine_id` - The engine ID to look up
+    /// * `ttl_seconds` - Time-to-live in seconds (cache expires after this duration)
     ///
     /// # Returns
     /// * `Ok(Some(EngineState))` if found and not expired
@@ -109,22 +102,24 @@ impl SqliteEngineRepository {
     pub async fn get_cached_engine_state(
         &self,
         engine_id: &str,
-        _ttl_seconds: u64,
+        ttl_seconds: u64,
     ) -> Result<Option<EngineState>, RepoError> {
-        let row = sqlx::query_as::<_, (String, String)>(
-            "SELECT state_json, cached_at FROM engines_cache WHERE engine_id = ?",
+        // Use SQLite datetime functions to check if cache is still valid
+        // cached_at + ttl_seconds should be >= current time
+        let row = sqlx::query_as::<_, (String,)>(
+            "SELECT state_json FROM engines_cache 
+             WHERE engine_id = ? 
+             AND datetime(cached_at, '+' || ? || ' seconds') >= datetime('now')",
         )
         .bind(engine_id)
+        .bind(ttl_seconds.to_string())
         .fetch_optional(&self.pool)
         .await
         .map_err(|e| RepoError::IoError {
             reason: format!("Failed to get cached engine state: {e}"),
         })?;
 
-        if let Some((state_json, _cached_at)) = row {
-            // Check if cache is still valid (TTL check)
-            // For now, we'll use a simple approach: always return cached if exists
-            // TODO: Implement proper TTL checking using cached_at timestamp
+        if let Some((state_json,)) = row {
             let state: EngineState =
                 serde_json::from_str(&state_json).map_err(|e| RepoError::IoError {
                     reason: format!("Failed to deserialize engine state: {e}"),
@@ -136,18 +131,21 @@ impl SqliteEngineRepository {
     }
 }
 
+#[async_trait]
 impl EngineRepository for SqliteEngineRepository {
-    fn list_registered(&self) -> Vec<Box<dyn LlmEngine>> {
-        let _engines = self.engines.read().unwrap();
-        // Clone the engines (they are Arc-wrapped internally)
-        // Note: This is a limitation - we can't actually clone trait objects
-        // For now, we'll return an empty vector and handle this differently
-        // TODO: Refactor to use Arc<dyn LlmEngine> instead of Box<dyn LlmEngine>
-        Vec::new()
+    async fn list_registered(&self) -> Vec<Arc<dyn LlmEngine>> {
+        let engines = self
+            .engines
+            .read()
+            .expect("Failed to acquire read lock on engine registry");
+        engines.clone()
     }
 
-    fn register(&self, engine: Box<dyn LlmEngine>) {
-        let mut engines = self.engines.write().unwrap();
+    async fn register(&self, engine: Arc<dyn LlmEngine>) {
+        let mut engines = self
+            .engines
+            .write()
+            .expect("Failed to acquire write lock on engine registry");
         engines.push(engine);
     }
 }

@@ -31,7 +31,10 @@ export const ApiListHeader: React.FC<ApiListHeaderProps> = ({ onRefresh }) => {
       </div>
       <div className="header-actions">
         <Tooltip content={t('apiList.createApiTooltip')}>
-          <button className="create-button" onClick={() => navigate('/api/create')}>
+          <button
+            className="create-button"
+            onClick={() => navigate('/api/create')}
+          >
             {t('apiList.createApi')}
           </button>
         </Tooltip>
@@ -44,4 +47,3 @@ export const ApiListHeader: React.FC<ApiListHeaderProps> = ({ onRefresh }) => {
     </header>
   );
 };
-

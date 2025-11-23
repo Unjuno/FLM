@@ -239,12 +239,11 @@ export function useHomeFeatures(searchQuery: string) {
         category: 'other',
       },
     ];
-    
+
     prevAllFeaturesRef.current = features;
     return features;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [locale]);
-
 
   // 検索フィルタリング
   const filteredFeatures = useMemo(() => {
@@ -265,4 +264,3 @@ export function useHomeFeatures(searchQuery: string) {
     filteredFeatures,
   };
 }
-

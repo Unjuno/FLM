@@ -96,7 +96,8 @@ describe('LogDetail.tsx', () => {
   describe('リクエストボディ表示', () => {
     it('リクエストボディを表示する', () => {
       render(<LogDetail log={mockLog} onClose={mockOnClose} />);
-      const requestBodyElements = screen.getAllByText(/request_body|リクエスト/i);
+      const requestBodyElements =
+        screen.getAllByText(/request_body|リクエスト/i);
       expect(requestBodyElements.length).toBeGreaterThan(0);
     });
 
@@ -113,7 +114,8 @@ describe('LogDetail.tsx', () => {
 
       render(<LogDetail log={logWithoutBody} onClose={mockOnClose} />);
       // リクエストボディがnullの場合、「リクエストボディがありません」というメッセージが表示される
-      const requestBodyMessages = screen.getAllByText(/リクエストボディ|なし|ありません/i);
+      const requestBodyMessages =
+        screen.getAllByText(/リクエストボディ|なし|ありません/i);
       expect(requestBodyMessages.length).toBeGreaterThan(0);
     });
   });
@@ -167,10 +169,10 @@ describe('LogDetail.tsx', () => {
       render(<LogDetail log={mockLog} onClose={mockOnClose} />);
       const copyButtons = screen.getAllByRole('button', { name: /コピー/i });
       expect(copyButtons.length).toBeGreaterThan(0);
-      
+
       // 最初のコピーボタンをクリック
       fireEvent.click(copyButtons[0]);
-      
+
       // copyToClipboardが呼ばれたことを確認
       await new Promise(resolve => setTimeout(resolve, 100));
       expect(mockCopyToClipboard).toHaveBeenCalled();

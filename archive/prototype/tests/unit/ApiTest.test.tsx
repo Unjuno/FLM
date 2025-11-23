@@ -75,9 +75,12 @@ describe('ApiTest', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
     });
 
-    await waitFor(() => {
-      expect(screen.getByText('Test API')).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByText('Test API')).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
   });
 
   it('should handle message input', async () => {
@@ -89,9 +92,12 @@ describe('ApiTest', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
     });
 
-    await waitFor(() => {
-      expect(screen.getByLabelText(/メッセージ入力欄/i)).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByLabelText(/メッセージ入力欄/i)).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     const textarea = screen.getByLabelText(/メッセージ入力欄/i);
     await act(async () => {
@@ -110,9 +116,12 @@ describe('ApiTest', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
     });
 
-    await waitFor(() => {
-      expect(screen.getByLabelText(/メッセージ入力欄/i)).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByLabelText(/メッセージ入力欄/i)).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     const textarea = screen.getByLabelText(/メッセージ入力欄/i);
     const sendButton = screen.getByLabelText(/メッセージを送信/i);
@@ -123,9 +132,12 @@ describe('ApiTest', () => {
     });
 
     // メッセージが送信されたことを確認（実際の実装に応じて調整）
-    await waitFor(() => {
-      expect(textarea).toHaveValue('');
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(textarea).toHaveValue('');
+      },
+      { timeout: 5000 }
+    );
   });
 
   it('should handle keyboard shortcuts', async () => {
@@ -137,21 +149,26 @@ describe('ApiTest', () => {
       await new Promise(resolve => setTimeout(resolve, 100));
     });
 
-    await waitFor(() => {
-      expect(screen.getByLabelText(/メッセージ入力欄/i)).toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.getByLabelText(/メッセージ入力欄/i)).toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     const textarea = screen.getByLabelText(/メッセージ入力欄/i);
-    
+
     await act(async () => {
       await userEvent.type(textarea, 'Test message');
       await userEvent.keyboard('{Enter}');
     });
 
     // Enterキーでメッセージが送信されることを確認（実際の実装に応じて調整）
-    await waitFor(() => {
-      expect(textarea).toHaveValue('');
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(textarea).toHaveValue('');
+      },
+      { timeout: 5000 }
+    );
   });
 });
-

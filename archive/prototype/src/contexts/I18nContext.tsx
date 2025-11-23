@@ -75,7 +75,10 @@ export const I18nProvider: React.FC<I18nProviderProps> = ({ children }) => {
         const settings = await safeInvoke<{ language?: string }>(
           'get_app_settings'
         );
-        if (settings?.language && ['ja', 'en', 'zh', 'ko', 'es', 'fr', 'de'].includes(settings.language)) {
+        if (
+          settings?.language &&
+          ['ja', 'en', 'zh', 'ko', 'es', 'fr', 'de'].includes(settings.language)
+        ) {
           setLocaleState(settings.language as Locale);
         }
       } catch (error) {
@@ -237,27 +240,32 @@ export const useI18n = (): I18nContextType => {
     // 開発環境では警告を一度だけ表示し、デフォルトの翻訳関数を返す
     if (process.env.NODE_ENV === 'development' && !hasWarnedAboutProvider) {
       hasWarnedAboutProvider = true;
-      console.warn('useI18n must be used within an I18nProvider. Using fallback translations.');
+      console.warn(
+        'useI18n must be used within an I18nProvider. Using fallback translations.'
+      );
     }
-    
+
     // フォールバック: デフォルトの翻訳関数を返す
-    const fallbackT = (key: string, params?: Record<string, string | number>): string => {
+    const fallbackT = (
+      key: string,
+      params?: Record<string, string | number>
+    ): string => {
       const keys = key.split('.');
       const value = getTranslationValueFallback(jaTranslations, keys);
-      
+
       if (value === null) {
         return key;
       }
-      
+
       if (params) {
         return value.replace(/\{\{(\w+)\}\}/g, (match, paramKey) => {
           return params[paramKey]?.toString() || match;
         });
       }
-      
+
       return value;
     };
-    
+
     return {
       locale: 'ja' as Locale,
       setLocale: async () => {

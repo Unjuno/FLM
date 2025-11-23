@@ -68,70 +68,83 @@ export function useAppUpdate(options?: {
   /**
    * アップデートチェック
    */
-  const checkUpdate = useCallback(async (silent = false) => {
-    try {
-      setChecking(true);
-      setError(null);
-
-      const result = await safeInvoke<UpdateCheckResult>('check_app_update');
-      
-      setUpdateAvailable(result.update_available);
-      setCurrentVersion(result.current_version);
-      setLatestVersion(result.latest_version || null);
-      setReleaseNotes(result.release_notes || null);
-
-      // アップデートが利用可能で、通知が有効な場合
-      if (result.update_available && !silent && (options?.showNotification !== false) && !hasNotified) {
-        setHasNotified(true);
-        showInfo(
-          'アップデートが利用可能です',
-          `新しいバージョン ${result.latest_version} が利用可能です。設定画面でインストールできます。`,
-          10000, // 10秒間表示
-          {
-            label: '設定画面を開く',
-            onClick: () => {
-              navigate('/settings');
-            },
-          }
-        );
-      }
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'アップデートチェックに失敗しました';
-      
-      // アップデーターが初期化されていない場合は、エラーを表示せずにサイレントに失敗
-      // これは開発環境やアップデーターが設定されていない環境では正常な動作
-      if (errorMessage.includes('UPDATER_NOT_INITIALIZED') || 
-          errorMessage.includes('アップデーターが初期化されていません')) {
-        // サイレントに失敗（エラーを設定しない）
-        setUpdateAvailable(false);
+  const checkUpdate = useCallback(
+    async (silent = false) => {
+      try {
+        setChecking(true);
         setError(null);
-      } else {
-        setError(errorMessage);
-        setUpdateAvailable(false);
-        
-        // エラー通知（サイレントモードでない場合のみ）
-        if (!silent && (options?.showNotification !== false)) {
-          showWarning('アップデートチェックエラー', errorMessage);
+
+        const result = await safeInvoke<UpdateCheckResult>('check_app_update');
+
+        setUpdateAvailable(result.update_available);
+        setCurrentVersion(result.current_version);
+        setLatestVersion(result.latest_version || null);
+        setReleaseNotes(result.release_notes || null);
+
+        // アップデートが利用可能で、通知が有効な場合
+        if (
+          result.update_available &&
+          !silent &&
+          options?.showNotification !== false &&
+          !hasNotified
+        ) {
+          setHasNotified(true);
+          showInfo(
+            'アップデートが利用可能です',
+            `新しいバージョン ${result.latest_version} が利用可能です。設定画面でインストールできます。`,
+            10000, // 10秒間表示
+            {
+              label: '設定画面を開く',
+              onClick: () => {
+                navigate('/settings');
+              },
+            }
+          );
         }
+      } catch (err) {
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : 'アップデートチェックに失敗しました';
+
+        // アップデーターが初期化されていない場合は、エラーを表示せずにサイレントに失敗
+        // これは開発環境やアップデーターが設定されていない環境では正常な動作
+        if (
+          errorMessage.includes('UPDATER_NOT_INITIALIZED') ||
+          errorMessage.includes('アップデーターが初期化されていません')
+        ) {
+          // サイレントに失敗（エラーを設定しない）
+          setUpdateAvailable(false);
+          setError(null);
+        } else {
+          setError(errorMessage);
+          setUpdateAvailable(false);
+
+          // エラー通知（サイレントモードでない場合のみ）
+          if (!silent && options?.showNotification !== false) {
+            showWarning('アップデートチェックエラー', errorMessage);
+          }
+        }
+      } finally {
+        setChecking(false);
       }
-    } finally {
-      setChecking(false);
-    }
-  }, [showInfo, showWarning, options?.showNotification, hasNotified]);
+    },
+    [showInfo, showWarning, options?.showNotification, hasNotified]
+  );
 
   /**
    * アップデートのインストール
    */
   const installUpdate = useCallback(async () => {
     let unlisten: (() => void) | null = null;
-    
+
     try {
       setInstalling(true);
       setError(null);
       setProgress(null);
 
       // 進捗イベントをリッスン
-      unlisten = await listen<UpdateProgress>('app_update_progress', (event) => {
+      unlisten = await listen<UpdateProgress>('app_update_progress', event => {
         if (event.payload) {
           setProgress(event.payload);
         }
@@ -145,7 +158,11 @@ export function useAppUpdate(options?: {
       setInstalling(false);
       setProgress(null);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'アップデートのインストールに失敗しました');
+      setError(
+        err instanceof Error
+          ? err.message
+          : 'アップデートのインストールに失敗しました'
+      );
       setInstalling(false);
       setProgress(null);
     } finally {
@@ -181,4 +198,3 @@ export function useAppUpdate(options?: {
     installUpdate,
   };
 }
-

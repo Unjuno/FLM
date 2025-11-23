@@ -62,7 +62,10 @@ export const ProgressDisplay: React.FC<ProgressDisplayProps> = ({
   className = '',
 }) => {
   const progressBarRef = useRef<HTMLDivElement>(null);
-  const progressPercent = Math.min(Math.max(Math.round(progress.progress), 0), 100);
+  const progressPercent = Math.min(
+    Math.max(Math.round(progress.progress), 0),
+    100
+  );
 
   // プログレスバーの幅を更新
   useEffect(() => {
@@ -193,4 +196,3 @@ export const ProgressDisplay: React.FC<ProgressDisplayProps> = ({
     </div>
   );
 };
-

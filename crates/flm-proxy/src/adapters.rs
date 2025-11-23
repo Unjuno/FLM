@@ -8,11 +8,13 @@ use flm_core::domain::security::{ApiKeyRecord, SecurityPolicy};
 use flm_core::error::RepoError;
 use flm_core::ports::SecurityRepository;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
+use tracing::error;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
 
 /// SQLite-based SecurityRepository implementation for flm-proxy
+#[derive(Clone)]
 pub struct SqliteSecurityRepository {
     pool: SqlitePool,
 }
@@ -37,8 +39,16 @@ impl SqliteSecurityRepository {
             .filename(path_str)
             .create_if_missing(true);
 
+        // Get max connections from environment variable or use default (10)
+        let max_connections = std::env::var("FLM_DB_MAX_CONNECTIONS")
+            .ok()
+            .and_then(|v| v.parse::<u32>().ok())
+            .unwrap_or(10)
+            .max(1) // At least 1 connection
+            .min(100); // Cap at 100 connections
+
         let pool = SqlitePoolOptions::new()
-            .max_connections(5)
+            .max_connections(max_connections)
             .connect_with(options)
             .await
             .map_err(|e| RepoError::IoError {
@@ -57,8 +67,8 @@ impl SqliteSecurityRepository {
         // On Windows, file permissions are managed differently and default permissions are usually sufficient
         #[cfg(unix)]
         {
-            if let Err(e) = set_db_file_permissions(&db_path) {
-                eprintln!("WARNING: Failed to set database file permissions: {}. Continuing anyway.", e);
+            if let Err(_) = set_db_file_permissions(&db_path) {
+                warn!(error_type = "db_permissions_failed", "Failed to set database file permissions. Continuing anyway.");
             }
         }
 
@@ -198,6 +208,264 @@ impl SecurityRepository for SqliteSecurityRepository {
                 updated_at,
             })
             .collect())
+    }
+}
+
+// Additional methods for SqliteSecurityRepository (not part of SecurityRepository trait)
+impl SqliteSecurityRepository {
+    /// Save rate limit state for an API key
+    ///
+    /// # Arguments
+    /// * `api_key_id` - The API key ID
+    /// * `requests_count` - Current request count
+    /// * `reset_at` - Reset timestamp (RFC3339 format)
+    pub async fn save_rate_limit_state(
+        &self,
+        api_key_id: &str,
+        requests_count: u32,
+        reset_at: &str,
+    ) -> Result<(), RepoError> {
+        sqlx::query(
+            "INSERT OR REPLACE INTO rate_limit_states (api_key_id, requests_count, reset_at) VALUES (?, ?, ?)",
+        )
+        .bind(api_key_id)
+        .bind(requests_count as i64)
+        .bind(reset_at)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to save rate limit state: {e}"),
+        })?;
+        Ok(())
+    }
+
+    /// Fetch rate limit state for an API key
+    ///
+    /// # Arguments
+    /// * `api_key_id` - The API key ID
+    ///
+    /// # Returns
+    /// * `Ok(Some((requests_count, reset_at)))` if state exists
+    /// * `Ok(None)` if state does not exist
+    /// * `Err(RepoError)` if an error occurs
+    pub async fn fetch_rate_limit_state(
+        &self,
+        api_key_id: &str,
+    ) -> Result<Option<(u32, String)>, RepoError> {
+        let row = sqlx::query_as::<_, (i64, String)>(
+            "SELECT requests_count, reset_at FROM rate_limit_states WHERE api_key_id = ?",
+        )
+        .bind(api_key_id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to fetch rate limit state: {e}"),
+        })?;
+
+        if let Some((count, reset_at)) = row {
+            Ok(Some((count as u32, reset_at)))
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Delete expired rate limit states
+    ///
+    /// Removes rate limit states where reset_at is in the past.
+    pub async fn cleanup_expired_rate_limits(&self) -> Result<(), RepoError> {
+        let now = chrono::Utc::now().to_rfc3339();
+        sqlx::query("DELETE FROM rate_limit_states WHERE reset_at < ?")
+            .bind(&now)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| RepoError::IoError {
+                reason: format!("Failed to cleanup expired rate limits: {e}"),
+            })?;
+        Ok(())
+    }
+
+    /// Save audit log entry
+    ///
+    /// # Arguments
+    /// * `request_id` - Unique request identifier
+    /// * `api_key_id` - API key ID (if authenticated)
+    /// * `endpoint` - Request endpoint
+    /// * `status` - HTTP status code
+    /// * `latency_ms` - Request latency in milliseconds
+    /// * `event_type` - Event type ('auth_success', 'auth_failure', 'ip_blocked', 'intrusion', 'anomaly', 'resource_alert')
+    /// * `severity` - Severity level ('low', 'medium', 'high', 'critical')
+    /// * `ip` - Client IP address
+    /// * `details` - Additional details in JSON format
+    pub async fn save_audit_log(
+        &self,
+        request_id: &str,
+        api_key_id: Option<&str>,
+        endpoint: &str,
+        status: u16,
+        latency_ms: Option<u64>,
+        event_type: Option<&str>,
+        severity: &str,
+        ip: Option<&str>,
+        details: Option<&str>,
+    ) -> Result<(), RepoError> {
+        sqlx::query(
+            "INSERT INTO audit_logs (request_id, api_key_id, endpoint, status, latency_ms, event_type, severity, ip, details) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        )
+        .bind(request_id)
+        .bind(api_key_id)
+        .bind(endpoint)
+        .bind(status as i64)
+        .bind(latency_ms.map(|v| v as i64))
+        .bind(event_type)
+        .bind(severity)
+        .bind(ip)
+        .bind(details)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to save audit log: {e}"),
+        })?;
+        Ok(())
+    }
+
+    /// Get all blocked IPs from database
+    ///
+    /// Returns a vector of (IP address, failure_count, first_failure_at, blocked_until, permanent_block, last_attempt)
+    pub async fn get_blocked_ips(&self) -> Result<Vec<(std::net::IpAddr, u32, String, Option<String>, bool, String)>, RepoError> {
+        use std::net::IpAddr;
+        
+        let rows = sqlx::query_as::<_, (String, i64, String, Option<String>, i64, String)>(
+            "SELECT ip, failure_count, first_failure_at, blocked_until, permanent_block, last_attempt FROM ip_blocklist"
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to fetch blocked IPs: {e}"),
+        })?;
+
+        let mut result = Vec::new();
+        for (ip_str, failure_count, first_failure_at, blocked_until, permanent_block, last_attempt) in rows {
+            if let Ok(ip) = ip_str.parse::<IpAddr>() {
+                result.push((ip, failure_count as u32, first_failure_at, blocked_until, permanent_block != 0, last_attempt));
+            } else {
+                error!(ip = %ip_str, "Failed to parse IP address from database");
+            }
+        }
+        
+        Ok(result)
+    }
+
+    /// Add or update a failure record for an IP address
+    ///
+    /// # Arguments
+    /// * `ip` - IP address
+    /// * `failure_count` - Current failure count
+    /// * `first_failure_at` - Timestamp of first failure (RFC3339)
+    /// * `blocked_until` - Timestamp when block expires (RFC3339, None if not blocked)
+    /// * `permanent_block` - Whether this is a permanent block
+    /// * `last_attempt` - Timestamp of last attempt (RFC3339)
+    pub async fn add_ip_failure(
+        &self,
+        ip: &std::net::IpAddr,
+        failure_count: u32,
+        first_failure_at: &str,
+        blocked_until: Option<&str>,
+        permanent_block: bool,
+        last_attempt: &str,
+    ) -> Result<(), RepoError> {
+        sqlx::query(
+            "INSERT OR REPLACE INTO ip_blocklist (ip, failure_count, first_failure_at, blocked_until, permanent_block, last_attempt, updated_at) VALUES (?, ?, ?, ?, ?, ?, datetime('now'))"
+        )
+        .bind(ip.to_string())
+        .bind(failure_count as i64)
+        .bind(first_failure_at)
+        .bind(blocked_until)
+        .bind(if permanent_block { 1 } else { 0 })
+        .bind(last_attempt)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to add IP failure: {e}"),
+        })?;
+        Ok(())
+    }
+
+    /// Unblock an IP address
+    ///
+    /// Removes the IP from the blocklist.
+    pub async fn unblock_ip(&self, ip: &std::net::IpAddr) -> Result<(), RepoError> {
+        sqlx::query("DELETE FROM ip_blocklist WHERE ip = ?")
+            .bind(ip.to_string())
+            .execute(&self.pool)
+            .await
+            .map_err(|e| RepoError::IoError {
+                reason: format!("Failed to unblock IP: {e}"),
+            })?;
+        Ok(())
+    }
+
+    /// Clear all temporary blocks (keeps permanent blocks)
+    pub async fn clear_temporary_blocks(&self) -> Result<(), RepoError> {
+        sqlx::query("DELETE FROM ip_blocklist WHERE permanent_block = 0")
+            .execute(&self.pool)
+            .await
+            .map_err(|e| RepoError::IoError {
+                reason: format!("Failed to clear temporary blocks: {e}"),
+            })?;
+        Ok(())
+    }
+
+    /// Clean up expired temporary blocks
+    ///
+    /// Removes blocks where blocked_until is in the past.
+    pub async fn cleanup_expired_blocks(&self) -> Result<(), RepoError> {
+        let now = chrono::Utc::now().to_rfc3339();
+        sqlx::query("DELETE FROM ip_blocklist WHERE permanent_block = 0 AND blocked_until IS NOT NULL AND blocked_until < ?")
+            .bind(&now)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| RepoError::IoError {
+                reason: format!("Failed to cleanup expired blocks: {e}"),
+            })?;
+        Ok(())
+    }
+
+    /// Save intrusion detection attempt
+    ///
+    /// # Arguments
+    /// * `id` - Unique identifier for the intrusion attempt
+    /// * `ip` - IP address
+    /// * `pattern` - Detected pattern type
+    /// * `score` - Intrusion score
+    /// * `request_path` - Request path
+    /// * `user_agent` - User-Agent header
+    /// * `method` - HTTP method
+    pub async fn save_intrusion_attempt(
+        &self,
+        id: &str,
+        ip: &std::net::IpAddr,
+        pattern: &str,
+        score: u32,
+        request_path: Option<&str>,
+        user_agent: Option<&str>,
+        method: Option<&str>,
+    ) -> Result<(), RepoError> {
+        sqlx::query(
+            "INSERT INTO intrusion_attempts (id, ip, pattern, score, request_path, user_agent, method) VALUES (?, ?, ?, ?, ?, ?, ?)"
+        )
+        .bind(id)
+        .bind(ip.to_string())
+        .bind(pattern)
+        .bind(score as i64)
+        .bind(request_path)
+        .bind(user_agent)
+        .bind(method)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to save intrusion attempt: {e}"),
+        })?;
+        Ok(())
     }
 }
 

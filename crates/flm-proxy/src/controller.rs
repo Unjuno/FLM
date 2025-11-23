@@ -10,8 +10,12 @@ use std::net::SocketAddr;
 use std::sync::Arc;
 use tokio::sync::{oneshot, RwLock};
 use tokio::task::JoinHandle;
+use tracing::error;
 
 use crate::middleware::AppState;
+use crate::security::ip_blocklist::IpBlocklist;
+use crate::security::intrusion_detection::IntrusionDetection;
+use crate::utils;
 
 // Wrapper to convert Arc<InMemoryEngineRepository> to Box<dyn EngineRepository + Send + Sync>
 struct EngineRepositoryWrapper(Arc<crate::engine_repo::InMemoryEngineRepository>);
@@ -177,7 +181,8 @@ async fn start_local_http_server(
             reason: format!("Failed to create security repository: {e}"),
         })?;
 
-    // Create services
+    // Create services (clone repo for AppState)
+    let security_repo_for_state = security_repo.clone();
     let security_service = flm_core::services::SecurityService::new(security_repo);
     let process_controller: Box<dyn flm_core::ports::EngineProcessController + Send + Sync> =
         Box::new(crate::process_controller::NoopProcessController);
@@ -196,13 +201,55 @@ async fn start_local_http_server(
     let engine_service =
         flm_core::services::EngineService::new(process_controller, http_client, engine_repo);
 
+    // Create IP blocklist and intrusion detection
+    let ip_blocklist = Arc::new(IpBlocklist::new());
+    let intrusion_detection = Arc::new(IntrusionDetection::new());
+    let ip_blocklist_for_state = ip_blocklist.clone();
+    let ip_blocklist_for_sync = ip_blocklist.clone();
+    let security_repo_for_load = security_repo_for_state.clone();
+    let security_repo_for_sync = security_repo_for_state.clone();
+    
+    // Load blocked IPs from database on startup
+    {
+        let ip_blocklist_load = ip_blocklist_for_state.clone();
+        tokio::spawn(async move {
+            if let Ok(entries) = security_repo_for_load.get_blocked_ips().await {
+                ip_blocklist_load.load_from_db(entries).await;
+            }
+        });
+    }
+    
+    // Start background task for periodic database sync (every 5 minutes)
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(300)); // 5 minutes
+        loop {
+            interval.tick().await;
+            
+            if ip_blocklist_for_sync.needs_sync().await {
+                if let Err(e) = ip_blocklist_for_sync.sync_to_db(&security_repo_for_sync).await {
+                    error!(error = %e, "Failed to sync IP blocklist to database");
+                } else {
+                    ip_blocklist_for_sync.mark_synced().await;
+                }
+            }
+            
+            // Clean up expired blocks
+            if let Err(e) = security_repo_for_sync.cleanup_expired_blocks().await {
+                error!(error = %e, "Failed to cleanup expired blocks");
+            }
+        }
+    });
+
     // Create app state
     let app_state = crate::middleware::AppState {
         security_service: Arc::new(security_service),
+        security_repo: Arc::new(security_repo_for_state),
         engine_service: Arc::new(engine_service),
         engine_repo: engine_repo_impl,
         rate_limit_state: Arc::new(RwLock::new(std::collections::HashMap::new())),
         trusted_proxy_ips: config.trusted_proxy_ips.clone(),
+        ip_blocklist,
+        intrusion_detection,
     };
 
     // Create the router
@@ -265,12 +312,27 @@ async fn create_router(
     // Get CORS configuration from security policy
     let cors_layer = create_cors_layer(&app_state).await;
 
-    use std::time::Duration;
-    use tower::timeout::TimeoutLayer;
-
-    // Create separate router for streaming endpoint (no timeout)
+    // Create separate router for streaming endpoint (with 30-minute timeout)
+    // Streaming requests can take longer, but we still need a timeout to prevent resource exhaustion
     let streaming_router = Router::new()
         .route("/v1/chat/completions", post(handle_chat_completions))
+        // Timeout middleware for streaming (30 minutes = 1800 seconds)
+        .layer(axum::middleware::from_fn(crate::middleware::streaming_timeout_middleware))
+        // Audit logging (outermost layer to capture all requests)
+        .layer(axum_middleware::from_fn_with_state(
+            app_state.clone(),
+            crate::middleware::audit_logging_middleware,
+        ))
+        // Intrusion detection (before IP block check)
+        .layer(axum_middleware::from_fn_with_state(
+            app_state.clone(),
+            crate::middleware::intrusion_detection_middleware,
+        ))
+        // IP block check (before authentication)
+        .layer(axum_middleware::from_fn_with_state(
+            app_state.clone(),
+            crate::middleware::ip_block_check_middleware,
+        ))
         .layer(cors_layer.clone())
         .layer(axum::middleware::from_fn(crate::middleware::add_security_headers))
         .layer(axum_middleware::from_fn_with_state(
@@ -289,12 +351,27 @@ async fn create_router(
         .route("/v1/models", get(handle_models))
         .route("/v1/embeddings", post(handle_embeddings))
         // Apply layers in order (outermost to innermost)
+        // Audit logging (outermost layer to capture all requests)
+        .layer(axum_middleware::from_fn_with_state(
+            app_state.clone(),
+            crate::middleware::audit_logging_middleware,
+        ))
+        // Intrusion detection (before IP block check)
+        .layer(axum_middleware::from_fn_with_state(
+            app_state.clone(),
+            crate::middleware::intrusion_detection_middleware,
+        ))
+        // IP block check (before authentication)
+        .layer(axum_middleware::from_fn_with_state(
+            app_state.clone(),
+            crate::middleware::ip_block_check_middleware,
+        ))
+        // Request timeout (60 seconds) - non-streaming endpoints only
+        .layer(axum::middleware::from_fn(crate::middleware::request_timeout_middleware))
         // Concurrency limit (100 connections)
         .layer(tower::limit::ConcurrencyLimitLayer::new(100))
         // Request body size limit (10MB)
         .layer(axum::extract::DefaultBodyLimit::max(10 * 1024 * 1024))
-        // Request timeout (60 seconds) - only for non-streaming endpoints
-        .layer(TimeoutLayer::new(Duration::from_secs(60)))
         // CORS layer
         .layer(cors_layer)
         // Security headers middleware
@@ -308,7 +385,7 @@ async fn create_router(
             app_state.clone(),
             crate::middleware::policy_middleware,
         ))
-        // Merge streaming router (no timeout)
+        // Merge streaming router
         .merge(streaming_router)
         .with_state(app_state);
 
@@ -351,8 +428,11 @@ async fn create_cors_layer(app_state: &AppState) -> tower_http::cors::CorsLayer 
         if let Some(allowed_origins) = cors.get("allowed_origins") {
             if let Some(origins_array) = allowed_origins.as_array() {
                 if origins_array.is_empty() {
-                    // Empty array means allow all
-                    return TowerCorsLayer::permissive();
+                    // Empty array means deny all (fail closed for security)
+                    return TowerCorsLayer::new()
+                        .allow_origin(tower_http::cors::AllowOrigin::predicate(|_, _| false))
+                        .allow_methods([])
+                        .allow_headers([]);
                 }
 
                 // Convert to HeaderValue list
@@ -363,7 +443,11 @@ async fn create_cors_layer(app_state: &AppState) -> tower_http::cors::CorsLayer 
                     .collect();
 
                 if origins.is_empty() {
-                    return TowerCorsLayer::permissive();
+                    // No valid origins - deny all (fail closed for security)
+                    return TowerCorsLayer::new()
+                        .allow_origin(tower_http::cors::AllowOrigin::predicate(|_, _| false))
+                        .allow_methods([])
+                        .allow_headers([]);
                 }
 
                 return TowerCorsLayer::new()
@@ -381,8 +465,12 @@ async fn create_cors_layer(app_state: &AppState) -> tower_http::cors::CorsLayer 
         }
     }
 
-    // Default: allow all
-    TowerCorsLayer::permissive()
+    // Default: deny all (fail closed for security)
+    // Explicit configuration is required to allow any origins
+    TowerCorsLayer::new()
+        .allow_origin(tower_http::cors::AllowOrigin::predicate(|_, _| false))
+        .allow_methods([])
+        .allow_headers([])
 }
 
 /// Health check endpoint
@@ -502,6 +590,40 @@ fn validate_stop_sequences(stop: &[String]) -> Result<(), &'static str> {
         }
     }
     Ok(())
+}
+
+/// Validate temperature parameter
+fn validate_temperature(temperature: Option<f64>) -> Result<(), &'static str> {
+    if let Some(temp) = temperature {
+        if temp < 0.0 || temp > 2.0 {
+            return Err("Temperature must be between 0.0 and 2.0");
+        }
+        if !temp.is_finite() {
+            return Err("Temperature must be a finite number");
+        }
+    }
+    Ok(())
+}
+
+/// Validate max_tokens parameter
+fn validate_max_tokens(max_tokens: Option<u32>) -> Result<(), &'static str> {
+    if let Some(max) = max_tokens {
+        if max == 0 {
+            return Err("max_tokens must be greater than 0");
+        }
+        if max > 1_000_000 {
+            return Err("max_tokens exceeds maximum limit (1,000,000)");
+        }
+    }
+    Ok(())
+}
+
+/// Validate message role
+fn validate_message_role(role: &str) -> Result<(), &'static str> {
+    match role {
+        "system" | "user" | "assistant" | "tool" => Ok(()),
+        _ => Err("Invalid message role. Must be one of: system, user, assistant, tool"),
+    }
 }
 
 /// Validate embedding input
@@ -896,6 +1018,36 @@ async fn handle_chat_completions(
             .into_response();
     }
 
+    // Validate temperature
+    if let Err(_) = validate_temperature(req.temperature) {
+        return (
+            axum::http::StatusCode::BAD_REQUEST,
+            axum::Json(serde_json::json!({
+                "error": {
+                    "message": "Temperature must be between 0.0 and 2.0",
+                    "type": "invalid_request_error",
+                    "code": "invalid_temperature"
+                }
+            })),
+        )
+            .into_response();
+    }
+
+    // Validate max_tokens
+    if let Err(_) = validate_max_tokens(req.max_tokens) {
+        return (
+            axum::http::StatusCode::BAD_REQUEST,
+            axum::Json(serde_json::json!({
+                "error": {
+                    "message": "max_tokens exceeds maximum limit or is invalid",
+                    "type": "invalid_request_error",
+                    "code": "invalid_max_tokens"
+                }
+            })),
+        )
+            .into_response();
+    }
+
     // Find the engine
     let engines = state.engine_repo.list_registered().await;
     let engine = match engines.iter().find(|e| e.id() == engine_id) {
@@ -915,6 +1067,23 @@ async fn handle_chat_completions(
         }
     };
 
+    // Validate message roles before conversion
+    for msg in &req.messages {
+        if let Err(_) = validate_message_role(&msg.role) {
+            return (
+                axum::http::StatusCode::BAD_REQUEST,
+                axum::Json(serde_json::json!({
+                    "error": {
+                        "message": "Invalid message role. Must be one of: system, user, assistant, tool",
+                        "type": "invalid_request_error",
+                        "code": "invalid_message_role"
+                    }
+                })),
+            )
+                .into_response();
+        }
+    }
+
     // Convert OpenAI messages to FLM messages
     let messages: Result<Vec<ChatMessage>, _> = req
         .messages
@@ -925,7 +1094,7 @@ async fn handle_chat_completions(
                 "user" => ChatRole::User,
                 "assistant" => ChatRole::Assistant,
                 "tool" => ChatRole::Tool,
-                _ => return Err(()),
+                _ => return Err(()), // This should never happen due to validation above
             };
             Ok(ChatMessage {
                 role,
@@ -1028,21 +1197,38 @@ async fn handle_chat_stream(
     let stream = match engine.chat_stream(req.clone()).await {
         Ok(s) => s,
         Err(e) => {
+            // Log error type only (mask sensitive information)
             let (status, message) = match e {
-                flm_core::error::EngineError::NotFound { .. } => {
+                flm_core::error::EngineError::NotFound { engine_id } => {
+                    let masked_id = utils::mask_identifier(&engine_id);
+                    error!(engine_id = %masked_id, error_type = "engine_not_found", "Engine lookup failed");
                     (axum::http::StatusCode::NOT_FOUND, "Engine not found")
                 }
-                flm_core::error::EngineError::NetworkError { .. } => {
+                flm_core::error::EngineError::NetworkError { reason: _ } => {
+                    error!(error_type = "network_error", "Network error starting stream");
                     (axum::http::StatusCode::BAD_GATEWAY, "Network error")
                 }
-                flm_core::error::EngineError::InvalidResponse { .. } => (
-                    axum::http::StatusCode::BAD_GATEWAY,
-                    "Invalid response from engine",
-                ),
-                _ => (
-                    axum::http::StatusCode::INTERNAL_SERVER_ERROR,
-                    "Failed to start streaming chat",
-                ),
+                flm_core::error::EngineError::InvalidResponse { reason: _ } => {
+                    error!(error_type = "invalid_response", "Invalid response starting stream");
+                    (
+                        axum::http::StatusCode::BAD_GATEWAY,
+                        "Invalid response from engine",
+                    )
+                }
+                flm_core::error::EngineError::ApiError { reason: _, .. } => {
+                    error!(error_type = "api_error", "Engine API error starting stream");
+                    (
+                        axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                        "Engine API error",
+                    )
+                }
+                _ => {
+                    error!(error_type = "unknown_error", "Unknown error starting stream");
+                    (
+                        axum::http::StatusCode::INTERNAL_SERVER_ERROR,
+                        "Failed to start streaming chat",
+                    )
+                },
             };
 
             return (
@@ -1105,27 +1291,42 @@ async fn handle_chat_stream(
                 }
             }
             Err(e) => {
-                // Log detailed error and send generalized error event
-                let (error_msg, log_msg) = match e {
-                    flm_core::error::EngineError::NetworkError { reason } => {
-                        eprintln!("ERROR: Network error in stream: {}", reason);
-                        ("Network error occurred".to_string(), Some(reason))
+                // Log error type only (mask sensitive information)
+                let (error_msg, error_code) = match e {
+                    flm_core::error::EngineError::NetworkError { reason: _ } => {
+                        error!(error_type = "network_error", "Network error in stream");
+                        ("Network error occurred", "network_error")
                     }
-                    flm_core::error::EngineError::InvalidResponse { reason } => {
-                        eprintln!("ERROR: Invalid response in stream: {}", reason);
-                        ("Invalid response from engine".to_string(), Some(reason))
+                    flm_core::error::EngineError::InvalidResponse { reason: _ } => {
+                        error!(error_type = "invalid_response", "Invalid response in stream");
+                        ("Invalid response from engine", "invalid_response")
                     }
-                    flm_core::error::EngineError::ApiError { reason, .. } => {
-                        eprintln!("ERROR: API error in stream: {}", reason);
-                        ("Engine API error".to_string(), Some(reason))
+                    flm_core::error::EngineError::ApiError { reason: _, .. } => {
+                        error!(error_type = "api_error", "Engine API error in stream");
+                        ("Engine API error", "api_error")
                     }
                     _ => {
-                        eprintln!("ERROR: Unknown stream error: {:?}", e);
-                        ("Stream error".to_string(), None)
+                        error!(error_type = "unknown_error", "Unknown stream error");
+                        ("Stream error", "unknown_error")
                     }
                 };
 
-                Err(axum::Error::new(std::io::Error::other(error_msg)))
+                // Send error as SSE event so client can handle it gracefully
+                let error_data = serde_json::json!({
+                    "error": {
+                        "message": error_msg,
+                        "type": "server_error",
+                        "code": error_code
+                    }
+                });
+
+                match Event::default().json_data(error_data) {
+                    Ok(event) => Ok(event),
+                    Err(_) => {
+                        // Fallback if JSON serialization fails
+                        Err(axum::Error::new(std::io::Error::other(error_msg)))
+                    }
+                }
             }
         }
     });

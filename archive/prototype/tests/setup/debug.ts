@@ -7,7 +7,10 @@
  * @param args - ログに出力する引数
  */
 export const debugLog = (...args: unknown[]): void => {
-  if (process.env.JEST_DEBUG === '1' || process.env.NODE_ENV === 'development') {
+  if (
+    process.env.JEST_DEBUG === '1' ||
+    process.env.NODE_ENV === 'development'
+  ) {
     console.log('[TEST DEBUG]', ...args);
   }
 };
@@ -17,7 +20,10 @@ export const debugLog = (...args: unknown[]): void => {
  * @param args - ログに出力する引数
  */
 export const debugWarn = (...args: unknown[]): void => {
-  if (process.env.JEST_DEBUG === '1' || process.env.NODE_ENV === 'development') {
+  if (
+    process.env.JEST_DEBUG === '1' ||
+    process.env.NODE_ENV === 'development'
+  ) {
     console.warn('[TEST WARN]', ...args);
   }
 };
@@ -27,7 +33,10 @@ export const debugWarn = (...args: unknown[]): void => {
  * @param args - ログに出力する引数
  */
 export const debugError = (...args: unknown[]): void => {
-  if (process.env.JEST_DEBUG === '1' || process.env.NODE_ENV === 'development') {
+  if (
+    process.env.JEST_DEBUG === '1' ||
+    process.env.NODE_ENV === 'development'
+  ) {
     console.error('[TEST ERROR]', ...args);
   }
 };
@@ -37,7 +46,10 @@ export const debugError = (...args: unknown[]): void => {
  * @param args - ログに出力する引数
  */
 export const debugInfo = (...args: unknown[]): void => {
-  if (process.env.JEST_DEBUG === '1' || process.env.NODE_ENV === 'development') {
+  if (
+    process.env.JEST_DEBUG === '1' ||
+    process.env.NODE_ENV === 'development'
+  ) {
     console.info('[TEST INFO]', ...args);
   }
 };
@@ -47,6 +59,7 @@ export const debugInfo = (...args: unknown[]): void => {
  * @returns デバッグモードが有効な場合true、それ以外はfalse
  */
 export const isDebugMode = (): boolean => {
-  return process.env.JEST_DEBUG === '1' || process.env.NODE_ENV === 'development';
+  return (
+    process.env.JEST_DEBUG === '1' || process.env.NODE_ENV === 'development'
+  );
 };
-

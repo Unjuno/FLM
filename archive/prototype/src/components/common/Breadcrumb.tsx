@@ -72,7 +72,11 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
       aria-label="パンくずリスト"
       role="navigation"
     >
-      <ol className="breadcrumb-list" itemScope itemType="https://schema.org/BreadcrumbList">
+      <ol
+        className="breadcrumb-list"
+        itemScope
+        itemType="https://schema.org/BreadcrumbList"
+      >
         {items.map((item, index) => {
           const isLast = isLastItem(index);
           // useMemoはループ内で使用できないため、通常の変数として計算
@@ -111,10 +115,7 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
               )}
               <meta itemProp="position" content={String(index + 1)} />
               {!isLast && (
-                <span
-                  className="breadcrumb-separator"
-                  aria-hidden="true"
-                >
+                <span className="breadcrumb-separator" aria-hidden="true">
                   {separator}
                 </span>
               )}
@@ -125,4 +126,3 @@ export const Breadcrumb: React.FC<BreadcrumbProps> = ({
     </nav>
   );
 };
-

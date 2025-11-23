@@ -30,7 +30,9 @@ export const LLMTestResults: React.FC<LLMTestResultsProps> = ({
       <div className="results-summary">
         <div className="summary-item">
           <span className="summary-label">成功率:</span>
-          <span className={`summary-value ${successRate === 100 ? 'success' : successRate > 0 ? 'partial' : 'error'}`}>
+          <span
+            className={`summary-value ${successRate === 100 ? 'success' : successRate > 0 ? 'partial' : 'error'}`}
+          >
             {successRate.toFixed(1)}%
           </span>
         </div>
@@ -73,4 +75,3 @@ export const LLMTestResults: React.FC<LLMTestResultsProps> = ({
     </div>
   );
 };
-

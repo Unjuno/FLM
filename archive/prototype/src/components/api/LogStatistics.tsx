@@ -1,12 +1,6 @@
 // LogStatistics - ログ統計情報コンポーネント
 
-import React, {
-  useState,
-  useEffect,
-  useCallback,
-  useMemo,
-  memo,
-} from 'react';
+import React, { useState, useEffect, useCallback, useMemo, memo } from 'react';
 import { safeInvoke } from '../../utils/tauri';
 import {
   BarChart,
@@ -265,7 +259,9 @@ const LogStatisticsComponent: React.FC<LogStatisticsProps> = ({
       if (!isMounted()) return;
       if (isMounted()) {
         setError(
-          err instanceof Error ? err.message : t('logStatistics.error.loadFailed')
+          err instanceof Error
+            ? err.message
+            : t('logStatistics.error.loadFailed')
         );
       }
     } finally {

@@ -60,4 +60,3 @@ export interface EngineDetectionResult {
   path?: string;
   message?: string;
 }
-

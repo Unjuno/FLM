@@ -25,13 +25,14 @@ jest.mock('../../src/utils/env', () => ({
 }));
 
 // loggerをモック
+const mockLogger = {
+  warn: jest.fn(),
+  error: jest.fn(),
+  debug: jest.fn(),
+  info: jest.fn(),
+};
 jest.mock('../../src/utils/logger', () => ({
-  logger: {
-    warn: jest.fn(),
-    error: jest.fn(),
-    debug: jest.fn(),
-    info: jest.fn(),
-  },
+  logger: mockLogger,
 }));
 
 // errorHandlerをモック
@@ -184,10 +185,7 @@ describe('tauri.ts', () => {
     it('Tauri環境が利用可能な場合、警告を表示しない', () => {
       checkTauriEnvironment('テスト機能');
       // 警告が表示されないことを確認（logger.warnが呼ばれない）
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { logger } = require('../../src/utils/logger');
-      expect(logger.warn).not.toHaveBeenCalled();
+      expect(mockLogger.warn).not.toHaveBeenCalled();
     });
 
     it.skip('Tauri環境が利用できない場合、開発環境で警告を表示する', () => {
@@ -209,9 +207,7 @@ describe('tauri.ts', () => {
 
       checkTauriEnvironment('テスト機能');
 
-      // eslint-disable-next-line @typescript-eslint/no-require-imports
-      const { logger } = require('../../src/utils/logger');
-      expect(logger.warn).not.toHaveBeenCalled();
+      expect(mockLogger.warn).not.toHaveBeenCalled();
     });
 
     it.skip('カスタム機能名で警告を表示する', () => {

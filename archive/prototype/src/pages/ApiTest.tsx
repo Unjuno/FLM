@@ -1,6 +1,12 @@
 // ApiTest - APIテストページ
 
-import React, { useState, useEffect, useTransition, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useTransition,
+  useMemo,
+  useCallback,
+} from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { InfoBanner } from '../components/common/InfoBanner';
@@ -35,7 +41,7 @@ interface ChatMessage {
 /**
  * APIテストページ
  * チャットインターフェースでAPIをテストします
- * 
+ *
  * @remarks
  * - Tauri環境ではIPC経由でHTTPリクエストを送信（自己署名証明書の問題を回避）
  * - リトライ機能付きでAPIリクエストを送信
@@ -184,7 +190,11 @@ export const ApiTest: React.FC = () => {
         }>('get_app_settings');
         TIMEOUT_MS = (appSettings.default_api_timeout_secs ?? 30) * 1000;
       } catch (err) {
-        logger.warn('グローバルタイムアウト設定の取得に失敗しました。デフォルト値を使用します。', 'ApiTest', err);
+        logger.warn(
+          'グローバルタイムアウト設定の取得に失敗しました。デフォルト値を使用します。',
+          'ApiTest',
+          err
+        );
       }
     }
     const timeoutId = setTimeout(() => {
@@ -194,10 +204,11 @@ export const ApiTest: React.FC = () => {
     try {
       // エンドポイント文字列から実際のURLを抽出（表示用文字列から最初のURLを取得）
       const actualEndpoint = extractEndpointUrl(apiInfo.endpoint);
-      
+
       // Tauri環境ではIPC経由でHTTPリクエストを送信（自己署名証明書の問題を回避）
-      const isTauri = typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
-      
+      const isTauri =
+        typeof window !== 'undefined' && '__TAURI_INTERNALS__' in window;
+
       const response = await retry(
         async () => {
           if (isTauri) {
@@ -221,7 +232,9 @@ export const ApiTest: React.FC = () => {
                     ...messages.map(m => ({
                       role: m.role as 'user' | 'assistant' | 'system',
                       content:
-                        typeof m.content === 'string' ? m.content : String(m.content),
+                        typeof m.content === 'string'
+                          ? m.content
+                          : String(m.content),
                     })),
                     { role: 'user' as const, content: userMessage.content },
                   ],
@@ -268,7 +281,9 @@ export const ApiTest: React.FC = () => {
                     ...messages.map(m => ({
                       role: m.role as 'user' | 'assistant' | 'system',
                       content:
-                        typeof m.content === 'string' ? m.content : String(m.content),
+                        typeof m.content === 'string'
+                          ? m.content
+                          : String(m.content),
                     })),
                     { role: 'user' as const, content: userMessage.content },
                   ],
@@ -278,7 +293,9 @@ export const ApiTest: React.FC = () => {
             );
 
             if (!fetchResponse.ok) {
-              throw new Error(`APIエラー: ${fetchResponse.status} ${fetchResponse.statusText}`);
+              throw new Error(
+                `APIエラー: ${fetchResponse.status} ${fetchResponse.statusText}`
+              );
             }
 
             return fetchResponse;
@@ -288,18 +305,24 @@ export const ApiTest: React.FC = () => {
           maxRetries: 3,
           retryDelay: 1000,
           exponentialBackoff: true,
-          shouldRetry: (error) => {
+          shouldRetry: error => {
             // タイムアウトや証明書エラーはリトライしない
             if (error instanceof Error && error.name === 'AbortError') {
               return false;
             }
-            if (error instanceof TypeError && error.message.includes('CERT_AUTHORITY_INVALID')) {
+            if (
+              error instanceof TypeError &&
+              error.message.includes('CERT_AUTHORITY_INVALID')
+            ) {
               return false;
             }
             return isRetryableError(error);
           },
           onRetry: (attempt, maxRetries) => {
-            logger.debug(`APIリクエストをリトライ中... (${attempt}/${maxRetries})`, 'ApiTest');
+            logger.debug(
+              `APIリクエストをリトライ中... (${attempt}/${maxRetries})`,
+              'ApiTest'
+            );
           },
         }
       );
@@ -336,7 +359,7 @@ export const ApiTest: React.FC = () => {
       setMessages(prev => [...prev, assistantMessage]);
     } catch (err) {
       clearTimeout(timeoutId);
-      
+
       // 証明書エラーの場合は分かりやすいメッセージを表示
       const errorMessageStr = extractErrorMessage(err);
       if (
@@ -346,7 +369,8 @@ export const ApiTest: React.FC = () => {
         errorMessageStr.includes('Failed to fetch') ||
         (err instanceof TypeError && errorMessageStr.includes('fetch'))
       ) {
-        const errorMessage = '自己署名証明書の検証エラーが発生しました。\n' +
+        const errorMessage =
+          '自己署名証明書の検証エラーが発生しました。\n' +
           'これは正常な動作です（FLMは自動生成された自己署名証明書を使用します）。\n' +
           'ブラウザのセキュリティ警告を無視して接続を続行してください。\n' +
           'または、Tauriアプリケーション内でテストを実行してください（証明書検証を自動的にスキップします）。';
@@ -357,16 +381,21 @@ export const ApiTest: React.FC = () => {
         };
         setMessages(prev => [...prev, errorChatMessage]);
         setError(errorMessage);
-        logger.error('証明書検証エラー', err instanceof Error ? err : new Error(extractErrorMessage(err)), 'ApiTest');
+        logger.error(
+          '証明書検証エラー',
+          err instanceof Error ? err : new Error(extractErrorMessage(err)),
+          'ApiTest'
+        );
         // 証明書エラーは正常な動作（自己署名証明書のため）
         return;
       }
-      
+
       // タイムアウトエラーの処理
       if (err instanceof Error && err.name === 'AbortError') {
         const errorMessage: ChatMessage = {
           role: 'assistant',
-          content: 'エラー: リクエストがタイムアウトしました（30秒以内に応答がありませんでした）',
+          content:
+            'エラー: リクエストがタイムアウトしました（30秒以内に応答がありませんでした）',
           timestamp: new Date(),
         };
         setMessages(prev => [...prev, errorMessage]);
@@ -381,12 +410,8 @@ export const ApiTest: React.FC = () => {
           timestamp: new Date(),
         };
         setMessages(prev => [...prev, errorMessage]);
-        
-        logger.error(
-          'APIリクエストに失敗しました',
-          err,
-          'ApiTest'
-        );
+
+        logger.error('APIリクエストに失敗しました', err, 'ApiTest');
       }
     } finally {
       setLoading(false);
@@ -397,12 +422,15 @@ export const ApiTest: React.FC = () => {
   /**
    * Enterキーで送信（Shift+Enterで改行）
    */
-  const handleKeyPress = useCallback((e: React.KeyboardEvent) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
-  }, [handleSend]);
+  const handleKeyPress = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (e.key === 'Enter' && !e.shiftKey) {
+        e.preventDefault();
+        handleSend();
+      }
+    },
+    [handleSend]
+  );
 
   if (loadingApiInfo) {
     return (
@@ -426,10 +454,7 @@ export const ApiTest: React.FC = () => {
       <div className="api-test-container">
         <Breadcrumb items={breadcrumbItems} />
         {error && (
-          <ErrorMessage
-            message={error}
-            onClose={() => setError(null)}
-          />
+          <ErrorMessage message={error} onClose={() => setError(null)} />
         )}
 
         {apiInfo && messages.length === 0 && (
@@ -460,7 +485,7 @@ export const ApiTest: React.FC = () => {
         {apiInfo && apiId && (
           <LLMTestRunner
             apiId={apiId}
-            onTestComplete={(results) => {
+            onTestComplete={results => {
               const successCount = results.filter(r => r.success).length;
               logger.info(
                 `自動テスト完了: ${successCount}/${results.length} 成功`,
@@ -489,7 +514,11 @@ export const ApiTest: React.FC = () => {
                         : '🤖 アシスタント'}
                     </span>
                     <span className="message-time">
-                      {formatTime(message.timestamp.toISOString(), 'ja-JP', false)}
+                      {formatTime(
+                        message.timestamp.toISOString(),
+                        'ja-JP',
+                        false
+                      )}
                     </span>
                     {message.tokens && (
                       <span className="message-tokens">
@@ -518,7 +547,10 @@ export const ApiTest: React.FC = () => {
               value={inputText}
               onChange={e => setInputText(e.target.value)}
               onKeyPress={handleKeyPress}
-              placeholder={t('apiTest.messagePlaceholder') || 'メッセージを入力... (Enterで送信、Shift+Enterで改行)'}
+              placeholder={
+                t('apiTest.messagePlaceholder') ||
+                'メッセージを入力... (Enterで送信、Shift+Enterで改行)'
+              }
               rows={3}
               disabled={loading || !apiInfo}
               aria-label={t('apiTest.messageInput') || 'メッセージ入力欄'}
@@ -533,7 +565,9 @@ export const ApiTest: React.FC = () => {
               disabled={!inputText.trim() || loading || !apiInfo || isPending}
               aria-label={t('apiTest.sendButton') || 'メッセージを送信'}
             >
-              {loading ? (t('apiTest.sending') || '送信中...') : (t('apiTest.send') || '送信')}
+              {loading
+                ? t('apiTest.sending') || '送信中...'
+                : t('apiTest.send') || '送信'}
             </button>
           </div>
         </div>

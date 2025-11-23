@@ -28,10 +28,7 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
   const { t } = useI18n();
 
   return (
-    <section
-      className="settings-section"
-      aria-labelledby="appearance-heading"
-    >
+    <section className="settings-section" aria-labelledby="appearance-heading">
       <h2 id="appearance-heading" className="settings-section-title">
         {t('settings.appearance.title')}
       </h2>
@@ -56,15 +53,9 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
           className="settings-select"
           aria-label={t('settings.appearance.theme')}
         >
-          <option value="auto">
-            {t('settings.appearance.themeAuto')}
-          </option>
-          <option value="light">
-            {t('settings.appearance.themeLight')}
-          </option>
-          <option value="dark">
-            {t('settings.appearance.themeDark')}
-          </option>
+          <option value="auto">{t('settings.appearance.themeAuto')}</option>
+          <option value="light">{t('settings.appearance.themeLight')}</option>
+          <option value="dark">{t('settings.appearance.themeDark')}</option>
         </select>
         <div className="settings-theme-preview">
           <button
@@ -81,4 +72,3 @@ export const AppearanceSettings: React.FC<AppearanceSettingsProps> = ({
     </section>
   );
 };
-

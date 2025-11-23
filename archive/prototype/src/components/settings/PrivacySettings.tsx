@@ -21,14 +21,8 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
   onSettingsChange,
 }) => {
   return (
-    <section
-      className="settings-section"
-      aria-labelledby="privacy-heading"
-    >
-      <h2
-        id="privacy-heading"
-        className="settings-section-title"
-      >
+    <section className="settings-section" aria-labelledby="privacy-heading">
+      <h2 id="privacy-heading" className="settings-section-title">
         プライバシー設定
       </h2>
       <div className="settings-group">
@@ -112,4 +106,3 @@ export const PrivacySettings: React.FC<PrivacySettingsProps> = ({
     </section>
   );
 };
-

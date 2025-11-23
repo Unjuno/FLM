@@ -21,6 +21,7 @@ futures = "0.3"
 chrono = { version = "0.4", features = ["serde"] }
 rand = "0.8"
 argon2.workspace = true
+async-trait.workspace = true
 
 [dev-dependencies]
 tokio-test = "0.4"

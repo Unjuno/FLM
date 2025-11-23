@@ -306,5 +306,11 @@
 
 ---
 
-**最終更新**: 2025-11-21  
-**次のステップ**: Phase 2（API設計の一貫性監査）開始
+**関連ドキュメント**:
+- `docs/specs/CORE_API.md` - Core API仕様
+- `docs/specs/DB_SCHEMA.md` - データベーススキーマ
+- `docs/audit/CORE_API_AUDIT_KYK.md` - KYK実施記録
+- `docs/audit/CORE_API_AUDIT_COMPLETE.md` - 監査完了サマリー
+- `docs/planning/PLAN.md` - プロジェクト計画
+
+**最終更新**: 2025-11-21

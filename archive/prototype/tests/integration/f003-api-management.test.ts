@@ -2,7 +2,13 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
-import { cleanupTestApis, createTestApi, waitForApiStart, waitForApiStop, handleTauriAppNotRunningError } from '../setup/test-helpers';
+import {
+  cleanupTestApis,
+  createTestApi,
+  waitForApiStart,
+  waitForApiStop,
+  handleTauriAppNotRunningError,
+} from '../setup/test-helpers';
 import { debugLog, debugWarn } from '../setup/debug';
 
 /**
@@ -50,7 +56,9 @@ describe('F003: API管理機能 統合テスト', () => {
   describe('API起動/停止機能', () => {
     it('should start API successfully', async () => {
       if (!testApiId) {
-        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
+        debugWarn(
+          'テスト用APIが作成されていないため、このテストをスキップします'
+        );
         return;
       }
 
@@ -81,7 +89,9 @@ describe('F003: API管理機能 統合テスト', () => {
 
     it('should stop API successfully', async () => {
       if (!testApiId) {
-        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
+        debugWarn(
+          'テスト用APIが作成されていないため、このテストをスキップします'
+        );
         return;
       }
 
@@ -112,7 +122,9 @@ describe('F003: API管理機能 統合テスト', () => {
 
     it('should handle starting already running API', async () => {
       if (!testApiId) {
-        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
+        debugWarn(
+          'テスト用APIが作成されていないため、このテストをスキップします'
+        );
         return;
       }
 
@@ -146,7 +158,9 @@ describe('F003: API管理機能 統合テスト', () => {
   describe('API設定更新機能', () => {
     it('should update API name', async () => {
       if (!testApiId) {
-        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
+        debugWarn(
+          'テスト用APIが作成されていないため、このテストをスキップします'
+        );
         return;
       }
 
@@ -176,7 +190,9 @@ describe('F003: API管理機能 統合テスト', () => {
 
     it('should update API port number', async () => {
       if (!testApiId) {
-        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
+        debugWarn(
+          'テスト用APIが作成されていないため、このテストをスキップします'
+        );
         return;
       }
 
@@ -206,7 +222,9 @@ describe('F003: API管理機能 統合テスト', () => {
 
     it('should update authentication setting', async () => {
       if (!testApiId) {
-        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
+        debugWarn(
+          'テスト用APIが作成されていないため、このテストをスキップします'
+        );
         return;
       }
 
@@ -234,7 +252,9 @@ describe('F003: API管理機能 統合テスト', () => {
 
     it('should handle invalid port number in update', async () => {
       if (!testApiId) {
-        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
+        debugWarn(
+          'テスト用APIが作成されていないため、このテストをスキップします'
+        );
         return;
       }
 
@@ -269,7 +289,9 @@ describe('F003: API管理機能 統合テスト', () => {
   describe('APIキー再生成機能', () => {
     it('should regenerate API key successfully', async () => {
       if (!testApiId) {
-        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
+        debugWarn(
+          'テスト用APIが作成されていないため、このテストをスキップします'
+        );
         return;
       }
 
@@ -312,7 +334,9 @@ describe('F003: API管理機能 統合テスト', () => {
 
     it('should handle regeneration when auth is disabled', async () => {
       if (!testApiId) {
-        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
+        debugWarn(
+          'テスト用APIが作成されていないため、このテストをスキップします'
+        );
         return;
       }
 
@@ -444,7 +468,9 @@ describe('F003: API管理機能 統合テスト', () => {
   describe('API詳細取得機能', () => {
     it('should retrieve API details successfully', async () => {
       if (!testApiId) {
-        debugWarn('テスト用APIが作成されていないため、このテストをスキップします');
+        debugWarn(
+          'テスト用APIが作成されていないため、このテストをスキップします'
+        );
         return;
       }
 

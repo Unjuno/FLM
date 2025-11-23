@@ -11,7 +11,20 @@ interface ModelInfo {
   description?: string;
   size?: number;
   parameters?: number;
-  category?: 'chat' | 'code' | 'translation' | 'summarization' | 'qa' | 'vision' | 'audio' | 'multimodal' | 'image-generation' | 'audio-generation' | 'embedding' | 'video-generation' | 'other';
+  category?:
+    | 'chat'
+    | 'code'
+    | 'translation'
+    | 'summarization'
+    | 'qa'
+    | 'vision'
+    | 'audio'
+    | 'multimodal'
+    | 'image-generation'
+    | 'audio-generation'
+    | 'embedding'
+    | 'video-generation'
+    | 'other';
   recommended?: boolean;
 }
 

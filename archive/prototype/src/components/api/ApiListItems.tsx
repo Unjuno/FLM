@@ -39,8 +39,11 @@ const ApiListItemsComponent: React.FC<ApiListItemsProps> = ({
   getStatusText,
 }) => {
   const parentRef = useRef<HTMLDivElement | null>(null);
-  const shouldUseVirtualScroll = useMemo(() => apis.length >= 100, [apis.length]);
-  
+  const shouldUseVirtualScroll = useMemo(
+    () => apis.length >= 100,
+    [apis.length]
+  );
+
   const rowVirtualizer = useVirtualizer({
     count: apis.length,
     getScrollElement: () => parentRef.current,
@@ -50,28 +53,39 @@ const ApiListItemsComponent: React.FC<ApiListItemsProps> = ({
   });
 
   // 仮想スクロール用のスタイル設定（メモ化）
-  const containerStyle = useMemo(() => ({
-    '--virtual-height': shouldUseVirtualScroll ? '600px' : 'auto',
-    '--virtual-overflow': shouldUseVirtualScroll ? 'auto' : 'visible',
-  } as React.CSSProperties), [shouldUseVirtualScroll]);
+  const containerStyle = useMemo(
+    () =>
+      ({
+        '--virtual-height': shouldUseVirtualScroll ? '600px' : 'auto',
+        '--virtual-overflow': shouldUseVirtualScroll ? 'auto' : 'visible',
+      }) as React.CSSProperties,
+    [shouldUseVirtualScroll]
+  );
 
   // 仮想スクロールアイテムのスタイル設定関数（メモ化）
-  const getVirtualItemStyle = useCallback((start: number) => ({
-    '--virtual-top': '0',
-    '--virtual-left': '0',
-    '--virtual-width': '100%',
-    '--virtual-transform': `translateY(${start}px)`,
-  } as React.CSSProperties), []);
+  const getVirtualItemStyle = useCallback(
+    (start: number) =>
+      ({
+        '--virtual-top': '0',
+        '--virtual-left': '0',
+        '--virtual-width': '100%',
+        '--virtual-transform': `translateY(${start}px)`,
+      }) as React.CSSProperties,
+    []
+  );
 
   // 親要素のref設定（メモ化）
-  const setParentRef = useCallback((el: HTMLDivElement | null) => {
-    parentRef.current = el;
-    if (el) {
-      Object.entries(containerStyle).forEach(([key, value]) => {
-        el.style.setProperty(key, String(value));
-      });
-    }
-  }, [containerStyle]);
+  const setParentRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      parentRef.current = el;
+      if (el) {
+        Object.entries(containerStyle).forEach(([key, value]) => {
+          el.style.setProperty(key, String(value));
+        });
+      }
+    },
+    [containerStyle]
+  );
 
   return (
     <div
@@ -88,16 +102,19 @@ const ApiListItemsComponent: React.FC<ApiListItemsProps> = ({
         onSelectAll={onSelectAll}
       />
       <div
-        ref={(el) => {
+        ref={el => {
           if (el && shouldUseVirtualScroll) {
-            el.style.setProperty('--virtual-height', `${rowVirtualizer.getTotalSize()}px`);
+            el.style.setProperty(
+              '--virtual-height',
+              `${rowVirtualizer.getTotalSize()}px`
+            );
             el.style.setProperty('--virtual-position', 'relative');
           }
         }}
         className={shouldUseVirtualScroll ? 'virtual-scroll-container' : ''}
       >
         {shouldUseVirtualScroll
-          ? rowVirtualizer.getVirtualItems().map((virtualRow) => {
+          ? rowVirtualizer.getVirtualItems().map(virtualRow => {
               const api = apis[virtualRow.index];
               const itemStyle = getVirtualItemStyle(virtualRow.start);
               return (
@@ -119,7 +136,7 @@ const ApiListItemsComponent: React.FC<ApiListItemsProps> = ({
                 </div>
               );
             })
-          : apis.map((api) => (
+          : apis.map(api => (
               <ApiCard
                 key={api.id}
                 api={api}
@@ -141,42 +158,47 @@ const ApiListItemsComponent: React.FC<ApiListItemsProps> = ({
  * ApiListItemsをメモ化してパフォーマンスを最適化
  * apis, selectedApiIds, operatingApiIds, apiOperationProgressが変更された場合のみ再レンダリング
  */
-export const ApiListItems = React.memo(ApiListItemsComponent, (prevProps, nextProps) => {
-  // apisの長さとIDが同じかチェック
-  if (prevProps.apis.length !== nextProps.apis.length) {
-    return false;
+export const ApiListItems = React.memo(
+  ApiListItemsComponent,
+  (prevProps, nextProps) => {
+    // apisの長さとIDが同じかチェック
+    if (prevProps.apis.length !== nextProps.apis.length) {
+      return false;
+    }
+
+    const apisChanged = prevProps.apis.some(
+      (api, index) =>
+        api.id !== nextProps.apis[index]?.id ||
+        api.status !== nextProps.apis[index]?.status
+    );
+
+    if (apisChanged) {
+      return false;
+    }
+
+    // 選択状態の変更をチェック
+    if (prevProps.selectedApiIds.size !== nextProps.selectedApiIds.size) {
+      return false;
+    }
+
+    // 操作中のAPIの変更をチェック
+    if (prevProps.operatingApiIds.size !== nextProps.operatingApiIds.size) {
+      return false;
+    }
+
+    // 進捗情報の変更をチェック
+    if (
+      prevProps.apiOperationProgress.size !==
+      nextProps.apiOperationProgress.size
+    ) {
+      return false;
+    }
+
+    // 全選択状態の変更をチェック
+    if (prevProps.isAllSelected !== nextProps.isAllSelected) {
+      return false;
+    }
+
+    return true;
   }
-  
-  const apisChanged = prevProps.apis.some((api, index) => 
-    api.id !== nextProps.apis[index]?.id || 
-    api.status !== nextProps.apis[index]?.status
-  );
-  
-  if (apisChanged) {
-    return false;
-  }
-
-  // 選択状態の変更をチェック
-  if (prevProps.selectedApiIds.size !== nextProps.selectedApiIds.size) {
-    return false;
-  }
-
-  // 操作中のAPIの変更をチェック
-  if (prevProps.operatingApiIds.size !== nextProps.operatingApiIds.size) {
-    return false;
-  }
-
-  // 進捗情報の変更をチェック
-  if (prevProps.apiOperationProgress.size !== nextProps.apiOperationProgress.size) {
-    return false;
-  }
-
-  // 全選択状態の変更をチェック
-  if (prevProps.isAllSelected !== nextProps.isAllSelected) {
-    return false;
-  }
-
-  return true;
-});
-
-
+);

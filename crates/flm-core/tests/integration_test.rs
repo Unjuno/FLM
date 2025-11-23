@@ -5,7 +5,6 @@
 #[cfg(test)]
 mod tests {
     use flm_core::domain::*;
-    use flm_core::error::*;
 
     #[test]
     fn test_engine_state_serialization() {
@@ -35,6 +34,8 @@ mod tests {
             acme_domain: None,
             acme_challenge: None,
             acme_dns_profile_id: None,
+            config_db_path: None,
+            security_db_path: None,
         };
 
         let json = serde_json::to_string(&config).unwrap();

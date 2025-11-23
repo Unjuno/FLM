@@ -12,9 +12,18 @@ import { extractErrorMessage } from '../utils/errorHandler';
 import { logger } from '../utils/logger';
 import { copyToClipboard } from '../utils/clipboard';
 import { useAsyncOperation } from '../hooks/useAsyncOperation';
-import { ErrorLogFilters, type ErrorLogFilters as ErrorLogFiltersType } from '../components/errorLogs/ErrorLogFilters';
-import { ErrorLogExport, type ExportFormat } from '../components/errorLogs/ErrorLogExport';
-import { ErrorLogStatistics, type ErrorLogInfo } from '../components/errorLogs/ErrorLogStatistics';
+import {
+  ErrorLogFilters,
+  type ErrorLogFilters as ErrorLogFiltersType,
+} from '../components/errorLogs/ErrorLogFilters';
+import {
+  ErrorLogExport,
+  type ExportFormat,
+} from '../components/errorLogs/ErrorLogExport';
+import {
+  ErrorLogStatistics,
+  type ErrorLogInfo,
+} from '../components/errorLogs/ErrorLogStatistics';
 import { ErrorLogList } from '../components/errorLogs/ErrorLogList';
 import './ErrorLogs.css';
 
@@ -34,14 +43,19 @@ export const ErrorLogs: React.FC = () => {
   });
 
   // パンくずリストの項目
-  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: t('header.settings') || '設定', path: '/settings' },
-    { label: t('errorLogs.title') || 'エラーログ' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(
+    () => [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('header.settings') || '設定', path: '/settings' },
+      { label: t('errorLogs.title') || 'エラーログ' },
+    ],
+    [t]
+  );
 
   // エラーログ一覧を取得する非同期操作
-  const loadErrorLogsOperation = useCallback(async (): Promise<ErrorLogInfo[]> => {
+  const loadErrorLogsOperation = useCallback(async (): Promise<
+    ErrorLogInfo[]
+  > => {
     return await safeInvoke<ErrorLogInfo[]>('list_error_logs', {
       error_category: filters.error_category || null,
       api_id: filters.api_id || null,
@@ -74,32 +88,44 @@ export const ErrorLogs: React.FC = () => {
   }, [loadErrorLogs]);
 
   // エラーログをエクスポート
-  const handleExport = useCallback(async (format: ExportFormat) => {
-    try {
-      setExporting(true);
-      clearError();
+  const handleExport = useCallback(
+    async (format: ExportFormat) => {
+      try {
+        setExporting(true);
+        clearError();
 
-      const filePath = await safeInvoke<string>('export_error_logs', {
-        format,
-        error_category: filters.error_category || null,
-        api_id: filters.api_id || null,
-        start_date: filters.start_date || null,
-        end_date: filters.end_date || null,
-      });
+        const filePath = await safeInvoke<string>('export_error_logs', {
+          format,
+          error_category: filters.error_category || null,
+          api_id: filters.api_id || null,
+          start_date: filters.start_date || null,
+          end_date: filters.end_date || null,
+        });
 
-      logger.info(`エラーログをエクスポートしました: ${filePath}`, '', 'ErrorLogs');
-      
-      // ファイルパスをクリップボードにコピー
-      await copyToClipboard(filePath);
-      showSuccess(`エラーログをエクスポートしました。ファイルパスをクリップボードにコピーしました。`);
-    } catch (err) {
-      const errorMessage = extractErrorMessage(err, 'エラーログのエクスポートに失敗しました');
-      logger.error('エラーログのエクスポートエラー', err, 'ErrorLogs');
-      showError('エクスポートに失敗しました', errorMessage);
-    } finally {
-      setExporting(false);
-    }
-  }, [filters, clearError, showSuccess, showError]);
+        logger.info(
+          `エラーログをエクスポートしました: ${filePath}`,
+          '',
+          'ErrorLogs'
+        );
+
+        // ファイルパスをクリップボードにコピー
+        await copyToClipboard(filePath);
+        showSuccess(
+          `エラーログをエクスポートしました。ファイルパスをクリップボードにコピーしました。`
+        );
+      } catch (err) {
+        const errorMessage = extractErrorMessage(
+          err,
+          'エラーログのエクスポートに失敗しました'
+        );
+        logger.error('エラーログのエクスポートエラー', err, 'ErrorLogs');
+        showError('エクスポートに失敗しました', errorMessage);
+      } finally {
+        setExporting(false);
+      }
+    },
+    [filters, clearError, showSuccess, showError]
+  );
 
   // フィルタークリア
   const handleClearFilters = useCallback(() => {
@@ -111,14 +137,16 @@ export const ErrorLogs: React.FC = () => {
     });
   }, []);
 
-
   return (
     <AppLayout>
       <div className="error-logs-page">
         <div className="page-container error-logs-container">
           <Breadcrumb items={breadcrumbItems} />
           <header className="page-header error-logs-header">
-            <button className="back-button" onClick={() => navigate('/settings')}>
+            <button
+              className="back-button"
+              onClick={() => navigate('/settings')}
+            >
               ← 設定に戻る
             </button>
             <h1>エラーログ</h1>
@@ -131,11 +159,7 @@ export const ErrorLogs: React.FC = () => {
           </header>
 
           {error && (
-            <ErrorMessage
-              message={error}
-              type="general"
-              onClose={clearError}
-            />
+            <ErrorMessage message={error} type="general" onClose={clearError} />
           )}
 
           <ErrorLogStatistics errorLogs={errorLogs} />
@@ -156,4 +180,3 @@ export const ErrorLogs: React.FC = () => {
     </AppLayout>
   );
 };
-

@@ -2,7 +2,11 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
-import { cleanupTestApis, handleTauriAppNotRunningError, checkTauriAvailable } from '../setup/test-helpers';
+import {
+  cleanupTestApis,
+  handleTauriAppNotRunningError,
+  checkTauriAvailable,
+} from '../setup/test-helpers';
 import { debugLog, debugWarn } from '../setup/debug';
 
 /**
@@ -15,12 +19,15 @@ describe('画像生成モデル API テスト', () => {
 
   const imageGenerationModels = [
     { name: 'flux:latest', description: 'Flux - 高品質画像生成モデル' },
-    { name: 'stable-diffusion-xl:latest', description: 'Stable Diffusion XL - 画像生成モデル' },
+    {
+      name: 'stable-diffusion-xl:latest',
+      description: 'Stable Diffusion XL - 画像生成モデル',
+    },
   ];
 
   beforeAll(async () => {
     debugLog('画像生成モデルAPIテストを開始します');
-    
+
     try {
       const result = await invoke<{
         id: string;
@@ -48,10 +55,15 @@ describe('画像生成モデル API テスト', () => {
       await new Promise(resolve => setTimeout(resolve, 3000));
     } catch (error) {
       if (handleTauriAppNotRunningError(error)) {
-        debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+        debugWarn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
-      debugWarn('画像生成API作成に失敗したため、このテストをスキップします:', error);
+      debugWarn(
+        '画像生成API作成に失敗したため、このテストをスキップします:',
+        error
+      );
     }
   });
 
@@ -70,7 +82,9 @@ describe('画像生成モデル API テスト', () => {
 
       const isTauriAvailable = await checkTauriAvailable();
       if (!isTauriAvailable) {
-        debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+        debugWarn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
@@ -90,15 +104,19 @@ describe('画像生成モデル API テスト', () => {
     it('画像生成モデルのカテゴリが正しく設定されていること', async () => {
       const isTauriAvailable = await checkTauriAvailable();
       if (!isTauriAvailable) {
-        debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+        debugWarn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
 
-      const models = await invoke<Array<{
-        name: string;
-        category?: string;
-      }>>('search_models', {
+      const models = await invoke<
+        Array<{
+          name: string;
+          category?: string;
+        }>
+      >('search_models', {
         engineType: 'ollama',
         category: 'image-generation',
         limit: 10,
@@ -107,11 +125,8 @@ describe('画像生成モデル API テスト', () => {
       expect(models).toBeDefined();
       expect(Array.isArray(models)).toBe(true);
 
-      const imageModels = models.filter(
-        m => m.category === 'image-generation'
-      );
+      const imageModels = models.filter(m => m.category === 'image-generation');
       expect(imageModels.length).toBeGreaterThan(0);
     }, 10000);
   });
 });
-

@@ -54,4 +54,3 @@ export function useRequestThrottle(options: UseRequestThrottleOptions) {
     lastRequestTimeRef,
   };
 }
-

@@ -49,3 +49,9 @@
 3. `EngineRegistry` に登録するモジュールを追加
 4. `docs/specs/ENGINE_DETECT.md` にステップを追記
 
+---
+
+**関連ドキュメント**:
+- `docs/specs/CORE_API.md` - コアAPI仕様（EngineStatus、EngineRegistry）
+- `docs/specs/CLI_SPEC.md` - CLI仕様（`flm engines detect`コマンド）
+- `docs/planning/PLAN.md` - プロジェクト計画

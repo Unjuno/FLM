@@ -58,4 +58,3 @@ export const ErrorLogStatistics: React.FC<ErrorLogStatisticsProps> = ({
     </section>
   );
 };
-

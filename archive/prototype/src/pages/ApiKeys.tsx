@@ -1,7 +1,14 @@
 // SPDX-License-Identifier: MIT
 // ApiKeys - APIキー管理ページ
 
-import React, { useState, useEffect, useTransition, useMemo, useRef, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useTransition,
+  useMemo,
+  useRef,
+  useCallback,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { API_KEY, DISPLAY_LIMITS, TIMEOUT } from '../constants/config';
@@ -36,7 +43,7 @@ interface ApiKeyInfo {
 /**
  * APIキー管理ページ
  * すべてのAPIとそのAPIキーを一覧表示・管理します
- * 
+ *
  * @remarks
  * - セキュリティ上の理由で、APIキーは表示時のみ取得
  * - メモリリーク対策として、setTimeoutのクリーンアップを実装
@@ -50,10 +57,10 @@ export const ApiKeys: React.FC = () => {
   const [visibleKeys, setVisibleKeys] = useState<Set<string>>(new Set());
   const [apiKeys, setApiKeys] = useState<ApiKeyInfo[]>([]);
   const [copied, setCopied] = useState<string | null>(null);
-  
+
   // メモリリーク対策: setTimeoutのクリーンアップ用
   const copyTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     message: string;
@@ -68,11 +75,14 @@ export const ApiKeys: React.FC = () => {
     confirmVariant: 'primary',
   });
 
-  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: t('header.settings') || '設定', path: '/settings' },
-    { label: t('apiKeys.title') || 'APIキー管理' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(
+    () => [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('header.settings') || '設定', path: '/settings' },
+      { label: t('apiKeys.title') || 'APIキー管理' },
+    ],
+    [t]
+  );
 
   const isMounted = useIsMounted();
 
@@ -137,179 +147,208 @@ export const ApiKeys: React.FC = () => {
    * 特定のAPIキーを取得（表示時のみ）
    * セキュリティ上の理由で、APIキーは必要時のみ取得する
    */
-  const loadApiKey = useCallback(async (apiId: string) => {
-    if (!isMounted()) return null;
-    
-    try {
-      const key = await safeInvoke<string | null>('get_api_key', {
-        api_id: apiId,
-      });
-      
+  const loadApiKey = useCallback(
+    async (apiId: string) => {
       if (!isMounted()) return null;
-      
-      return key;
-    } catch (err) {
-      if (isDev()) {
-        logger.error(
-          'APIキーの取得に失敗しました',
-          err instanceof Error ? err : new Error(extractErrorMessage(err)),
-          'ApiKeys'
-        );
+
+      try {
+        const key = await safeInvoke<string | null>('get_api_key', {
+          api_id: apiId,
+        });
+
+        if (!isMounted()) return null;
+
+        return key;
+      } catch (err) {
+        if (isDev()) {
+          logger.error(
+            'APIキーの取得に失敗しました',
+            err instanceof Error ? err : new Error(extractErrorMessage(err)),
+            'ApiKeys'
+          );
+        }
+        return null;
       }
-      return null;
-    }
-  }, [isMounted]);
+    },
+    [isMounted]
+  );
 
   /**
    * APIキーの表示/非表示を切り替え
    * 表示時はAPIキーを取得し、非表示時は表示状態のみを更新
    */
-  const toggleKeyVisibility = useCallback(async (apiId: string) => {
-    if (!isMounted()) return;
-    
-    if (visibleKeys.has(apiId)) {
-      if (isMounted()) {
-        setVisibleKeys(prev => {
-          const newSet = new Set(prev);
-          newSet.delete(apiId);
-          return newSet;
-        });
-      }
-    } else {
-      const key = await loadApiKey(apiId);
-      
+  const toggleKeyVisibility = useCallback(
+    async (apiId: string) => {
       if (!isMounted()) return;
-      
-      if (key) {
-        setApiKeys(prev =>
-          prev.map(info =>
-            info.apiId === apiId ? { ...info, apiKey: key } : info
-          )
-        );
-        setVisibleKeys(prev => new Set(prev).add(apiId));
+
+      if (visibleKeys.has(apiId)) {
+        if (isMounted()) {
+          setVisibleKeys(prev => {
+            const newSet = new Set(prev);
+            newSet.delete(apiId);
+            return newSet;
+          });
+        }
       } else {
-        showErrorNotification(
-          'APIキーの取得に失敗しました',
-          'セキュリティ上の理由で、APIキーは作成時のみ表示されます。'
-        );
+        const key = await loadApiKey(apiId);
+
+        if (!isMounted()) return;
+
+        if (key) {
+          setApiKeys(prev =>
+            prev.map(info =>
+              info.apiId === apiId ? { ...info, apiKey: key } : info
+            )
+          );
+          setVisibleKeys(prev => new Set(prev).add(apiId));
+        } else {
+          showErrorNotification(
+            'APIキーの取得に失敗しました',
+            'セキュリティ上の理由で、APIキーは作成時のみ表示されます。'
+          );
+        }
       }
-    }
-  }, [visibleKeys, loadApiKey, isMounted, showErrorNotification]);
+    },
+    [visibleKeys, loadApiKey, isMounted, showErrorNotification]
+  );
 
   /**
    * クリップボードにコピー
    * コピー成功後、一定時間後に「コピー済み」表示を自動で解除
    */
-  const handleCopyToClipboard = useCallback(async (text: string, apiId: string) => {
-    if (!isMounted()) return;
-    
-    try {
-      await copyToClipboard(text);
-      
+  const handleCopyToClipboard = useCallback(
+    async (text: string, apiId: string) => {
       if (!isMounted()) return;
-      
-      setCopied(apiId);
-      
-      // 既存のタイマーをクリアしてから新しいタイマーを設定（メモリリーク対策）
-      if (copyTimeoutRef.current) {
-        clearTimeout(copyTimeoutRef.current);
-      }
-      
-      copyTimeoutRef.current = setTimeout(() => {
+
+      try {
+        await copyToClipboard(text);
+
         if (!isMounted()) return;
-        setCopied(null);
-        copyTimeoutRef.current = null;
-      }, TIMEOUT.COPY_NOTIFICATION);
-    } catch (err) {
-      if (!isMounted()) return;
-      showErrorNotification('クリップボードへのコピーに失敗しました', extractErrorMessage(err));
-    }
-  }, [isMounted, showErrorNotification]);
+
+        setCopied(apiId);
+
+        // 既存のタイマーをクリアしてから新しいタイマーを設定（メモリリーク対策）
+        if (copyTimeoutRef.current) {
+          clearTimeout(copyTimeoutRef.current);
+        }
+
+        copyTimeoutRef.current = setTimeout(() => {
+          if (!isMounted()) return;
+          setCopied(null);
+          copyTimeoutRef.current = null;
+        }, TIMEOUT.COPY_NOTIFICATION);
+      } catch (err) {
+        if (!isMounted()) return;
+        showErrorNotification(
+          'クリップボードへのコピーに失敗しました',
+          extractErrorMessage(err)
+        );
+      }
+    },
+    [isMounted, showErrorNotification]
+  );
 
   /**
    * APIキーを再生成
    * 現在のAPIキーは無効化され、新しいAPIキーが生成される
    */
-  const handleRegenerateKey = useCallback(async (apiId: string) => {
-    if (!isMounted()) return;
-    
-    setConfirmDialog({
-      isOpen: true,
-      message: 'APIキーを再生成しますか？現在のAPIキーは無効になります。',
-      confirmVariant: 'primary',
-      onConfirm: async () => {
-        if (!isMounted()) return;
-        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-        try {
-          const newKey = await safeInvoke<string>('regenerate_api_key', { api_id: apiId });
+  const handleRegenerateKey = useCallback(
+    async (apiId: string) => {
+      if (!isMounted()) return;
 
+      setConfirmDialog({
+        isOpen: true,
+        message: 'APIキーを再生成しますか？現在のAPIキーは無効になります。',
+        confirmVariant: 'primary',
+        onConfirm: async () => {
           if (!isMounted()) return;
-
-          if (newKey) {
-            setApiKeys(prev =>
-              prev.map(info =>
-                info.apiId === apiId ? { ...info, apiKey: newKey } : info
-              )
-            );
-            setVisibleKeys(prev => new Set(prev).add(apiId));
-          }
-
-          showSuccess(
-            'APIキーを再生成しました',
-            '新しいAPIキーは下記に表示されます。安全に保存してください。',
-            5000
-          );
-
-          await loadApiKeys();
-        } catch (err) {
-          if (!isMounted()) return;
-          const errorMessage = extractErrorMessage(err, 'APIキーの再生成に失敗しました');
-          showErrorNotification('APIキーの再生成に失敗しました', errorMessage);
-        }
-      },
-      onCancel: () => {
-        if (isMounted()) {
           setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-        }
-      },
-    });
-  }, [loadApiKeys, showSuccess, showErrorNotification, isMounted]);
+          try {
+            const newKey = await safeInvoke<string>('regenerate_api_key', {
+              api_id: apiId,
+            });
+
+            if (!isMounted()) return;
+
+            if (newKey) {
+              setApiKeys(prev =>
+                prev.map(info =>
+                  info.apiId === apiId ? { ...info, apiKey: newKey } : info
+                )
+              );
+              setVisibleKeys(prev => new Set(prev).add(apiId));
+            }
+
+            showSuccess(
+              'APIキーを再生成しました',
+              '新しいAPIキーは下記に表示されます。安全に保存してください。',
+              5000
+            );
+
+            await loadApiKeys();
+          } catch (err) {
+            if (!isMounted()) return;
+            const errorMessage = extractErrorMessage(
+              err,
+              'APIキーの再生成に失敗しました'
+            );
+            showErrorNotification(
+              'APIキーの再生成に失敗しました',
+              errorMessage
+            );
+          }
+        },
+        onCancel: () => {
+          if (isMounted()) {
+            setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+          }
+        },
+      });
+    },
+    [loadApiKeys, showSuccess, showErrorNotification, isMounted]
+  );
 
   /**
    * APIキーを削除
    * 削除操作は取り消せないため、確認ダイアログを表示
    */
-  const handleDeleteKey = useCallback(async (apiId: string) => {
-    if (!isMounted()) return;
-    
-    setConfirmDialog({
-      isOpen: true,
-      message: 'このAPIキーを削除しますか？この操作は取り消せません。',
-      confirmVariant: 'danger',
-      onConfirm: async () => {
-        if (!isMounted()) return;
-        setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-        try {
-          await safeInvoke('delete_api_key', { apiId });
+  const handleDeleteKey = useCallback(
+    async (apiId: string) => {
+      if (!isMounted()) return;
 
+      setConfirmDialog({
+        isOpen: true,
+        message: 'このAPIキーを削除しますか？この操作は取り消せません。',
+        confirmVariant: 'danger',
+        onConfirm: async () => {
           if (!isMounted()) return;
-
-          showSuccess('APIキーを削除しました', '', 3000);
-
-          await loadApiKeys();
-        } catch (err) {
-          if (!isMounted()) return;
-          const errorMessage = extractErrorMessage(err, 'APIキーの削除に失敗しました');
-          showErrorNotification('APIキーの削除に失敗しました', errorMessage);
-        }
-      },
-      onCancel: () => {
-        if (isMounted()) {
           setConfirmDialog(prev => ({ ...prev, isOpen: false }));
-        }
-      },
-    });
-  }, [loadApiKeys, showSuccess, showErrorNotification, isMounted]);
+          try {
+            await safeInvoke('delete_api_key', { apiId });
+
+            if (!isMounted()) return;
+
+            showSuccess('APIキーを削除しました', '', 3000);
+
+            await loadApiKeys();
+          } catch (err) {
+            if (!isMounted()) return;
+            const errorMessage = extractErrorMessage(
+              err,
+              'APIキーの削除に失敗しました'
+            );
+            showErrorNotification('APIキーの削除に失敗しました', errorMessage);
+          }
+        },
+        onCancel: () => {
+          if (isMounted()) {
+            setConfirmDialog(prev => ({ ...prev, isOpen: false }));
+          }
+        },
+      });
+    },
+    [loadApiKeys, showSuccess, showErrorNotification, isMounted]
+  );
 
   /**
    * APIキーを部分的にマスク
@@ -348,17 +387,17 @@ export const ApiKeys: React.FC = () => {
             ← ホームに戻る
           </button>
           <h1>{t('apiKeys.title') || 'APIキー管理'}</h1>
-          <button className="refresh-button" onClick={loadApiKeys} aria-label={t('apiKeys.refresh') || '更新'}>
+          <button
+            className="refresh-button"
+            onClick={loadApiKeys}
+            aria-label={t('apiKeys.refresh') || '更新'}
+          >
             {t('apiKeys.refresh') || '更新'}
           </button>
         </header>
 
         {error && (
-          <ErrorMessage
-            message={error}
-            type="api"
-            onClose={clearError}
-          />
+          <ErrorMessage message={error} type="api" onClose={clearError} />
         )}
 
         <div className="api-keys-content">

@@ -45,18 +45,20 @@ export const ModelCatalogManagement: React.FC = () => {
   useGlobalKeyboardShortcuts();
 
   // パンくずリストの項目
-  const breadcrumbItems: BreadcrumbItem[] = React.useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: 'モデル管理', path: '/models' },
-    { label: 'モデルカタログ管理' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = React.useMemo(
+    () => [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: 'モデル管理', path: '/models' },
+      { label: 'モデルカタログ管理' },
+    ],
+    [t]
+  );
 
   // モデルカタログを読み込む非同期操作
-  const loadModelCatalogOperation = React.useCallback(async (): Promise<ModelCatalogInfo[]> => {
-    return await safeInvoke<ModelCatalogInfo[]>(
-      'get_model_catalog',
-      {}
-    );
+  const loadModelCatalogOperation = React.useCallback(async (): Promise<
+    ModelCatalogInfo[]
+  > => {
+    return await safeInvoke<ModelCatalogInfo[]>('get_model_catalog', {});
   }, []);
 
   // 非同期操作フックを使用
@@ -109,7 +111,8 @@ export const ModelCatalogManagement: React.FC = () => {
       (model.description &&
         model.description.toLowerCase().includes(searchQuery.toLowerCase()));
     const matchesCategory =
-      selectedCategory === 'all' || (model.category || 'other') === selectedCategory;
+      selectedCategory === 'all' ||
+      (model.category || 'other') === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
@@ -142,9 +145,7 @@ export const ModelCatalogManagement: React.FC = () => {
   const categories = React.useMemo<string[]>(
     () =>
       Array.from(
-        new Set(
-          models.map(model => model.category ?? 'other')
-        )
+        new Set(models.map(model => model.category ?? 'other'))
       ).sort(),
     [models]
   );
@@ -213,11 +214,7 @@ export const ModelCatalogManagement: React.FC = () => {
         </header>
 
         {error && (
-          <ErrorMessage
-            message={error}
-            type="api"
-            onClose={clearError}
-          />
+          <ErrorMessage message={error} type="api" onClose={clearError} />
         )}
 
         <div className="model-catalog-management-content">
@@ -301,7 +298,9 @@ export const ModelCatalogManagement: React.FC = () => {
                       </div>
                       <div className="model-meta-item">
                         <span className="meta-label">カテゴリ:</span>
-                        <span className="meta-value">{getCategoryLabel(model.category)}</span>
+                        <span className="meta-value">
+                          {getCategoryLabel(model.category)}
+                        </span>
                       </div>
                       {model.author && (
                         <div className="model-meta-item">

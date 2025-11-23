@@ -32,9 +32,7 @@ export const HomeFeatureSection: React.FC<HomeFeatureSectionProps> = ({
     <section className="home-section">
       <button className="home-section-header" onClick={onToggle}>
         <h2 className="home-section-title">{title}</h2>
-        <span className="home-section-toggle">
-          {isExpanded ? '▼' : '▶'}
-        </span>
+        <span className="home-section-toggle">{isExpanded ? '▼' : '▶'}</span>
       </button>
       {isExpanded && (
         <nav className="home-actions" aria-label={title}>
@@ -62,4 +60,3 @@ export const HomeFeatureSection: React.FC<HomeFeatureSectionProps> = ({
     </section>
   );
 };
-

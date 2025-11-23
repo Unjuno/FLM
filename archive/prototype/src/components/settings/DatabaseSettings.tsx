@@ -12,10 +12,7 @@ export const DatabaseSettings: React.FC = () => {
   const { t } = useI18n();
 
   return (
-    <section
-      className="settings-section"
-      aria-labelledby="database-heading"
-    >
+    <section className="settings-section" aria-labelledby="database-heading">
       <h2 id="database-heading" className="settings-section-title">
         {t('settings.database.title')}
       </h2>
@@ -25,4 +22,3 @@ export const DatabaseSettings: React.FC = () => {
     </section>
   );
 };
-

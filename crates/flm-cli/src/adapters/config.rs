@@ -3,8 +3,9 @@
 use flm_core::error::RepoError;
 use flm_core::ports::ConfigRepository;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
-use std::str::FromStr;
 
 /// SQLite-based ConfigRepository implementation
 pub struct SqliteConfigRepository {
@@ -27,14 +28,12 @@ impl SqliteConfigRepository {
                 reason: "Invalid database path (non-UTF8)".to_string(),
             })?;
 
-        let options = SqliteConnectOptions::from_str(path_str)
-            .map_err(|e| RepoError::IoError {
-                reason: format!("Invalid database path: {e}"),
-            })?
+        let options = SqliteConnectOptions::new()
+            .filename(path_str)
             .create_if_missing(true);
 
         let pool = SqlitePoolOptions::new()
-            .max_connections(1)
+            .max_connections(5)
             .connect_with(options)
             .await
             .map_err(|e| RepoError::IoError {
@@ -42,18 +41,22 @@ impl SqliteConfigRepository {
             })?;
 
         // Run migrations on the pool we just created
-        let migrations_path = crate::db::migration::find_migrations_path()?;
-        let migrator = sqlx::migrate::Migrator::new(&*migrations_path)
-            .await
-            .map_err(|e| RepoError::MigrationFailed {
-                reason: format!("Failed to create migrator: {e}"),
-            })?;
-        migrator
+        sqlx::migrate!("../flm-core/migrations")
             .run(&pool)
             .await
             .map_err(|e| RepoError::MigrationFailed {
                 reason: format!("Config DB migration failed: {e}"),
             })?;
+
+        // Set restrictive file permissions (Unix only: chmod 600 equivalent)
+        // On Windows, file permissions are managed differently and default permissions are usually sufficient
+        #[cfg(unix)]
+        {
+            if let Err(e) = set_db_file_permissions(db_path.as_ref()) {
+                // Log warning but don't fail - database is already created and functional
+                eprintln!("Warning: Failed to set database file permissions: {}", e);
+            }
+        }
 
         Ok(Self { pool })
     }
@@ -64,63 +67,58 @@ impl SqliteConfigRepository {
     }
 }
 
+#[async_trait::async_trait]
 impl ConfigRepository for SqliteConfigRepository {
-    fn get(&self, key: &str) -> Result<Option<String>, RepoError> {
-        // Use tokio::runtime::Handle to run async code in sync context
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
+    async fn get(&self, key: &str) -> Result<Option<String>, RepoError> {
+        let row = sqlx::query_as::<_, (String,)>("SELECT value FROM settings WHERE key = ?")
+            .bind(key)
+            .fetch_optional(&self.pool)
+            .await
+            .map_err(|e| RepoError::IoError {
+                reason: format!("Failed to get config: {e}"),
+            })?;
+
+        Ok(row.map(|r| r.0))
+    }
+
+    async fn set(&self, key: &str, value: &str) -> Result<(), RepoError> {
+        sqlx::query(
+            "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))",
+        )
+        .bind(key)
+        .bind(value)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to set config: {e}"),
         })?;
 
-        rt.block_on(async {
-            let row = sqlx::query_as::<_, (String,)>("SELECT value FROM settings WHERE key = ?")
-                .bind(key)
-                .fetch_optional(&self.pool)
+        Ok(())
+    }
+
+    async fn list(&self) -> Result<Vec<(String, String)>, RepoError> {
+        let rows =
+            sqlx::query_as::<_, (String, String)>("SELECT key, value FROM settings ORDER BY key")
+                .fetch_all(&self.pool)
                 .await
                 .map_err(|e| RepoError::IoError {
-                    reason: format!("Failed to get config: {e}"),
+                    reason: format!("Failed to list config: {e}"),
                 })?;
 
-            Ok(row.map(|r| r.0))
-        })
+        Ok(rows)
     }
+}
 
-    fn set(&self, key: &str, value: &str) -> Result<(), RepoError> {
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
-        })?;
-
-        rt.block_on(async {
-            sqlx::query(
-                "INSERT OR REPLACE INTO settings (key, value, updated_at) VALUES (?, ?, datetime('now'))",
-            )
-            .bind(key)
-            .bind(value)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to set config: {e}"),
-            })?;
-
-            Ok(())
-        })
-    }
-
-    fn list(&self) -> Result<Vec<(String, String)>, RepoError> {
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
-        })?;
-
-        rt.block_on(async {
-            let rows = sqlx::query_as::<_, (String, String)>(
-                "SELECT key, value FROM settings ORDER BY key",
-            )
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to list config: {e}"),
-            })?;
-
-            Ok(rows)
-        })
-    }
+/// Set restrictive file permissions for database files (Unix only)
+///
+/// Sets permissions to 600 (rw-------) to ensure only the owner can read/write.
+/// On Windows, this function is a no-op as Windows uses a different permission model.
+#[cfg(unix)]
+fn set_db_file_permissions<P: AsRef<Path>>(db_path: P) -> Result<(), std::io::Error> {
+    use std::fs;
+    let metadata = fs::metadata(&db_path)?;
+    let mut perms = metadata.permissions();
+    // chmod 600: owner read+write, group/others no access
+    perms.set_mode(0o600);
+    fs::set_permissions(&db_path, perms)
 }

@@ -18,8 +18,9 @@ pub struct HttpRequest {
 pub type HttpStream = Pin<Box<dyn Stream<Item = Result<Vec<u8>, HttpError>> + Send>>;
 
 /// HTTP client trait
+#[async_trait::async_trait]
 pub trait HttpClient: Send + Sync {
-    fn get_json(&self, url: &str) -> Result<Value, HttpError>;
-    fn post_json(&self, url: &str, body: Value) -> Result<Value, HttpError>;
-    fn stream(&self, req: HttpRequest) -> Result<HttpStream, HttpError>;
+    async fn get_json(&self, url: &str) -> Result<Value, HttpError>;
+    async fn post_json(&self, url: &str, body: Value) -> Result<Value, HttpError>;
+    async fn stream(&self, req: HttpRequest) -> Result<HttpStream, HttpError>;
 }

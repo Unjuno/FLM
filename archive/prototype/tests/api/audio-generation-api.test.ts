@@ -2,12 +2,16 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
-import { cleanupTestApis, handleTauriAppNotRunningError, checkTauriAvailable } from '../setup/test-helpers';
+import {
+  cleanupTestApis,
+  handleTauriAppNotRunningError,
+  checkTauriAvailable,
+} from '../setup/test-helpers';
 import { debugLog, debugWarn } from '../setup/debug';
 
 /**
  * 音声生成モデルのテスト
- * 
+ *
  * テスト対象:
  * - 音声生成モデル（bark, musicgen, xtts-v2, valle-x, coqui-tts）を使用したAPI作成
  * - マルチモーダル設定で音声機能を有効化したAPI
@@ -20,14 +24,23 @@ describe('音声生成モデル API テスト', () => {
 
   // テスト対象の音声生成モデル
   const audioGenerationModels = [
-    { name: 'bark:latest', description: 'Bark - テキスト・音声入力から音声出力を生成' },
-    { name: 'musicgen:latest', description: 'MusicGen - 高品質な音楽生成モデル' },
-    { name: 'xtts-v2:latest', description: 'XTTS v2 - 高品質な多言語音声合成モデル' },
+    {
+      name: 'bark:latest',
+      description: 'Bark - テキスト・音声入力から音声出力を生成',
+    },
+    {
+      name: 'musicgen:latest',
+      description: 'MusicGen - 高品質な音楽生成モデル',
+    },
+    {
+      name: 'xtts-v2:latest',
+      description: 'XTTS v2 - 高品質な多言語音声合成モデル',
+    },
   ];
 
   beforeAll(async () => {
     debugLog('音声生成モデルAPIテストを開始します');
-    
+
     // テスト用のAPIを作成（音声生成モデルを使用）
     try {
       const result = await invoke<{
@@ -59,10 +72,15 @@ describe('音声生成モデル API テスト', () => {
       await new Promise(resolve => setTimeout(resolve, 3000));
     } catch (error) {
       if (handleTauriAppNotRunningError(error)) {
-        debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+        debugWarn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
-      debugWarn('音声生成API作成に失敗したため、このテストをスキップします:', error);
+      debugWarn(
+        '音声生成API作成に失敗したため、このテストをスキップします:',
+        error
+      );
     }
   });
 
@@ -82,7 +100,9 @@ describe('音声生成モデル API テスト', () => {
       // Tauriアプリが起動していない場合はスキップ
       const isTauriAvailable = await checkTauriAvailable();
       if (!isTauriAvailable) {
-        debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+        debugWarn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
@@ -130,7 +150,9 @@ describe('音声生成モデル API テスト', () => {
         }
       } catch (error) {
         if (handleTauriAppNotRunningError(error)) {
-          debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+          debugWarn(
+            'Tauriアプリが起動していないため、このテストをスキップします'
+          );
           return;
         }
         debugWarn('音声生成モデルAPI作成テストでエラー:', error);
@@ -252,7 +274,9 @@ describe('音声生成モデル API テスト', () => {
       // Tauriアプリが起動していない場合はスキップ
       const isTauriAvailable = await checkTauriAvailable();
       if (!isTauriAvailable) {
-        debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+        debugWarn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
@@ -264,12 +288,14 @@ describe('音声生成モデル API テスト', () => {
 
       expect(apiInfo).toBeDefined();
       expect(apiInfo.model_name).toBe('bark:latest');
-      
+
       // 音声生成モデルのカテゴリを確認
-      const models = await invoke<Array<{
-        name: string;
-        category?: string;
-      }>>('search_models', {
+      const models = await invoke<
+        Array<{
+          name: string;
+          category?: string;
+        }>
+      >('search_models', {
         engineType: 'ollama',
         category: 'audio-generation',
         limit: 10,
@@ -284,16 +310,20 @@ describe('音声生成モデル API テスト', () => {
       // Tauriアプリが起動していない場合はスキップ
       const isTauriAvailable = await checkTauriAvailable();
       if (!isTauriAvailable) {
-        debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+        debugWarn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
 
       // モデルカタログから音声生成モデルを確認
-      const models = await invoke<Array<{
-        name: string;
-        category?: string;
-      }>>('search_models', {
+      const models = await invoke<
+        Array<{
+          name: string;
+          category?: string;
+        }>
+      >('search_models', {
         engineType: 'ollama',
         category: 'audio-generation',
         limit: 10,
@@ -303,23 +333,21 @@ describe('音声生成モデル API テスト', () => {
       expect(Array.isArray(models)).toBe(true);
 
       // 音声生成モデルが含まれていることを確認
-      const audioModels = models.filter(
-        m => m.category === 'audio-generation'
-      );
+      const audioModels = models.filter(m => m.category === 'audio-generation');
       expect(audioModels.length).toBeGreaterThan(0);
 
       // 主要な音声生成モデルが含まれていることを確認
       const modelNames = audioModels.map(m => m.name);
       expect(
-        modelNames.some(name => 
-          name.includes('bark') || 
-          name.includes('musicgen') || 
-          name.includes('xtts') ||
-          name.includes('valle') ||
-          name.includes('coqui')
+        modelNames.some(
+          name =>
+            name.includes('bark') ||
+            name.includes('musicgen') ||
+            name.includes('xtts') ||
+            name.includes('valle') ||
+            name.includes('coqui')
         )
       ).toBe(true);
     }, 10000);
   });
 });
-

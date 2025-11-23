@@ -1,7 +1,11 @@
 // useLLMTestRunner - LLMテスト実行ロジックを提供するカスタムフック
 
 import { useState, useCallback } from 'react';
-import { testLLMExecution, testLLMByApiId, type LLMTestResult } from '../utils/llmTest';
+import {
+  testLLMExecution,
+  testLLMByApiId,
+  type LLMTestResult,
+} from '../utils/llmTest';
 import { logger } from '../utils/logger';
 import { useErrorHandler } from './useErrorHandler';
 
@@ -64,7 +68,9 @@ export function useLLMTestRunner(options: UseLLMTestRunnerOptions) {
         const message = testMessages[i].trim();
         if (!message) continue;
 
-        setCurrentTest(`テスト ${i + 1}/${testMessages.length}: "${message.substring(0, 30)}..."`);
+        setCurrentTest(
+          `テスト ${i + 1}/${testMessages.length}: "${message.substring(0, 30)}..."`
+        );
 
         let result: LLMTestResult;
 
@@ -84,7 +90,8 @@ export function useLLMTestRunner(options: UseLLMTestRunnerOptions) {
             success: false,
             responseTime: 0,
             message: '',
-            error: 'テストに必要な情報が不足しています（apiId または endpoint + modelName）',
+            error:
+              'テストに必要な情報が不足しています（apiId または endpoint + modelName）',
           };
         }
 
@@ -115,17 +122,28 @@ export function useLLMTestRunner(options: UseLLMTestRunnerOptions) {
     } finally {
       setTesting(false);
     }
-  }, [apiId, endpoint, apiKey, modelName, customMessages, testing, onTestComplete, handleError]);
+  }, [
+    apiId,
+    endpoint,
+    apiKey,
+    modelName,
+    customMessages,
+    testing,
+    onTestComplete,
+    handleError,
+  ]);
 
   // 成功率を計算
-  const successRate = results.length > 0
-    ? (results.filter(r => r.success).length / results.length) * 100
-    : 0;
+  const successRate =
+    results.length > 0
+      ? (results.filter(r => r.success).length / results.length) * 100
+      : 0;
 
   // 平均応答時間を計算
-  const avgResponseTime = results.length > 0
-    ? results.reduce((sum, r) => sum + r.responseTime, 0) / results.length
-    : 0;
+  const avgResponseTime =
+    results.length > 0
+      ? results.reduce((sum, r) => sum + r.responseTime, 0) / results.length
+      : 0;
 
   return {
     testing,
@@ -137,4 +155,3 @@ export function useLLMTestRunner(options: UseLLMTestRunnerOptions) {
     canRun: !!(apiId || (endpoint && modelName)),
   };
 }
-

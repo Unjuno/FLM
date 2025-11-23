@@ -5,7 +5,13 @@ import { invoke } from '@tauri-apps/api/core';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { cleanupTestApis, createTestApi, waitForApiStart, waitForApiStop, handleTauriAppNotRunningError } from '../setup/test-helpers';
+import {
+  cleanupTestApis,
+  createTestApi,
+  waitForApiStart,
+  waitForApiStop,
+  handleTauriAppNotRunningError,
+} from '../setup/test-helpers';
 import { debugLog, debugWarn } from '../setup/debug';
 
 /**
@@ -138,9 +144,7 @@ describe('証明書自動生成機能 統合テスト', () => {
           process.env.NODE_ENV === 'development' ||
           process.env.JEST_DEBUG === '1'
         ) {
-          debugWarn(
-            '証明書ファイルが見つからないため、このテストをスキップ'
-          );
+          debugWarn('証明書ファイルが見つからないため、このテストをスキップ');
         }
         expect(true).toBe(true);
         return;
@@ -254,9 +258,7 @@ describe('証明書自動生成機能 統合テスト', () => {
           process.env.NODE_ENV === 'development' ||
           process.env.JEST_DEBUG === '1'
         ) {
-          debugWarn(
-            '証明書ファイルが見つからないため、このテストをスキップ'
-          );
+          debugWarn('証明書ファイルが見つからないため、このテストをスキップ');
         }
         expect(true).toBe(true);
         return;

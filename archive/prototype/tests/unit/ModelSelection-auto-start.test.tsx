@@ -6,6 +6,7 @@
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
 import { render, screen, waitFor, act } from '@testing-library/react';
 import '@testing-library/jest-dom';
+import { MemoryRouter } from 'react-router-dom';
 import { ModelSelection } from '../../src/components/api/ModelSelection';
 
 // Tauri IPCをモック
@@ -69,12 +70,14 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
       });
 
       render(
-        <ModelSelection
-          onModelSelected={mockOnModelSelected}
-          selectedModel={null}
-          engineType="ollama"
-          onEngineChange={mockOnEngineChange}
-        />
+        <MemoryRouter>
+          <ModelSelection
+            onModelSelected={mockOnModelSelected}
+            selectedModel={null}
+            engineType="ollama"
+            onEngineChange={mockOnEngineChange}
+          />
+        </MemoryRouter>
       );
 
       await waitFor(
@@ -101,12 +104,14 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
       });
 
       render(
-        <ModelSelection
-          onModelSelected={mockOnModelSelected}
-          selectedModel={null}
-          engineType="ollama"
-          onEngineChange={mockOnEngineChange}
-        />
+        <MemoryRouter>
+          <ModelSelection
+            onModelSelected={mockOnModelSelected}
+            selectedModel={null}
+            engineType="ollama"
+            onEngineChange={mockOnEngineChange}
+          />
+        </MemoryRouter>
       );
 
       await waitFor(
@@ -167,12 +172,14 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
       });
 
       render(
-        <ModelSelection
-          onModelSelected={mockOnModelSelected}
-          selectedModel={null}
-          engineType="ollama"
-          onEngineChange={mockOnEngineChange}
-        />
+        <MemoryRouter>
+          <ModelSelection
+            onModelSelected={mockOnModelSelected}
+            selectedModel={null}
+            engineType="ollama"
+            onEngineChange={mockOnEngineChange}
+          />
+        </MemoryRouter>
       );
 
       await waitFor(() => {
@@ -233,12 +240,14 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
       });
 
       render(
-        <ModelSelection
-          onModelSelected={mockOnModelSelected}
-          selectedModel={null}
-          engineType="ollama"
-          onEngineChange={mockOnEngineChange}
-        />
+        <MemoryRouter>
+          <ModelSelection
+            onModelSelected={mockOnModelSelected}
+            selectedModel={null}
+            engineType="ollama"
+            onEngineChange={mockOnEngineChange}
+          />
+        </MemoryRouter>
       );
 
       await waitFor(
@@ -277,12 +286,14 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
       });
 
       render(
-        <ModelSelection
-          onModelSelected={mockOnModelSelected}
-          selectedModel={null}
-          engineType="ollama"
-          onEngineChange={mockOnEngineChange}
-        />
+        <MemoryRouter>
+          <ModelSelection
+            onModelSelected={mockOnModelSelected}
+            selectedModel={null}
+            engineType="ollama"
+            onEngineChange={mockOnEngineChange}
+          />
+        </MemoryRouter>
       );
 
       await waitFor(
@@ -311,12 +322,14 @@ describe('ModelSelection.tsx - エンジン自動起動機能', () => {
       });
 
       render(
-        <ModelSelection
-          onModelSelected={mockOnModelSelected}
-          selectedModel={null}
-          engineType="ollama"
-          onEngineChange={mockOnEngineChange}
-        />
+        <MemoryRouter>
+          <ModelSelection
+            onModelSelected={mockOnModelSelected}
+            selectedModel={null}
+            engineType="ollama"
+            onEngineChange={mockOnEngineChange}
+          />
+        </MemoryRouter>
       );
 
       await waitFor(

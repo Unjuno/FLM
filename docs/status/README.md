@@ -23,12 +23,13 @@ docs/status/
 
 現在進行中または最新の参照情報：
 
-- **NEXT_STEPS.md** - 次の作業ステップと推奨事項
-- **PHASE1_NEXT_STEPS.md** - Phase 1の次のステップ
-- **PROXY_SERVICE_PHASE2_PROGRESS.md** - ProxyService Phase 2の実装進捗
-- **COMPILATION_ISSUE.md** - コンパイルエラー調査レポート（進行中）
-- **TEST_ENVIRONMENT_SETUP.md** - テスト環境セットアップガイド
-- **TEST_ENVIRONMENT_STATUS.md** - テスト環境の状態
+- **NEXT_STEPS.md** - 次の作業ステップと推奨事項（Ready）
+- **PHASE1_NEXT_STEPS.md** - Phase 1の次のステップ（Ready for Next Implementation）
+- **PROXY_SERVICE_PHASE2_PROGRESS.md** - ProxyService Phase 2の実装進捗（In Progress）
+- **BOTNET_PROTECTION_PLAN.md** - ボットネット対策実装計画の進捗状況（Planning Complete）
+- **COMPILATION_ISSUE.md** - コンパイルエラー調査レポート（In Progress）
+- **TEST_ENVIRONMENT_SETUP.md** - テスト環境セットアップガイド（Setup Guide）
+- **TEST_ENVIRONMENT_STATUS.md** - テスト環境の状態（Environment Setup Complete）
 
 ## 完了済みレポート (`completed/`)
 
@@ -87,6 +88,27 @@ docs/status/
 - **STATE_EXTRACTOR_FIXED.md** - State Extractor修正
 - **SYNC_ISSUE_FIXED.md** - 同期問題修正
 
+## レポートの分類
+
+### アクティブなレポート（`active/`）
+
+現在進行中または最新の参照情報。定期的に更新される。
+
+- **Ready**: 準備完了、次のステップが明確
+- **In Progress**: 進行中
+- **Planning Complete**: 計画完了、実装待ち
+- **Setup Guide**: セットアップガイド
+- **Environment Setup Complete**: 環境セットアップ完了
+
+### 完了済みレポート（`completed/`）
+
+完了したタスクやフェーズの記録。参照用に保持。
+
+- **Completed**: 完了
+- **All Tests Passed**: 全テスト合格
+- **Phase X Complete**: Phase X完了
+- **Safety Check Complete**: 安全性チェック完了
+
 ## レポートの見方
 
 各レポートには以下の情報が含まれています：
@@ -105,14 +127,23 @@ docs/status/
 4. テスト結果は `completed/tests/` を参照
 5. 安全性・監査情報は `completed/safety/` を参照
 
+## レポートの更新ルール
+
+1. **アクティブなレポート**: 進捗に応じて随時更新
+2. **完了済みレポート**: 完了時に `active/` から `completed/` に移動
+3. **日付の記録**: 各レポートに作成日・更新日を明記
+
 ## 関連ドキュメント
 
 - `docs/planning/PLAN.md` - プロジェクト計画
 - `docs/specs/` - 仕様書
 - `docs/guides/` - ガイド
 - `docs/audit/` - 監査レポート
+- `docs/planning/BOTNET_PROTECTION_IMPLEMENTATION_PLAN.md` - ボットネット対策実装計画
 
 ---
 
 **注意**: 完了済みレポートは参照用に保持されています。最新の情報は `active/` ディレクトリを確認してください。
+
+**最終更新**: 2025-01-27
 

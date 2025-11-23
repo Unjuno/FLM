@@ -1,6 +1,6 @@
 # エンジンアダプター実装とSecurityPolicy適用完了
 
-> Status: Complete | Date: 2025-01-XX
+> Status: Complete | Date: 2025-01-27
 
 ## 実装完了項目
 
@@ -110,3 +110,13 @@
 3. レート制限の負荷テスト
 4. ドメイン名検証のエッジケーステスト
 
+---
+
+**関連ドキュメント**:
+- `docs/specs/CORE_API.md` - Core API仕様
+- `docs/specs/ENGINE_DETECT.md` - エンジン検出仕様
+- `docs/specs/PROXY_SPEC.md` - プロキシ仕様
+- `docs/planning/PLAN.md` - プロジェクト計画
+- `docs/status/completed/tasks/FINAL_SUMMARY.md` - 最終サマリー
+
+**最終更新**: 2025-01-27

@@ -4,8 +4,9 @@ use flm_core::domain::security::{ApiKeyRecord, SecurityPolicy};
 use flm_core::error::RepoError;
 use flm_core::ports::SecurityRepository;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
-use std::str::FromStr;
 
 /// SQLite-based SecurityRepository implementation
 pub struct SqliteSecurityRepository {
@@ -28,14 +29,12 @@ impl SqliteSecurityRepository {
                 reason: "Invalid database path (non-UTF8)".to_string(),
             })?;
 
-        let options = SqliteConnectOptions::from_str(path_str)
-            .map_err(|e| RepoError::IoError {
-                reason: format!("Invalid database path: {e}"),
-            })?
+        let options = SqliteConnectOptions::new()
+            .filename(path_str)
             .create_if_missing(true);
 
         let pool = SqlitePoolOptions::new()
-            .max_connections(1)
+            .max_connections(5)
             .connect_with(options)
             .await
             .map_err(|e| RepoError::IoError {
@@ -43,18 +42,22 @@ impl SqliteSecurityRepository {
             })?;
 
         // Run migrations on the pool we just created
-        let migrations_path = crate::db::migration::find_migrations_path()?;
-        let migrator = sqlx::migrate::Migrator::new(&*migrations_path)
-            .await
-            .map_err(|e| RepoError::MigrationFailed {
-                reason: format!("Failed to create migrator: {e}"),
-            })?;
-        migrator
+        sqlx::migrate!("../flm-core/migrations")
             .run(&pool)
             .await
             .map_err(|e| RepoError::MigrationFailed {
                 reason: format!("Security DB migration failed: {e}"),
             })?;
+
+        // Set restrictive file permissions (Unix only: chmod 600 equivalent)
+        // On Windows, file permissions are managed differently and default permissions are usually sufficient
+        #[cfg(unix)]
+        {
+            if let Err(e) = set_db_file_permissions(db_path.as_ref()) {
+                // Log warning but don't fail - database is already created and functional
+                eprintln!("Warning: Failed to set database file permissions: {}", e);
+            }
+        }
 
         Ok(Self { pool })
     }
@@ -65,175 +68,171 @@ impl SqliteSecurityRepository {
     }
 }
 
+#[async_trait::async_trait]
 impl SecurityRepository for SqliteSecurityRepository {
-    fn save_api_key(&self, key: ApiKeyRecord) -> Result<(), RepoError> {
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
+    async fn save_api_key(&self, key: ApiKeyRecord) -> Result<(), RepoError> {
+        sqlx::query(
+            "INSERT OR REPLACE INTO api_keys (id, label, hash, created_at, revoked_at) VALUES (?, ?, ?, ?, ?)",
+        )
+        .bind(&key.id)
+        .bind(&key.label)
+        .bind(&key.hash)
+        .bind(&key.created_at)
+        .bind(&key.revoked_at)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to save API key: {e}"),
         })?;
 
-        rt.block_on(async {
-            sqlx::query(
-                "INSERT OR REPLACE INTO api_keys (id, label, hash, created_at, revoked_at) VALUES (?, ?, ?, ?, ?)",
-            )
-            .bind(&key.id)
-            .bind(&key.label)
-            .bind(&key.hash)
-            .bind(&key.created_at)
-            .bind(&key.revoked_at)
+        Ok(())
+    }
+
+    async fn fetch_api_key(&self, id: &str) -> Result<Option<ApiKeyRecord>, RepoError> {
+        let row = sqlx::query_as::<_, (String, String, String, String, Option<String>)>(
+            "SELECT id, label, hash, created_at, revoked_at FROM api_keys WHERE id = ?",
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to fetch API key: {e}"),
+        })?;
+
+        Ok(
+            row.map(|(id, label, hash, created_at, revoked_at)| ApiKeyRecord {
+                id,
+                label,
+                hash,
+                created_at,
+                revoked_at,
+            }),
+        )
+    }
+
+    async fn list_api_keys(&self) -> Result<Vec<ApiKeyRecord>, RepoError> {
+        let rows = sqlx::query_as::<_, (String, String, String, String, Option<String>)>(
+            "SELECT id, label, hash, created_at, revoked_at FROM api_keys ORDER BY created_at DESC",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to list API keys: {e}"),
+        })?;
+
+        Ok(rows
+            .into_iter()
+            .map(|(id, label, hash, created_at, revoked_at)| ApiKeyRecord {
+                id,
+                label,
+                hash,
+                created_at,
+                revoked_at,
+            })
+            .collect())
+    }
+
+    async fn list_active_api_keys(&self) -> Result<Vec<ApiKeyRecord>, RepoError> {
+        // Optimized query: filter revoked keys at database level
+        let rows = sqlx::query_as::<_, (String, String, String, String, Option<String>)>(
+            "SELECT id, label, hash, created_at, revoked_at FROM api_keys WHERE revoked_at IS NULL ORDER BY created_at DESC",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to list active API keys: {e}"),
+        })?;
+
+        Ok(rows
+            .into_iter()
+            .map(|(id, label, hash, created_at, revoked_at)| ApiKeyRecord {
+                id,
+                label,
+                hash,
+                created_at,
+                revoked_at,
+            })
+            .collect())
+    }
+
+    async fn mark_api_key_revoked(&self, id: &str, revoked_at: &str) -> Result<(), RepoError> {
+        sqlx::query("UPDATE api_keys SET revoked_at = ? WHERE id = ?")
+            .bind(revoked_at)
+            .bind(id)
             .execute(&self.pool)
             .await
             .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to save API key: {e}"),
+                reason: format!("Failed to revoke API key: {e}"),
             })?;
 
-            Ok(())
-        })
+        Ok(())
     }
 
-    fn fetch_api_key(&self, id: &str) -> Result<Option<ApiKeyRecord>, RepoError> {
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
+    async fn save_policy(&self, policy: SecurityPolicy) -> Result<(), RepoError> {
+        sqlx::query(
+            "INSERT OR REPLACE INTO security_policies (id, policy_json, updated_at) VALUES (?, ?, ?)",
+        )
+        .bind(&policy.id)
+        .bind(&policy.policy_json)
+        .bind(&policy.updated_at)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to save policy: {e}"),
         })?;
 
-        rt.block_on(async {
-            let row = sqlx::query_as::<_, (String, String, String, String, Option<String>)>(
-                "SELECT id, label, hash, created_at, revoked_at FROM api_keys WHERE id = ?",
-            )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to fetch API key: {e}"),
-            })?;
-
-            Ok(
-                row.map(|(id, label, hash, created_at, revoked_at)| ApiKeyRecord {
-                    id,
-                    label,
-                    hash,
-                    created_at,
-                    revoked_at,
-                }),
-            )
-        })
+        Ok(())
     }
 
-    fn list_api_keys(&self) -> Result<Vec<ApiKeyRecord>, RepoError> {
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
+    async fn fetch_policy(&self, id: &str) -> Result<Option<SecurityPolicy>, RepoError> {
+        let row = sqlx::query_as::<_, (String, String, String)>(
+            "SELECT id, policy_json, updated_at FROM security_policies WHERE id = ?",
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to fetch policy: {e}"),
         })?;
 
-        rt.block_on(async {
-            let rows = sqlx::query_as::<_, (String, String, String, String, Option<String>)>(
-                "SELECT id, label, hash, created_at, revoked_at FROM api_keys ORDER BY created_at DESC",
-            )
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to list API keys: {e}"),
-            })?;
-
-            Ok(rows
-                .into_iter()
-                .map(|(id, label, hash, created_at, revoked_at)| ApiKeyRecord {
-                    id,
-                    label,
-                    hash,
-                    created_at,
-                    revoked_at,
-                })
-                .collect())
-        })
+        Ok(row.map(|(id, policy_json, updated_at)| SecurityPolicy {
+            id,
+            policy_json,
+            updated_at,
+        }))
     }
 
-    fn mark_api_key_revoked(&self, id: &str, revoked_at: &str) -> Result<(), RepoError> {
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
+    async fn list_policies(&self) -> Result<Vec<SecurityPolicy>, RepoError> {
+        let rows = sqlx::query_as::<_, (String, String, String)>(
+            "SELECT id, policy_json, updated_at FROM security_policies ORDER BY updated_at DESC",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to list policies: {e}"),
         })?;
 
-        rt.block_on(async {
-            sqlx::query("UPDATE api_keys SET revoked_at = ? WHERE id = ?")
-                .bind(revoked_at)
-                .bind(id)
-                .execute(&self.pool)
-                .await
-                .map_err(|e| RepoError::IoError {
-                    reason: format!("Failed to revoke API key: {e}"),
-                })?;
-
-            Ok(())
-        })
-    }
-
-    fn save_policy(&self, policy: SecurityPolicy) -> Result<(), RepoError> {
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
-        })?;
-
-        rt.block_on(async {
-            sqlx::query(
-                "INSERT OR REPLACE INTO security_policies (id, policy_json, updated_at) VALUES (?, ?, ?)",
-            )
-            .bind(&policy.id)
-            .bind(&policy.policy_json)
-            .bind(&policy.updated_at)
-            .execute(&self.pool)
-            .await
-            .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to save policy: {e}"),
-            })?;
-
-            Ok(())
-        })
-    }
-
-    fn fetch_policy(&self, id: &str) -> Result<Option<SecurityPolicy>, RepoError> {
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
-        })?;
-
-        rt.block_on(async {
-            let row = sqlx::query_as::<_, (String, String, String)>(
-                "SELECT id, policy_json, updated_at FROM security_policies WHERE id = ?",
-            )
-            .bind(id)
-            .fetch_optional(&self.pool)
-            .await
-            .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to fetch policy: {e}"),
-            })?;
-
-            Ok(row.map(|(id, policy_json, updated_at)| SecurityPolicy {
+        Ok(rows
+            .into_iter()
+            .map(|(id, policy_json, updated_at)| SecurityPolicy {
                 id,
                 policy_json,
                 updated_at,
-            }))
-        })
+            })
+            .collect())
     }
+}
 
-    fn list_policies(&self) -> Result<Vec<SecurityPolicy>, RepoError> {
-        let rt = tokio::runtime::Handle::try_current().map_err(|_| RepoError::IoError {
-            reason: "No async runtime available".to_string(),
-        })?;
-
-        rt.block_on(async {
-            let rows = sqlx::query_as::<_, (String, String, String)>(
-                "SELECT id, policy_json, updated_at FROM security_policies ORDER BY updated_at DESC",
-            )
-            .fetch_all(&self.pool)
-            .await
-            .map_err(|e| RepoError::IoError {
-                reason: format!("Failed to list policies: {e}"),
-            })?;
-
-            Ok(rows
-                .into_iter()
-                .map(|(id, policy_json, updated_at)| SecurityPolicy {
-                    id,
-                    policy_json,
-                    updated_at,
-                })
-                .collect())
-        })
-    }
+/// Set restrictive file permissions for database files (Unix only)
+///
+/// Sets permissions to 600 (rw-------) to ensure only the owner can read/write.
+/// On Windows, this function is a no-op as Windows uses a different permission model.
+#[cfg(unix)]
+fn set_db_file_permissions<P: AsRef<Path>>(db_path: P) -> Result<(), std::io::Error> {
+    use std::fs;
+    let metadata = fs::metadata(&db_path)?;
+    let mut perms = metadata.permissions();
+    // chmod 600: owner read+write, group/others no access
+    perms.set_mode(0o600);
+    fs::set_permissions(&db_path, perms)
 }

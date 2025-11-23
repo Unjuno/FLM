@@ -4,7 +4,13 @@
  * @jest-environment jsdom
  */
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  fireEvent,
+  waitFor,
+  act,
+} from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { LogExport } from '../../src/components/api/LogExport';
 
@@ -56,7 +62,9 @@ describe('LogExport.tsx', () => {
     it('エクスポートコンポーネントを表示する', () => {
       render(<LogExport apiId="api-1" filter={mockFilter} />);
       // CSV、JSON、PDFのいずれかのボタンが表示されることを確認
-      const exportButtons = screen.getAllByText(/CSVでエクスポート|JSONでエクスポート|PDFでエクスポート/i);
+      const exportButtons = screen.getAllByText(
+        /CSVでエクスポート|JSONでエクスポート|PDFでエクスポート/i
+      );
       expect(exportButtons.length).toBeGreaterThan(0);
     });
 
@@ -94,7 +102,9 @@ describe('LogExport.tsx', () => {
       await waitFor(
         () => {
           // 確認ダイアログの確認ボタンを探す（複数の方法で試す）
-          const confirmButtons = screen.queryAllByRole('button', { name: /確認/i });
+          const confirmButtons = screen.queryAllByRole('button', {
+            name: /確認/i,
+          });
           const confirmButtonByText = screen.queryByText(/確認/i);
           expect(confirmButtons.length > 0 || confirmButtonByText).toBeTruthy();
         },
@@ -104,10 +114,11 @@ describe('LogExport.tsx', () => {
       // 確認ダイアログの確認ボタンをクリック
       const confirmButtons = screen.queryAllByRole('button', { name: /確認/i });
       const confirmButtonByText = screen.queryByText(/確認/i);
-      const confirmButton = confirmButtons.length > 0 
-        ? confirmButtons[0] 
-        : confirmButtonByText?.closest('button') as HTMLButtonElement;
-      
+      const confirmButton =
+        confirmButtons.length > 0
+          ? confirmButtons[0]
+          : (confirmButtonByText?.closest('button') as HTMLButtonElement);
+
       if (confirmButton) {
         await act(async () => {
           fireEvent.click(confirmButton);
@@ -126,7 +137,10 @@ describe('LogExport.tsx', () => {
 
       await waitFor(
         () => {
-          expect(mockSafeInvoke).toHaveBeenCalledWith('export_logs', expect.any(Object));
+          expect(mockSafeInvoke).toHaveBeenCalledWith(
+            'export_logs',
+            expect.any(Object)
+          );
         },
         { timeout: 3000 }
       );
@@ -155,7 +169,9 @@ describe('LogExport.tsx', () => {
       await waitFor(
         () => {
           // 確認ダイアログの確認ボタンを探す（複数の方法で試す）
-          const confirmButtons = screen.queryAllByRole('button', { name: /確認/i });
+          const confirmButtons = screen.queryAllByRole('button', {
+            name: /確認/i,
+          });
           const confirmButtonByText = screen.queryByText(/確認/i);
           expect(confirmButtons.length > 0 || confirmButtonByText).toBeTruthy();
         },
@@ -165,10 +181,11 @@ describe('LogExport.tsx', () => {
       // 確認ダイアログの確認ボタンをクリック
       const confirmButtons = screen.queryAllByRole('button', { name: /確認/i });
       const confirmButtonByText = screen.queryByText(/確認/i);
-      const confirmButton = confirmButtons.length > 0 
-        ? confirmButtons[0] 
-        : confirmButtonByText?.closest('button') as HTMLButtonElement;
-      
+      const confirmButton =
+        confirmButtons.length > 0
+          ? confirmButtons[0]
+          : (confirmButtonByText?.closest('button') as HTMLButtonElement);
+
       if (confirmButton) {
         await act(async () => {
           fireEvent.click(confirmButton);
@@ -187,7 +204,10 @@ describe('LogExport.tsx', () => {
 
       await waitFor(
         () => {
-          expect(mockSafeInvoke).toHaveBeenCalledWith('export_logs', expect.any(Object));
+          expect(mockSafeInvoke).toHaveBeenCalledWith(
+            'export_logs',
+            expect.any(Object)
+          );
         },
         { timeout: 3000 }
       );
@@ -206,7 +226,8 @@ describe('LogExport.tsx', () => {
 
       await waitFor(
         () => {
-          const errorElements = screen.getAllByText(/エクスポートに失敗|エラー/i);
+          const errorElements =
+            screen.getAllByText(/エクスポートに失敗|エラー/i);
           expect(errorElements.length).toBeGreaterThan(0);
         },
         { timeout: 3000 }

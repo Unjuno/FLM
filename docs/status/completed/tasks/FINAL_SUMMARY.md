@@ -1,6 +1,6 @@
 # 最終サマリー
 
-> Status: Completed | Date: 2025-11-21
+> Status: Completed | Date: 2025-01-27
 
 ## 完了した全タスク
 
@@ -27,6 +27,14 @@
 - vLLMエンジンアダプターに`embeddings`テストを追加
 - vLLMエンジンアダプターに`chat_stream`テストを追加
 - WireMockを使用したモックサーバーテスト
+
+### 4. CLI未実装コマンドの実装 ✅ (2025-01-27)
+
+- `flm security policy` - セキュリティポリシー管理（show/set）
+- `flm check` - データベース整合性チェック
+- `flm chat` - チャット機能（ストリーミング対応）
+- `flm security backup` - バックアップ/復元（3世代管理）
+- 各コマンドに対して統合テストを追加
 
 ## 実装詳細
 
@@ -79,8 +87,19 @@
 6. `docs/status/STREAMING_IMPROVEMENTS_COMPLETE.md`
 7. `docs/status/ALL_TASKS_COMPLETE.md`
 8. `docs/status/FINAL_SUMMARY.md`
+9. `docs/status/completed/tasks/CLI_COMMANDS_IMPLEMENTATION_COMPLETE.md` (2025-01-27)
 
 ## 次のステップ
 
 すべてのタスクが完了しました。プロジェクトは次のフェーズに進む準備ができています。
 
+---
+
+**関連ドキュメント**:
+- `docs/planning/PLAN.md` - プロジェクト計画
+- `docs/status/active/NEXT_STEPS.md` - 次の作業ステップ
+- `docs/status/completed/phases/PHASE2_COMPLETE.md` - Phase 2完了レポート
+- `docs/audit/CORE_API_AUDIT.md` - Core API監査レポート
+- `docs/specs/CORE_API.md` - Core API仕様
+
+**最終更新**: 2025-01-27

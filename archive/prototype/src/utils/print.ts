@@ -32,10 +32,13 @@ const DEFAULT_LINE_HEIGHT = 1.5;
  * エラーメッセージ
  */
 const ERROR_MESSAGES = {
-  NO_ELEMENT: (selector: string) => `印刷対象の要素が見つかりません: ${selector}`,
-  POPUP_BLOCKED: () => '印刷ウィンドウがブロックされました。ポップアップを許可してください。',
+  NO_ELEMENT: (selector: string) =>
+    `印刷対象の要素が見つかりません: ${selector}`,
+  POPUP_BLOCKED: () =>
+    '印刷ウィンドウがブロックされました。ポップアップを許可してください。',
   PRINT_FAILED: () => '印刷処理に失敗しました。',
-  CALLBACK_ERROR: (phase: string) => `${phase}コールバックでエラーが発生しました`,
+  CALLBACK_ERROR: (phase: string) =>
+    `${phase}コールバックでエラーが発生しました`,
 };
 
 /**
@@ -88,7 +91,7 @@ const getElement = (selector: string | HTMLElement): HTMLElement | null => {
     // IDで検索
     const element = document.getElementById(selector);
     if (element) return element;
-    
+
     // セレクタで検索
     return document.querySelector(selector);
   }
@@ -119,7 +122,7 @@ const createPrintWindowHTML = (
 ): string => {
   const pageTitle = title || document.title;
   const printStyles = createPrintStyles(styles);
-  
+
   return `
     <!DOCTYPE html>
     <html lang="ja">
@@ -146,7 +149,7 @@ const safeExecuteCallback = async (
   phase: string = '印刷'
 ): Promise<void> => {
   if (!callback) return;
-  
+
   try {
     await Promise.resolve(callback());
   } catch (error) {
@@ -178,27 +181,22 @@ const handleError = async (
  * @param options 印刷オプション
  */
 export const print = async (options: PrintOptions = {}): Promise<void> => {
-  const {
-    targetElement,
-    title,
-    beforePrint,
-    afterPrint,
-    styles,
-  } = options;
-  
+  const { targetElement, title, beforePrint, afterPrint, styles } = options;
+
   let printWindow: Window | null = null;
-  
+
   try {
     // 印刷前コールバックを実行
     await safeExecuteCallback(beforePrint, '印刷前');
-    
+
     // 印刷対象のコンテンツを取得
     let content: string;
-    
+
     if (targetElement) {
       const element = getElement(targetElement);
       if (!element) {
-        const selector = typeof targetElement === 'string' ? targetElement : 'Unknown';
+        const selector =
+          typeof targetElement === 'string' ? targetElement : 'Unknown';
         logger.error(ERROR_MESSAGES.NO_ELEMENT(selector), '', 'print');
         throw new Error(ERROR_MESSAGES.NO_ELEMENT(selector));
       }
@@ -207,36 +205,42 @@ export const print = async (options: PrintOptions = {}): Promise<void> => {
       // 対象が指定されていない場合は、body全体を印刷
       content = document.body.innerHTML;
     }
-    
+
     // 印刷ウィンドウを開く
     printWindow = window.open('', '_blank', 'width=800,height=600');
-    
+
     if (!printWindow) {
       logger.error(ERROR_MESSAGES.POPUP_BLOCKED(), '', 'print');
       throw new Error(ERROR_MESSAGES.POPUP_BLOCKED());
     }
-    
+
     // HTMLを書き込む
     const html = createPrintWindowHTML(content, title, styles);
     printWindow.document.write(html);
     printWindow.document.close();
-    
+
     // スタイルの読み込みと画像の読み込みを待つ
-    await new Promise<void>((resolve) => {
+    await new Promise<void>(resolve => {
       if (!printWindow) {
         resolve();
         return;
       }
-      
-      printWindow.addEventListener('load', () => {
+
+      // JSDOM互換性: window.openがWindowを返さない場合のハンドリング
+      if (typeof printWindow.addEventListener === 'function') {
+        printWindow.addEventListener('load', () => {
+          setTimeout(() => resolve(), PRINT_DELAY_MS);
+        });
+      } else {
+        // JSDOM環境では即座に解決
         setTimeout(() => resolve(), PRINT_DELAY_MS);
-      });
+      }
     });
-    
+
     // 印刷ダイアログを表示
     printWindow.focus();
     printWindow.print();
-    
+
     // 印刷ダイアログが閉じられるのを待つ
     setTimeout(() => {
       if (printWindow) {
@@ -244,7 +248,6 @@ export const print = async (options: PrintOptions = {}): Promise<void> => {
       }
       safeExecuteCallback(afterPrint, '印刷後');
     }, WINDOW_CLOSE_DELAY_MS);
-    
   } catch (error) {
     logger.error(ERROR_MESSAGES.PRINT_FAILED(), error, 'print');
     await handleError(printWindow, afterPrint);

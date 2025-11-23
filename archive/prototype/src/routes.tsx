@@ -1,6 +1,6 @@
 /**
  * アプリケーションのルーティング設定
- * 
+ *
  * ルート定義を一元管理し、メンテナンス性を向上させます。
  */
 
@@ -16,7 +16,9 @@ import { ApiDetails } from './pages/ApiDetails';
 
 // エラーハンドリング付きのlazy loadingヘルパー関数
 const lazyLoad = (
-  importFn: () => Promise<{ [key: string]: React.ComponentType<Record<string, never>> }>,
+  importFn: () => Promise<{
+    [key: string]: React.ComponentType<Record<string, never>>;
+  }>,
   componentName: string
 ) => {
   return lazy(() =>
@@ -40,7 +42,10 @@ const lazyLoad = (
 };
 
 // 使用頻度の低いページはLazy Loading（コード分割）
-const OllamaSetup = lazyLoad(() => import('./pages/OllamaSetup'), 'OllamaSetup');
+const OllamaSetup = lazyLoad(
+  () => import('./pages/OllamaSetup'),
+  'OllamaSetup'
+);
 const ApiCreate = lazyLoad(() => import('./pages/ApiCreate'), 'ApiCreate');
 const WebServiceSetup = lazyLoad(
   () => import('./pages/WebServiceSetup'),
@@ -52,7 +57,10 @@ const ApiTestSelector = lazyLoad(
 );
 const ApiEdit = lazyLoad(() => import('./pages/ApiEdit'), 'ApiEdit');
 const ApiInfo = lazyLoad(() => import('./pages/ApiInfo'), 'ApiInfo');
-const ApiSettings = lazyLoad(() => import('./pages/ApiSettings'), 'ApiSettings');
+const ApiSettings = lazyLoad(
+  () => import('./pages/ApiSettings'),
+  'ApiSettings'
+);
 const ApiKeys = lazyLoad(() => import('./pages/ApiKeys'), 'ApiKeys');
 const ModelManagement = lazyLoad(
   () => import('./pages/ModelManagement'),
@@ -106,7 +114,10 @@ const ModelCatalogManagement = lazyLoad(
   () => import('./pages/ModelCatalogManagement'),
   'ModelCatalogManagement'
 );
-const Diagnostics = lazyLoad(() => import('./pages/Diagnostics'), 'Diagnostics');
+const Diagnostics = lazyLoad(
+  () => import('./pages/Diagnostics'),
+  'Diagnostics'
+);
 const ErrorLogs = lazyLoad(() => import('./pages/ErrorLogs'), 'ErrorLogs');
 const About = lazyLoad(() => import('./pages/About'), 'About');
 const PrivacyPolicy = lazyLoad(
@@ -255,4 +266,3 @@ export const routes: RouteObject[] = [
     element: <TermsOfService />,
   },
 ];
-

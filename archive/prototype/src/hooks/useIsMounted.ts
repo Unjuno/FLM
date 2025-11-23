@@ -5,13 +5,13 @@ import { useEffect, useRef } from 'react';
 /**
  * コンポーネントのマウント状態を追跡するカスタムフック
  * アンマウント後の状態更新を防ぐために使用します
- * 
+ *
  * @returns マウント状態を確認する関数
- * 
+ *
  * @example
  * ```tsx
  * const isMounted = useIsMounted();
- * 
+ *
  * useEffect(() => {
  *   someAsyncOperation().then(() => {
  *     if (isMounted()) {
@@ -33,4 +33,3 @@ export const useIsMounted = (): (() => boolean) => {
 
   return () => isMountedRef.current;
 };
-

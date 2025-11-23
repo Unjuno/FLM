@@ -5,7 +5,13 @@
  */
 import React from 'react';
 import { describe, it, expect, jest, beforeEach } from '@jest/globals';
-import { render, screen, waitFor, fireEvent, act } from '@testing-library/react';
+import {
+  render,
+  screen,
+  waitFor,
+  fireEvent,
+  act,
+} from '@testing-library/react';
 import '@testing-library/jest-dom';
 import { SystemCheck } from '../../src/components/common/SystemCheck';
 
@@ -37,11 +43,16 @@ describe('SystemCheck.tsx', () => {
       await act(async () => {
         render(<SystemCheck />);
       });
-      
+
       // ローディングメッセージが表示されることを確認
-      await waitFor(() => {
-        expect(screen.getByText(/システム情報を取得しています/i)).toBeTruthy();
-      }, { timeout: 1000 });
+      await waitFor(
+        () => {
+          expect(
+            screen.getByText(/システム情報を取得しています/i)
+          ).toBeTruthy();
+        },
+        { timeout: 1000 }
+      );
     });
 
     it('システムリソース情報を取得して表示する', async () => {
@@ -198,10 +209,13 @@ describe('SystemCheck.tsx', () => {
         render(<SystemCheck showRecommendations={true} />);
       });
 
-      await waitFor(() => {
-        // 推奨モデル名が表示されることを確認
-        expect(screen.getByText('llama3:8b')).toBeTruthy();
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          // 推奨モデル名が表示されることを確認
+          expect(screen.getByText('llama3:8b')).toBeTruthy();
+        },
+        { timeout: 3000 }
+      );
     });
 
     it('推奨理由を表示する', async () => {
@@ -226,11 +240,14 @@ describe('SystemCheck.tsx', () => {
         render(<SystemCheck showRecommendations={true} />);
       });
 
-      await waitFor(() => {
-        expect(
-          screen.getByText('システムリソースに適しています')
-        ).toBeTruthy();
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          expect(
+            screen.getByText('システムリソースに適しています')
+          ).toBeTruthy();
+        },
+        { timeout: 3000 }
+      );
     });
 
     it('showRecommendationsがfalseの場合、推奨を表示しない', async () => {
@@ -248,12 +265,15 @@ describe('SystemCheck.tsx', () => {
         render(<SystemCheck showRecommendations={false} />);
       });
 
-      await waitFor(() => {
-        // メモリまたはCPUラベルが表示されることを確認
-        const memory = screen.queryByText('メモリ');
-        const cpu = screen.queryByText('CPU');
-        expect(memory || cpu).toBeTruthy();
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          // メモリまたはCPUラベルが表示されることを確認
+          const memory = screen.queryByText('メモリ');
+          const cpu = screen.queryByText('CPU');
+          expect(memory || cpu).toBeTruthy();
+        },
+        { timeout: 3000 }
+      );
 
       expect(mockSafeInvoke).toHaveBeenCalledTimes(1); // get_system_resourcesのみ
     });
@@ -269,10 +289,15 @@ describe('SystemCheck.tsx', () => {
         render(<SystemCheck />);
       });
 
-      await waitFor(() => {
-        // ErrorMessageコンポーネントがエラーメッセージを表示することを確認
-        expect(screen.getByText('システム情報の取得に失敗しました')).toBeTruthy();
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          // ErrorMessageコンポーネントがエラーメッセージを表示することを確認
+          expect(
+            screen.getByText('システム情報の取得に失敗しました')
+          ).toBeTruthy();
+        },
+        { timeout: 3000 }
+      );
     });
 
     it('ErrorMessageコンポーネントを使用してエラーを表示する', async () => {
@@ -287,7 +312,9 @@ describe('SystemCheck.tsx', () => {
       await waitFor(
         () => {
           // ErrorMessageコンポーネントがエラーメッセージを表示することを確認
-          expect(screen.getByText('システム情報の取得に失敗しました')).toBeTruthy();
+          expect(
+            screen.getByText('システム情報の取得に失敗しました')
+          ).toBeTruthy();
         },
         { timeout: 3000 }
       );
@@ -318,23 +345,29 @@ describe('SystemCheck.tsx', () => {
         render(<SystemCheck onModelSelected={onModelSelected} />);
       });
 
-      await waitFor(() => {
-        expect(screen.getByText('llama3:8b')).toBeTruthy();
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          expect(screen.getByText('llama3:8b')).toBeTruthy();
+        },
+        { timeout: 3000 }
+      );
 
       // モデル選択ボタンをクリック（存在する場合）
-      await waitFor(() => {
-        const selectButton = screen.queryByRole('button', {
-          name: /このモデルを使用/i,
-        });
-        if (selectButton) {
-          fireEvent.click(selectButton);
-          expect(onModelSelected).toHaveBeenCalledWith('llama3:8b');
-        } else {
-          // ボタンが見つからない場合でも、モデル名が表示されていることを確認
-          expect(screen.getByText('llama3:8b')).toBeTruthy();
-        }
-      }, { timeout: 3000 });
+      await waitFor(
+        () => {
+          const selectButton = screen.queryByRole('button', {
+            name: /このモデルを使用/i,
+          });
+          if (selectButton) {
+            fireEvent.click(selectButton);
+            expect(onModelSelected).toHaveBeenCalledWith('llama3:8b');
+          } else {
+            // ボタンが見つからない場合でも、モデル名が表示されていることを確認
+            expect(screen.getByText('llama3:8b')).toBeTruthy();
+          }
+        },
+        { timeout: 3000 }
+      );
     });
   });
 });

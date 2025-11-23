@@ -49,13 +49,13 @@ export const Home: React.FC = () => {
   const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
   useOllamaDetection();
   const { showInfo } = useNotifications();
-  
+
   // Ollama自動起動
   useOllamaAutoStart();
-  
+
   // ナビゲーションハンドラー
   const navigation = useHomeNavigation();
-  
+
   // 機能定義と検索
   const { allFeatures, filteredFeatures } = useHomeFeatures(searchQuery);
 
@@ -85,8 +85,6 @@ export const Home: React.FC = () => {
     [navigation, navigate, startTransition]
   );
 
-
-
   type PortResolutionDetail = Array<{
     api_id: string;
     api_name: string;
@@ -108,7 +106,10 @@ export const Home: React.FC = () => {
       });
     };
 
-    window.addEventListener('flm-auto-port-resolved', listener as EventListener);
+    window.addEventListener(
+      'flm-auto-port-resolved',
+      listener as EventListener
+    );
     return () => {
       window.removeEventListener(
         'flm-auto-port-resolved',
@@ -116,7 +117,6 @@ export const Home: React.FC = () => {
       );
     };
   }, [showInfo]);
-
 
   // セクションの折りたたみ/展開を切り替え
   const toggleSection = useCallback((sectionName: string) => {
@@ -131,11 +131,11 @@ export const Home: React.FC = () => {
     });
   }, []);
 
-
   // パンくずリストの項目（ホームのみ）
-  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
-    { label: t('header.home') || 'ホーム' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(
+    () => [{ label: t('header.home') || 'ホーム' }],
+    [t]
+  );
 
   return (
     <div className="home-page">
@@ -167,11 +167,11 @@ export const Home: React.FC = () => {
 
         <header className="home-header">
           <div className="home-header-logo-container">
-            <img 
-              src="/logo.png" 
-              alt="FLM" 
-              className="home-header-logo" 
-              width="48" 
+            <img
+              src="/logo.png"
+              alt="FLM"
+              className="home-header-logo"
+              width="48"
               height="48"
               aria-hidden="true"
             />

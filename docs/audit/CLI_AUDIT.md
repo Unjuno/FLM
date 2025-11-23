@@ -103,5 +103,10 @@
 
 ---
 
-**最終更新**: 2025-11-20
+**関連ドキュメント**:
+- `docs/specs/CLI_SPEC.md` - CLI仕様
+- `docs/specs/CORE_API.md` - Core API仕様
+- `docs/planning/PLAN.md` - プロジェクト計画
+- `docs/audit/CORE_API_AUDIT.md` - Core API監査レポート
 
+**最終更新**: 2025-11-20

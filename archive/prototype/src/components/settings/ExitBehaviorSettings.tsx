@@ -52,4 +52,3 @@ export const ExitBehaviorSettings: React.FC<ExitBehaviorSettingsProps> = ({
     </section>
   );
 };
-

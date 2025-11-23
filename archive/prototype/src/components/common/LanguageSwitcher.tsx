@@ -131,7 +131,9 @@ export const LanguageSwitcher: React.FC = () => {
     };
   }, [isOpen]);
 
-  const handleLanguageChange = async (newLocale: 'ja' | 'en' | 'zh' | 'ko' | 'es' | 'fr' | 'de') => {
+  const handleLanguageChange = async (
+    newLocale: 'ja' | 'en' | 'zh' | 'ko' | 'es' | 'fr' | 'de'
+  ) => {
     if (newLocale !== locale) {
       await setLocale(newLocale);
     }

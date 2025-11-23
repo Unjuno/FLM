@@ -16,4 +16,3 @@ declare module '@tauri-apps/plugin-dialog' {
     options?: OpenDialogOptions
   ): Promise<string | string[] | null>;
 }
-

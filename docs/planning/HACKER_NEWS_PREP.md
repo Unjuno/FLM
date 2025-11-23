@@ -164,6 +164,7 @@ A: 公式サイトからインストーラーをダウンロードし、実行�
 - `docs/specs/PROXY_SPEC.md` セクション10.6 - パッケージングのセキュリティ対策
 - `docs/guides/SECURITY_FIREWALL_GUIDE.md` セクション9 - セキュリティ検証手順
 - `docs/planning/PLAN.md` - プロジェクト計画とフェーズ
+- `docs/planning/diagram.md` - アーキテクチャ図
 
 ---
 

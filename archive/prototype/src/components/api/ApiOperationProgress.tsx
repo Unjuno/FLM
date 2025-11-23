@@ -54,14 +54,10 @@ export const ApiOperationProgress: React.FC<ApiOperationProgressProps> = ({
     <div className="api-operation-progress">
       <div className="progress-content">
         <div className="progress-bar">
-          <div 
-            ref={progressFillRef}
-            className="progress-fill"
-          ></div>
+          <div ref={progressFillRef} className="progress-fill"></div>
         </div>
         <span className="progress-text">{progressText}</span>
       </div>
     </div>
   );
 };
-

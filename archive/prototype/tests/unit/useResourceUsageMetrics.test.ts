@@ -458,23 +458,29 @@ describe('useResourceUsageMetrics.ts', () => {
 
       await waitFor(
         () => {
-          expect(mockSafeInvoke).toHaveBeenCalledWith('get_performance_metrics', {
-            request: {
-              api_id: 'test-api',
-              metric_type: 'cpu_usage',
-              start_date: '2024-01-01',
-              end_date: '2024-01-02',
-            },
-          });
+          expect(mockSafeInvoke).toHaveBeenCalledWith(
+            'get_performance_metrics',
+            {
+              request: {
+                api_id: 'test-api',
+                metric_type: 'cpu_usage',
+                start_date: '2024-01-01',
+                end_date: '2024-01-02',
+              },
+            }
+          );
 
-          expect(mockSafeInvoke).toHaveBeenCalledWith('get_performance_metrics', {
-            request: {
-              api_id: 'test-api',
-              metric_type: 'memory_usage',
-              start_date: '2024-01-01',
-              end_date: '2024-01-02',
-            },
-          });
+          expect(mockSafeInvoke).toHaveBeenCalledWith(
+            'get_performance_metrics',
+            {
+              request: {
+                api_id: 'test-api',
+                metric_type: 'memory_usage',
+                start_date: '2024-01-01',
+                end_date: '2024-01-02',
+              },
+            }
+          );
         },
         { timeout: 3000 }
       );

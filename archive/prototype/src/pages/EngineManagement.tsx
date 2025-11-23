@@ -1,7 +1,13 @@
 // EngineManagement - エンジン管理ページ
 // LLMエンジンの検出・起動・停止・設定管理
 
-import React, { useState, useEffect, useTransition, useRef, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useTransition,
+  useRef,
+  useCallback,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { useNotifications } from '../contexts/NotificationContext';
@@ -18,7 +24,10 @@ import './EngineManagement.css';
 /**
  * エンジン起動プログレスバーコンポーネント
  */
-const EngineStartProgressBar: React.FC<{ progress: number; message?: string }> = ({ progress, message }) => {
+const EngineStartProgressBar: React.FC<{
+  progress: number;
+  message?: string;
+}> = ({ progress, message }) => {
   const progressRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -91,7 +100,9 @@ export const EngineManagement: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | 'installed' | 'not_installed' | 'running' | 'stopped'>('all');
+  const [statusFilter, setStatusFilter] = useState<
+    'all' | 'installed' | 'not_installed' | 'running' | 'stopped'
+  >('all');
   const [startProgress, setStartProgress] = useState<{
     [key: string]: { progress: number; message: string } | null;
   }>({});
@@ -101,11 +112,14 @@ export const EngineManagement: React.FC = () => {
 
   useGlobalKeyboardShortcuts();
 
-  const breadcrumbItems: BreadcrumbItem[] = React.useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: t('header.settings') || '設定', path: '/settings' },
-    { label: t('engineManagement.title') || 'エンジン管理' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = React.useMemo(
+    () => [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('header.settings') || '設定', path: '/settings' },
+      { label: t('engineManagement.title') || 'エンジン管理' },
+    ],
+    [t]
+  );
 
   /**
    * エンジンを検索・フィルタリング
@@ -117,11 +131,14 @@ export const EngineManagement: React.FC = () => {
     if (searchQuery.trim()) {
       const query = searchQuery.toLowerCase();
       filtered = filtered.filter(engine => {
-        const engineName = ENGINE_NAMES[engine.engine_type] || engine.engine_type;
-        return engineName.toLowerCase().includes(query) ||
-               engine.engine_type.toLowerCase().includes(query) ||
-               (engine.version && engine.version.toLowerCase().includes(query)) ||
-               (engine.path && engine.path.toLowerCase().includes(query));
+        const engineName =
+          ENGINE_NAMES[engine.engine_type] || engine.engine_type;
+        return (
+          engineName.toLowerCase().includes(query) ||
+          engine.engine_type.toLowerCase().includes(query) ||
+          (engine.version && engine.version.toLowerCase().includes(query)) ||
+          (engine.path && engine.path.toLowerCase().includes(query))
+        );
       });
     }
 
@@ -180,7 +197,11 @@ export const EngineManagement: React.FC = () => {
       setEngineConfigs(configs);
     } catch (err) {
       // エラーは静かに処理（設定がない場合もある）
-      logger.warn('エンジン設定の読み込みに失敗しました', extractErrorMessage(err), 'EngineManagement');
+      logger.warn(
+        'エンジン設定の読み込みに失敗しました',
+        extractErrorMessage(err),
+        'EngineManagement'
+      );
     }
   }, []);
 
@@ -200,9 +221,7 @@ export const EngineManagement: React.FC = () => {
       await loadEngines();
       showSuccess('エンジンの検出が完了しました');
     } catch (err) {
-      showError(
-        extractErrorMessage(err, 'エンジンの検出に失敗しました')
-      );
+      showError(extractErrorMessage(err, 'エンジンの検出に失敗しました'));
     } finally {
       setDetecting(false);
     }
@@ -211,233 +230,305 @@ export const EngineManagement: React.FC = () => {
   /**
    * エンジンを起動
    */
-  const handleStartEngine = useCallback(async (engineType: string) => {
-    try {
-      setStarting(engineType);
-      setError(null);
-      setStartProgress(prev => ({ ...prev, [engineType]: { progress: 0, message: '起動コマンドを実行中...' } }));
-
+  const handleStartEngine = useCallback(
+    async (engineType: string) => {
       try {
-        setStartProgress(prev => ({ ...prev, [engineType]: { progress: 20, message: '起動コマンドを実行中...' } }));
-        await safeInvoke('start_engine', {
-          engineType: engineType,
-          config: null,
-        });
-        setStartProgress(prev => ({ ...prev, [engineType]: { progress: 50, message: '起動コマンドが完了しました' } }));
-      } catch (err) {
-        // タイムアウトエラーの場合、エンジンが実際に起動している可能性があるため確認を継続
-        const errorMessage = extractErrorMessage(err);
-        if (errorMessage.includes('タイムアウト')) {
-          setStartProgress(prev => ({ ...prev, [engineType]: { progress: 50, message: '起動処理は継続中です...' } }));
-          logger.info(
-            `${ENGINE_NAMES[engineType] || engineType}の起動コマンドがタイムアウトしましたが、起動処理は継続中です`,
-            '',
-            'EngineManagement'
-          );
-          await new Promise(resolve => setTimeout(resolve, 1000));
-        } else {
-          throw err;
+        setStarting(engineType);
+        setError(null);
+        setStartProgress(prev => ({
+          ...prev,
+          [engineType]: { progress: 0, message: '起動コマンドを実行中...' },
+        }));
+
+        try {
+          setStartProgress(prev => ({
+            ...prev,
+            [engineType]: { progress: 20, message: '起動コマンドを実行中...' },
+          }));
+          await safeInvoke('start_engine', {
+            engineType: engineType,
+            config: null,
+          });
+          setStartProgress(prev => ({
+            ...prev,
+            [engineType]: {
+              progress: 50,
+              message: '起動コマンドが完了しました',
+            },
+          }));
+        } catch (err) {
+          // タイムアウトエラーの場合、エンジンが実際に起動している可能性があるため確認を継続
+          const errorMessage = extractErrorMessage(err);
+          if (errorMessage.includes('タイムアウト')) {
+            setStartProgress(prev => ({
+              ...prev,
+              [engineType]: {
+                progress: 50,
+                message: '起動処理は継続中です...',
+              },
+            }));
+            logger.info(
+              `${ENGINE_NAMES[engineType] || engineType}の起動コマンドがタイムアウトしましたが、起動処理は継続中です`,
+              '',
+              'EngineManagement'
+            );
+            await new Promise(resolve => setTimeout(resolve, 1000));
+          } else {
+            throw err;
+          }
         }
-      }
 
-      // 起動確認のため段階的に状態を確認
-      setStartProgress(prev => ({ ...prev, [engineType]: { progress: 60, message: '起動確認中...' } }));
-      await new Promise(resolve => setTimeout(resolve, 1000));
-      setStartProgress(prev => ({ ...prev, [engineType]: { progress: 70, message: 'エンジンの状態を確認中...' } }));
-      await new Promise(resolve => setTimeout(resolve, 1000));
+        // 起動確認のため段階的に状態を確認
+        setStartProgress(prev => ({
+          ...prev,
+          [engineType]: { progress: 60, message: '起動確認中...' },
+        }));
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        setStartProgress(prev => ({
+          ...prev,
+          [engineType]: { progress: 70, message: 'エンジンの状態を確認中...' },
+        }));
+        await new Promise(resolve => setTimeout(resolve, 1000));
 
-      setStartProgress(prev => ({ ...prev, [engineType]: { progress: 80, message: '最終確認中...' } }));
-      const detectedEngines = await safeInvoke<EngineDetectionResult[]>(
-        'detect_all_engines',
-        {}
-      );
-      const engine = detectedEngines.find(e => e.engine_type === engineType);
-      setStartProgress(prev => ({ ...prev, [engineType]: { progress: 100, message: '確認完了' } }));
-      
-      await new Promise(resolve => setTimeout(resolve, 500));
-      setStartProgress(prev => ({ ...prev, [engineType]: null }));
+        setStartProgress(prev => ({
+          ...prev,
+          [engineType]: { progress: 80, message: '最終確認中...' },
+        }));
+        const detectedEngines = await safeInvoke<EngineDetectionResult[]>(
+          'detect_all_engines',
+          {}
+        );
+        const engine = detectedEngines.find(e => e.engine_type === engineType);
+        setStartProgress(prev => ({
+          ...prev,
+          [engineType]: { progress: 100, message: '確認完了' },
+        }));
 
-      if (engine?.running) {
-        showSuccess(`${ENGINE_NAMES[engineType] || engineType}を起動しました`);
-      } else {
-        showError('エンジンの起動に失敗しました。エンジンが起動しているか確認してください。');
+        await new Promise(resolve => setTimeout(resolve, 500));
+        setStartProgress(prev => ({ ...prev, [engineType]: null }));
+
+        if (engine?.running) {
+          showSuccess(
+            `${ENGINE_NAMES[engineType] || engineType}を起動しました`
+          );
+        } else {
+          showError(
+            'エンジンの起動に失敗しました。エンジンが起動しているか確認してください。'
+          );
+        }
+        // 状態を更新
+        await loadEngines();
+      } catch (err) {
+        setStartProgress(prev => ({ ...prev, [engineType]: null }));
+        const errorMessage = extractErrorMessage(
+          err,
+          'エンジンの起動に失敗しました'
+        );
+        // タイムアウトエラーは既に処理済みなので、エラーメッセージを表示しない
+        if (!errorMessage.includes('タイムアウト')) {
+          showError(errorMessage);
+        }
+      } finally {
+        setStarting(null);
       }
-      // 状態を更新
-      await loadEngines();
-    } catch (err) {
-      setStartProgress(prev => ({ ...prev, [engineType]: null }));
-      const errorMessage = extractErrorMessage(err, 'エンジンの起動に失敗しました');
-      // タイムアウトエラーは既に処理済みなので、エラーメッセージを表示しない
-      if (!errorMessage.includes('タイムアウト')) {
-        showError(errorMessage);
-      }
-    } finally {
-      setStarting(null);
-    }
-  }, [loadEngines, showSuccess, showError]);
+    },
+    [loadEngines, showSuccess, showError]
+  );
 
   /**
    * エンジンを停止
    */
-  const handleStopEngine = useCallback(async (engineType: string) => {
-    try {
-      setStopping(engineType);
-      setError(null);
+  const handleStopEngine = useCallback(
+    async (engineType: string) => {
+      try {
+        setStopping(engineType);
+        setError(null);
 
-      await safeInvoke('stop_engine', { engineType });
-      showSuccess(`${ENGINE_NAMES[engineType] || engineType}を停止しました`);
-      await loadEngines(); // 状態を更新
-    } catch (err) {
-      showError(
-        extractErrorMessage(err, 'エンジンの停止に失敗しました')
-      );
-    } finally {
-      setStopping(null);
-    }
-  }, [loadEngines, showSuccess, showError]);
+        await safeInvoke('stop_engine', { engineType });
+        showSuccess(`${ENGINE_NAMES[engineType] || engineType}を停止しました`);
+        await loadEngines(); // 状態を更新
+      } catch (err) {
+        showError(extractErrorMessage(err, 'エンジンの停止に失敗しました'));
+      } finally {
+        setStopping(null);
+      }
+    },
+    [loadEngines, showSuccess, showError]
+  );
 
   /**
    * エンジンを自動インストール
    */
-  const handleInstallEngine = useCallback(async (engineType: string) => {
-    try {
-      setStarting(engineType);
-      setError(null);
+  const handleInstallEngine = useCallback(
+    async (engineType: string) => {
+      try {
+        setStarting(engineType);
+        setError(null);
 
-      // 進捗イベントをリッスン
-      const unlisten = await listen<{
-        status: string;
-        progress: number;
-        downloaded_bytes: number;
-        total_bytes: number;
-        speed_bytes_per_sec: number;
-        message?: string | null;
-      }>('engine_install_progress', event => {
-        if (event.payload) {
-          const { progress, message } = event.payload;
+        // 進捗イベントをリッスン
+        const unlisten = await listen<{
+          status: string;
+          progress: number;
+          downloaded_bytes: number;
+          total_bytes: number;
+          speed_bytes_per_sec: number;
+          message?: string | null;
+        }>('engine_install_progress', event => {
+          if (event.payload) {
+            const { progress, message } = event.payload;
+            setInstallProgress(prev => ({
+              ...prev,
+              [engineType]: {
+                progress: progress,
+                message: message || `インストール中... ${progress.toFixed(1)}%`,
+              },
+            }));
+            logger.info(
+              `インストール進捗: ${progress.toFixed(1)}%`,
+              message || '',
+              'EngineManagement'
+            );
+          }
+        });
+
+        try {
+          // インストール実行
+          try {
+            await safeInvoke('install_engine', { engineType: engineType });
+          } catch (installErr) {
+            // タイムアウトエラーの場合、インストールが実際に完了しているか確認
+            const errorMessage =
+              installErr instanceof Error
+                ? installErr.message
+                : String(installErr);
+            if (errorMessage.includes('タイムアウト')) {
+              logger.info(
+                `${ENGINE_NAMES[engineType] || engineType}のインストールコマンドがタイムアウトしましたが、インストール処理は継続中です`,
+                '',
+                'EngineManagement'
+              );
+              // インストール確認のため少し待機
+              await new Promise(resolve => setTimeout(resolve, 3000));
+            } else {
+              // タイムアウト以外のエラーはそのままスロー
+              throw installErr;
+            }
+          }
+
+          // イベントリスナーを解除
+          unlisten();
           setInstallProgress(prev => ({
             ...prev,
-            [engineType]: {
-              progress: progress,
-              message: message || `インストール中... ${progress.toFixed(1)}%`,
-            },
+            [engineType]: { progress: 100, message: 'インストール完了' },
           }));
-          logger.info(
-            `インストール進捗: ${progress.toFixed(1)}%`,
-            message || '',
-            'EngineManagement'
-          );
-        }
-      });
 
-      try {
-        // インストール実行
-        try {
-          await safeInvoke('install_engine', { engineType: engineType });
-        } catch (installErr) {
-          // タイムアウトエラーの場合、インストールが実際に完了しているか確認
-          const errorMessage = installErr instanceof Error ? installErr.message : String(installErr);
-          if (errorMessage.includes('タイムアウト')) {
+          // 少し待ってからプログレスバーを非表示
+          await new Promise(resolve => setTimeout(resolve, 500));
+          setInstallProgress(prev => ({ ...prev, [engineType]: null }));
+
+          // インストール後に再度検出して状態を確認（最大3回リトライ、各回で2秒待機）
+          let engine: EngineDetectionResult | undefined = undefined;
+          for (let retry = 0; retry < 3; retry++) {
+            await new Promise(resolve =>
+              setTimeout(resolve, 2000 * (retry + 1))
+            );
+
+            const detectedEngines = await safeInvoke<EngineDetectionResult[]>(
+              'detect_all_engines',
+              {}
+            );
+            engine = detectedEngines.find(e => e.engine_type === engineType);
+
+            if (engine?.installed) {
+              break;
+            }
+
             logger.info(
-              `${ENGINE_NAMES[engineType] || engineType}のインストールコマンドがタイムアウトしましたが、インストール処理は継続中です`,
+              `${ENGINE_NAMES[engineType] || engineType}の検出試行 ${retry + 1} / 3: installed=${engine?.installed ?? false}`,
               '',
               'EngineManagement'
             );
-            // インストール確認のため少し待機
-            await new Promise(resolve => setTimeout(resolve, 3000));
+          }
+
+          // 状態を確認してから成功メッセージを表示
+          if (engine?.installed) {
+            showSuccess(
+              `${ENGINE_NAMES[engineType] || engineType}のインストールが完了しました`
+            );
           } else {
-            // タイムアウト以外のエラーはそのままスロー
+            // インストールに失敗した場合のみエラーを表示
+            // インストールコマンド自体が失敗した場合は、catchブロックでエラーが表示される
+            // ここでは検証に失敗した場合のメッセージを表示
+            const errorMsg = engine?.message
+              ? `インストール後の検証に失敗しました。${engine.message}\n\n出力パネルのログを確認して、詳細なエラー情報を確認してください。`
+              : 'インストール後の検証に失敗しました。エンジンがインストールされているか確認してください。\n\n出力パネルのログを確認して、詳細なエラー情報を確認してください。';
+            showError(errorMsg);
+          }
+
+          // 状態を更新
+          await loadEngines();
+        } catch (installErr) {
+          // イベントリスナーを解除
+          unlisten();
+          setInstallProgress(prev => ({ ...prev, [engineType]: null }));
+          const errorMessage =
+            installErr instanceof Error
+              ? installErr.message
+              : String(installErr);
+          // タイムアウトエラーは既に処理済みなので、エラーメッセージを表示しない
+          if (!errorMessage.includes('タイムアウト')) {
             throw installErr;
           }
         }
-
-        // イベントリスナーを解除
-        unlisten();
-        setInstallProgress(prev => ({ ...prev, [engineType]: { progress: 100, message: 'インストール完了' } }));
-
-        // 少し待ってからプログレスバーを非表示
-        await new Promise(resolve => setTimeout(resolve, 500));
+      } catch (err) {
         setInstallProgress(prev => ({ ...prev, [engineType]: null }));
+        const errorMessage =
+          err instanceof Error
+            ? err.message
+            : 'エンジンのインストールに失敗しました';
 
-        // インストール後に再度検出して状態を確認（最大3回リトライ、各回で2秒待機）
-        let engine: EngineDetectionResult | undefined = undefined;
-        for (let retry = 0; retry < 3; retry++) {
-          await new Promise(resolve => setTimeout(resolve, 2000 * (retry + 1)));
-          
-          const detectedEngines = await safeInvoke<EngineDetectionResult[]>(
-            'detect_all_engines',
-            {}
-          );
-          engine = detectedEngines.find(e => e.engine_type === engineType);
-          
-          if (engine?.installed) {
-            break;
-          }
-          
-          logger.info(
-            `${ENGINE_NAMES[engineType] || engineType}の検出試行 ${retry + 1} / 3: installed=${engine?.installed ?? false}`,
-            '',
-            'EngineManagement'
-          );
+        // エラーメッセージを改善
+        let userFriendlyMessage = errorMessage;
+
+        if (
+          errorMessage.includes('Python') ||
+          errorMessage.includes('python')
+        ) {
+          userFriendlyMessage = `${ENGINE_NAMES[engineType] || engineType}のインストールにはPythonが必要です。\n\nPythonをインストールしてから、再度お試しください。\nPython公式サイト: https://www.python.org/`;
+        } else if (errorMessage.includes('pip')) {
+          userFriendlyMessage = `pipが見つかりません。Pythonとpipをインストールしてから、再度お試しください。`;
+        } else if (
+          errorMessage.includes('タイムアウト') ||
+          errorMessage.includes('timeout')
+        ) {
+          userFriendlyMessage = `インストールに時間がかかっています。バックグラウンドで継続中です。\n\nしばらく待ってから、エンジンの状態を確認してください。`;
+        } else if (
+          errorMessage.includes('ダウンロード') ||
+          errorMessage.includes('download')
+        ) {
+          userFriendlyMessage = `ダウンロードに失敗しました。ネットワーク接続を確認してから、再度お試しください。`;
+        } else if (
+          errorMessage.includes('権限') ||
+          errorMessage.includes('permission') ||
+          errorMessage.includes('access denied')
+        ) {
+          userFriendlyMessage = `インストールに必要な権限がありません。\n\n管理者権限で実行するか、ユーザー権限でインストールする設定を確認してください。`;
+        } else if (
+          errorMessage.includes('ディスク') ||
+          errorMessage.includes('disk') ||
+          errorMessage.includes('容量')
+        ) {
+          userFriendlyMessage = `ディスク容量が不足しています。\n\n空き容量を確保してから、再度お試しください。`;
         }
-        
-        // 状態を確認してから成功メッセージを表示
-        if (engine?.installed) {
-          showSuccess(
-            `${ENGINE_NAMES[engineType] || engineType}のインストールが完了しました`
-          );
-        } else {
-          // インストールに失敗した場合のみエラーを表示
-          // インストールコマンド自体が失敗した場合は、catchブロックでエラーが表示される
-          // ここでは検証に失敗した場合のメッセージを表示
-          const errorMsg = engine?.message 
-            ? `インストール後の検証に失敗しました。${engine.message}\n\n出力パネルのログを確認して、詳細なエラー情報を確認してください。`
-            : 'インストール後の検証に失敗しました。エンジンがインストールされているか確認してください。\n\n出力パネルのログを確認して、詳細なエラー情報を確認してください。';
-          showError(errorMsg);
-        }
-        
-        // 状態を更新
-        await loadEngines();
-      } catch (installErr) {
-        // イベントリスナーを解除
-        unlisten();
-        setInstallProgress(prev => ({ ...prev, [engineType]: null }));
-        const errorMessage = installErr instanceof Error ? installErr.message : String(installErr);
-        // タイムアウトエラーは既に処理済みなので、エラーメッセージを表示しない
-        if (!errorMessage.includes('タイムアウト')) {
-          throw installErr;
-        }
+
+        showError(userFriendlyMessage);
+        logger.error('エンジンインストールエラー', err, 'EngineManagement');
+      } finally {
+        setStarting(null);
       }
-    } catch (err) {
-      setInstallProgress(prev => ({ ...prev, [engineType]: null }));
-      const errorMessage =
-        err instanceof Error
-          ? err.message
-          : 'エンジンのインストールに失敗しました';
-      
-      // エラーメッセージを改善
-      let userFriendlyMessage = errorMessage;
-      
-      if (errorMessage.includes('Python') || errorMessage.includes('python')) {
-        userFriendlyMessage = `${ENGINE_NAMES[engineType] || engineType}のインストールにはPythonが必要です。\n\nPythonをインストールしてから、再度お試しください。\nPython公式サイト: https://www.python.org/`;
-      } else if (errorMessage.includes('pip')) {
-        userFriendlyMessage = `pipが見つかりません。Pythonとpipをインストールしてから、再度お試しください。`;
-      } else if (errorMessage.includes('タイムアウト') || errorMessage.includes('timeout')) {
-        userFriendlyMessage = `インストールに時間がかかっています。バックグラウンドで継続中です。\n\nしばらく待ってから、エンジンの状態を確認してください。`;
-      } else if (errorMessage.includes('ダウンロード') || errorMessage.includes('download')) {
-        userFriendlyMessage = `ダウンロードに失敗しました。ネットワーク接続を確認してから、再度お試しください。`;
-      } else if (errorMessage.includes('権限') || errorMessage.includes('permission') || errorMessage.includes('access denied')) {
-        userFriendlyMessage = `インストールに必要な権限がありません。\n\n管理者権限で実行するか、ユーザー権限でインストールする設定を確認してください。`;
-      } else if (errorMessage.includes('ディスク') || errorMessage.includes('disk') || errorMessage.includes('容量')) {
-        userFriendlyMessage = `ディスク容量が不足しています。\n\n空き容量を確保してから、再度お試しください。`;
-      }
-      
-      showError(userFriendlyMessage);
-      logger.error('エンジンインストールエラー', err, 'EngineManagement');
-    } finally {
-      setStarting(null);
-    }
-  }, [loadEngines, showSuccess, showError]);
+    },
+    [loadEngines, showSuccess, showError]
+  );
 
   if (loading) {
     return (
@@ -445,7 +536,10 @@ export const EngineManagement: React.FC = () => {
         <div className="engine-management-container">
           <Breadcrumb items={breadcrumbItems} />
           <header className="engine-management-header">
-            <button className="back-button" onClick={() => navigate('/settings')}>
+            <button
+              className="back-button"
+              onClick={() => navigate('/settings')}
+            >
               ← 戻る
             </button>
             <h1>エンジン管理</h1>
@@ -513,7 +607,7 @@ export const EngineManagement: React.FC = () => {
                   type="text"
                   placeholder="エンジン名で検索..."
                   value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
+                  onChange={e => setSearchQuery(e.target.value)}
                   className="engine-search-input"
                 />
                 {searchQuery && (
@@ -529,9 +623,14 @@ export const EngineManagement: React.FC = () => {
               </div>
               <select
                 value={statusFilter}
-                onChange={(e) => setStatusFilter(e.target.value as typeof statusFilter)}
+                onChange={e =>
+                  setStatusFilter(e.target.value as typeof statusFilter)
+                }
                 className="engine-status-filter"
-                aria-label={t('engineManagement.statusFilter') || 'エンジンの状態でフィルタリング'}
+                aria-label={
+                  t('engineManagement.statusFilter') ||
+                  'エンジンの状態でフィルタリング'
+                }
               >
                 <option value="all">すべての状態</option>
                 <option value="installed">インストール済み</option>
@@ -546,7 +645,9 @@ export const EngineManagement: React.FC = () => {
               <div className="engine-search-results-info">
                 {filteredEngines.length}件のエンジンが見つかりました
                 {engines.length !== filteredEngines.length && (
-                  <span className="engine-search-total">（全{engines.length}件中）</span>
+                  <span className="engine-search-total">
+                    （全{engines.length}件中）
+                  </span>
                 )}
               </div>
             ) : null}
@@ -603,49 +704,68 @@ export const EngineManagement: React.FC = () => {
                         <div className="message-icon">📦</div>
                         <div className="message-content">
                           <p className="message-title">
-                            {ENGINE_NAMES[engine.engine_type] || engine.engine_type}が未インストールです
+                            {ENGINE_NAMES[engine.engine_type] ||
+                              engine.engine_type}
+                            が未インストールです
                           </p>
                           <p className="message-description">
                             {engine.engine_type === 'ollama' && (
-                              <>このアプリから自動的にインストールできます。ワンクリックでセットアップを開始します。</>
+                              <>
+                                このアプリから自動的にインストールできます。ワンクリックでセットアップを開始します。
+                              </>
                             )}
                             {engine.engine_type === 'lm_studio' && (
-                              <>LM Studioのインストーラーを自動ダウンロードして起動します。インストール後、LM Studioを起動してください。</>
+                              <>
+                                LM
+                                Studioのインストーラーを自動ダウンロードして起動します。インストール後、LM
+                                Studioを起動してください。
+                              </>
                             )}
                             {engine.engine_type === 'vllm' && (
-                              <>Pythonがインストールされている場合、自動的にvLLMをインストールします。Pythonが未インストールの場合は、先にPythonをインストールしてください。</>
+                              <>
+                                Pythonがインストールされている場合、自動的にvLLMをインストールします。Pythonが未インストールの場合は、先にPythonをインストールしてください。
+                              </>
                             )}
                             {engine.engine_type === 'llama_cpp' && (
-                              <>llama.cppを自動ダウンロードしてセットアップします。アプリ内で完結します。</>
+                              <>
+                                llama.cppを自動ダウンロードしてセットアップします。アプリ内で完結します。
+                              </>
                             )}
-                            {!['ollama', 'lm_studio', 'vllm', 'llama_cpp'].includes(engine.engine_type) && (
-                              <>このアプリから自動的にインストールできます。ワンクリックでセットアップを開始します。</>
+                            {![
+                              'ollama',
+                              'lm_studio',
+                              'vllm',
+                              'llama_cpp',
+                            ].includes(engine.engine_type) && (
+                              <>
+                                このアプリから自動的にインストールできます。ワンクリックでセットアップを開始します。
+                              </>
                             )}
                           </p>
                         </div>
                       </div>
                     )}
-                    
+
                     {engine.message && engine.installed && (
                       <div className="engine-message">
                         <p>{engine.message}</p>
                       </div>
                     )}
-                    
+
                     {startProgress[engine.engine_type] && (
                       <EngineStartProgressBar
                         progress={startProgress[engine.engine_type]!.progress}
                         message={startProgress[engine.engine_type]!.message}
                       />
                     )}
-                    
+
                     {installProgress[engine.engine_type] && (
                       <EngineStartProgressBar
                         progress={installProgress[engine.engine_type]!.progress}
                         message={installProgress[engine.engine_type]!.message}
                       />
                     )}
-                    
+
                     <div className="engine-info">
                       {engine.path && (
                         <div className="engine-info-item">
@@ -665,7 +785,9 @@ export const EngineManagement: React.FC = () => {
                               handleInstallEngine(engine.engine_type);
                             });
                           }}
-                          disabled={starting === engine.engine_type || isPending}
+                          disabled={
+                            starting === engine.engine_type || isPending
+                          }
                         >
                           {starting === engine.engine_type ? (
                             <>
@@ -689,7 +811,9 @@ export const EngineManagement: React.FC = () => {
                               handleStartEngine(engine.engine_type);
                             });
                           }}
-                          disabled={starting === engine.engine_type || isPending}
+                          disabled={
+                            starting === engine.engine_type || isPending
+                          }
                         >
                           {starting === engine.engine_type
                             ? '起動中...'
@@ -705,7 +829,9 @@ export const EngineManagement: React.FC = () => {
                               handleStopEngine(engine.engine_type);
                             });
                           }}
-                          disabled={stopping === engine.engine_type || isPending}
+                          disabled={
+                            stopping === engine.engine_type || isPending
+                          }
                         >
                           {stopping === engine.engine_type
                             ? '停止中...'

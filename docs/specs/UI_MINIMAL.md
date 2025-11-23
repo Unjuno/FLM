@@ -125,3 +125,13 @@ Setup Wizard
 - UI コンポーネントライブラリ（Tailwind / MUI など）、テーマカラー。
 - 手動テストシナリオ（Phase2 開始時に `docs/tests/ui-scenarios.md` として整理）。
 - Chat Tester での詳細パラメータ設定（Phase3 以降に拡張予定）。
+
+---
+
+**関連ドキュメント**:
+- `docs/specs/CORE_API.md` - コアAPI仕様（UIが使用するAPI）
+- `docs/specs/UI_EXTENSIONS.md` - UI拡張仕様
+- `docs/specs/I18N_SPEC.md` - 国際化仕様
+- `docs/specs/BRAND_GUIDELINE.md` - ブランドガイドライン
+- `docs/guides/SECURITY_FIREWALL_GUIDE.md` - ファイアウォール設定ガイド
+- `docs/planning/PLAN.md` - プロジェクト計画

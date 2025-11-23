@@ -36,9 +36,10 @@ export const ApiListControls: React.FC<ApiListControlsProps> = ({
           aria-label={`${t('apiList.selectAllAria')} (${summaryLabel})`}
         />
         <span>{t('apiList.selectAll', { count: selectedCount })}</span>
-        <span className="select-count" aria-hidden="true">{summaryLabel}</span>
+        <span className="select-count" aria-hidden="true">
+          {summaryLabel}
+        </span>
       </label>
     </div>
   );
 };
-

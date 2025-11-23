@@ -50,42 +50,51 @@ let lastSnapshot: SharedOllamaDetectionState | null = null;
 
 const notifyDetectionListeners = () => {
   const snapshot = getSharedSnapshot();
-  
+
   // 状態が実際に変更された場合のみ通知（不要な再レンダリングを防ぐ）
   if (lastSnapshot) {
-    const statusChanged = 
+    const statusChanged =
       lastSnapshot.status !== snapshot.status ||
-      (lastSnapshot.status && snapshot.status && (
-        lastSnapshot.status.running !== snapshot.status.running ||
-        lastSnapshot.status.installed !== snapshot.status.installed ||
-        lastSnapshot.status.portable !== snapshot.status.portable ||
-        lastSnapshot.status.version !== snapshot.status.version
-      ));
-    
-    const isDetectingChanged = lastSnapshot.isDetecting !== snapshot.isDetecting;
+      (lastSnapshot.status &&
+        snapshot.status &&
+        (lastSnapshot.status.running !== snapshot.status.running ||
+          lastSnapshot.status.installed !== snapshot.status.installed ||
+          lastSnapshot.status.portable !== snapshot.status.portable ||
+          lastSnapshot.status.version !== snapshot.status.version));
+
+    const isDetectingChanged =
+      lastSnapshot.isDetecting !== snapshot.isDetecting;
     const errorChanged = lastSnapshot.error !== snapshot.error;
     const autoStatusChanged = lastSnapshot.autoStatus !== snapshot.autoStatus;
     const autoErrorChanged = lastSnapshot.autoError !== snapshot.autoError;
-    
+
     // autoStepsの変更をチェック（配列の内容が変更されたか）
-    const autoStepsChanged = 
+    const autoStepsChanged =
       lastSnapshot.autoSteps.length !== snapshot.autoSteps.length ||
       lastSnapshot.autoSteps.some((step, idx) => {
         const newStep = snapshot.autoSteps[idx];
-        return !newStep || 
+        return (
+          !newStep ||
           step.id !== newStep.id ||
           step.status !== newStep.status ||
           step.progress !== newStep.progress ||
-          step.message !== newStep.message;
+          step.message !== newStep.message
+        );
       });
-    
+
     // 何も変更されていない場合は通知をスキップ
-    if (!statusChanged && !isDetectingChanged && !errorChanged && 
-        !autoStatusChanged && !autoErrorChanged && !autoStepsChanged) {
+    if (
+      !statusChanged &&
+      !isDetectingChanged &&
+      !errorChanged &&
+      !autoStatusChanged &&
+      !autoErrorChanged &&
+      !autoStepsChanged
+    ) {
       return;
     }
   }
-  
+
   lastSnapshot = snapshot;
   detectionListeners.forEach(listener => listener(snapshot));
 };
@@ -103,7 +112,11 @@ export function useOllamaDetection() {
   );
 
   const detect = useCallback(async () => {
-    logger.debug('[useOllamaDetection] Ollama検出を開始します...', undefined, 'useOllama');
+    logger.debug(
+      '[useOllamaDetection] Ollama検出を開始します...',
+      undefined,
+      'useOllama'
+    );
     sharedDetectionState.isDetecting = true;
     sharedDetectionState.error = null;
     notifyDetectionListeners();
@@ -120,7 +133,11 @@ export function useOllamaDetection() {
           logger.debug('[useOllamaDetection] 検出結果:', result, 'useOllama');
           sharedDetectionState.status = result;
           sharedDetectionState.error = null;
-          logger.debug('[useOllamaDetection] 検出が完了しました', undefined, 'useOllama');
+          logger.debug(
+            '[useOllamaDetection] 検出が完了しました',
+            undefined,
+            'useOllama'
+          );
           return result;
         } catch (err) {
           const errorMessage =
@@ -233,7 +250,11 @@ export function useOllamaDetection() {
     if (!state.status) {
       if (state.autoStatus === 'idle') {
         runAutoSetup().catch(err => {
-          logger.error('[useOllamaDetection] 自動セットアップエラー', err, 'useOllama');
+          logger.error(
+            '[useOllamaDetection] 自動セットアップエラー',
+            err,
+            'useOllama'
+          );
         });
       }
       return;
@@ -245,7 +266,11 @@ export function useOllamaDetection() {
     if (needsDownload || needsStart) {
       if (state.autoStatus !== 'running') {
         runAutoSetup().catch(err => {
-          logger.error('[useOllamaDetection] 自動セットアップエラー', err, 'useOllama');
+          logger.error(
+            '[useOllamaDetection] 自動セットアップエラー',
+            err,
+            'useOllama'
+          );
         });
       }
     } else {
@@ -323,7 +348,10 @@ export function useOllamaDownload() {
       });
       setDownloadPath(downloadPath);
     } catch (err) {
-      const errorMessage = extractErrorMessage(err, 'ダウンロードに失敗しました');
+      const errorMessage = extractErrorMessage(
+        err,
+        'ダウンロードに失敗しました'
+      );
       setError(errorMessage);
       setDownloadStatus('error');
 
@@ -413,7 +441,7 @@ export function useOllamaProcess() {
       // エラー情報を詳細に取得
       let errorMessage = 'Ollamaの起動に失敗しました';
       let errorDetails: Record<string, unknown> = {};
-      
+
       if (err instanceof Error) {
         errorMessage = extractErrorMessage(err);
         errorDetails = {
@@ -421,7 +449,7 @@ export function useOllamaProcess() {
           message: err.message,
           stack: err.stack,
         };
-        
+
         // エラーオブジェクトの追加プロパティを取得
         try {
           const errorObj = err as unknown as Record<string, unknown>;
@@ -452,10 +480,14 @@ export function useOllamaProcess() {
       } else {
         errorMessage = extractErrorMessage(err);
       }
-      
+
       logger.error('[useOllamaProcess] 起動エラー', err, 'useOllama');
       if (Object.keys(errorDetails).length > 0) {
-        logger.debug('[useOllamaProcess] エラー詳細:', errorDetails, 'useOllama');
+        logger.debug(
+          '[useOllamaProcess] エラー詳細:',
+          errorDetails,
+          'useOllama'
+        );
       }
       setError(errorMessage);
       throw err;

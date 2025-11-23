@@ -62,6 +62,9 @@ pub enum RepoError {
 
     #[error("IO error: {reason}")]
     IoError { reason: String },
+
+    #[error("Validation error: {reason}")]
+    ValidationError { reason: String },
 }
 
 /// HTTP-related errors

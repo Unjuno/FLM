@@ -36,7 +36,7 @@ export interface UseEngineManagementReturn {
 
 /**
  * エンジン管理用カスタムフック
- * 
+ *
  * @param initialEngineType - 初期エンジンタイプ
  * @param onEngineTypeChange - エンジンタイプ変更時のコールバック
  */
@@ -46,17 +46,22 @@ export const useEngineManagement = (
 ): UseEngineManagementReturn => {
   const [availableEngines, setAvailableEngines] = useState<string[]>([]);
   const [loadingEngines, setLoadingEngines] = useState(false);
-  const [engineDetectionResult, setEngineDetectionResult] = useState<EngineDetectionResult | null>(null);
+  const [engineDetectionResult, setEngineDetectionResult] =
+    useState<EngineDetectionResult | null>(null);
   const [checkingEngine, setCheckingEngine] = useState(false);
-  const [currentEngineType, setCurrentEngineType] = useState<string>(initialEngineType);
-  
+  const [currentEngineType, setCurrentEngineType] =
+    useState<string>(initialEngineType);
+
   const isMounted = useIsMounted();
 
   // エンジンタイプを設定
-  const setEngineType = useCallback((engineType: string) => {
-    setCurrentEngineType(engineType);
-    onEngineTypeChange?.(engineType);
-  }, [onEngineTypeChange]);
+  const setEngineType = useCallback(
+    (engineType: string) => {
+      setCurrentEngineType(engineType);
+      onEngineTypeChange?.(engineType);
+    },
+    [onEngineTypeChange]
+  );
 
   // 利用可能なエンジン一覧を取得
   const loadAvailableEngines = useCallback(async () => {
@@ -80,48 +85,51 @@ export const useEngineManagement = (
   }, [isMounted]);
 
   // エンジンのインストール状態を確認
-  const checkEngineInstallation = useCallback(async (engineType: string) => {
-    if (!engineType || engineType === 'ollama') {
-      // Ollamaは自動インストールされるため、特別なチェックは不要
-      if (isMounted()) {
-        setEngineDetectionResult(null);
+  const checkEngineInstallation = useCallback(
+    async (engineType: string) => {
+      if (!engineType || engineType === 'ollama') {
+        // Ollamaは自動インストールされるため、特別なチェックは不要
+        if (isMounted()) {
+          setEngineDetectionResult(null);
+        }
+        return;
       }
-      return;
-    }
 
-    try {
-      setCheckingEngine(true);
-      const result = await safeInvoke<{
-        engine_type: string;
-        installed: boolean;
-        running: boolean;
-        version?: string | null;
-        path?: string | null;
-        message?: string | null;
-      }>('detect_engine', { engineType });
+      try {
+        setCheckingEngine(true);
+        const result = await safeInvoke<{
+          engine_type: string;
+          installed: boolean;
+          running: boolean;
+          version?: string | null;
+          path?: string | null;
+          message?: string | null;
+        }>('detect_engine', { engineType });
 
-      if (isMounted()) {
-        setEngineDetectionResult({
-          installed: result.installed,
-          running: result.running,
-          message: result.message || undefined,
-        });
+        if (isMounted()) {
+          setEngineDetectionResult({
+            installed: result.installed,
+            running: result.running,
+            message: result.message || undefined,
+          });
+        }
+      } catch (err) {
+        logger.error('エンジン検出エラー', err, 'useEngineManagement');
+        if (isMounted()) {
+          setEngineDetectionResult({
+            installed: false,
+            running: false,
+            message: 'エンジンの検出に失敗しました',
+          });
+        }
+      } finally {
+        if (isMounted()) {
+          setCheckingEngine(false);
+        }
       }
-    } catch (err) {
-      logger.error('エンジン検出エラー', err, 'useEngineManagement');
-      if (isMounted()) {
-        setEngineDetectionResult({
-          installed: false,
-          running: false,
-          message: 'エンジンの検出に失敗しました',
-        });
-      }
-    } finally {
-      if (isMounted()) {
-        setCheckingEngine(false);
-      }
-    }
-  }, [isMounted]);
+    },
+    [isMounted]
+  );
 
   // 初回読み込み時にエンジン一覧を取得
   useEffect(() => {
@@ -145,4 +153,3 @@ export const useEngineManagement = (
     checkEngineInstallation,
   };
 };
-

@@ -3,7 +3,7 @@
 FLM Core Library - Domain layer implementation.
 
 This crate provides:
-- Domain models and data structures (see `docs/CORE_API.md` section 2)
+- Domain models and data structures (see `docs/specs/CORE_API.md` section 2)
 - Service layer (EngineService, ProxyService, SecurityService, ConfigService)
 - Port traits (abstract interfaces for adapters)
 
@@ -27,5 +27,5 @@ flm-core/
 └── migrations/      # SQL migration files (TODO)
 ```
 
-See `docs/CORE_API.md` for the complete API specification.
+See `docs/specs/CORE_API.md` for the complete API specification.
 

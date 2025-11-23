@@ -56,6 +56,7 @@ Rust製セキュアプロキシを起動し、Forward先を検出済みエンジ
 
 オプション:
 - `--port <number>` (HTTP待受ポート・デフォルト 8080、HTTPSは+1)
+- `--bind <address>` (バインドするIPアドレス・デフォルト "127.0.0.1"。外部アクセスが必要な場合のみ "0.0.0.0" を使用)
 - `--engine-base-url <url>` (デフォルトは検出結果)
 - `--acme-email`, `--acme-domain`（https-acmeモード必須）
 - `--no-daemon` (フォアグラウンド実行)
@@ -241,5 +242,10 @@ flm check --verbose
 
 ---
 
-この仕様は `docs/planning/PLAN.md` / `docs/specs/FEATURE_SPEC.md` と連動し、コマンド実装前に更新する。
-
+**関連ドキュメント**:
+- `docs/specs/CORE_API.md` - コアAPI仕様（CLIが使用するAPI）
+- `docs/planning/PLAN.md` - プロジェクト計画
+- `docs/specs/FEATURE_SPEC.md` - 機能仕様
+- `docs/specs/PROXY_SPEC.md` - プロキシ仕様
+- `docs/specs/ENGINE_DETECT.md` - エンジン検出仕様
+- `docs/specs/DB_SCHEMA.md` - データベーススキーマ

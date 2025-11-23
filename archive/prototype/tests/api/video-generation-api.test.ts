@@ -2,7 +2,11 @@
 
 import { describe, it, expect, beforeAll, afterAll } from '@jest/globals';
 import { invoke } from '@tauri-apps/api/core';
-import { cleanupTestApis, handleTauriAppNotRunningError, checkTauriAvailable } from '../setup/test-helpers';
+import {
+  cleanupTestApis,
+  handleTauriAppNotRunningError,
+  checkTauriAvailable,
+} from '../setup/test-helpers';
 import { debugLog, debugWarn } from '../setup/debug';
 
 /**
@@ -13,7 +17,7 @@ describe('動画生成モデル API テスト', () => {
 
   beforeAll(async () => {
     debugLog('動画生成モデルAPIテストを開始します');
-    
+
     try {
       const result = await invoke<{
         id: string;
@@ -36,10 +40,15 @@ describe('動画生成モデル API テスト', () => {
       createdApiId = result.id;
     } catch (error) {
       if (handleTauriAppNotRunningError(error)) {
-        debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+        debugWarn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         return;
       }
-      debugWarn('動画生成API作成に失敗したため、このテストをスキップします:', error);
+      debugWarn(
+        '動画生成API作成に失敗したため、このテストをスキップします:',
+        error
+      );
     }
   });
 
@@ -58,7 +67,9 @@ describe('動画生成モデル API テスト', () => {
 
       const isTauriAvailable = await checkTauriAvailable();
       if (!isTauriAvailable) {
-        debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+        debugWarn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
@@ -78,15 +89,19 @@ describe('動画生成モデル API テスト', () => {
     it('動画生成モデルのカテゴリが正しく設定されていること', async () => {
       const isTauriAvailable = await checkTauriAvailable();
       if (!isTauriAvailable) {
-        debugWarn('Tauriアプリが起動していないため、このテストをスキップします');
+        debugWarn(
+          'Tauriアプリが起動していないため、このテストをスキップします'
+        );
         expect(true).toBe(true);
         return;
       }
 
-      const models = await invoke<Array<{
-        name: string;
-        category?: string;
-      }>>('search_models', {
+      const models = await invoke<
+        Array<{
+          name: string;
+          category?: string;
+        }>
+      >('search_models', {
         engineType: 'ollama',
         category: 'video-generation',
         limit: 10,
@@ -95,11 +110,8 @@ describe('動画生成モデル API テスト', () => {
       expect(models).toBeDefined();
       expect(Array.isArray(models)).toBe(true);
 
-      const videoModels = models.filter(
-        m => m.category === 'video-generation'
-      );
+      const videoModels = models.filter(m => m.category === 'video-generation');
       expect(videoModels.length).toBeGreaterThan(0);
     }, 10000);
   });
 });
-

@@ -1,6 +1,12 @@
 // ApiDetails - API詳細ページ
 
-import React, { useState, useEffect, useTransition, useMemo, useCallback } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useTransition,
+  useMemo,
+  useCallback,
+} from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { safeInvoke } from '../utils/tauri';
 import { generateSampleCode } from '../utils/apiCodeGenerator';
@@ -67,31 +73,32 @@ export const ApiDetails: React.FC = () => {
    * API情報を読み込む操作
    * API一覧から該当APIを取得し、データ構造を変換
    */
-  const loadApiInfoOperation = useCallback(async (): Promise<ApiDetailsLocalInfo | null> => {
-    if (!apiId) {
-      return null;
-    }
+  const loadApiInfoOperation =
+    useCallback(async (): Promise<ApiDetailsLocalInfo | null> => {
+      if (!apiId) {
+        return null;
+      }
 
-    const apis = await safeInvoke<ApiDetailsLocalInfo[]>('list_apis');
-    const api = apis.find((a: ApiDetailsLocalInfo) => a.id === apiId);
+      const apis = await safeInvoke<ApiDetailsLocalInfo[]>('list_apis');
+      const api = apis.find((a: ApiDetailsLocalInfo) => a.id === apiId);
 
-    if (!api) {
-      throw new Error('APIが見つかりませんでした');
-    }
+      if (!api) {
+        throw new Error('APIが見つかりませんでした');
+      }
 
-    return {
-      id: api.id,
-      name: api.name,
-      endpoint: api.endpoint,
-      external_endpoint: api.external_endpoint,
-      model_name: api.model_name,
-      port: api.port,
-      enable_auth: api.enable_auth,
-      status: api.status,
-      created_at: api.created_at,
-      updated_at: api.updated_at,
-    };
-  }, [apiId]);
+      return {
+        id: api.id,
+        name: api.name,
+        endpoint: api.endpoint,
+        external_endpoint: api.external_endpoint,
+        model_name: api.model_name,
+        port: api.port,
+        enable_auth: api.enable_auth,
+        status: api.status,
+        created_at: api.created_at,
+        updated_at: api.updated_at,
+      };
+    }, [apiId]);
 
   const {
     data: loadedApiInfo,
@@ -150,7 +157,10 @@ export const ApiDetails: React.FC = () => {
         setApiKey(null);
       }
     } catch (err) {
-      const errorMessage = extractErrorMessage(err, 'APIキーの取得に失敗しました');
+      const errorMessage = extractErrorMessage(
+        err,
+        'APIキーの取得に失敗しました'
+      );
       showErrorNotification('APIキーの取得に失敗しました', errorMessage);
       logger.error('APIキーの取得に失敗しました', err, 'ApiDetails');
     } finally {
@@ -167,7 +177,10 @@ export const ApiDetails: React.FC = () => {
       await copyToClipboard(text);
       showSuccess('クリップボードにコピーしました', '', 3000);
     } catch (err) {
-      showErrorNotification('コピーに失敗しました', extractErrorMessage(err, 'クリップボードへのアクセスに失敗しました'));
+      showErrorNotification(
+        'コピーに失敗しました',
+        extractErrorMessage(err, 'クリップボードへのアクセスに失敗しました')
+      );
     }
   };
 
@@ -176,28 +189,29 @@ export const ApiDetails: React.FC = () => {
    * @param language 生成する言語（'curl' | 'python' | 'javascript'）
    * @returns サンプルコード文字列（apiInfoが存在しない場合は空文字列）
    */
-  const getSampleCode = useCallback((
-    language: 'curl' | 'python' | 'javascript'
-  ): string => {
-    if (!apiInfo) return '';
+  const getSampleCode = useCallback(
+    (language: 'curl' | 'python' | 'javascript'): string => {
+      if (!apiInfo) return '';
 
-    const apiInfoForGenerator: ApiInfo = {
-      id: apiInfo.id,
-      name: apiInfo.name,
-      endpoint: apiInfo.endpoint,
-      port: apiInfo.port,
-      status: apiInfo.status === 'running' ? 'running' : 'stopped',
-      model_name: apiInfo.model_name,
-      created_at: apiInfo.created_at,
-      updated_at: apiInfo.updated_at,
-    };
+      const apiInfoForGenerator: ApiInfo = {
+        id: apiInfo.id,
+        name: apiInfo.name,
+        endpoint: apiInfo.endpoint,
+        port: apiInfo.port,
+        status: apiInfo.status === 'running' ? 'running' : 'stopped',
+        model_name: apiInfo.model_name,
+        created_at: apiInfo.created_at,
+        updated_at: apiInfo.updated_at,
+      };
 
-    return generateSampleCode(language, {
-      apiInfo: apiInfoForGenerator,
-      apiKey: apiInfo.enable_auth ? apiKey || undefined : undefined,
-      sampleMessage: SAMPLE_DATA.MESSAGE,
-    });
-  }, [apiInfo, apiKey]);
+      return generateSampleCode(language, {
+        apiInfo: apiInfoForGenerator,
+        apiKey: apiInfo.enable_auth ? apiKey || undefined : undefined,
+        sampleMessage: SAMPLE_DATA.MESSAGE,
+      });
+    },
+    [apiInfo, apiKey]
+  );
 
   if (loading) {
     return (
@@ -315,7 +329,9 @@ export const ApiDetails: React.FC = () => {
               >
                 <span className="section-title-with-icon">
                   エンドポイント
-                  <span className="section-title-icon" aria-hidden="true">❓</span>
+                  <span className="section-title-icon" aria-hidden="true">
+                    ❓
+                  </span>
                 </span>
               </Tooltip>
             </h2>
@@ -343,12 +359,16 @@ export const ApiDetails: React.FC = () => {
                 >
                   <span className="section-title-with-icon">
                     外部アクセスアドレス
-                    <span className="section-title-icon" aria-hidden="true">❓</span>
+                    <span className="section-title-icon" aria-hidden="true">
+                      ❓
+                    </span>
                   </span>
                 </Tooltip>
               </h2>
               <div className="endpoint-display">
-                <code className="endpoint-url">{apiInfo.external_endpoint}</code>
+                <code className="endpoint-url">
+                  {apiInfo.external_endpoint}
+                </code>
                 <button
                   className="copy-button"
                   onClick={() => {
@@ -375,7 +395,9 @@ export const ApiDetails: React.FC = () => {
                 >
                   <span className="section-title-with-icon">
                     APIキー
-                    <span className="section-title-icon" aria-hidden="true">❓</span>
+                    <span className="section-title-icon" aria-hidden="true">
+                      ❓
+                    </span>
                   </span>
                 </Tooltip>
               </h2>

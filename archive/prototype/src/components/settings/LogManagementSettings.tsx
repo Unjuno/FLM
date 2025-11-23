@@ -29,10 +29,7 @@ export const LogManagementSettings: React.FC<LogManagementSettingsProps> = ({
       className="settings-section"
       aria-labelledby="log-management-heading"
     >
-      <h2
-        id="log-management-heading"
-        className="settings-section-title"
-      >
+      <h2 id="log-management-heading" className="settings-section-title">
         {t('settings.logManagement.title')}
       </h2>
       <div className="settings-group">
@@ -47,9 +44,7 @@ export const LogManagementSettings: React.FC<LogManagementSettingsProps> = ({
           type="number"
           min={LOG_RETENTION.MIN_DAYS}
           max={LOG_RETENTION.MAX_DAYS}
-          value={
-            settings.log_retention_days || LOG_RETENTION.DEFAULT_DAYS
-          }
+          value={settings.log_retention_days || LOG_RETENTION.DEFAULT_DAYS}
           onChange={e => {
             const parsed = parseInt(e.target.value, 10);
             onSettingsChange({
@@ -67,7 +62,8 @@ export const LogManagementSettings: React.FC<LogManagementSettingsProps> = ({
         <label htmlFor="audit-log-retention-days">
           監査ログ保持期間（日数）
           <span className="settings-hint">
-            監査ログを保持する日数を設定します（最小1日、最大365日、デフォルト: 90日）
+            監査ログを保持する日数を設定します（最小1日、最大365日、デフォルト:
+            90日）
           </span>
         </label>
         <input
@@ -75,9 +71,7 @@ export const LogManagementSettings: React.FC<LogManagementSettingsProps> = ({
           type="number"
           min={LOG_RETENTION.MIN_DAYS}
           max={LOG_RETENTION.MAX_DAYS}
-          value={
-            settings.audit_log_retention_days ?? 90
-          }
+          value={settings.audit_log_retention_days ?? 90}
           onChange={e => {
             const parsed = parseInt(e.target.value, 10);
             onSettingsChange({
@@ -92,4 +86,3 @@ export const LogManagementSettings: React.FC<LogManagementSettingsProps> = ({
     </section>
   );
 };
-

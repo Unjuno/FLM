@@ -29,4 +29,3 @@ export const LLMTestProgress: React.FC<LLMTestProgressProps> = ({
     </div>
   );
 };
-

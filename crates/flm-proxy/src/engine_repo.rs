@@ -6,6 +6,7 @@
 use async_trait::async_trait;
 use flm_core::ports::{EngineRepository, LlmEngine};
 use std::sync::{Arc, RwLock};
+use tracing::error;
 
 /// Simple in-memory EngineRepository for proxy server
 pub struct InMemoryEngineRepository {
@@ -32,8 +33,8 @@ impl EngineRepository for InMemoryEngineRepository {
     async fn list_registered(&self) -> Vec<Arc<dyn LlmEngine>> {
         match self.engines.read() {
             Ok(engines) => engines.clone(),
-            Err(e) => {
-                eprintln!("ERROR: Failed to acquire read lock on engines: {}. Returning empty list.", e);
+            Err(_) => {
+                error!(error_type = "read_lock_failed", "Failed to acquire read lock on engines. Returning empty list.");
                 Vec::new()
             }
         }
@@ -46,8 +47,8 @@ impl EngineRepository for InMemoryEngineRepository {
                 engines.retain(|e| e.id() != engine.id());
                 engines.push(engine);
             }
-            Err(e) => {
-                eprintln!("ERROR: Failed to acquire write lock on engines: {}. Engine registration skipped.", e);
+            Err(_) => {
+                error!(error_type = "write_lock_failed", "Failed to acquire write lock on engines. Engine registration skipped.");
             }
         }
     }

@@ -159,7 +159,9 @@ export const ModelSelectionSidebar: React.FC<ModelSelectionSidebarProps> = ({
         <select
           id="view-mode-select"
           value={viewMode}
-          onChange={e => onViewModeChange(e.target.value as 'installed' | 'catalog' | 'all')}
+          onChange={e =>
+            onViewModeChange(e.target.value as 'installed' | 'catalog' | 'all')
+          }
           className="sidebar-filter"
           aria-label="表示モード"
         >
@@ -247,14 +249,16 @@ export const ModelSelectionSidebar: React.FC<ModelSelectionSidebarProps> = ({
         )}
         {filteredModels.map(model => {
           const isInstalled = models.some(m => m.name === model.name);
-          const isFromCatalog = catalogModelsAsOllama.some(m => m.name === model.name);
-          
+          const isFromCatalog = catalogModelsAsOllama.some(
+            m => m.name === model.name
+          );
+
           return (
             <div
               key={model.name}
               className={`sidebar-model-item ${
                 localSelectedModel?.name === model.name ? 'active' : ''
-              } ${(model.recommended || isRecommended(model.name)) ? 'recommended' : ''} ${
+              } ${model.recommended || isRecommended(model.name) ? 'recommended' : ''} ${
                 isInstalled ? 'installed' : isFromCatalog ? 'catalog' : ''
               }`}
               onClick={() => onModelSelect(model)}
@@ -288,7 +292,10 @@ export const ModelSelectionSidebar: React.FC<ModelSelectionSidebarProps> = ({
                   <span className="sidebar-recommended-badge">推奨</span>
                 )}
                 {!isInstalled && isFromCatalog && (
-                  <span className="sidebar-catalog-badge" title="カタログから選択可能（ダウンロードが必要）">
+                  <span
+                    className="sidebar-catalog-badge"
+                    title="カタログから選択可能（ダウンロードが必要）"
+                  >
                     カタログ
                   </span>
                 )}
@@ -300,4 +307,3 @@ export const ModelSelectionSidebar: React.FC<ModelSelectionSidebarProps> = ({
     </div>
   );
 };
-

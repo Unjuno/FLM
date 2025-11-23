@@ -37,7 +37,9 @@ describe('errorHandler.ts', () => {
       // technicalDetailsはerror.stackが存在する場合はそれに一致する
       // Jest環境では、error.stackが存在する場合でも、technicalDetailsが正しく設定されない場合がある
       // そのため、technicalDetailsの存在チェックのみ行う
-      expect(result.technicalDetails !== undefined || error.stack === undefined).toBe(true);
+      expect(
+        result.technicalDetails !== undefined || error.stack === undefined
+      ).toBe(true);
     });
 
     it('Ollamaエラーを正しく分類する', () => {

@@ -41,7 +41,9 @@ describe('AppLoading.tsx', () => {
       const spinner = container.querySelector('.app-loading-spinner');
       expect(spinner).toBeInTheDocument();
 
-      const spinnerCircle = container.querySelector('.app-loading-spinner-circle');
+      const spinnerCircle = container.querySelector(
+        '.app-loading-spinner-circle'
+      );
       expect(spinnerCircle).toBeInTheDocument();
     });
 
@@ -50,7 +52,9 @@ describe('AppLoading.tsx', () => {
       const progressBar = container.querySelector('.app-loading-progress');
       expect(progressBar).toBeInTheDocument();
 
-      const progressFill = container.querySelector('.app-loading-progress-fill');
+      const progressFill = container.querySelector(
+        '.app-loading-progress-fill'
+      );
       expect(progressFill).toBeInTheDocument();
     });
   });

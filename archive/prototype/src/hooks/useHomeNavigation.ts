@@ -181,13 +181,16 @@ export function useHomeNavigation() {
   /**
    * システムチェックでモデルが選択された時の処理
    */
-  const handleModelSelected = useCallback((modelName: string) => {
-    navigate('/api/create', {
-      state: {
-        selectedModelName: modelName,
-      },
-    });
-  }, [navigate]);
+  const handleModelSelected = useCallback(
+    (modelName: string) => {
+      navigate('/api/create', {
+        state: {
+          selectedModelName: modelName,
+        },
+      });
+    },
+    [navigate]
+  );
 
   return {
     handleCreateApi,
@@ -213,4 +216,3 @@ export function useHomeNavigation() {
     handleModelSelected,
   };
 }
-

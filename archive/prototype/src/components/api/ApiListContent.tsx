@@ -29,9 +29,14 @@ interface ApiListContentProps {
   onCreate: () => void;
   onSelectAll: () => void;
   onToggleSelection: (apiId: string) => void;
-  onToggleStatus: (apiId: string, currentStatus: 'running' | 'preparing' | 'stopped' | 'error') => Promise<void>;
+  onToggleStatus: (
+    apiId: string,
+    currentStatus: 'running' | 'preparing' | 'stopped' | 'error'
+  ) => Promise<void>;
   onDelete: (apiId: string, apiName: string, modelName?: string) => void;
-  getStatusText: (status: 'running' | 'preparing' | 'stopped' | 'error') => string;
+  getStatusText: (
+    status: 'running' | 'preparing' | 'stopped' | 'error'
+  ) => string;
 }
 
 /**
@@ -93,4 +98,3 @@ export const ApiListContent: React.FC<ApiListContentProps> = ({
     </div>
   );
 };
-

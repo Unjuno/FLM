@@ -390,7 +390,8 @@ export const FALLBACK_MODELS: ReadonlyArray<ModelInfo> = [
   // マルチモーダル拡張
   {
     name: 'pixtral:latest',
-    description: 'Pixtral - 高精度な画像理解とテキスト生成のマルチモーダルモデル',
+    description:
+      'Pixtral - 高精度な画像理解とテキスト生成のマルチモーダルモデル',
     size: 12000000000,
     parameters: 12000000000,
     category: 'multimodal',
@@ -531,11 +532,11 @@ export const FALLBACK_MODELS: ReadonlyArray<ModelInfo> = [
     recommended: false,
     author: 'Meta',
   },
-  
+
   // 業界特化モデル追加（第3弾）
 
   // 軽量モデル追加（第3弾）
-  
+
   {
     name: 'micro-llm:latest',
     description: 'Micro LLM - マイクロコントローラー向けの極軽量モデル',
@@ -546,7 +547,7 @@ export const FALLBACK_MODELS: ReadonlyArray<ModelInfo> = [
     author: 'Community',
   },
   // マルチモーダル追加（第3弾）
-  
+
   {
     name: 'gen2:latest',
     description: 'Gen-2 - 高品質な動画生成モデル',
@@ -645,7 +646,7 @@ export const FALLBACK_MODELS: ReadonlyArray<ModelInfo> = [
     recommended: true,
     author: 'Mistral AI',
   },
-  
+
   // SEO・マーケティングモデル
 
   // カスタマーサポートモデル
@@ -755,7 +756,7 @@ export const FALLBACK_MODELS: ReadonlyArray<ModelInfo> = [
     recommended: true,
     author: 'Meta',
   },
-  
+
   {
     name: 'qwen2.5:7b',
     description: 'Qwen 2.5 7B - 中規模多言語チャットモデル',
@@ -936,7 +937,7 @@ export const FALLBACK_MODELS: ReadonlyArray<ModelInfo> = [
     recommended: false,
     author: 'Alibaba Cloud',
   },
-  
+
   {
     name: 'realtime-voice:latest',
     description: 'Real-time Voice - リアルタイム音声対話モデル',
@@ -963,4 +964,3 @@ export const FALLBACK_MODELS: ReadonlyArray<ModelInfo> = [
 export function createFallbackModels(): ModelInfo[] {
   return FALLBACK_MODELS.map(model => ({ ...model }));
 }
-

@@ -70,4 +70,3 @@ export const ErrorLogList: React.FC<ErrorLogListProps> = ({
     </div>
   );
 };
-

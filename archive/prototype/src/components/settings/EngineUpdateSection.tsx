@@ -2,7 +2,13 @@
  * エンジンアップデートセクション
  */
 
-import React, { useState, useEffect, useCallback, useTransition, useRef } from 'react';
+import React, {
+  useState,
+  useEffect,
+  useCallback,
+  useTransition,
+  useRef,
+} from 'react';
 import { listen } from '@tauri-apps/api/event';
 import { useI18n } from '../../contexts/I18nContext';
 import { safeInvoke } from '../../utils/tauri';
@@ -12,11 +18,11 @@ import { ErrorMessage } from '../common/ErrorMessage';
 import { InfoBanner } from '../common/InfoBanner';
 import { ConfirmDialog } from '../common/ConfirmDialog';
 import { EngineProgressBar } from './ProgressBar';
-import type { 
-  EngineUpdateCheck, 
-  EngineDownloadProgress, 
+import type {
+  EngineUpdateCheck,
+  EngineDownloadProgress,
   EngineDetectionResult,
-  OllamaUpdateCheck
+  OllamaUpdateCheck,
 } from '../../types/settings';
 import type { DownloadProgress } from '../../types/ollama';
 
@@ -48,7 +54,9 @@ export const EngineUpdateSection: React.FC = () => {
   const [successMessage, setSuccessMessage] = useState<{
     [key: string]: string | null;
   }>({});
-  const successMessageTimeoutsRef = useRef<Record<string, NodeJS.Timeout | null>>({});
+  const successMessageTimeoutsRef = useRef<
+    Record<string, NodeJS.Timeout | null>
+  >({});
   const [progress, setProgress] = useState<{
     [key: string]: EngineDownloadProgress | null;
   }>({});
@@ -70,138 +78,195 @@ export const EngineUpdateSection: React.FC = () => {
   const autoStartAttemptedRef = useRef<Record<string, boolean>>({});
 
   // エンジン検出
-  const detectEngine = useCallback(async (engineType: string) => {
-    try {
-      const result = await safeInvoke<EngineDetectionResult>('detect_engine', { engineType });
-      setDetectionResults(prev => ({ ...prev, [engineType]: result }));
-      
-      // インストール済みだが停止中の場合は自動起動を試みる（非同期で実行）
-      if (
-        result.installed &&
-        !result.running &&
-        !autoStartAttemptedRef.current[engineType] &&
-        !stopping[engineType] &&
-        !starting[engineType]
-      ) {
-        autoStartAttemptedRef.current[engineType] = true;
-        
-        // 非同期で自動起動を実行（タイムアウトエラーを無視するため）
-        (async () => {
-          try {
-            setStarting(prev => ({ ...prev, [engineType]: true }));
-            setStartProgress(prev => ({ ...prev, [engineType]: { progress: 0, message: '自動起動中...' } }));
-            logger.info(
-              `${engineNames[engineType]}を自動起動します`,
-              '',
-              'EngineUpdateSection'
-            );
-            
-            // タイムアウトエラーをキャッチして処理を続行
+  const detectEngine = useCallback(
+    async (engineType: string) => {
+      try {
+        const result = await safeInvoke<EngineDetectionResult>(
+          'detect_engine',
+          { engineType }
+        );
+        setDetectionResults(prev => ({ ...prev, [engineType]: result }));
+
+        // インストール済みだが停止中の場合は自動起動を試みる（非同期で実行）
+        if (
+          result.installed &&
+          !result.running &&
+          !autoStartAttemptedRef.current[engineType] &&
+          !stopping[engineType] &&
+          !starting[engineType]
+        ) {
+          autoStartAttemptedRef.current[engineType] = true;
+
+          // 非同期で自動起動を実行（タイムアウトエラーを無視するため）
+          (async () => {
             try {
-              setStartProgress(prev => ({ ...prev, [engineType]: { progress: 20, message: '起動コマンドを実行中...' } }));
-              await safeInvoke('start_engine', {
-                engineType: engineType,
-                config: null,
-              });
-              setStartProgress(prev => ({ ...prev, [engineType]: { progress: 50, message: '起動コマンドが完了しました' } }));
-            } catch (startErr) {
-              // タイムアウトエラーの場合でも、エンジンが起動している可能性があるため
-              // エラーを無視して状態確認を続行
-              const errorMessage = startErr instanceof Error ? startErr.message : String(startErr);
-              if (errorMessage.includes('タイムアウト')) {
-                setStartProgress(prev => ({ ...prev, [engineType]: { progress: 50, message: '起動処理は継続中です...' } }));
-                logger.info(
-                  `${engineNames[engineType]}の起動コマンドがタイムアウトしましたが、起動処理は継続中です`,
-                  '',
-                  'EngineUpdateSection'
-                );
-              } else {
-                throw startErr;
-              }
-            }
-            
-            // 起動確認のため少し待機（タイムアウトした場合でも待機）
-            setStartProgress(prev => ({ ...prev, [engineType]: { progress: 60, message: '起動確認中...' } }));
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            setStartProgress(prev => ({ ...prev, [engineType]: { progress: 70, message: 'エンジンの状態を確認中...' } }));
-            await new Promise(resolve => setTimeout(resolve, 1000));
-            setStartProgress(prev => ({ ...prev, [engineType]: { progress: 80, message: '最終確認中...' } }));
-            
-            // 起動後の状態を再検出（最大3回リトライ）
-            let recheckResult: EngineDetectionResult | null = null;
-            for (let retry = 0; retry < 3; retry++) {
-              await new Promise(resolve => setTimeout(resolve, 1000 + retry * 1000));
-              try {
-                recheckResult = await safeInvoke<EngineDetectionResult>('detect_engine', { engineType });
-                setDetectionResults(prev => ({ ...prev, [engineType]: recheckResult! }));
-                if (recheckResult.running) {
-                  break;
-                }
-              } catch (detectErr) {
-                logger.warn(
-                  `自動起動後の検出に失敗しました（試行 ${retry + 1}/3）`,
-                  detectErr instanceof Error ? detectErr.message : String(detectErr),
-                  'EngineUpdateSection'
-                );
-                if (retry === 2) {
-                  // 最後の試行でも失敗した場合
-                  autoStartAttemptedRef.current[engineType] = false;
-                  return;
-                }
-              }
-            }
-            
-            // 状態を確認してから成功メッセージを表示
-            if (recheckResult && recheckResult.running) {
-              setStartProgress(prev => ({ ...prev, [engineType]: { progress: 100, message: '確認完了' } }));
-              
-              // 少し待ってからプログレスバーを非表示
-              await new Promise(resolve => setTimeout(resolve, 500));
-              setStartProgress(prev => ({ ...prev, [engineType]: null }));
-              setSuccessMessage(prev => ({
+              setStarting(prev => ({ ...prev, [engineType]: true }));
+              setStartProgress(prev => ({
                 ...prev,
-                [engineType]: `${engineNames[engineType]}を自動起動しました`,
+                [engineType]: { progress: 0, message: '自動起動中...' },
               }));
-              const existingTimeout = successMessageTimeoutsRef.current[engineType];
-              if (existingTimeout) {
-                clearTimeout(existingTimeout);
-              }
-              const timeoutId = setTimeout(() => {
-                setSuccessMessage(prev => ({ ...prev, [engineType]: null }));
-                successMessageTimeoutsRef.current[engineType] = null;
-              }, TIMEOUT.SUCCESS_MESSAGE);
-              successMessageTimeoutsRef.current[engineType] = timeoutId;
-            } else {
-              // 起動に失敗した場合、自動起動試行フラグをリセット
-              autoStartAttemptedRef.current[engineType] = false;
-            }
-          } catch (startErr) {
-            setStartProgress(prev => ({ ...prev, [engineType]: null }));
-            // 自動起動に失敗してもエラーは表示しない（サイレント失敗）
-            const errorMessage = startErr instanceof Error ? startErr.message : String(startErr);
-            // タイムアウトエラーは既に処理済みなので、ログに記録しない
-            if (!errorMessage.includes('タイムアウト')) {
-              logger.warn(
-                `${engineNames[engineType]}の自動起動に失敗しました`,
-                errorMessage,
+              logger.info(
+                `${engineNames[engineType]}を自動起動します`,
+                '',
                 'EngineUpdateSection'
               );
+
+              // タイムアウトエラーをキャッチして処理を続行
+              try {
+                setStartProgress(prev => ({
+                  ...prev,
+                  [engineType]: {
+                    progress: 20,
+                    message: '起動コマンドを実行中...',
+                  },
+                }));
+                await safeInvoke('start_engine', {
+                  engineType: engineType,
+                  config: null,
+                });
+                setStartProgress(prev => ({
+                  ...prev,
+                  [engineType]: {
+                    progress: 50,
+                    message: '起動コマンドが完了しました',
+                  },
+                }));
+              } catch (startErr) {
+                // タイムアウトエラーの場合でも、エンジンが起動している可能性があるため
+                // エラーを無視して状態確認を続行
+                const errorMessage =
+                  startErr instanceof Error
+                    ? startErr.message
+                    : String(startErr);
+                if (errorMessage.includes('タイムアウト')) {
+                  setStartProgress(prev => ({
+                    ...prev,
+                    [engineType]: {
+                      progress: 50,
+                      message: '起動処理は継続中です...',
+                    },
+                  }));
+                  logger.info(
+                    `${engineNames[engineType]}の起動コマンドがタイムアウトしましたが、起動処理は継続中です`,
+                    '',
+                    'EngineUpdateSection'
+                  );
+                } else {
+                  throw startErr;
+                }
+              }
+
+              // 起動確認のため少し待機（タイムアウトした場合でも待機）
+              setStartProgress(prev => ({
+                ...prev,
+                [engineType]: { progress: 60, message: '起動確認中...' },
+              }));
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              setStartProgress(prev => ({
+                ...prev,
+                [engineType]: {
+                  progress: 70,
+                  message: 'エンジンの状態を確認中...',
+                },
+              }));
+              await new Promise(resolve => setTimeout(resolve, 1000));
+              setStartProgress(prev => ({
+                ...prev,
+                [engineType]: { progress: 80, message: '最終確認中...' },
+              }));
+
+              // 起動後の状態を再検出（最大3回リトライ）
+              let recheckResult: EngineDetectionResult | null = null;
+              for (let retry = 0; retry < 3; retry++) {
+                await new Promise(resolve =>
+                  setTimeout(resolve, 1000 + retry * 1000)
+                );
+                try {
+                  recheckResult = await safeInvoke<EngineDetectionResult>(
+                    'detect_engine',
+                    { engineType }
+                  );
+                  setDetectionResults(prev => ({
+                    ...prev,
+                    [engineType]: recheckResult!,
+                  }));
+                  if (recheckResult.running) {
+                    break;
+                  }
+                } catch (detectErr) {
+                  logger.warn(
+                    `自動起動後の検出に失敗しました（試行 ${retry + 1}/3）`,
+                    detectErr instanceof Error
+                      ? detectErr.message
+                      : String(detectErr),
+                    'EngineUpdateSection'
+                  );
+                  if (retry === 2) {
+                    // 最後の試行でも失敗した場合
+                    autoStartAttemptedRef.current[engineType] = false;
+                    return;
+                  }
+                }
+              }
+
+              // 状態を確認してから成功メッセージを表示
+              if (recheckResult && recheckResult.running) {
+                setStartProgress(prev => ({
+                  ...prev,
+                  [engineType]: { progress: 100, message: '確認完了' },
+                }));
+
+                // 少し待ってからプログレスバーを非表示
+                await new Promise(resolve => setTimeout(resolve, 500));
+                setStartProgress(prev => ({ ...prev, [engineType]: null }));
+                setSuccessMessage(prev => ({
+                  ...prev,
+                  [engineType]: `${engineNames[engineType]}を自動起動しました`,
+                }));
+                const existingTimeout =
+                  successMessageTimeoutsRef.current[engineType];
+                if (existingTimeout) {
+                  clearTimeout(existingTimeout);
+                }
+                const timeoutId = setTimeout(() => {
+                  setSuccessMessage(prev => ({ ...prev, [engineType]: null }));
+                  successMessageTimeoutsRef.current[engineType] = null;
+                }, TIMEOUT.SUCCESS_MESSAGE);
+                successMessageTimeoutsRef.current[engineType] = timeoutId;
+              } else {
+                // 起動に失敗した場合、自動起動試行フラグをリセット
+                autoStartAttemptedRef.current[engineType] = false;
+              }
+            } catch (startErr) {
+              setStartProgress(prev => ({ ...prev, [engineType]: null }));
+              // 自動起動に失敗してもエラーは表示しない（サイレント失敗）
+              const errorMessage =
+                startErr instanceof Error ? startErr.message : String(startErr);
+              // タイムアウトエラーは既に処理済みなので、ログに記録しない
+              if (!errorMessage.includes('タイムアウト')) {
+                logger.warn(
+                  `${engineNames[engineType]}の自動起動に失敗しました`,
+                  errorMessage,
+                  'EngineUpdateSection'
+                );
+              }
+              // 自動起動試行フラグをリセットして、次回も試行可能にする
+              autoStartAttemptedRef.current[engineType] = false;
+            } finally {
+              setStarting(prev => ({ ...prev, [engineType]: false }));
             }
-            // 自動起動試行フラグをリセットして、次回も試行可能にする
-            autoStartAttemptedRef.current[engineType] = false;
-          } finally {
-            setStarting(prev => ({ ...prev, [engineType]: false }));
-          }
-        })();
+          })();
+        }
+      } catch (err) {
+        setError(prev => ({
+          ...prev,
+          [engineType]:
+            err instanceof Error ? err.message : 'エンジン検出に失敗しました',
+        }));
       }
-    } catch (err) {
-      setError(prev => ({
-        ...prev,
-        [engineType]:
-          err instanceof Error ? err.message : 'エンジン検出に失敗しました',
-      }));
-    }
-  }, [engineNames, stopping, starting]);
+    },
+    [engineNames, stopping, starting]
+  );
 
   // アップデートチェック
   const checkUpdate = useCallback(async (engineType: string) => {
@@ -255,25 +320,34 @@ export const EngineUpdateSection: React.FC = () => {
             setProgress(prev => ({ ...prev, [engineType]: null }));
 
             // 進捗イベントをリッスン
-            const unlisten = await listen<DownloadProgress>('engine_install_progress', event => {
-              if (event.payload && typeof event.payload.progress === 'number') {
-                setProgress(prev => ({
-                  ...prev,
-                  [engineType]: {
-                    downloaded: event.payload.downloaded_bytes || 0,
-                    total: event.payload.total_bytes || 0,
-                    percentage: event.payload.progress || 0,
-                  },
-                }));
+            const unlisten = await listen<DownloadProgress>(
+              'engine_install_progress',
+              event => {
+                if (
+                  event.payload &&
+                  typeof event.payload.progress === 'number'
+                ) {
+                  setProgress(prev => ({
+                    ...prev,
+                    [engineType]: {
+                      downloaded: event.payload.downloaded_bytes || 0,
+                      total: event.payload.total_bytes || 0,
+                      percentage: event.payload.progress || 0,
+                    },
+                  }));
+                }
               }
-            });
+            );
 
             // インストール実行
             try {
               await safeInvoke('install_engine', { engineType });
             } catch (installErr) {
               // タイムアウトエラーの場合、インストールが実際に完了しているか確認
-              const errorMessage = installErr instanceof Error ? installErr.message : String(installErr);
+              const errorMessage =
+                installErr instanceof Error
+                  ? installErr.message
+                  : String(installErr);
               if (errorMessage.includes('タイムアウト')) {
                 logger.info(
                   `${engineNames[engineType]}のインストールコマンドがタイムアウトしましたが、インストール処理は継続中です`,
@@ -294,33 +368,46 @@ export const EngineUpdateSection: React.FC = () => {
             // インストール後に再度検出して状態を確認（最大3回リトライ）
             let recheckResult: EngineDetectionResult | null = null;
             for (let retry = 0; retry < 3; retry++) {
-              await new Promise(resolve => setTimeout(resolve, 1000 + retry * 1000));
+              await new Promise(resolve =>
+                setTimeout(resolve, 1000 + retry * 1000)
+              );
               try {
-                recheckResult = await safeInvoke<EngineDetectionResult>('detect_engine', { engineType });
-                setDetectionResults(prev => ({ ...prev, [engineType]: recheckResult! }));
+                recheckResult = await safeInvoke<EngineDetectionResult>(
+                  'detect_engine',
+                  { engineType }
+                );
+                setDetectionResults(prev => ({
+                  ...prev,
+                  [engineType]: recheckResult!,
+                }));
                 if (recheckResult.installed) {
                   break;
                 }
               } catch (detectErr) {
                 logger.warn(
                   `インストール後の検出に失敗しました（試行 ${retry + 1}/3）`,
-                  detectErr instanceof Error ? detectErr.message : String(detectErr),
+                  detectErr instanceof Error
+                    ? detectErr.message
+                    : String(detectErr),
                   'EngineUpdateSection'
                 );
                 if (retry === 2) {
                   // 最後の試行でも失敗した場合
-                  throw new Error('インストール後の検出に失敗しました。エンジンがインストールされているか確認してください。');
+                  throw new Error(
+                    'インストール後の検出に失敗しました。エンジンがインストールされているか確認してください。'
+                  );
                 }
               }
             }
-            
+
             // 状態を確認してから成功メッセージを表示
             if (recheckResult && recheckResult.installed) {
               setSuccessMessage(prev => ({
                 ...prev,
                 [engineType]: `${engineNames[engineType]}のインストールが完了しました`,
               }));
-              const existingTimeout = successMessageTimeoutsRef.current[engineType];
+              const existingTimeout =
+                successMessageTimeoutsRef.current[engineType];
               if (existingTimeout) {
                 clearTimeout(existingTimeout);
               }
@@ -331,50 +418,101 @@ export const EngineUpdateSection: React.FC = () => {
               successMessageTimeoutsRef.current[engineType] = timeoutId;
             } else {
               // インストールに失敗した場合
-              throw new Error('インストールが完了しませんでした。エンジンがインストールされているか確認してください。');
+              throw new Error(
+                'インストールが完了しませんでした。エンジンがインストールされているか確認してください。'
+              );
             }
-            
+
             // インストール後に自動的に起動を試みる
             try {
-              setStartProgress(prev => ({ ...prev, [engineType]: { progress: 0, message: 'インストール後の自動起動中...' } }));
-              setStartProgress(prev => ({ ...prev, [engineType]: { progress: 20, message: '起動コマンドを実行中...' } }));
-              
+              setStartProgress(prev => ({
+                ...prev,
+                [engineType]: {
+                  progress: 0,
+                  message: 'インストール後の自動起動中...',
+                },
+              }));
+              setStartProgress(prev => ({
+                ...prev,
+                [engineType]: {
+                  progress: 20,
+                  message: '起動コマンドを実行中...',
+                },
+              }));
+
               try {
                 await safeInvoke('start_engine', {
                   engineType: engineType,
                   config: null,
                 });
-                setStartProgress(prev => ({ ...prev, [engineType]: { progress: 50, message: '起動コマンドが完了しました' } }));
+                setStartProgress(prev => ({
+                  ...prev,
+                  [engineType]: {
+                    progress: 50,
+                    message: '起動コマンドが完了しました',
+                  },
+                }));
               } catch (startErr) {
-                const errorMessage = startErr instanceof Error ? startErr.message : String(startErr);
+                const errorMessage =
+                  startErr instanceof Error
+                    ? startErr.message
+                    : String(startErr);
                 if (errorMessage.includes('タイムアウト')) {
-                  setStartProgress(prev => ({ ...prev, [engineType]: { progress: 50, message: '起動処理は継続中です...' } }));
+                  setStartProgress(prev => ({
+                    ...prev,
+                    [engineType]: {
+                      progress: 50,
+                      message: '起動処理は継続中です...',
+                    },
+                  }));
                 } else {
                   throw startErr;
                 }
               }
-              
+
               // 起動確認のため少し待機
-              setStartProgress(prev => ({ ...prev, [engineType]: { progress: 60, message: '起動確認中...' } }));
+              setStartProgress(prev => ({
+                ...prev,
+                [engineType]: { progress: 60, message: '起動確認中...' },
+              }));
               await new Promise(resolve => setTimeout(resolve, 1000));
-              setStartProgress(prev => ({ ...prev, [engineType]: { progress: 70, message: 'エンジンの状態を確認中...' } }));
+              setStartProgress(prev => ({
+                ...prev,
+                [engineType]: {
+                  progress: 70,
+                  message: 'エンジンの状態を確認中...',
+                },
+              }));
               await new Promise(resolve => setTimeout(resolve, 1000));
-              setStartProgress(prev => ({ ...prev, [engineType]: { progress: 80, message: '最終確認中...' } }));
-              
+              setStartProgress(prev => ({
+                ...prev,
+                [engineType]: { progress: 80, message: '最終確認中...' },
+              }));
+
               // 起動後の状態を再検出（最大3回リトライ）
               let startRecheckResult: EngineDetectionResult | null = null;
               for (let retry = 0; retry < 3; retry++) {
-                await new Promise(resolve => setTimeout(resolve, 1000 + retry * 1000));
+                await new Promise(resolve =>
+                  setTimeout(resolve, 1000 + retry * 1000)
+                );
                 try {
-                  startRecheckResult = await safeInvoke<EngineDetectionResult>('detect_engine', { engineType });
-                  setDetectionResults(prev => ({ ...prev, [engineType]: startRecheckResult! }));
+                  startRecheckResult = await safeInvoke<EngineDetectionResult>(
+                    'detect_engine',
+                    { engineType }
+                  );
+                  setDetectionResults(prev => ({
+                    ...prev,
+                    [engineType]: startRecheckResult!,
+                  }));
                   if (startRecheckResult.running) {
                     break;
                   }
                 } catch (detectErr) {
                   logger.warn(
                     `インストール後の自動起動検出に失敗しました（試行 ${retry + 1}/3）`,
-                    detectErr instanceof Error ? detectErr.message : String(detectErr),
+                    detectErr instanceof Error
+                      ? detectErr.message
+                      : String(detectErr),
                     'EngineUpdateSection'
                   );
                   if (retry === 2) {
@@ -389,15 +527,21 @@ export const EngineUpdateSection: React.FC = () => {
                   }
                 }
               }
-              
+
               // 状態を確認してから成功メッセージを表示
               if (startRecheckResult && startRecheckResult.running) {
-                setStartProgress(prev => ({ ...prev, [engineType]: { progress: 100, message: '起動が完了しました' } }));
-                
+                setStartProgress(prev => ({
+                  ...prev,
+                  [engineType]: {
+                    progress: 100,
+                    message: '起動が完了しました',
+                  },
+                }));
+
                 // 少し待ってからプログレスバーを非表示
                 await new Promise(resolve => setTimeout(resolve, 500));
                 setStartProgress(prev => ({ ...prev, [engineType]: null }));
-                
+
                 setSuccessMessage(prev => ({
                   ...prev,
                   [engineType]: `${engineNames[engineType]}のインストールと起動が完了しました`,
@@ -424,7 +568,9 @@ export const EngineUpdateSection: React.FC = () => {
             setError(prev => ({
               ...prev,
               [engineType]:
-                err instanceof Error ? err.message : 'インストールに失敗しました',
+                err instanceof Error
+                  ? err.message
+                  : 'インストールに失敗しました',
             }));
           } finally {
             setInstalling(prev => ({ ...prev, [engineType]: false }));
@@ -445,63 +591,106 @@ export const EngineUpdateSection: React.FC = () => {
       try {
         setStarting(prev => ({ ...prev, [engineType]: true }));
         setError(prev => ({ ...prev, [engineType]: null }));
-        setStartProgress(prev => ({ ...prev, [engineType]: { progress: 0, message: '起動コマンドを実行中...' } }));
+        setStartProgress(prev => ({
+          ...prev,
+          [engineType]: { progress: 0, message: '起動コマンドを実行中...' },
+        }));
 
         // 起動コマンド実行中（0-50%）
         try {
-          setStartProgress(prev => ({ ...prev, [engineType]: { progress: 20, message: '起動コマンドを実行中...' } }));
+          setStartProgress(prev => ({
+            ...prev,
+            [engineType]: { progress: 20, message: '起動コマンドを実行中...' },
+          }));
           await safeInvoke('start_engine', {
             engineType: engineType,
             config: null,
           });
-          setStartProgress(prev => ({ ...prev, [engineType]: { progress: 50, message: '起動コマンドが完了しました' } }));
+          setStartProgress(prev => ({
+            ...prev,
+            [engineType]: {
+              progress: 50,
+              message: '起動コマンドが完了しました',
+            },
+          }));
         } catch (startErr) {
           // タイムアウトエラーの場合でも処理を続行
-          const errorMessage = startErr instanceof Error ? startErr.message : String(startErr);
+          const errorMessage =
+            startErr instanceof Error ? startErr.message : String(startErr);
           if (errorMessage.includes('タイムアウト')) {
-            setStartProgress(prev => ({ ...prev, [engineType]: { progress: 50, message: '起動処理は継続中です...' } }));
+            setStartProgress(prev => ({
+              ...prev,
+              [engineType]: {
+                progress: 50,
+                message: '起動処理は継続中です...',
+              },
+            }));
           } else {
             throw startErr;
           }
         }
 
         // 起動確認待機中（50-80%）
-        setStartProgress(prev => ({ ...prev, [engineType]: { progress: 60, message: '起動確認中...' } }));
+        setStartProgress(prev => ({
+          ...prev,
+          [engineType]: { progress: 60, message: '起動確認中...' },
+        }));
         await new Promise(resolve => setTimeout(resolve, 1000));
-        setStartProgress(prev => ({ ...prev, [engineType]: { progress: 70, message: 'エンジンの状態を確認中...' } }));
+        setStartProgress(prev => ({
+          ...prev,
+          [engineType]: { progress: 70, message: 'エンジンの状態を確認中...' },
+        }));
         await new Promise(resolve => setTimeout(resolve, 1000));
 
         // 状態確認中（80-100%）
-        setStartProgress(prev => ({ ...prev, [engineType]: { progress: 80, message: '最終確認中...' } }));
-        
+        setStartProgress(prev => ({
+          ...prev,
+          [engineType]: { progress: 80, message: '最終確認中...' },
+        }));
+
         // 起動後の状態を確認（最大3回リトライ）
         let recheckResult: EngineDetectionResult | null = null;
         for (let retry = 0; retry < 3; retry++) {
-          await new Promise(resolve => setTimeout(resolve, 1000 + retry * 1000));
+          await new Promise(resolve =>
+            setTimeout(resolve, 1000 + retry * 1000)
+          );
           try {
-            recheckResult = await safeInvoke<EngineDetectionResult>('detect_engine', { engineType });
-            setDetectionResults(prev => ({ ...prev, [engineType]: recheckResult! }));
+            recheckResult = await safeInvoke<EngineDetectionResult>(
+              'detect_engine',
+              { engineType }
+            );
+            setDetectionResults(prev => ({
+              ...prev,
+              [engineType]: recheckResult!,
+            }));
             if (recheckResult.running) {
               break;
             }
           } catch (detectErr) {
             logger.warn(
               `起動後の検出に失敗しました（試行 ${retry + 1}/3）`,
-              detectErr instanceof Error ? detectErr.message : String(detectErr),
+              detectErr instanceof Error
+                ? detectErr.message
+                : String(detectErr),
               'EngineUpdateSection'
             );
             if (retry === 2) {
               // 最後の試行でも失敗した場合
               setStartProgress(prev => ({ ...prev, [engineType]: null }));
-              throw new Error('エンジンの起動に失敗しました。エンジンが起動しているか確認してください。');
+              throw new Error(
+                'エンジンの起動に失敗しました。エンジンが起動しているか確認してください。'
+              );
             }
           }
         }
-        
+
         // 状態を確認してから成功メッセージを表示
         if (recheckResult && recheckResult.running) {
-          setStartProgress(prev => ({ ...prev, [engineType]: { progress: 100, message: '起動が完了しました' } }));
-          
+          setStartProgress(prev => ({
+            ...prev,
+            [engineType]: { progress: 100, message: '起動が完了しました' },
+          }));
+
           // 少し待ってからプログレスバーを非表示
           await new Promise(resolve => setTimeout(resolve, 500));
           setStartProgress(prev => ({ ...prev, [engineType]: null }));
@@ -522,7 +711,9 @@ export const EngineUpdateSection: React.FC = () => {
         } else {
           // 起動に失敗した場合
           setStartProgress(prev => ({ ...prev, [engineType]: null }));
-          throw new Error('エンジンの起動に失敗しました。エンジンが起動しているか確認してください。');
+          throw new Error(
+            'エンジンの起動に失敗しました。エンジンが起動しているか確認してください。'
+          );
         }
       } catch (err) {
         setStartProgress(prev => ({ ...prev, [engineType]: null }));
@@ -550,7 +741,10 @@ export const EngineUpdateSection: React.FC = () => {
         // 停止後に再度検出して状態を更新（自動起動は試みない）
         // 停止が成功したかを確認するため、少し待機してから検出
         await new Promise(resolve => setTimeout(resolve, 1000));
-        const result = await safeInvoke<EngineDetectionResult>('detect_engine', { engineType });
+        const result = await safeInvoke<EngineDetectionResult>(
+          'detect_engine',
+          { engineType }
+        );
         setDetectionResults(prev => ({ ...prev, [engineType]: result }));
 
         // 停止が成功したかどうかを確認
@@ -610,18 +804,24 @@ export const EngineUpdateSection: React.FC = () => {
               engineType === 'ollama'
                 ? 'ollama_update_progress'
                 : 'engine_update_progress';
-            const unlisten = await listen<DownloadProgress>(eventName, event => {
-              if (event.payload && typeof event.payload.progress === 'number') {
-                setProgress(prev => ({
-                  ...prev,
-                  [engineType]: {
-                    downloaded: event.payload.downloaded_bytes || 0,
-                    total: event.payload.total_bytes || 0,
-                    percentage: event.payload.progress || 0,
-                  },
-                }));
+            const unlisten = await listen<DownloadProgress>(
+              eventName,
+              event => {
+                if (
+                  event.payload &&
+                  typeof event.payload.progress === 'number'
+                ) {
+                  setProgress(prev => ({
+                    ...prev,
+                    [engineType]: {
+                      downloaded: event.payload.downloaded_bytes || 0,
+                      total: event.payload.total_bytes || 0,
+                      percentage: event.payload.progress || 0,
+                    },
+                  }));
+                }
               }
-            });
+            );
 
             // アップデート実行
             if (engineType === 'ollama') {
@@ -637,7 +837,8 @@ export const EngineUpdateSection: React.FC = () => {
               ...prev,
               [engineType]: `${engineNames[engineType]}を最新版に更新しました`,
             }));
-            const existingTimeout = successMessageTimeoutsRef.current[engineType];
+            const existingTimeout =
+              successMessageTimeoutsRef.current[engineType];
             if (existingTimeout) {
               clearTimeout(existingTimeout);
             }
@@ -655,7 +856,9 @@ export const EngineUpdateSection: React.FC = () => {
             setError(prev => ({
               ...prev,
               [engineType]:
-                err instanceof Error ? err.message : 'アップデートに失敗しました',
+                err instanceof Error
+                  ? err.message
+                  : 'アップデートに失敗しました',
             }));
           } finally {
             setUpdating(prev => ({ ...prev, [engineType]: false }));
@@ -809,7 +1012,13 @@ export const EngineUpdateSection: React.FC = () => {
                             checkUpdate(engineType);
                           });
                         }}
-                        disabled={isChecking || isUpdating || isStarting || isStopping || isPending}
+                        disabled={
+                          isChecking ||
+                          isUpdating ||
+                          isStarting ||
+                          isStopping ||
+                          isPending
+                        }
                       >
                         {isChecking ? '確認中...' : 'アップデート確認'}
                       </button>
@@ -822,7 +1031,9 @@ export const EngineUpdateSection: React.FC = () => {
                               handleUpdate(engineType);
                             });
                           }}
-                          disabled={isUpdating || isStarting || isStopping || isPending}
+                          disabled={
+                            isUpdating || isStarting || isStopping || isPending
+                          }
                         >
                           {isUpdating ? '更新中...' : '更新'}
                         </button>
@@ -854,14 +1065,17 @@ export const EngineUpdateSection: React.FC = () => {
               )}
 
               {engineProgress && (
-                <EngineProgressBar 
+                <EngineProgressBar
                   progress={engineProgress.percentage}
-                  message={engineProgress.message || `${engineProgress.downloaded.toLocaleString()} / ${engineProgress.total.toLocaleString()} bytes (${engineProgress.percentage.toFixed(1)}%)`}
+                  message={
+                    engineProgress.message ||
+                    `${engineProgress.downloaded.toLocaleString()} / ${engineProgress.total.toLocaleString()} bytes (${engineProgress.percentage.toFixed(1)}%)`
+                  }
                 />
               )}
 
               {startProgress[engineType] && (
-                <EngineProgressBar 
+                <EngineProgressBar
                   progress={startProgress[engineType]!.progress}
                   message={startProgress[engineType]!.message}
                 />
@@ -876,8 +1090,10 @@ export const EngineUpdateSection: React.FC = () => {
 
               {/* 診断情報の表示: 未インストールの場合、またはインストールされているが起動していない場合 */}
               {detection?.message && (
-                <InfoBanner 
-                  type={!isInstalled ? "warning" : isRunning ? "info" : "warning"} 
+                <InfoBanner
+                  type={
+                    !isInstalled ? 'warning' : isRunning ? 'info' : 'warning'
+                  }
                   message={detection.message}
                   dismissible={isInstalled && isRunning}
                 />
@@ -898,4 +1114,3 @@ export const EngineUpdateSection: React.FC = () => {
     </section>
   );
 };
-

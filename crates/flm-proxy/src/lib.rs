@@ -8,5 +8,7 @@ pub mod engine_repo;
 pub mod http_client;
 pub mod middleware;
 pub mod process_controller;
+pub mod security;
+pub mod utils;
 
 pub use controller::AxumProxyController;

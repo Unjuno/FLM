@@ -24,11 +24,33 @@ export const ModelManagement: React.FC = () => {
   const location = useLocation();
   const { t } = useI18n();
   // URLパラメータからタブを取得
-  const getTabFromUrl = (): 'search' | 'installed' | 'huggingface' | 'modelfile' | 'converter' | 'sharing' => {
+  const getTabFromUrl = ():
+    | 'search'
+    | 'installed'
+    | 'huggingface'
+    | 'modelfile'
+    | 'converter'
+    | 'sharing' => {
     const params = new URLSearchParams(location.search);
     const tab = params.get('tab');
-    if (tab && ['search', 'installed', 'huggingface', 'modelfile', 'converter', 'sharing'].includes(tab)) {
-      return tab as 'search' | 'installed' | 'huggingface' | 'modelfile' | 'converter' | 'sharing';
+    if (
+      tab &&
+      [
+        'search',
+        'installed',
+        'huggingface',
+        'modelfile',
+        'converter',
+        'sharing',
+      ].includes(tab)
+    ) {
+      return tab as
+        | 'search'
+        | 'installed'
+        | 'huggingface'
+        | 'modelfile'
+        | 'converter'
+        | 'sharing';
     }
     return 'search';
   };
@@ -60,51 +82,57 @@ export const ModelManagement: React.FC = () => {
       { label: t('header.home') || 'ホーム', path: '/' },
     ];
     if (returnTo === 'api/create') {
-      items.push({ label: t('modelManagement.createApi') || 'API作成', path: '/api/create' });
+      items.push({
+        label: t('modelManagement.createApi') || 'API作成',
+        path: '/api/create',
+      });
     }
     items.push({ label: t('modelManagement.title') || 'モデル管理' });
     return items;
   }, [t, returnTo]);
 
   // モデル選択時のハンドラ
-  const handleModelSelected = useCallback((model: {
-    name: string;
-    size?: number;
-    description?: string;
-    parameters?: number;
-  }) => {
-    // パラメータ数のフォーマット（B単位に変換）
-    let description = model.description;
-    if (!description && model.parameters) {
-      const paramsB = model.parameters / 1000000000;
-      if (paramsB >= 1) {
-        description = `${paramsB.toFixed(1)}B パラメータ`;
-      } else {
-        const paramsM = model.parameters / 1000000;
-        description = `${paramsM.toFixed(0)}M パラメータ`;
+  const handleModelSelected = useCallback(
+    (model: {
+      name: string;
+      size?: number;
+      description?: string;
+      parameters?: number;
+    }) => {
+      // パラメータ数のフォーマット（B単位に変換）
+      let description = model.description;
+      if (!description && model.parameters) {
+        const paramsB = model.parameters / 1000000000;
+        if (paramsB >= 1) {
+          description = `${paramsB.toFixed(1)}B パラメータ`;
+        } else {
+          const paramsM = model.parameters / 1000000;
+          description = `${paramsM.toFixed(0)}M パラメータ`;
+        }
       }
-    }
 
-    // ModelInfoからSelectedModelに変換
-    const selectedModel: SelectedModel = {
-      name: model.name,
-      size: model.size,
-      description,
-    };
+      // ModelInfoからSelectedModelに変換
+      const selectedModel: SelectedModel = {
+        name: model.name,
+        size: model.size,
+        description,
+      };
 
-    if (returnTo === 'api/create') {
-      // API作成画面に戻り、選択したモデルを渡す
-      navigate('/api/create', {
-        state: {
-          selectedModel,
-          engineType: selectedEngine || 'ollama',
-        },
-      });
-    } else {
-      // 通常の遷移
-      navigate('/api/create', { state: { selectedModel } });
-    }
-  }, [returnTo, selectedEngine, navigate]);
+      if (returnTo === 'api/create') {
+        // API作成画面に戻り、選択したモデルを渡す
+        navigate('/api/create', {
+          state: {
+            selectedModel,
+            engineType: selectedEngine || 'ollama',
+          },
+        });
+      } else {
+        // 通常の遷移
+        navigate('/api/create', { state: { selectedModel } });
+      }
+    },
+    [returnTo, selectedEngine, navigate]
+  );
 
   return (
     <div className="page-background model-management-page">

@@ -28,13 +28,33 @@ interface NotificationContextValue {
     action?: NotificationAction
   ) => void;
   /** 成功通知を表示 */
-  showSuccess: (title: string, message?: string, duration?: number, action?: NotificationAction) => void;
+  showSuccess: (
+    title: string,
+    message?: string,
+    duration?: number,
+    action?: NotificationAction
+  ) => void;
   /** エラー通知を表示 */
-  showError: (title: string, message?: string, duration?: number, action?: NotificationAction) => void;
+  showError: (
+    title: string,
+    message?: string,
+    duration?: number,
+    action?: NotificationAction
+  ) => void;
   /** 警告通知を表示 */
-  showWarning: (title: string, message?: string, duration?: number, action?: NotificationAction) => void;
+  showWarning: (
+    title: string,
+    message?: string,
+    duration?: number,
+    action?: NotificationAction
+  ) => void;
   /** 情報通知を表示 */
-  showInfo: (title: string, message?: string, duration?: number, action?: NotificationAction) => void;
+  showInfo: (
+    title: string,
+    message?: string,
+    duration?: number,
+    action?: NotificationAction
+  ) => void;
   /** 通知を削除する */
   removeNotification: (id: string) => void;
   /** 全ての通知を削除する */
@@ -102,7 +122,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
    * 成功通知を表示
    */
   const showSuccess = useCallback(
-    (title: string, message?: string, duration?: number, action?: NotificationAction) => {
+    (
+      title: string,
+      message?: string,
+      duration?: number,
+      action?: NotificationAction
+    ) => {
       showNotification('success', title, message, duration, action);
     },
     [showNotification]
@@ -112,7 +137,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
    * エラー通知を表示
    */
   const showError = useCallback(
-    (title: string, message?: string, duration?: number, action?: NotificationAction) => {
+    (
+      title: string,
+      message?: string,
+      duration?: number,
+      action?: NotificationAction
+    ) => {
       // エラーは長めに表示
       showNotification(
         'error',
@@ -129,7 +159,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
    * 警告通知を表示
    */
   const showWarning = useCallback(
-    (title: string, message?: string, duration?: number, action?: NotificationAction) => {
+    (
+      title: string,
+      message?: string,
+      duration?: number,
+      action?: NotificationAction
+    ) => {
       showNotification('warning', title, message, duration, action);
     },
     [showNotification]
@@ -139,7 +174,12 @@ export const NotificationProvider: React.FC<NotificationProviderProps> = ({
    * 情報通知を表示
    */
   const showInfo = useCallback(
-    (title: string, message?: string, duration?: number, action?: NotificationAction) => {
+    (
+      title: string,
+      message?: string,
+      duration?: number,
+      action?: NotificationAction
+    ) => {
       showNotification('info', title, message, duration, action);
     },
     [showNotification]

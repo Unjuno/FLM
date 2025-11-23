@@ -71,7 +71,12 @@ export const useApiListData = () => {
   }, [apis, selectAll]);
 
   const handleImportComplete = useCallback(
-    (result: { imported: number; skipped: number; renamed: number; errors: string[] }) => {
+    (result: {
+      imported: number;
+      skipped: number;
+      renamed: number;
+      errors: string[];
+    }) => {
       void refreshApis();
       clearSelection();
       logger.info(
@@ -166,5 +171,3 @@ export const useApiListData = () => {
     breadcrumbItems,
   };
 };
-
-

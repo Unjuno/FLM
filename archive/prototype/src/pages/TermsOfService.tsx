@@ -17,10 +17,10 @@ export const TermsOfService: React.FC = () => {
   useGlobalKeyboardShortcuts();
 
   // パンくずリストの項目
-  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
-    { label: 'ホーム', path: '/' },
-    { label: '利用規約' },
-  ], []);
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(
+    () => [{ label: 'ホーム', path: '/' }, { label: '利用規約' }],
+    []
+  );
 
   return (
     <div className="terms-of-service-page">

@@ -27,7 +27,7 @@ interface SharedModelInfo {
 
 /**
  * モデル共有コンポーネント
- * 
+ *
  * **実装状況**:
  * - ✅ UI実装: 完全実装済み
  * - ✅ ローカルデータベースへの保存: 完全実装済み
@@ -35,7 +35,7 @@ interface SharedModelInfo {
  * - ⚠️ Hugging Face Hubファイルアップロード: 将来実装予定
  * - ⚠️ Hugging Face Hubからのダウンロード: 将来実装予定
  * - ⚠️ Ollama Hub連携: 将来実装予定（公式APIが提供されていないため）
- * 
+ *
  * **注意**: 現在の実装では、モデル情報をローカルデータベースに保存するか、
  * Hugging Face Hubにリポジトリを作成することのみ可能です。
  * 実際のファイルアップロード/ダウンロード機能は将来実装予定です。
@@ -118,16 +118,19 @@ export const ModelSharing: React.FC = () => {
             .map(t => t.trim())
             .filter(t => t.length > 0);
 
-          const info = await safeInvoke<SharedModelInfo>('share_model_command', {
-            config: {
-              model_name: modelName,
-              model_path: modelPath,
-              description: description || null,
-              tags: tagsArray,
-              license: license || null,
-              is_public: isPublic,
-            },
-          });
+          const info = await safeInvoke<SharedModelInfo>(
+            'share_model_command',
+            {
+              config: {
+                model_name: modelName,
+                model_path: modelPath,
+                description: description || null,
+                tags: tagsArray,
+                license: license || null,
+                is_public: isPublic,
+              },
+            }
+          );
 
           setSharedInfo(info);
           showSuccess('モデルを共有しました');
@@ -139,7 +142,10 @@ export const ModelSharing: React.FC = () => {
           setTags('');
           setLicense('');
         } catch (err) {
-          const errorMessage = extractErrorMessage(err, 'モデル共有に失敗しました');
+          const errorMessage = extractErrorMessage(
+            err,
+            'モデル共有に失敗しました'
+          );
           setError(errorMessage);
           showError(errorMessage);
         } finally {
@@ -183,7 +189,11 @@ export const ModelSharing: React.FC = () => {
     } catch (err) {
       // エラーは静かに処理（手動入力にフォールバック）
       // eslint-disable-next-line no-console
-      logger.warn('ファイル選択ダイアログが利用できません', String(err), 'ModelSharing');
+      logger.warn(
+        'ファイル選択ダイアログが利用できません',
+        String(err),
+        'ModelSharing'
+      );
       showError(
         'ファイル選択ダイアログが利用できません。手動でパスを入力してください。'
       );

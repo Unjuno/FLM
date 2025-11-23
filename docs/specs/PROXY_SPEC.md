@@ -126,6 +126,8 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 - `packaged-ca`: ルートCA証明書はビルド時に生成し、インストーラに同梱。サーバー証明書は起動時に自動生成（ルートCAで署名）。インストール時にOS信頼ストアへ自動登録。
 
 * 設定は `ProxyConfig` に集約 (`core` 側で管理)
+  - `listen_addr`: バインドするIPアドレス（デフォルト: "127.0.0.1"）。外部アクセスが必要な場合のみ "0.0.0.0" を使用
+  - `trusted_proxy_ips`: X-Forwarded-For ヘッダーの検証に使用する信頼できるプロキシのIPアドレスリスト。空の場合は直接接続とみなす
 * ACME 証明書は `security.db` にパスと更新日時を保存
 * `packaged-ca` モードのルートCA証明書はビルド時に生成し、インストーラに同梱。サーバー証明書は起動時に自動生成（ルートCAで署名）
 
@@ -290,3 +292,12 @@ Proxy / UI / CLI は `SecurityPolicy.policy_json` に以下のキーが存在す
 - `/v1/audio/*` 等の将来 API は `EngineCapabilities` を確認して動的にサポート
 - ProxyService でのホットリロード（設定変更を再起動無しで反映するか）
 
+---
+
+**関連ドキュメント**:
+- `docs/specs/CORE_API.md` - コアAPI仕様（Proxyが使用するAPI）
+- `docs/planning/BOTNET_PROTECTION_IMPLEMENTATION_PLAN.md` - ボットネット対策実装計画
+- `docs/guides/SECURITY_BOTNET_PROTECTION.md` - ボットネット対策ガイド（ユーザー向け）
+- `docs/guides/SECURITY_FIREWALL_GUIDE.md` - ファイアウォール設定ガイド
+- `docs/specs/CLI_SPEC.md` - CLI仕様
+- `docs/specs/ENGINE_DETECT.md` - エンジン検出仕様

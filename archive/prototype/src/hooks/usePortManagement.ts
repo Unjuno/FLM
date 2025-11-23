@@ -28,7 +28,7 @@ export interface UsePortManagementReturn {
 
 /**
  * ポート管理用カスタムフック
- * 
+ *
  * @param initialPort - 初期ポート番号
  * @param onPortChange - ポート変更時のコールバック
  */
@@ -40,15 +40,18 @@ export const usePortManagement = (
   const [portDetecting, setPortDetecting] = useState(false);
   const [portDetected, setPortDetected] = useState(false);
   const [portError, setPortError] = useState<string | undefined>(undefined);
-  
+
   const isMounted = useIsMounted();
 
   // ポートを設定
-  const setPort = useCallback((newPort: number) => {
-    setPortState(newPort);
-    setPortError(undefined);
-    onPortChange?.(newPort);
-  }, [onPortChange]);
+  const setPort = useCallback(
+    (newPort: number) => {
+      setPortState(newPort);
+      setPortError(undefined);
+      onPortChange?.(newPort);
+    },
+    [onPortChange]
+  );
 
   // 利用可能なポートを自動検出（内部使用）
   const autoDetectPort = useCallback(
@@ -195,26 +198,22 @@ export const usePortManagement = (
   // 高頻度レンダリングを防ぐため、前回のポートを保持して変更時のみチェック
   const prevPortRef = useRef<number | null>(null);
   const portCheckTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
+
   useEffect(() => {
     // ポートが実際に変更された場合のみチェック（高頻度レンダリングを防ぐ）
     if (prevPortRef.current === port) {
       return;
     }
-    
+
     prevPortRef.current = port;
-    
+
     // 既存のタイムアウトをクリア
     if (portCheckTimeoutRef.current) {
       clearTimeout(portCheckTimeoutRef.current);
       portCheckTimeoutRef.current = null;
     }
-    
-    if (
-      port &&
-      port >= PORT_RANGE.MIN &&
-      port <= PORT_RANGE.MAX
-    ) {
+
+    if (port && port >= PORT_RANGE.MIN && port <= PORT_RANGE.MAX) {
       portCheckTimeoutRef.current = setTimeout(async () => {
         const isAvailable = await safeInvoke<boolean>(
           'check_port_availability',
@@ -263,16 +262,16 @@ export const usePortManagement = (
           }
         }
         portCheckTimeoutRef.current = null;
-       }, TIMEOUT.PORT_CHECK_DELAY);
-     }
-     
-     return () => {
-       if (portCheckTimeoutRef.current) {
-         clearTimeout(portCheckTimeoutRef.current);
-         portCheckTimeoutRef.current = null;
-       }
-     };
-   }, [port, autoDetectPort, isMounted]);
+      }, TIMEOUT.PORT_CHECK_DELAY);
+    }
+
+    return () => {
+      if (portCheckTimeoutRef.current) {
+        clearTimeout(portCheckTimeoutRef.current);
+        portCheckTimeoutRef.current = null;
+      }
+    };
+  }, [port, autoDetectPort, isMounted]);
 
   return {
     port,
@@ -284,4 +283,3 @@ export const usePortManagement = (
     autoDetectPort,
   };
 };
-

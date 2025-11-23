@@ -114,21 +114,40 @@ export const ApiTestSelector: React.FC = () => {
   const getStatusDisplay = (status: ApiInfoSimple['status']) => {
     switch (status) {
       case 'running':
-        return { icon: '🟢', label: t('apiTestSelector.status.running'), className: 'status-running' };
+        return {
+          icon: '🟢',
+          label: t('apiTestSelector.status.running'),
+          className: 'status-running',
+        };
       case 'stopped':
-        return { icon: '⚫', label: t('apiTestSelector.status.stopped'), className: 'status-stopped' };
+        return {
+          icon: '⚫',
+          label: t('apiTestSelector.status.stopped'),
+          className: 'status-stopped',
+        };
       case 'error':
-        return { icon: '🔴', label: t('apiTestSelector.status.error'), className: 'status-error' };
+        return {
+          icon: '🔴',
+          label: t('apiTestSelector.status.error'),
+          className: 'status-error',
+        };
       default:
-        return { icon: '⚪', label: t('apiTestSelector.status.unknown'), className: 'status-unknown' };
+        return {
+          icon: '⚪',
+          label: t('apiTestSelector.status.unknown'),
+          className: 'status-unknown',
+        };
     }
   };
 
   // パンくずリストの項目
-  const breadcrumbItems: BreadcrumbItem[] = useMemo(() => [
-    { label: t('header.home') || 'ホーム', path: '/' },
-    { label: t('apiTestSelector.title') || 'APIテスト選択' },
-  ], [t]);
+  const breadcrumbItems: BreadcrumbItem[] = useMemo(
+    () => [
+      { label: t('header.home') || 'ホーム', path: '/' },
+      { label: t('apiTestSelector.title') || 'APIテスト選択' },
+    ],
+    [t]
+  );
 
   if (loading) {
     return (
@@ -156,9 +175,7 @@ export const ApiTestSelector: React.FC = () => {
         <Breadcrumb items={breadcrumbItems} />
         <header className="page-header">
           <h1>{t('apiTestSelector.title')}</h1>
-          <p className="page-description">
-            {t('apiTestSelector.description')}
-          </p>
+          <p className="page-description">{t('apiTestSelector.description')}</p>
         </header>
 
         {error && (

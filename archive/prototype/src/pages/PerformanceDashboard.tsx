@@ -203,7 +203,10 @@ export const PerformanceDashboard: React.FC = () => {
   const breadcrumbItems: BreadcrumbItem[] = useMemo(() => {
     const items: BreadcrumbItem[] = [
       { label: t('header.home') || 'ホーム', path: '/' },
-      { label: t('performanceDashboard.title') || 'パフォーマンスダッシュボード' },
+      {
+        label:
+          t('performanceDashboard.title') || 'パフォーマンスダッシュボード',
+      },
     ];
     if (selectedApi) {
       items.splice(1, 0, {

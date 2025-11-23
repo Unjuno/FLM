@@ -23,6 +23,8 @@ pub fn create_test_proxy_config() -> crate::domain::proxy::ProxyConfig {
         acme_domain: None,
         acme_challenge: None,
         acme_dns_profile_id: None,
+        config_db_path: None,
+        security_db_path: None,
     }
 }
 

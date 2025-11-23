@@ -1,6 +1,6 @@
 /**
  * 非同期操作の共通パターンを提供するカスタムフック
- * 
+ *
  * エラーハンドリング、ローディング状態管理、リトライ機能などを統一します。
  */
 
@@ -34,7 +34,7 @@ export interface UseAsyncOperationReturn<T> extends AsyncOperationState<T> {
 
 /**
  * 非同期操作を管理するカスタムフック
- * 
+ *
  * @param operation 実行する非同期操作
  * @param options オプション設定
  * @returns 非同期操作の状態と操作関数
@@ -78,11 +78,7 @@ export function useAsyncOperation<T>(
       }));
 
       if (options?.logErrors !== false) {
-        logger.error(
-          errorMessage,
-          err,
-          options?.context || 'AsyncOperation'
-        );
+        logger.error(errorMessage, err, options?.context || 'AsyncOperation');
       }
     }
   }, [options?.logErrors, options?.context]);
@@ -114,4 +110,3 @@ export function useAsyncOperation<T>(
     reset,
   };
 }
-

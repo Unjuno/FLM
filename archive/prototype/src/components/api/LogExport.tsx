@@ -1,6 +1,12 @@
 // LogExport - ログエクスポートコンポーネント
 
-import React, { useState, useCallback, useTransition, useEffect, useRef } from 'react';
+import React, {
+  useState,
+  useCallback,
+  useTransition,
+  useEffect,
+  useRef,
+} from 'react';
 import { safeInvoke } from '../../utils/tauri';
 import { Tooltip } from '../common/Tooltip';
 import { exportLogsToPdf } from '../../utils/pdfExport';
@@ -87,7 +93,9 @@ export const LogExport: React.FC<LogExportProps> = ({
   const [isPending, startTransition] = useTransition(); // React 18 Concurrent Features用
   const [includeRequestBody, setIncludeRequestBody] = useState(false);
   const [showWarning, setShowWarning] = useState(false);
-  const [pendingFormat, setPendingFormat] = useState<'csv' | 'json' | null>(null);
+  const [pendingFormat, setPendingFormat] = useState<'csv' | 'json' | null>(
+    null
+  );
   const [encryptFile, setEncryptFile] = useState(false);
   const [encryptionPassword, setEncryptionPassword] = useState('');
   const warningDialogRef = useRef<HTMLDivElement>(null);
@@ -147,34 +155,36 @@ export const LogExport: React.FC<LogExportProps> = ({
   /**
    * ファイルをダウンロード
    */
-  const downloadFile = useCallback(
-    (data: string, format: string): void => {
-      // 暗号化ファイルの場合はMIMEタイプをapplication/octet-streamに設定
-      const mimeType = format.endsWith('.encrypted') 
-        ? 'application/octet-stream' 
-        : (format === 'csv' ? MIME_TYPES.csv : MIME_TYPES.json);
-      
-      const blob = new Blob([data], {
-        type: mimeType,
-      });
+  const downloadFile = useCallback((data: string, format: string): void => {
+    // 暗号化ファイルの場合はMIMEタイプをapplication/octet-streamに設定
+    const mimeType = format.endsWith('.encrypted')
+      ? 'application/octet-stream'
+      : format === 'csv'
+        ? MIME_TYPES.csv
+        : MIME_TYPES.json;
 
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `api-logs-${new Date().toISOString().split('T')[0]}.${format}`;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      URL.revokeObjectURL(url);
-    },
-    []
-  );
+    const blob = new Blob([data], {
+      type: mimeType,
+    });
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `api-logs-${new Date().toISOString().split('T')[0]}.${format}`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  }, []);
 
   /**
    * CSV/JSONエクスポートを実行
    */
   const exportToFile = useCallback(
-    async (format: 'csv' | 'json', includeBody: boolean = false): Promise<void> => {
+    async (
+      format: 'csv' | 'json',
+      includeBody: boolean = false
+    ): Promise<void> => {
       if (!apiId) {
         setError(ERROR_MESSAGES.NO_API);
         return;
@@ -202,7 +212,10 @@ export const LogExport: React.FC<LogExportProps> = ({
           onExportComplete(response.count);
         }
       } catch (err) {
-        const errorMessage = extractErrorMessage(err, ERROR_MESSAGES.EXPORT_FAILED);
+        const errorMessage = extractErrorMessage(
+          err,
+          ERROR_MESSAGES.EXPORT_FAILED
+        );
         setError(errorMessage);
         logger.error('ログエクスポートエラー', err, 'LogExport');
       } finally {
@@ -227,7 +240,10 @@ export const LogExport: React.FC<LogExportProps> = ({
         filename: `api-logs_${new Date().toISOString().split('T')[0]}`,
       });
     } catch (err) {
-      const errorMessage = extractErrorMessage(err, ERROR_MESSAGES.PDF_EXPORT_FAILED);
+      const errorMessage = extractErrorMessage(
+        err,
+        ERROR_MESSAGES.PDF_EXPORT_FAILED
+      );
       setError(errorMessage);
       logger.error('PDFエクスポートエラー', err, 'LogExport');
     } finally {
@@ -246,8 +262,13 @@ export const LogExport: React.FC<LogExportProps> = ({
       }
 
       // 暗号化が有効な場合、パスワードを確認
-      if (encryptFile && (!encryptionPassword || encryptionPassword.length < 8)) {
-        setError('暗号化を有効にする場合は、8文字以上のパスワードを入力してください。');
+      if (
+        encryptFile &&
+        (!encryptionPassword || encryptionPassword.length < 8)
+      ) {
+        setError(
+          '暗号化を有効にする場合は、8文字以上のパスワードを入力してください。'
+        );
         return;
       }
 
@@ -259,7 +280,7 @@ export const LogExport: React.FC<LogExportProps> = ({
       }
 
       // 警告を表示（機密情報が含まれる可能性があることを通知）
-      const warningMessage = 
+      const warningMessage =
         '⚠️ プライバシー警告\n\n' +
         'エクスポートされるログデータには機密情報が含まれる可能性があります。\n' +
         'リクエストボディはデフォルトで除外されていますが、エクスポートファイルには\n' +
@@ -279,7 +300,13 @@ export const LogExport: React.FC<LogExportProps> = ({
         },
       });
     },
-    [includeRequestBody, encryptFile, encryptionPassword, exportToPdf, exportToFile]
+    [
+      includeRequestBody,
+      encryptFile,
+      encryptionPassword,
+      exportToPdf,
+      exportToFile,
+    ]
   );
 
   /**
@@ -288,15 +315,26 @@ export const LogExport: React.FC<LogExportProps> = ({
   const handleConfirmExport = useCallback(() => {
     if (pendingFormat) {
       // 暗号化が有効な場合、パスワードを確認
-      if (encryptFile && (!encryptionPassword || encryptionPassword.length < 8)) {
-        setError('暗号化を有効にする場合は、8文字以上のパスワードを入力してください。');
+      if (
+        encryptFile &&
+        (!encryptionPassword || encryptionPassword.length < 8)
+      ) {
+        setError(
+          '暗号化を有効にする場合は、8文字以上のパスワードを入力してください。'
+        );
         setShowWarning(false);
         setPendingFormat(null);
         return;
       }
       exportToFile(pendingFormat, includeRequestBody);
     }
-  }, [pendingFormat, includeRequestBody, encryptFile, encryptionPassword, exportToFile]);
+  }, [
+    pendingFormat,
+    includeRequestBody,
+    encryptFile,
+    encryptionPassword,
+    exportToFile,
+  ]);
 
   /**
    * 警告ダイアログをキャンセル
@@ -501,27 +539,35 @@ export const LogExport: React.FC<LogExportProps> = ({
 
       {/* 警告ダイアログ */}
       {showWarning && (
-        <div className="log-export-warning-overlay" role="dialog" aria-modal="true">
+        <div
+          className="log-export-warning-overlay"
+          role="dialog"
+          aria-modal="true"
+        >
           <div ref={warningDialogRef} className="log-export-warning-dialog">
             <div className="log-export-warning-header">
               <h3>⚠️ プライバシー警告</h3>
             </div>
             <div className="log-export-warning-content">
-              <p>
-                リクエストボディを含めてエクスポートしようとしています。
-              </p>
+              <p>リクエストボディを含めてエクスポートしようとしています。</p>
               <p>
                 <strong>注意事項：</strong>
               </p>
               <ul>
-                <li>リクエストボディには機密情報（APIキー、パスワード、トークンなど）が含まれる可能性があります</li>
-                <li>機密情報は自動的にマスク処理されますが、完全な保護を保証するものではありません</li>
-                <li>エクスポートファイルは適切に管理し、不要になったら削除してください</li>
-                <li>エクスポートファイルを共有する際は、機密情報が含まれていないことを確認してください</li>
+                <li>
+                  リクエストボディには機密情報（APIキー、パスワード、トークンなど）が含まれる可能性があります
+                </li>
+                <li>
+                  機密情報は自動的にマスク処理されますが、完全な保護を保証するものではありません
+                </li>
+                <li>
+                  エクスポートファイルは適切に管理し、不要になったら削除してください
+                </li>
+                <li>
+                  エクスポートファイルを共有する際は、機密情報が含まれていないことを確認してください
+                </li>
               </ul>
-              <p>
-                本当にリクエストボディを含めてエクスポートしますか？
-              </p>
+              <p>本当にリクエストボディを含めてエクスポートしますか？</p>
             </div>
             <div className="log-export-warning-actions">
               <button

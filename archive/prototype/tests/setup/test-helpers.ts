@@ -22,13 +22,13 @@ export const checkTauriAvailable = async (): Promise<boolean> => {
  * Tauriアプリが起動していない場合にテストをスキップします
  * @param testFn - 実行するテスト関数
  */
-export const skipIfTauriNotAvailable = (
-  testFn: () => void | Promise<void>
-) => {
+export const skipIfTauriNotAvailable = (testFn: () => void | Promise<void>) => {
   return async () => {
     const isAvailable = await checkTauriAvailable();
     if (!isAvailable) {
-      console.warn('Tauriアプリが起動していないため、このテストをスキップします');
+      console.warn(
+        'Tauriアプリが起動していないため、このテストをスキップします'
+      );
       return;
     }
     await testFn();
@@ -119,7 +119,7 @@ export const createTestApiForCategory = async (
   port: number
 ): Promise<string> => {
   const multimodalConfig = getMultimodalConfigForCategory(category);
-  
+
   const config: ApiConfig = {
     name: `Test API - ${category} - ${modelName}`,
     model_name: modelName,
@@ -213,7 +213,7 @@ export const waitForApiStop = async (
  */
 export function handleTauriAppNotRunningError(error: unknown): boolean {
   const errorMessage = error instanceof Error ? error.message : String(error);
-  if (errorMessage.includes('Tauriアプリケーションが起動していません')) {       
+  if (errorMessage.includes('Tauriアプリケーションが起動していません')) {
     console.error('Tauriアプリが起動していないため、テストを継続できません');
     throw new Error(
       'Tauriアプリケーションが起動していません。テストを実行する前に `npm run tauri dev` でアプリを起動してください。'
@@ -245,4 +245,3 @@ export async function safeInvokeWithErrorHandling<T>(
     throw error;
   }
 }
-

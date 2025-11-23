@@ -25,7 +25,9 @@ export interface ApiConfigMemorySettingsProps {
  * メモリ・リソース設定セクション
  * コンテキストウィンドウ、GPUレイヤー、CPUスレッド、バッチサイズ、MMAP、MLock、低メモリモードの設定
  */
-export const ApiConfigMemorySettings: React.FC<ApiConfigMemorySettingsProps> = ({
+export const ApiConfigMemorySettings: React.FC<
+  ApiConfigMemorySettingsProps
+> = ({
   memorySettings,
   errors,
   onMemorySettingChange,
@@ -289,4 +291,3 @@ export const ApiConfigMemorySettings: React.FC<ApiConfigMemorySettingsProps> = (
     </div>
   );
 };
-
