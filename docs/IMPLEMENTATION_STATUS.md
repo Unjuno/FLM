@@ -1,0 +1,256 @@
+# 実装状況レポート
+
+> Status: Reference | Audience: All contributors | Updated: 2025-01-27
+
+このドキュメントは、FLMプロジェクトの実装状況をまとめたものです。
+
+## 実装状況サマリー
+
+### ✅ 実装完了
+
+- **flm-core**: Domain層、Service層、Port層が実装済み
+- **flm-cli**: 主要なCLIコマンドが実装済み
+- **flm-proxy**: Axumベースのプロキシサーバーが実装済み
+- **エンジンアダプター**: 4つすべて実装済み（Ollama, vLLM, LM Studio, llama.cpp）
+
+### ⚠️ 未実装・部分実装
+
+- **ボットネット対策機能**: Phase 1完了、Phase 2/3未実装
+  - ✅ IPブロックリスト（Phase 1完了）
+  - ✅ 侵入検知システム（Phase 1完了）
+  - ✅ 監査ログ（Phase 1完了）
+  - ❌ 異常検知システム（Phase 2未実装）
+  - ❌ リソース保護（CPU/メモリ監視）（Phase 2未実装）
+
+## 詳細な実装状況
+
+### 1. flm-core（コアライブラリ）
+
+#### 実装済み
+
+**Domain層** (`crates/flm-core/src/domain/`):
+- ✅ `chat.rs` - チャット関連のドメインモデル
+- ✅ `engine.rs` - エンジン関連のドメインモデル
+- ✅ `models.rs` - モデル関連のドメインモデル
+- ✅ `proxy.rs` - プロキシ関連のドメインモデル
+- ✅ `security.rs` - セキュリティ関連のドメインモデル
+
+**Service層** (`crates/flm-core/src/services/`):
+- ✅ `engine.rs` - EngineService（エンジン検出、モデル一覧、チャット、埋め込み）
+- ✅ `proxy.rs` - ProxyService（プロキシ起動、停止、状態確認）
+- ✅ `security.rs` - SecurityService（APIキー管理、セキュリティポリシー）
+- ✅ `config.rs` - ConfigService（設定管理）
+
+**Port層** (`crates/flm-core/src/ports/`):
+- ✅ `engine.rs` - LlmEngine trait、EngineRepository trait
+- ✅ `proxy.rs` - ProxyController trait
+- ✅ `security.rs` - SecurityRepository trait
+- ✅ `config.rs` - ConfigRepository trait
+- ✅ `http.rs` - HttpClient trait
+
+**データベースマイグレーション**:
+- ✅ `20250101000001_create_config_db.sql` - config.db作成
+- ✅ `20250101000002_create_security_db.sql` - security.db作成
+- ✅ `20250101000003_init_security_policy.sql` - セキュリティポリシー初期化
+- ✅ `20250127000001_add_botnet_protection.sql` - ボットネット対策用テーブル（未使用）
+
+#### テスト
+
+- ✅ `config_service_test.rs` - ConfigServiceのテスト
+- ✅ `proxy_service_test.rs` - ProxyServiceのテスト
+- ✅ `security_service_test.rs` - SecurityServiceのテスト
+- ✅ `integration_test.rs` - 統合テスト
+
+### 2. flm-cli（CLI）
+
+#### 実装済み
+
+**コマンド** (`crates/flm-cli/src/commands/`):
+- ✅ `engines.rs` - `flm engines detect` コマンド
+- ✅ `models.rs` - `flm models list` コマンド
+- ✅ `proxy.rs` - `flm proxy start/stop/status` コマンド
+- ✅ `api_keys.rs` - `flm api-keys create/list/revoke/rotate` コマンド
+- ✅ `config.rs` - `flm config get/set/list` コマンド
+
+**アダプター** (`crates/flm-cli/src/adapters/`):
+- ✅ `engine.rs` - EngineRepository実装
+- ✅ `proxy.rs` - ProxyController実装
+- ✅ `security.rs` - SecurityRepository実装
+- ✅ `config.rs` - ConfigRepository実装
+- ✅ `http.rs` - HttpClient実装
+- ✅ `process_controller.rs` - EngineProcessController実装
+
+#### テスト
+
+- ✅ `cli_test.rs` - CLIコマンドのテスト
+- ✅ `engine_repository_test.rs` - EngineRepositoryのテスト
+- ✅ `proxy_cli_test.rs` - Proxy CLIのテスト
+- ✅ `integration_test.rs` - 統合テスト
+
+### 3. flm-proxy（プロキシサーバー）
+
+#### 実装済み
+
+**コントローラー** (`crates/flm-proxy/src/controller.rs`):
+- ✅ AxumProxyController - ProxyController traitの実装
+- ✅ プロキシサーバーの起動・停止・状態確認
+- ✅ ルーティング設定（`/v1/models`, `/v1/chat/completions`, `/v1/embeddings`）
+
+**ミドルウェア** (`crates/flm-proxy/src/middleware.rs`):
+- ✅ `auth_middleware` - Bearerトークン認証
+- ✅ `policy_middleware` - IPホワイトリスト、CORS、レート制限
+- ✅ `rate_limit_middleware` - APIキーベースのレート制限
+- ✅ `add_security_headers` - セキュリティヘッダーの追加
+- ✅ `request_timeout_middleware` - リクエストタイムアウト（60秒）
+- ✅ `audit_logging_middleware` - 監査ログ記録（Phase 1完了）
+- ✅ `intrusion_detection_middleware` - 侵入検知ミドルウェア（Phase 1完了）
+- ✅ `ip_blocklist_middleware` - IPブロックリストチェック（Phase 1完了）
+
+**ハンドラー** (`crates/flm-proxy/src/controller.rs`):
+- ✅ `handle_health` - ヘルスチェックエンドポイント
+- ✅ `handle_models` - `/v1/models` エンドポイント
+- ✅ `handle_chat_completions` - `/v1/chat/completions` エンドポイント（同期・ストリーミング）
+- ✅ `handle_embeddings` - `/v1/embeddings` エンドポイント
+
+#### セキュリティ機能（ボットネット対策）
+
+**Phase 1: 完了 ✅** (`crates/flm-proxy/src/security/`):
+- ✅ **IPブロックリスト** (`ip_blocklist.rs`)
+  - メモリ内キャッシュ + データベース同期（5分ごと）
+  - ブロックルール（5回→30分、10回→24時間、20回→永続）
+  - 起動時のデータベース読み込み
+  - 認証失敗時の自動ブロック
+- ✅ **侵入検知システム** (`intrusion_detection.rs`)
+  - 4種類のパターン検出（SQLインジェクション、パストラバーサル、不審なUser-Agent、異常なHTTPメソッド）
+  - スコアリングシステム（0-49: ログのみ、100-199: 1時間ブロック、200+: 24時間ブロック）
+  - データベースへの記録
+  - IPブロックリストとの統合
+- ✅ **監査ログ** (`middleware.rs` の `audit_logging_middleware`)
+  - イベントタイプ（auth_success, auth_failure, ip_blocked, intrusion等）
+  - 重大度（low, medium, high, critical）
+  - IPアドレス、詳細情報（JSON形式）の記録
+
+**Phase 2: 未実装 ❌**:
+- ❌ 異常検知システム（大量リクエスト検出、異常パターン検出）
+- ❌ リソース保護（CPU/メモリ監視、自動スロットリング）
+
+**詳細**: `docs/planning/BOTNET_PROTECTION_IMPLEMENTATION_PLAN.md` を参照
+
+#### テスト
+
+- ✅ `integration_test.rs` - 統合テスト
+
+### 4. エンジンアダプター
+
+#### 実装済み
+
+**Ollama** (`crates/flm-engine-ollama/`):
+- ✅ `LlmEngine` trait実装
+- ✅ `health_check` - ヘルスチェック
+- ✅ `list_models` - モデル一覧取得
+- ✅ `chat` - チャット（同期）
+- ✅ `chat_stream` - チャット（ストリーミング）
+- ✅ `embeddings` - 埋め込み
+
+**vLLM** (`crates/flm-engine-vllm/`):
+- ✅ `LlmEngine` trait実装
+- ✅ `health_check` - ヘルスチェック
+- ✅ `list_models` - モデル一覧取得
+- ✅ `chat` - チャット（同期）
+- ✅ `chat_stream` - チャット（ストリーミング）
+- ✅ `embeddings` - 埋め込み
+
+**LM Studio** (`crates/flm-engine-lmstudio/`):
+- ✅ `LlmEngine` trait実装
+- ✅ `health_check` - ヘルスチェック
+- ✅ `list_models` - モデル一覧取得
+- ✅ `chat` - チャット（同期）
+- ✅ `chat_stream` - チャット（ストリーミング）
+- ✅ `embeddings` - 埋め込み
+
+**llama.cpp** (`crates/flm-engine-llamacpp/`):
+- ✅ `LlmEngine` trait実装
+- ✅ `health_check` - ヘルスチェック
+- ✅ `list_models` - モデル一覧取得
+- ✅ `chat` - チャット（同期）
+- ✅ `chat_stream` - チャット（ストリーミング）
+- ✅ `embeddings` - 埋め込み
+
+#### テスト
+
+各エンジンアダプターに `integration_test.rs` が存在
+
+## 実装とドキュメントの整合性
+
+### 仕様書との整合性
+
+- ✅ **CORE_API.md**: 実装は仕様書と概ね一致（一部非同期メソッドの違いあり）
+- ✅ **CLI_SPEC.md**: CLIコマンドは仕様書と一致
+- ✅ **PROXY_SPEC.md**: プロキシ実装は仕様書と概ね一致
+- ✅ **ENGINE_DETECT.md**: エンジン検出は仕様書と一致
+
+### 計画との整合性
+
+- ✅ **Phase 0**: 完了
+- ✅ **Phase 1A**: 完了（エンジン検出/モデル一覧）
+- ✅ **Phase 1B**: 完了（プロキシ基本実装完了、セキュリティ機能Phase 1完了）
+- ⚠️ **Phase 2**: 未開始（UI実装）
+- ⚠️ **Phase 3**: 未開始（パッケージング）
+
+詳細: `docs/planning/PLAN.md` を参照
+
+## 次のステップ
+
+### 優先度: 高
+
+1. **ボットネット対策機能の実装（Phase 2/3）**
+   - 異常検知システム（大量リクエスト検出、異常パターン検出）
+   - リソース保護（CPU/メモリ監視、自動スロットリング）
+
+   詳細: `docs/planning/BOTNET_PROTECTION_IMPLEMENTATION_PLAN.md` を参照
+   進捗: Phase 1完了（IPブロックリスト、侵入検知、監査ログ） - `docs/status/completed/security/SECURITY_PHASE1_COMPLETE.md` を参照
+
+2. **Phase 2: UI実装**
+   - Tauri UIの実装
+   - Rust Core APIとのIPC通信
+   - Setup Wizardの実装
+
+   詳細: `docs/specs/UI_MINIMAL.md` を参照
+
+### 優先度: 中
+
+3. **テストカバレッジの向上**
+   - 単体テストの追加
+   - 統合テストの拡充
+   - E2Eテストの実装
+
+   詳細: `docs/guides/TEST_STRATEGY.md` を参照
+
+4. **ドキュメントの更新**
+   - 仕様書の更新（非同期メソッドの明記）
+   - 使用例の追加
+   - APIドキュメントの生成
+
+## 関連ドキュメント
+
+- `docs/planning/PLAN.md` - プロジェクト計画
+- `docs/specs/CORE_API.md` - コアAPI仕様
+- `docs/specs/CLI_SPEC.md` - CLI仕様
+- `docs/specs/PROXY_SPEC.md` - プロキシ仕様
+- `docs/planning/BOTNET_PROTECTION_IMPLEMENTATION_PLAN.md` - ボットネット対策実装計画
+- `docs/status/active/NEXT_STEPS.md` - 次の作業ステップ
+- `docs/status/completed/tasks/FINAL_SUMMARY.md` - 完了タスクのサマリー
+- `docs/status/completed/security/SECURITY_PHASE1_COMPLETE.md` - セキュリティ機能Phase 1完了レポート
+
+---
+
+**最終更新**: 2025-01-27
+
+## セキュリティ機能の実装状況
+
+### Phase 1: 完了 ✅
+
+Phase 1のセキュリティ機能（IPブロックリスト、侵入検知、監査ログ）は実装完了しています。
+
+詳細は `docs/status/completed/security/SECURITY_PHASE1_COMPLETE.md` を参照してください。
+
