@@ -31,7 +31,7 @@ sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "sqlite", "mig
 # HTTP/Proxy
 axum = "0.7"
 hyper = { version = "1.0", features = ["full"] }
-tower = "0.4"
+tower = { version = "0.4", features = ["limit", "timeout"] }
 tower-http = { version = "0.5", features = ["cors", "trace"] }
 
 # Security
@@ -40,6 +40,9 @@ ring = "0.17"
 
 # CLI
 clap = { version = "4.4", features = ["derive"] }
+
+# Async traits
+async-trait = "0.1"
 
 # Dev dependencies are specified per crate, not in workspace
 

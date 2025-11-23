@@ -6,6 +6,7 @@ use crate::domain::security::{ApiKeyMetadata, ApiKeyRecord, PlainAndHashedApiKey
 use crate::error::RepoError;
 use crate::ports::SecurityRepository;
 use chrono::Utc;
+use std::net::IpAddr;
 use std::sync::Arc;
 
 /// Security service
@@ -39,8 +40,8 @@ where
     /// # Returns
     /// * `Ok(Vec<SecurityPolicy>)` on success
     /// * `Err(RepoError)` if an error occurs
-    pub fn list_policies(&self) -> Result<Vec<SecurityPolicy>, RepoError> {
-        self.repo.list_policies()
+    pub async fn list_policies(&self) -> Result<Vec<SecurityPolicy>, RepoError> {
+        self.repo.list_policies().await
     }
 
     /// Get a specific policy
@@ -52,8 +53,8 @@ where
     /// * `Ok(Some(policy))` if the policy exists
     /// * `Ok(None)` if the policy does not exist
     /// * `Err(RepoError)` if an error occurs
-    pub fn get_policy(&self, id: &str) -> Result<Option<SecurityPolicy>, RepoError> {
-        self.repo.fetch_policy(id)
+    pub async fn get_policy(&self, id: &str) -> Result<Option<SecurityPolicy>, RepoError> {
+        self.repo.fetch_policy(id).await
     }
 
     /// Set/update a security policy
@@ -63,9 +64,74 @@ where
     ///
     /// # Returns
     /// * `Ok(())` on success
-    /// * `Err(RepoError)` if an error occurs
-    pub fn set_policy(&self, policy: SecurityPolicy) -> Result<(), RepoError> {
-        self.repo.save_policy(policy)
+    /// * `Err(RepoError)` if an error occurs (including validation errors)
+    ///
+    /// # Errors
+    /// Returns `RepoError::ValidationError` if the policy JSON contains invalid IP addresses or CIDR notation
+    pub async fn set_policy(&self, policy: SecurityPolicy) -> Result<(), RepoError> {
+        // Validate IP whitelist in policy_json
+        validate_security_policy(&policy.policy_json)?;
+        self.repo.save_policy(policy).await
+    }
+
+    /// Validate a domain name
+    ///
+    /// # Arguments
+    /// * `domain` - The domain name to validate
+    ///
+    /// # Returns
+    /// * `Ok(true)` if the domain is valid
+    /// * `Ok(false)` if the domain is invalid
+    /// * `Err(RepoError)` if an error occurs during validation
+    ///
+    /// # Validation Rules
+    /// - Domain must be between 1 and 253 characters
+    /// - Domain must contain only alphanumeric characters, hyphens, and dots
+    /// - Domain must not start or end with a hyphen or dot
+    /// - Domain must have at least one dot (for TLD)
+    /// - Each label (part between dots) must be between 1 and 63 characters
+    pub fn validate_domain(domain: &str) -> Result<bool, RepoError> {
+        // Basic length check
+        if domain.is_empty() || domain.len() > 253 {
+            return Ok(false);
+        }
+
+        // Check for valid characters (alphanumeric, hyphen, dot)
+        if !domain
+            .chars()
+            .all(|c| c.is_alphanumeric() || c == '-' || c == '.')
+        {
+            return Ok(false);
+        }
+
+        // Must not start or end with hyphen or dot
+        if domain.starts_with('-')
+            || domain.starts_with('.')
+            || domain.ends_with('-')
+            || domain.ends_with('.')
+        {
+            return Ok(false);
+        }
+
+        // Must contain at least one dot (for TLD)
+        if !domain.contains('.') {
+            return Ok(false);
+        }
+
+        // Split into labels and validate each
+        let labels: Vec<&str> = domain.split('.').collect();
+        for label in labels {
+            // Each label must be 1-63 characters
+            if label.is_empty() || label.len() > 63 {
+                return Ok(false);
+            }
+            // Label must not start or end with hyphen
+            if label.starts_with('-') || label.ends_with('-') {
+                return Ok(false);
+            }
+        }
+
+        Ok(true)
     }
 
     /// Create a new API key
@@ -80,7 +146,7 @@ where
     /// # Note
     /// The plain text key is only returned once on creation.
     /// It should be displayed to the user and then discarded.
-    pub fn create_api_key(&self, label: &str) -> Result<PlainAndHashedApiKey, RepoError> {
+    pub async fn create_api_key(&self, label: &str) -> Result<PlainAndHashedApiKey, RepoError> {
         // Generate a random API key
         let plain_key = generate_api_key();
 
@@ -99,7 +165,7 @@ where
         };
 
         // Save to repository
-        self.repo.save_api_key(record.clone())?;
+        self.repo.save_api_key(record.clone()).await?;
 
         Ok(PlainAndHashedApiKey {
             plain: plain_key,
@@ -115,9 +181,9 @@ where
     /// # Returns
     /// * `Ok(())` on success
     /// * `Err(RepoError)` if an error occurs
-    pub fn revoke_api_key(&self, id: &str) -> Result<(), RepoError> {
+    pub async fn revoke_api_key(&self, id: &str) -> Result<(), RepoError> {
         let revoked_at = Utc::now().to_rfc3339();
-        self.repo.mark_api_key_revoked(id, &revoked_at)
+        self.repo.mark_api_key_revoked(id, &revoked_at).await
     }
 
     /// List all API keys (metadata only, no hashes)
@@ -125,8 +191,8 @@ where
     /// # Returns
     /// * `Ok(Vec<ApiKeyMetadata>)` on success
     /// * `Err(RepoError)` if an error occurs
-    pub fn list_api_keys(&self) -> Result<Vec<ApiKeyMetadata>, RepoError> {
-        let records = self.repo.list_api_keys()?;
+    pub async fn list_api_keys(&self) -> Result<Vec<ApiKeyMetadata>, RepoError> {
+        let records = self.repo.list_api_keys().await?;
         Ok(records
             .into_iter()
             .map(|record| ApiKeyMetadata {
@@ -149,13 +215,13 @@ where
     /// # Returns
     /// * `Ok(PlainAndHashedApiKey)` containing the new plain text key and record
     /// * `Err(RepoError)` if an error occurs
-    pub fn rotate_api_key(
+    pub async fn rotate_api_key(
         &self,
         id: &str,
         new_label: Option<&str>,
     ) -> Result<PlainAndHashedApiKey, RepoError> {
         // Fetch the old key to get the label
-        let old_key = self.repo.fetch_api_key(id)?;
+        let old_key = self.repo.fetch_api_key(id).await?;
         let label = if let Some(new_label) = new_label {
             new_label.to_string()
         } else if let Some(ref old) = old_key {
@@ -167,10 +233,45 @@ where
         };
 
         // Revoke the old key
-        self.revoke_api_key(id)?;
+        self.revoke_api_key(id).await?;
 
         // Create a new key with the same or new label
-        self.create_api_key(&label)
+        self.create_api_key(&label).await
+    }
+
+    /// Verify an API key
+    ///
+    /// This checks if the provided plain text API key matches any stored key.
+    ///
+    /// # Arguments
+    /// * `plain_key` - The plain text API key to verify
+    ///
+    /// # Returns
+    /// * `Ok(Some(ApiKeyRecord))` if the key is valid and not revoked
+    /// * `Ok(None)` if the key is invalid or revoked
+    /// * `Err(RepoError)` if an error occurs
+    ///
+    /// # Security Note
+    /// To prevent timing attacks, this function verifies all keys before returning.
+    /// However, for performance reasons with many keys, we still return early on match.
+    /// For stronger protection, consider using a hash-based lookup (future enhancement).
+    pub async fn verify_api_key(&self, plain_key: &str) -> Result<Option<ApiKeyRecord>, RepoError> {
+        // Get only active (non-revoked) API keys for better performance
+        let records = self.repo.list_active_api_keys().await?;
+
+        // Check each key
+        // Note: Early return on match is acceptable here because:
+        // 1. Argon2 verification itself is constant-time
+        // 2. The number of keys is typically small
+        // 3. For better timing attack protection with many keys, consider hash-based lookup
+        for record in records {
+            // Verify the hash using Argon2 (hash is already in the record)
+            if verify_api_key_hash(plain_key, &record.hash)? {
+                return Ok(Some(record));
+            }
+        }
+
+        Ok(None)
     }
 }
 
@@ -231,4 +332,251 @@ fn hash_api_key(plain_key: &str) -> Result<String, RepoError> {
         })?;
 
     Ok(password_hash.to_string())
+}
+
+/// Verify an API key against a stored hash
+///
+/// # Arguments
+/// * `plain_key` - The plain text API key to verify
+/// * `stored_hash` - The stored Argon2 hash
+///
+/// # Returns
+/// * `Ok(true)` if the key matches
+/// * `Ok(false)` if the key does not match
+/// * `Err(RepoError)` if verification fails
+fn verify_api_key_hash(plain_key: &str, stored_hash: &str) -> Result<bool, RepoError> {
+    use argon2::password_hash::{PasswordHash, PasswordVerifier};
+    use argon2::Argon2;
+
+    let parsed_hash = PasswordHash::new(stored_hash).map_err(|e| RepoError::IoError {
+        reason: format!("Failed to parse stored hash: {e}"),
+    })?;
+
+    let argon2 = Argon2::default();
+    match argon2.verify_password(plain_key.as_bytes(), &parsed_hash) {
+        Ok(()) => Ok(true),
+        Err(argon2::password_hash::Error::Password) => Ok(false),
+        Err(e) => Err(RepoError::IoError {
+            reason: format!("Failed to verify API key: {e}"),
+        }),
+    }
+}
+
+/// Validate security policy JSON
+///
+/// Validates IP whitelist entries (IP addresses and CIDR notation).
+/// Returns `RepoError::ValidationError` if validation fails.
+fn validate_security_policy(policy_json: &str) -> Result<(), RepoError> {
+    use serde_json::Value;
+
+    let policy: Value =
+        serde_json::from_str(policy_json).map_err(|e| RepoError::ValidationError {
+            reason: format!("Invalid JSON: {e}"),
+        })?;
+
+    // Validate ip_whitelist if present
+    if let Some(ip_whitelist) = policy.get("ip_whitelist") {
+        if let Some(ip_list) = ip_whitelist.as_array() {
+            for (idx, ip_entry) in ip_list.iter().enumerate() {
+                if let Some(ip_str) = ip_entry.as_str() {
+                    validate_ip_or_cidr(ip_str).map_err(|e| RepoError::ValidationError {
+                        reason: format!("Invalid IP whitelist entry at index {idx}: {e}"),
+                    })?;
+                } else {
+                    return Err(RepoError::ValidationError {
+                        reason: format!(
+                            "Invalid IP whitelist entry at index {idx}: expected string, got {ip_entry}"
+                        ),
+                    });
+                }
+            }
+        } else if !ip_whitelist.is_null() {
+            return Err(RepoError::ValidationError {
+                reason: "ip_whitelist must be an array or null".to_string(),
+            });
+        }
+    }
+
+    // Validate CORS allowed_origins if present
+    if let Some(cors) = policy.get("cors") {
+        if let Some(allowed_origins) = cors.get("allowed_origins") {
+            if let Some(origins_array) = allowed_origins.as_array() {
+                for (idx, origin_entry) in origins_array.iter().enumerate() {
+                    if let Some(origin_str) = origin_entry.as_str() {
+                        // Validate domain name format (basic validation)
+                        if !origin_str.is_empty() && origin_str != "*" {
+                            // CORS origin can be a URL (http://example.com:3000) or domain (example.com)
+                            // Extract domain part for validation
+                            let domain_part = origin_str
+                                .strip_prefix("http://")
+                                .or_else(|| origin_str.strip_prefix("https://"))
+                                .unwrap_or(origin_str)
+                                .split('/')
+                                .next()
+                                .unwrap_or(origin_str)
+                                .split(':')
+                                .next()
+                                .unwrap_or(origin_str);
+
+                            if !domain_part.is_empty() && domain_part != "*" {
+                                validate_domain_name(domain_part).map_err(|e| {
+                                    RepoError::ValidationError {
+                                        reason: format!("Invalid CORS origin at index {idx}: {e}"),
+                                    }
+                                })?;
+                            }
+                        }
+                    } else {
+                        return Err(RepoError::ValidationError {
+                            reason: format!(
+                                "Invalid CORS origin at index {idx}: expected string, got {origin_entry}"
+                            ),
+                        });
+                    }
+                }
+            } else if !allowed_origins.is_null() {
+                return Err(RepoError::ValidationError {
+                    reason: "cors.allowed_origins must be an array or null".to_string(),
+                });
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Validate a domain name
+///
+/// Basic validation using a simple regex pattern.
+/// Supports:
+/// - Standard domain names (e.g., "example.com")
+/// - Subdomains (e.g., "api.example.com")
+/// - Wildcard (*) - should be handled separately
+/// - URLs with protocol (e.g., "https://example.com") - extracts domain
+fn validate_domain_name(domain: &str) -> Result<(), String> {
+    // Remove protocol if present
+    let domain = domain
+        .strip_prefix("http://")
+        .or_else(|| domain.strip_prefix("https://"))
+        .unwrap_or(domain);
+
+    // Remove path if present
+    let domain = domain.split('/').next().unwrap_or(domain);
+
+    // Remove port if present
+    let domain = domain.split(':').next().unwrap_or(domain);
+
+    // Basic domain name validation
+    // - Must not be empty
+    if domain.is_empty() {
+        return Err("Domain name cannot be empty".to_string());
+    }
+
+    // - Must not exceed 253 characters (RFC 1035)
+    if domain.len() > 253 {
+        return Err("Domain name exceeds maximum length (253 characters)".to_string());
+    }
+
+    // - Must contain at least one dot (for TLD), except for "localhost"
+    if !domain.contains('.') && domain != "localhost" {
+        return Err("Domain name must contain at least one dot".to_string());
+    }
+
+    // Special case: localhost is valid without TLD
+    if domain == "localhost" {
+        return Ok(());
+    }
+
+    // - Each label must be 1-63 characters and contain only alphanumeric and hyphens
+    // - Labels cannot start or end with hyphens
+    // - TLD must be at least 2 characters
+    let labels: Vec<&str> = domain.split('.').collect();
+    if labels.len() < 2 {
+        return Err("Domain name must have at least a label and TLD".to_string());
+    }
+
+    for (idx, label) in labels.iter().enumerate() {
+        // Label length check
+        if label.is_empty() {
+            return Err(format!("Domain label at position {idx} cannot be empty"));
+        }
+        if label.len() > 63 {
+            return Err(format!(
+                "Domain label '{label}' exceeds maximum length (63 characters)"
+            ));
+        }
+
+        // Label character check (alphanumeric and hyphens only)
+        if !label.chars().all(|c| c.is_alphanumeric() || c == '-') {
+            return Err(format!(
+                "Domain label '{label}' contains invalid characters (only alphanumeric and hyphens allowed)"
+            ));
+        }
+
+        // Label cannot start or end with hyphen
+        if label.starts_with('-') || label.ends_with('-') {
+            return Err(format!(
+                "Domain label '{label}' cannot start or end with a hyphen"
+            ));
+        }
+
+        // TLD must be at least 2 characters
+        if idx == labels.len() - 1 && label.len() < 2 {
+            return Err("Top-level domain (TLD) must be at least 2 characters".to_string());
+        }
+    }
+
+    Ok(())
+}
+
+/// Validate an IP address or CIDR notation
+///
+/// Supports IPv4, IPv6, and CIDR notation (e.g., "192.168.1.0/24", "2001:db8::/32").
+fn validate_ip_or_cidr(ip_or_cidr: &str) -> Result<(), String> {
+    if ip_or_cidr.contains('/') {
+        // CIDR notation
+        let parts: Vec<&str> = ip_or_cidr.split('/').collect();
+        if parts.len() != 2 {
+            return Err(format!(
+                "Invalid CIDR format: expected 'IP/prefix', got '{ip_or_cidr}'"
+            ));
+        }
+
+        let ip_str = parts[0];
+        let prefix_str = parts[1];
+
+        // Validate IP address
+        ip_str
+            .parse::<IpAddr>()
+            .map_err(|e| format!("Invalid IP address in CIDR '{ip_or_cidr}': {e}"))?;
+
+        // Validate prefix length
+        let prefix: u8 = prefix_str
+            .parse()
+            .map_err(|e| format!("Invalid prefix length in CIDR '{ip_or_cidr}': {e}"))?;
+
+        // Validate prefix length range
+        if ip_str.contains(':') {
+            // IPv6: prefix must be 0-128
+            if prefix > 128 {
+                return Err(format!(
+                    "Invalid IPv6 prefix length: {prefix} (must be 0-128)"
+                ));
+            }
+        } else {
+            // IPv4: prefix must be 0-32
+            if prefix > 32 {
+                return Err(format!(
+                    "Invalid IPv4 prefix length: {prefix} (must be 0-32)"
+                ));
+            }
+        }
+    } else {
+        // Plain IP address
+        ip_or_cidr
+            .parse::<IpAddr>()
+            .map_err(|e| format!("Invalid IP address '{ip_or_cidr}': {e}"))?;
+    }
+
+    Ok(())
 }

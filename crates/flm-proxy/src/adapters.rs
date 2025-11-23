@@ -1,0 +1,216 @@
+//! Adapter implementations for flm-proxy
+//!
+//! This module contains concrete implementations of port traits
+//! needed by the proxy server, without depending on flm-cli.
+
+use async_trait::async_trait;
+use flm_core::domain::security::{ApiKeyRecord, SecurityPolicy};
+use flm_core::error::RepoError;
+use flm_core::ports::SecurityRepository;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
+#[cfg(unix)]
+use std::os::unix::fs::PermissionsExt;
+use std::path::Path;
+
+/// SQLite-based SecurityRepository implementation for flm-proxy
+pub struct SqliteSecurityRepository {
+    pool: SqlitePool,
+}
+
+impl SqliteSecurityRepository {
+    /// Create a new SecurityRepository with a SQLite connection
+    ///
+    /// # Arguments
+    /// * `db_path` - Path to the security.db file
+    ///
+    /// # Errors
+    /// Returns `RepoError` if the database connection fails
+    pub async fn new<P: AsRef<Path>>(db_path: P) -> Result<Self, RepoError> {
+        let path_str = db_path
+            .as_ref()
+            .to_str()
+            .ok_or_else(|| RepoError::IoError {
+                reason: "Invalid database path (non-UTF8)".to_string(),
+            })?;
+
+        let options = SqliteConnectOptions::new()
+            .filename(path_str)
+            .create_if_missing(true);
+
+        let pool = SqlitePoolOptions::new()
+            .max_connections(5)
+            .connect_with(options)
+            .await
+            .map_err(|e| RepoError::IoError {
+                reason: format!("Failed to connect to security.db: {e}"),
+            })?;
+
+        // Run migrations
+        sqlx::migrate!("../flm-core/migrations")
+            .run(&pool)
+            .await
+            .map_err(|e| RepoError::MigrationFailed {
+                reason: format!("Security DB migration failed: {e}"),
+            })?;
+
+        // Set restrictive file permissions (Unix only: chmod 600 equivalent)
+        // On Windows, file permissions are managed differently and default permissions are usually sufficient
+        #[cfg(unix)]
+        {
+            if let Err(e) = set_db_file_permissions(&db_path) {
+                eprintln!("WARNING: Failed to set database file permissions: {}. Continuing anyway.", e);
+            }
+        }
+
+        Ok(Self { pool })
+    }
+}
+
+#[async_trait]
+impl SecurityRepository for SqliteSecurityRepository {
+    async fn save_api_key(&self, key: ApiKeyRecord) -> Result<(), RepoError> {
+        sqlx::query(
+            "INSERT OR REPLACE INTO api_keys (id, label, hash, created_at, revoked_at) VALUES (?, ?, ?, ?, ?)",
+        )
+        .bind(&key.id)
+        .bind(&key.label)
+        .bind(&key.hash)
+        .bind(&key.created_at)
+        .bind(&key.revoked_at)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to save API key: {e}"),
+        })?;
+        Ok(())
+    }
+
+    async fn fetch_api_key(&self, id: &str) -> Result<Option<ApiKeyRecord>, RepoError> {
+        let row = sqlx::query_as::<_, (String, String, String, String, Option<String>)>(
+            "SELECT id, label, hash, created_at, revoked_at FROM api_keys WHERE id = ?",
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to fetch API key: {e}"),
+        })?;
+
+        if let Some((id, label, hash, created_at, revoked_at)) = row {
+            Ok(Some(ApiKeyRecord {
+                id,
+                label,
+                hash,
+                created_at,
+                revoked_at,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn list_api_keys(&self) -> Result<Vec<ApiKeyRecord>, RepoError> {
+        let rows = sqlx::query_as::<_, (String, String, String, String, Option<String>)>(
+            "SELECT id, label, hash, created_at, revoked_at FROM api_keys ORDER BY created_at DESC",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to list API keys: {e}"),
+        })?;
+
+        Ok(rows
+            .into_iter()
+            .map(|(id, label, hash, created_at, revoked_at)| ApiKeyRecord {
+                id,
+                label,
+                hash,
+                created_at,
+                revoked_at,
+            })
+            .collect())
+    }
+
+    async fn mark_api_key_revoked(&self, id: &str, revoked_at: &str) -> Result<(), RepoError> {
+        sqlx::query("UPDATE api_keys SET revoked_at = ? WHERE id = ?")
+            .bind(revoked_at)
+            .bind(id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| RepoError::IoError {
+                reason: format!("Failed to revoke API key: {e}"),
+            })?;
+        Ok(())
+    }
+
+    async fn save_policy(&self, policy: SecurityPolicy) -> Result<(), RepoError> {
+        sqlx::query(
+            "INSERT OR REPLACE INTO security_policies (id, policy_json, updated_at) VALUES (?, ?, ?)",
+        )
+        .bind(&policy.id)
+        .bind(&policy.policy_json)
+        .bind(&policy.updated_at)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to save security policy: {e}"),
+        })?;
+        Ok(())
+    }
+
+    async fn fetch_policy(&self, id: &str) -> Result<Option<SecurityPolicy>, RepoError> {
+        let row = sqlx::query_as::<_, (String, String, String)>(
+            "SELECT id, policy_json, updated_at FROM security_policies WHERE id = ?",
+        )
+        .bind(id)
+        .fetch_optional(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to fetch security policy: {e}"),
+        })?;
+
+        if let Some((id, policy_json, updated_at)) = row {
+            Ok(Some(SecurityPolicy {
+                id,
+                policy_json,
+                updated_at,
+            }))
+        } else {
+            Ok(None)
+        }
+    }
+
+    async fn list_policies(&self) -> Result<Vec<SecurityPolicy>, RepoError> {
+        let rows = sqlx::query_as::<_, (String, String, String)>(
+            "SELECT id, policy_json, updated_at FROM security_policies ORDER BY updated_at DESC",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to list security policies: {e}"),
+        })?;
+
+        Ok(rows
+            .into_iter()
+            .map(|(id, policy_json, updated_at)| SecurityPolicy {
+                id,
+                policy_json,
+                updated_at,
+            })
+            .collect())
+    }
+}
+
+/// Set restrictive file permissions for database file (Unix only)
+///
+/// Sets permissions to 600 (owner read+write, group/others no access).
+/// On Windows, this function is a no-op as Windows uses a different permission model.
+#[cfg(unix)]
+fn set_db_file_permissions<P: AsRef<Path>>(db_path: P) -> Result<(), std::io::Error> {
+    use std::fs;
+    let metadata = fs::metadata(&db_path)?;
+    let mut perms = metadata.permissions();
+    // chmod 600: owner read+write, group/others no access
+    perms.set_mode(0o600);
+    fs::set_permissions(&db_path, perms)
+}
