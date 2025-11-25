@@ -1,0 +1,108 @@
+.api-prompts-page {
+  width: 100%;
+  min-height: 100vh;
+}
+
+.api-prompts-container {
+  max-width: 1100px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.api-prompts-header .header-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.api-prompts-header .header-description {
+  margin-top: 8px;
+  color: var(--text-muted, #555);
+}
+
+.api-prompts-layout {
+  display: grid;
+  grid-template-columns: 0.9fr 1.1fr;
+  gap: 24px;
+}
+
+.api-prompts-layout .card {
+  background: var(--surface-elevated, #fff);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 14px rgba(15, 23, 42, 0.08);
+}
+
+.prompts-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-height: 600px;
+  overflow-y: auto;
+}
+
+.prompt-item {
+  border: 1px solid rgba(15, 23, 42, 0.08);
+  border-radius: 12px;
+  padding: 14px;
+  text-align: left;
+  background: transparent;
+  cursor: pointer;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.prompt-item.active {
+  border-color: var(--accent, #2563eb);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+}
+
+.prompt-item-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 6px;
+}
+
+.prompt-item-body .prompt-snippet {
+  margin: 0;
+  color: var(--text-muted, #6b7280);
+}
+
+.prompt-item small {
+  color: var(--text-muted, #94a3b8);
+}
+
+.prompts-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.prompts-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--text-strong, #1e293b);
+}
+
+.prompts-form textarea {
+  font-family: 'Fira Code', 'SFMono-Regular', Menlo, Monaco, Consolas,
+    'Liberation Mono', 'Courier New', monospace;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+@media (max-width: 1024px) {
+  .api-prompts-layout {
+    grid-template-columns: 1fr;
+  }
+}
+

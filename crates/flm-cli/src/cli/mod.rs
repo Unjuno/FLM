@@ -3,9 +3,11 @@
 //! This module contains all CLI command definitions using clap.
 
 pub mod api_keys;
+pub mod api_prompts;
 pub mod chat;
 pub mod config;
 pub mod engines;
+pub mod model_profiles;
 pub mod models;
 pub mod proxy;
 pub mod security;
@@ -21,7 +23,7 @@ pub struct Cli {
     pub command: Commands,
 
     /// Output format (json or text)
-    #[arg(global = true, long, default_value = "text")]
+    #[arg(global = true, long, default_value = "json")]
     pub format: String,
 
     /// Path to config.db
@@ -46,6 +48,12 @@ pub enum Commands {
         #[command(subcommand)]
         subcommand: api_keys::ApiKeysSubcommand,
     },
+    /// API prompt management
+    #[command(name = "api")]
+    Api {
+        #[command(subcommand)]
+        subcommand: api_prompts::ApiSubcommand,
+    },
     /// Engine management
     Engines {
         #[command(subcommand)]
@@ -55,6 +63,12 @@ pub enum Commands {
     Models {
         #[command(subcommand)]
         subcommand: models::ModelsSubcommand,
+    },
+    /// Model profile management
+    #[command(name = "model-profiles")]
+    ModelProfiles {
+        #[command(subcommand)]
+        subcommand: model_profiles::ModelProfilesSubcommand,
     },
     /// Proxy management
     Proxy {

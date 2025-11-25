@@ -1,6 +1,7 @@
 //! Check command implementation
 
 use crate::adapters::{SqliteConfigRepository, SqliteSecurityRepository};
+use crate::commands::CliUserError;
 use crate::utils::{get_config_db_path, get_security_db_path};
 use flm_core::services::{ConfigService, SecurityService};
 use serde_json::json;
@@ -102,7 +103,6 @@ pub async fn execute(
 
         if has_errors {
             println!("❌ Integrity check failed with errors");
-            std::process::exit(1);
         } else if has_warnings {
             println!("⚠️  Integrity check completed with warnings");
         } else {
@@ -111,7 +111,7 @@ pub async fn execute(
     }
 
     if has_errors {
-        std::process::exit(1);
+        return Err(Box::new(CliUserError::silent()));
     }
 
     Ok(())
@@ -129,7 +129,9 @@ async fn check_config_db(
         checks.push(CheckItem {
             name: "config.db exists".to_string(),
             status: CheckStatus::Warning,
-            message: Some("Database file does not exist (will be created on first use)".to_string()),
+            message: Some(
+                "Database file does not exist (will be created on first use)".to_string(),
+            ),
         });
         return Ok(checks);
     }
@@ -259,7 +261,9 @@ async fn check_security_db(
         checks.push(CheckItem {
             name: "security.db exists".to_string(),
             status: CheckStatus::Warning,
-            message: Some("Database file does not exist (will be created on first use)".to_string()),
+            message: Some(
+                "Database file does not exist (will be created on first use)".to_string(),
+            ),
         });
         return Ok(checks);
     }
@@ -312,11 +316,12 @@ async fn check_security_db(
         .await
     {
         let count: i64 = rows.get("count");
-        let active_count: i64 = sqlx::query("SELECT COUNT(*) as count FROM api_keys WHERE revoked_at IS NULL")
-            .fetch_one(&pool)
-            .await
-            .map(|row| row.get("count"))
-            .unwrap_or(0);
+        let active_count: i64 =
+            sqlx::query("SELECT COUNT(*) as count FROM api_keys WHERE revoked_at IS NULL")
+                .fetch_one(&pool)
+                .await
+                .map(|row| row.get("count"))
+                .unwrap_or(0);
 
         checks.push(CheckItem {
             name: "security.db api_keys count".to_string(),
@@ -329,9 +334,10 @@ async fn check_security_db(
         });
 
         // Check for keys with empty hash (should not happen)
-        if let Ok(rows) = sqlx::query("SELECT COUNT(*) as count FROM api_keys WHERE hash = '' OR hash IS NULL")
-            .fetch_one(&pool)
-            .await
+        if let Ok(rows) =
+            sqlx::query("SELECT COUNT(*) as count FROM api_keys WHERE hash = '' OR hash IS NULL")
+                .fetch_one(&pool)
+                .await
         {
             let invalid_count: i64 = rows.get("count");
             if invalid_count > 0 {
@@ -371,9 +377,10 @@ async fn check_security_db(
         });
 
         // Check default policy exists and has valid JSON
-        if let Ok(Some(policy_row)) = sqlx::query("SELECT policy_json FROM security_policies WHERE id = 'default'")
-            .fetch_optional(&pool)
-            .await
+        if let Ok(Some(policy_row)) =
+            sqlx::query("SELECT policy_json FROM security_policies WHERE id = 'default'")
+                .fetch_optional(&pool)
+                .await
         {
             let policy_json: String = policy_row.get("policy_json");
             match serde_json::from_str::<serde_json::Value>(&policy_json) {
@@ -400,7 +407,9 @@ async fn check_security_db(
             checks.push(CheckItem {
                 name: "security.db default policy".to_string(),
                 status: CheckStatus::Warning,
-                message: Some("Default policy not found (will be created on first use)".to_string()),
+                message: Some(
+                    "Default policy not found (will be created on first use)".to_string(),
+                ),
             });
         }
     }
@@ -441,4 +450,3 @@ async fn check_security_db(
 
     Ok(checks)
 }
-

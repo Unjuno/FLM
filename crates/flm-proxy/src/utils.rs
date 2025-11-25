@@ -1,7 +1,7 @@
 //! Utility functions for security and logging
 
 /// Mask sensitive identifiers (engine IDs, API key IDs, etc.)
-/// 
+///
 /// Replaces the middle portion with asterisks to prevent information leakage
 /// while still allowing some identification for debugging purposes.
 pub fn mask_identifier(id: &str) -> String {
@@ -16,12 +16,12 @@ pub fn mask_identifier(id: &str) -> String {
         } else {
             ""
         };
-        format!("{}***{}", prefix, suffix)
+        format!("{prefix}***{suffix}")
     }
 }
 
 /// Mask IP addresses for logging
-/// 
+///
 /// Replaces the last octet with asterisks for IPv4,
 /// or the last 64 bits for IPv6.
 #[allow(dead_code)]
@@ -34,8 +34,10 @@ pub fn mask_ip_address(ip: &std::net::IpAddr) -> String {
         std::net::IpAddr::V6(ipv6) => {
             // Show first 64 bits, mask last 64 bits
             let segments = ipv6.segments();
-            format!("{:x}:{:x}:{:x}:{:x}:***", segments[0], segments[1], segments[2], segments[3])
+            format!(
+                "{:x}:{:x}:{:x}:{:x}:***",
+                segments[0], segments[1], segments[2], segments[3]
+            )
         }
     }
 }
-

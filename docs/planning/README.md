@@ -1,6 +1,6 @@
 # Planning Documents
 
-> Status: Reference | Audience: All contributors | Updated: 2025-01-27
+> Status: Reference | Audience: All contributors | Updated: 2025-11-25
 
 このディレクトリには、プロジェクトの計画と設計ドキュメントが含まれています。
 
@@ -19,7 +19,7 @@ docs/planning/
 
 ### PLAN.md - メインプロジェクト計画
 
-**Status**: Canonical | **Audience**: All contributors | **Updated**: 2025-11-20
+**Status**: Canonical | **Audience**: All contributors | **Updated**: 2025-11-25
 
 プロジェクト全体の計画とフェーズ定義。必読のドキュメントです。
 
@@ -32,7 +32,7 @@ docs/planning/
 
 ### diagram.md - アーキテクチャ図
 
-**Status**: Canonical | **Audience**: All contributors | **Updated**: 2025-11-20
+**Status**: Canonical | **Audience**: All contributors | **Updated**: 2025-11-25
 
 Rust コア / Adapters / External Dependencies の関係と依存方向を示すマーメイド図。
 
@@ -45,7 +45,7 @@ Rust コア / Adapters / External Dependencies の関係と依存方向を示す
 
 ### BOTNET_PROTECTION_IMPLEMENTATION_PLAN.md - ボットネット対策実装計画
 
-**Status**: Planning | **Audience**: Security engineers, Core developers | **Updated**: 2025-01-27
+**Status**: Planning | **Audience**: Security engineers, Core developers | **Updated**: 2025-11-25
 
 外部公開時のボットネット対策機能の実装計画。開発者向けの詳細な実装仕様。
 
@@ -62,7 +62,7 @@ Rust コア / Adapters / External Dependencies の関係と依存方向を示す
 
 ### HACKER_NEWS_PREP.md - Hacker News投稿準備ガイド
 
-**Status**: Reference | **Audience**: Project leads | **Updated**: 2025-11-20
+**Status**: Reference | **Audience**: Project leads | **Updated**: 2025-11-25
 
 Phase 3完了後のHacker News投稿に向けた準備ガイド。
 

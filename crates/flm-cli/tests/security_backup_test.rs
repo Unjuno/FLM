@@ -65,6 +65,7 @@ async fn test_backup_restore() {
     let service = SecurityService::new(repo);
     let key_result = service.create_api_key("test-key").await.unwrap();
     let original_key_id = key_result.record.id.clone();
+    drop(service); // release SQLite handle so the file can be removed on Windows
 
     // Create backup
     let backup_dir = temp_dir.path().join("backups");
@@ -161,6 +162,9 @@ async fn test_backup_generation_management() {
         })
         .collect();
 
-    assert_eq!(backup_files.len(), 3, "Should keep only 3 most recent backups");
+    assert_eq!(
+        backup_files.len(),
+        3,
+        "Should keep only 3 most recent backups"
+    );
 }
-

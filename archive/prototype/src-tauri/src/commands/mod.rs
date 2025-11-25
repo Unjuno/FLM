@@ -6,6 +6,7 @@
 pub mod alerts;
 pub mod api;
 pub mod backup;
+pub mod cli_bridge;
 pub mod database;
 pub mod engine;
 pub mod http;

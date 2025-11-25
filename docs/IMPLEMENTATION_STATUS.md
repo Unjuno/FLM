@@ -1,6 +1,8 @@
 # 実装状況レポート
 
-> Status: Reference | Audience: All contributors | Updated: 2025-01-27
+> Status: Reference | Audience: All contributors | Updated: 2025-11-25
+
+**注意**: このドキュメントは定期的に更新されています。最新の実装状況については `docs/status/active/NEXT_STEPS.md` も参照してください。
 
 このドキュメントは、FLMプロジェクトの実装状況をまとめたものです。
 
@@ -13,14 +15,29 @@
 - **flm-proxy**: Axumベースのプロキシサーバーが実装済み
 - **エンジンアダプター**: 4つすべて実装済み（Ollama, vLLM, LM Studio, llama.cpp）
 
-### ⚠️ 未実装・部分実装
+### ✅ 実装完了（続き）
 
-- **ボットネット対策機能**: Phase 1完了、Phase 2/3未実装
+- **ボットネット対策機能**: Phase 1-3すべて完了（2025-01-27）
   - ✅ IPブロックリスト（Phase 1完了）
   - ✅ 侵入検知システム（Phase 1完了）
   - ✅ 監査ログ（Phase 1完了）
-  - ❌ 異常検知システム（Phase 2未実装）
-  - ❌ リソース保護（CPU/メモリ監視）（Phase 2未実装）
+  - ✅ 異常検知システム（Phase 2完了）
+  - ✅ リソース保護（CPU/メモリ監視）（Phase 2完了）
+  - ✅ IPベースレート制限（Phase 2完了）
+  - ✅ ハニーポットエンドポイント（Phase 3完了）
+
+- **CLIコマンド拡張**: 完了（2025-01-27）
+  - ✅ `flm model-profiles` - モデルプロファイル管理
+  - ✅ `flm api prompts` - APIプロンプト管理
+
+- **UI統合**: 完了（2025-01-27）
+  - ✅ モデルプロファイル管理UI
+  - ✅ APIプロンプト管理UI
+  - ✅ Tauri IPCブリッジ拡張
+
+- **機能改善**: 完了（2025-01-27）
+  - ✅ エンジンキャッシュTTLチェック
+  - ✅ ドメイン名検証（SecurityPolicyのacme_domain）
 
 ## 詳細な実装状況
 
@@ -194,7 +211,11 @@
 - ✅ **Phase 0**: 完了
 - ✅ **Phase 1A**: 完了（エンジン検出/モデル一覧）
 - ✅ **Phase 1B**: 完了（プロキシ基本実装完了、セキュリティ機能Phase 1完了）
-- ⚠️ **Phase 2**: 未開始（UI実装）
+- ✅ **セキュリティ機能 Phase 2**: 完了（異常検知、リソース保護、IPベースレート制限）
+- ✅ **セキュリティ機能 Phase 3**: 完了（ハニーポットエンドポイント）
+- ✅ **CLI拡張**: 完了（model-profiles、api-prompts）
+- ✅ **UI統合（一部）**: 完了（モデルプロファイル、APIプロンプト管理UI）
+- ⚠️ **Phase 2（UI実装）**: 部分完了（モデルプロファイル、APIプロンプト管理UI完了、その他未実装）
 - ⚠️ **Phase 3**: 未開始（パッケージング）
 
 詳細: `docs/planning/PLAN.md` を参照
@@ -203,19 +224,20 @@
 
 ### 優先度: 高
 
-1. **ボットネット対策機能の実装（Phase 2/3）**
-   - 異常検知システム（大量リクエスト検出、異常パターン検出）
-   - リソース保護（CPU/メモリ監視、自動スロットリング）
-
-   詳細: `docs/planning/BOTNET_PROTECTION_IMPLEMENTATION_PLAN.md` を参照
-   進捗: Phase 1完了（IPブロックリスト、侵入検知、監査ログ） - `docs/status/completed/security/SECURITY_PHASE1_COMPLETE.md` を参照
-
-2. **Phase 2: UI実装**
-   - Tauri UIの実装
-   - Rust Core APIとのIPC通信
-   - Setup Wizardの実装
+1. **Phase 2: UI実装（残り）**
+   - セキュリティイベントの可視化
+   - IPブロックリスト管理UI
+   - その他のUI機能
 
    詳細: `docs/specs/UI_MINIMAL.md` を参照
+   進捗: モデルプロファイル、APIプロンプト管理UI完了
+
+2. **Phase 3: パッケージング**
+   - インストーラー作成
+   - パッケージング自動化
+   - 配布準備
+
+   詳細: `docs/planning/PLAN.md` を参照
 
 ### 優先度: 中
 
@@ -253,4 +275,16 @@
 Phase 1のセキュリティ機能（IPブロックリスト、侵入検知、監査ログ）は実装完了しています。
 
 詳細は `docs/status/completed/security/SECURITY_PHASE1_COMPLETE.md` を参照してください。
+
+### Phase 2: 完了 ✅
+
+Phase 2のセキュリティ機能（異常検知システム、リソース保護、IPベースレート制限）は実装完了しています。
+
+詳細は `docs/status/completed/security/SECURITY_PHASE2_COMPLETE.md` を参照してください。
+
+### Phase 3: 完了 ✅
+
+Phase 3のセキュリティ機能（ハニーポットエンドポイント）は実装完了しています。
+
+詳細は `docs/status/completed/security/SECURITY_PHASE3_COMPLETE.md` を参照してください。
 

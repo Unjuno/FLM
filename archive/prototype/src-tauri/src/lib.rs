@@ -14,9 +14,10 @@ pub mod plugins;
 
 use app::{initialize_application, setup_cleanup_handler, spawn_startup_task};
 use commands::{
-    alerts, api, backup, database as db_commands, engine, http, ipc_version, model_converter,
-    model_search, model_sharing, oauth, ollama as ollama_commands, performance, plugin, port, remote_sync,
-    scheduler, settings, suggestions, system, updater, get_app_info, greet,
+    alerts, api, backup, cli_bridge, database as db_commands, engine, http, ipc_version,
+    model_converter, model_search, model_sharing, oauth, ollama as ollama_commands, performance,
+    plugin, port, remote_sync, scheduler, settings, suggestions, system, updater, get_app_info,
+    greet,
 };
 use serde::{Deserialize, Serialize};
 use tauri::Manager;
@@ -43,6 +44,34 @@ pub fn run() {
             // === 基本コマンド ===
             greet,
             get_app_info,
+            cli_bridge::ipc_detect_engines,
+            cli_bridge::ipc_list_models,
+            cli_bridge::ipc_proxy_start,
+            cli_bridge::ipc_proxy_status,
+            cli_bridge::ipc_proxy_stop,
+            cli_bridge::ipc_security_policy_show,
+            cli_bridge::ipc_security_policy_show,
+            cli_bridge::ipc_security_policy_set,
+            cli_bridge::ipc_api_keys_list,
+            cli_bridge::ipc_api_keys_create,
+            cli_bridge::ipc_api_keys_revoke,
+            cli_bridge::ipc_config_list,
+            cli_bridge::ipc_config_get,
+            cli_bridge::ipc_config_set,
+            cli_bridge::get_platform,
+            cli_bridge::ipc_model_profiles_list,
+            cli_bridge::ipc_model_profiles_save,
+            cli_bridge::ipc_model_profiles_delete,
+            cli_bridge::ipc_api_prompts_list,
+            cli_bridge::ipc_api_prompts_show,
+            cli_bridge::ipc_api_prompts_set,
+            cli_bridge::ipc_security_ip_blocklist_list,
+            cli_bridge::ipc_security_ip_blocklist_unblock,
+            cli_bridge::ipc_security_ip_blocklist_clear,
+            cli_bridge::ipc_security_audit_logs,
+            cli_bridge::ipc_security_intrusion,
+            cli_bridge::ipc_security_anomaly,
+            cli_bridge::ipc_security_install_packaged_ca,
             
             // === Ollama関連 ===
             ollama_commands::detect_ollama,

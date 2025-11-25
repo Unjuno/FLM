@@ -1,6 +1,6 @@
 # Specifications
 
-> Status: Reference | Audience: All contributors | Updated: 2025-01-27
+> Status: Reference | Audience: All contributors | Updated: 2025-11-25
 
 このディレクトリには、FLMプロジェクトの各コンポーネントの詳細仕様書が含まれています。
 
@@ -25,7 +25,7 @@ docs/specs/
 
 ### CORE_API.md - コアAPI仕様
 
-**Status**: Canonical | **Audience**: Rust core engineers | **Updated**: 2025-01-27
+**Status**: Canonical | **Audience**: Rust core engineers | **Updated**: 2025-11-25
 
 Rustコアライブラリ（`flm-core`）のAPI仕様。Domain層、Application層、Ports（Traits）の定義。
 
@@ -40,7 +40,7 @@ Rustコアライブラリ（`flm-core`）のAPI仕様。Domain層、Application�
 
 ### CLI_SPEC.md - CLIコマンド仕様
 
-**Status**: Canonical | **Audience**: CLI developers & QA | **Updated**: 2025-11-20
+**Status**: Canonical | **Audience**: CLI developers & QA | **Updated**: 2025-11-25
 
 CLIコマンドの詳細仕様。コマンド一覧、オプション、出力形式、エラーハンドリング。
 
@@ -53,7 +53,7 @@ CLIコマンドの詳細仕様。コマンド一覧、オプション、出力�
 
 ### PROXY_SPEC.md - プロキシ仕様
 
-**Status**: Canonical | **Audience**: Proxy/Network engineers | **Updated**: 2025-11-20
+**Status**: Canonical | **Audience**: Proxy/Network engineers | **Updated**: 2025-11-25
 
 HTTP(S)プロキシの詳細仕様。ルーティング、認証、セキュリティ、OpenAI互換API。
 
@@ -67,7 +67,7 @@ HTTP(S)プロキシの詳細仕様。ルーティング、認証、セキュリ�
 
 ### UI_MINIMAL.md - UI最小仕様
 
-**Status**: Canonical | **Audience**: UI engineers | **Updated**: 2025-11-20
+**Status**: Canonical | **Audience**: UI engineers | **Updated**: 2025-11-25
 
 Phase 2で実装する最小UIの仕様。画面構成、コンポーネント、IPC通信。
 
@@ -80,7 +80,7 @@ Phase 2で実装する最小UIの仕様。画面構成、コンポーネント�
 
 ### UI_EXTENSIONS.md - UI拡張仕様
 
-**Status**: Reference | **Audience**: Product & UI leads | **Updated**: 2025-11-20
+**Status**: Reference | **Audience**: Product & UI leads | **Updated**: 2025-11-25
 
 Phase 2以降のUI拡張機能の仕様。多言語対応、テーマ、アクセシビリティ。
 
@@ -93,7 +93,7 @@ Phase 2以降のUI拡張機能の仕様。多言語対応、テーマ、アク�
 
 ### ENGINE_DETECT.md - エンジン検出仕様
 
-**Status**: Canonical | **Audience**: Engine adapter developers | **Updated**: 2025-11-20
+**Status**: Canonical | **Audience**: Engine adapter developers | **Updated**: 2025-11-25
 
 LLMエンジン（Ollama、vLLM、LM Studio、llama.cpp）の検出ロジック仕様。
 
@@ -106,7 +106,7 @@ LLMエンジン（Ollama、vLLM、LM Studio、llama.cpp）の検出ロジック�
 
 ### DB_SCHEMA.md - データベーススキーマ
 
-**Status**: Canonical | **Audience**: Persistence / CLI engineers | **Updated**: 2025-11-20
+**Status**: Canonical | **Audience**: Persistence / CLI engineers | **Updated**: 2025-11-25
 
 SQLiteデータベース（`config.db`、`security.db`）のスキーマ定義とマイグレーション方針。
 
@@ -119,7 +119,7 @@ SQLiteデータベース（`config.db`、`security.db`）のスキーマ定義�
 
 ### FEATURE_SPEC.md - 機能仕様
 
-**Status**: Canonical | **Audience**: Product & Engineering leads | **Updated**: 2025-11-20
+**Status**: Canonical | **Audience**: Product & Engineering leads | **Updated**: 2025-11-25
 
 プロジェクト全体の機能仕様。各フェーズで実装する機能の詳細。
 
@@ -131,7 +131,7 @@ SQLiteデータベース（`config.db`、`security.db`）のスキーマ定義�
 
 ### I18N_SPEC.md - 国際化仕様
 
-**Status**: Canonical | **Audience**: UI engineers | **Updated**: 2025-11-20
+**Status**: Canonical | **Audience**: UI engineers | **Updated**: 2025-11-25
 
 多言語対応の仕様。翻訳ファイルの構造、ロケール管理、実装方針。
 
@@ -144,7 +144,7 @@ SQLiteデータベース（`config.db`、`security.db`）のスキーマ定義�
 
 ### BRAND_GUIDELINE.md - ブランドガイドライン
 
-**Status**: Canonical | **Audience**: UI/Design engineers | **Updated**: 2025-11-20
+**Status**: Canonical | **Audience**: UI/Design engineers | **Updated**: 2025-11-25
 
 ブランドガイドライン。ロゴ、カラーパレット、タイポグラフィ、UIコンポーネント。
 

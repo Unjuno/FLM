@@ -10,6 +10,10 @@ import { logger } from './utils/logger';
 
 // 頻繁に使用されるページは通常インポート（初期バンドルに含める）
 import { Home } from './pages/Home';
+import { Dashboard } from './pages/Dashboard';
+import { ApiSetup } from './pages/ApiSetup';
+import { ChatTester } from './pages/ChatTester';
+import { SetupWizard } from './pages/SetupWizard';
 import { ApiList } from './pages/ApiList';
 import { ApiTest } from './pages/ApiTest';
 import { ApiDetails } from './pages/ApiDetails';
@@ -128,6 +132,27 @@ const TermsOfService = lazyLoad(
   () => import('./pages/TermsOfService'),
   'TermsOfService'
 );
+const ModelProfiles = lazyLoad(
+  () => import('./pages/ModelProfiles'),
+  'ModelProfiles'
+);
+const ApiPrompts = lazyLoad(() => import('./pages/ApiPrompts'), 'ApiPrompts');
+const SecurityIpBlocklist = lazyLoad(
+  () => import('./pages/SecurityIpBlocklist'),
+  'SecurityIpBlocklist'
+);
+const SecurityAuditLogs = lazyLoad(
+  () => import('./pages/SecurityAuditLogs'),
+  'SecurityAuditLogs'
+);
+const SecurityIntrusion = lazyLoad(
+  () => import('./pages/SecurityIntrusion'),
+  'SecurityIntrusion'
+);
+const SecurityAnomaly = lazyLoad(
+  () => import('./pages/SecurityAnomaly'),
+  'SecurityAnomaly'
+);
 
 /**
  * アプリケーションのルート定義
@@ -136,6 +161,22 @@ export const routes: RouteObject[] = [
   {
     path: '/',
     element: <Home />,
+  },
+  {
+    path: '/dashboard',
+    element: <Dashboard />,
+  },
+  {
+    path: '/api/setup',
+    element: <ApiSetup />,
+  },
+  {
+    path: '/chat/tester',
+    element: <ChatTester />,
+  },
+  {
+    path: '/setup/wizard',
+    element: <SetupWizard />,
   },
   {
     path: '/ollama-setup',
@@ -252,6 +293,30 @@ export const routes: RouteObject[] = [
   {
     path: '/models/catalog',
     element: <ModelCatalogManagement />,
+  },
+  {
+    path: '/models/profiles',
+    element: <ModelProfiles />,
+  },
+  {
+    path: '/api/prompts',
+    element: <ApiPrompts />,
+  },
+  {
+    path: '/security/ip-blocklist',
+    element: <SecurityIpBlocklist />,
+  },
+  {
+    path: '/security/audit-logs',
+    element: <SecurityAuditLogs />,
+  },
+  {
+    path: '/security/intrusion',
+    element: <SecurityIntrusion />,
+  },
+  {
+    path: '/security/anomaly',
+    element: <SecurityAnomaly />,
   },
   {
     path: '/about',

@@ -6,7 +6,7 @@ if (
   typeof global !== 'undefined' &&
   typeof global.ResizeObserver === 'undefined'
 ) {
-  // @ts-ignore
+  // @ts-expect-error
   global.ResizeObserver = class ResizeObserver {
     constructor(_callback?: ResizeObserverCallback) {}
     observe(_target: Element, _options?: ResizeObserverOptions) {}
@@ -18,7 +18,7 @@ if (
   typeof globalThis !== 'undefined' &&
   typeof (globalThis as any).ResizeObserver === 'undefined'
 ) {
-  // @ts-ignore
+  // @ts-expect-error
   (globalThis as any).ResizeObserver = class ResizeObserver {
     constructor(_callback?: ResizeObserverCallback) {}
     observe(_target: Element, _options?: ResizeObserverOptions) {}
@@ -30,7 +30,7 @@ if (
   typeof window !== 'undefined' &&
   typeof (window as any).ResizeObserver === 'undefined'
 ) {
-  // @ts-ignore
+  // @ts-expect-error
   (window as any).ResizeObserver = class ResizeObserver {
     constructor(_callback?: ResizeObserverCallback) {}
     observe(_target: Element, _options?: ResizeObserverOptions) {}

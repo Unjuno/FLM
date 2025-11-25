@@ -132,10 +132,55 @@ impl ProxyRepository for SqliteProxyRepository {
     }
 
     async fn list_active_handles(&self) -> Result<Vec<ProxyHandle>, RepoError> {
-        // Note: Active handles are managed in memory by ProxyController.
-        // This method returns an empty vector for now.
-        // In a production system, we might store handles in a separate table
-        // or use a shared state manager.
-        Ok(Vec::new())
+        let rows = sqlx::query_as::<_, (String, String)>(
+            "SELECT id, handle_json FROM active_proxy_handles",
+        )
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to list active proxy handles: {e}"),
+        })?;
+
+        let mut handles = Vec::new();
+        for (_id, handle_json) in rows {
+            let handle: ProxyHandle =
+                serde_json::from_str(&handle_json).map_err(|e| RepoError::IoError {
+                    reason: format!("Failed to deserialize proxy handle: {e}"),
+                })?;
+            handles.push(handle);
+        }
+
+        Ok(handles)
+    }
+
+    async fn save_active_handle(&self, handle: ProxyHandle) -> Result<(), RepoError> {
+        let handle_json = serde_json::to_string(&handle).map_err(|e| RepoError::IoError {
+            reason: format!("Failed to serialize proxy handle: {e}"),
+        })?;
+
+        sqlx::query(
+            "INSERT OR REPLACE INTO active_proxy_handles (id, handle_json, created_at) VALUES (?, ?, datetime('now'))",
+        )
+        .bind(&handle.id)
+        .bind(&handle_json)
+        .execute(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to save active proxy handle: {e}"),
+        })?;
+
+        Ok(())
+    }
+
+    async fn remove_active_handle(&self, handle_id: &str) -> Result<(), RepoError> {
+        sqlx::query("DELETE FROM active_proxy_handles WHERE id = ?")
+            .bind(handle_id)
+            .execute(&self.pool)
+            .await
+            .map_err(|e| RepoError::IoError {
+                reason: format!("Failed to remove active proxy handle: {e}"),
+            })?;
+
+        Ok(())
     }
 }

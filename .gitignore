@@ -1,5 +1,6 @@
 # Rust
 /target/
+**/target/
 **/*.rs.bk
 Cargo.lock
 
@@ -17,6 +18,7 @@ Thumbs.db
 # Archive directory - exclude build artifacts
 archive/prototype/node_modules/
 archive/prototype/target/
+archive/prototype/src-tauri/target/
 archive/prototype/dist/
 archive/prototype/coverage/
 archive/prototype/.pnp

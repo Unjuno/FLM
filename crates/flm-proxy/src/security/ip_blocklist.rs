@@ -49,7 +49,7 @@ impl IpBlocklist {
     /// Automatically removes expired temporary blocks.
     pub async fn is_blocked(&self, ip: &IpAddr) -> bool {
         let mut blocked_ips = self.blocked_ips.write().await;
-        
+
         if let Some(entry) = blocked_ips.get(ip) {
             // Check if temporary block has expired
             if let Some(blocked_until) = entry.blocked_until {
@@ -64,13 +64,13 @@ impl IpBlocklist {
                     return true;
                 }
             }
-            
+
             // Permanent block
             if entry.permanent_block {
                 return true;
             }
         }
-        
+
         false
     }
 
@@ -84,7 +84,7 @@ impl IpBlocklist {
     pub async fn record_failure(&self, ip: IpAddr) -> bool {
         let mut blocked_ips = self.blocked_ips.write().await;
         let now = Instant::now();
-        
+
         let entry = blocked_ips.entry(ip).or_insert_with(|| BlocklistEntry {
             failure_count: 0,
             first_failure_time: now,
@@ -92,10 +92,10 @@ impl IpBlocklist {
             permanent_block: false,
             last_attempt: now,
         });
-        
+
         entry.failure_count += 1;
         entry.last_attempt = now;
-        
+
         // Apply blocking rules
         let should_block = if entry.failure_count >= 20 {
             // Permanent block
@@ -134,7 +134,7 @@ impl IpBlocklist {
             );
             false
         };
-        
+
         should_block
     }
 
@@ -183,11 +183,19 @@ impl IpBlocklist {
         entries: Vec<(IpAddr, u32, String, Option<String>, bool, String)>,
     ) {
         use chrono::DateTime;
-        
+
         let mut blocked_ips = self.blocked_ips.write().await;
         let now = Instant::now();
-        
-        for (ip, failure_count, first_failure_at_str, blocked_until_str, permanent_block, last_attempt_str) in entries {
+
+        for (
+            ip,
+            failure_count,
+            first_failure_at_str,
+            blocked_until_str,
+            permanent_block,
+            last_attempt_str,
+        ) in entries
+        {
             // Parse timestamps
             let first_failure_time = DateTime::parse_from_rfc3339(&first_failure_at_str)
                 .ok()
@@ -198,19 +206,16 @@ impl IpBlocklist {
                         .map(|d| now - d)
                 })
                 .unwrap_or(now);
-            
-            let blocked_until = blocked_until_str
-                .and_then(|s| {
-                    DateTime::parse_from_rfc3339(&s)
+
+            let blocked_until = blocked_until_str.and_then(|s| {
+                DateTime::parse_from_rfc3339(&s).ok().and_then(|dt| {
+                    dt.signed_duration_since(chrono::Utc::now())
+                        .to_std()
                         .ok()
-                        .and_then(|dt| {
-                            dt.signed_duration_since(chrono::Utc::now())
-                                .to_std()
-                                .ok()
-                                .map(|d| now + d)
-                        })
-                });
-            
+                        .map(|d| now + d)
+                })
+            });
+
             let last_attempt = DateTime::parse_from_rfc3339(&last_attempt_str)
                 .ok()
                 .and_then(|dt| {
@@ -220,43 +225,57 @@ impl IpBlocklist {
                         .map(|d| now - d)
                 })
                 .unwrap_or(now);
-            
-            blocked_ips.insert(ip, BlocklistEntry {
-                failure_count,
-                first_failure_time,
-                blocked_until,
-                permanent_block,
-                last_attempt,
-            });
+
+            blocked_ips.insert(
+                ip,
+                BlocklistEntry {
+                    failure_count,
+                    first_failure_time,
+                    blocked_until,
+                    permanent_block,
+                    last_attempt,
+                },
+            );
         }
     }
 
     /// Sync to database
     ///
     /// Saves all current blocklist entries to the database.
-    pub async fn sync_to_db(&self, repo: &crate::adapters::SqliteSecurityRepository) -> Result<(), flm_core::error::RepoError> {
+    pub async fn sync_to_db(
+        &self,
+        repo: &crate::adapters::SqliteSecurityRepository,
+    ) -> Result<(), flm_core::error::RepoError> {
         let blocked_ips = self.blocked_ips.read().await;
         let now = Instant::now();
-        
+
         for (ip, entry) in blocked_ips.iter() {
             // Convert Instant to RFC3339 timestamps
             let first_failure_at = chrono::Utc::now()
-                .checked_sub_signed(chrono::Duration::from_std(now.duration_since(entry.first_failure_time)).unwrap_or_default())
+                .checked_sub_signed(
+                    chrono::Duration::from_std(now.duration_since(entry.first_failure_time))
+                        .unwrap_or_default(),
+                )
                 .unwrap_or_else(chrono::Utc::now)
                 .to_rfc3339();
-            
+
             let blocked_until = entry.blocked_until.map(|until| {
                 chrono::Utc::now()
-                    .checked_add_signed(chrono::Duration::from_std(until.duration_since(now)).unwrap_or_default())
+                    .checked_add_signed(
+                        chrono::Duration::from_std(until.duration_since(now)).unwrap_or_default(),
+                    )
                     .unwrap_or_else(chrono::Utc::now)
                     .to_rfc3339()
             });
-            
+
             let last_attempt = chrono::Utc::now()
-                .checked_sub_signed(chrono::Duration::from_std(now.duration_since(entry.last_attempt)).unwrap_or_default())
+                .checked_sub_signed(
+                    chrono::Duration::from_std(now.duration_since(entry.last_attempt))
+                        .unwrap_or_default(),
+                )
                 .unwrap_or_else(chrono::Utc::now)
                 .to_rfc3339();
-            
+
             repo.add_ip_failure(
                 ip,
                 entry.failure_count,
@@ -264,9 +283,10 @@ impl IpBlocklist {
                 blocked_until.as_deref(),
                 entry.permanent_block,
                 &last_attempt,
-            ).await?;
+            )
+            .await?;
         }
-        
+
         Ok(())
     }
 }
@@ -276,4 +296,3 @@ impl Default for IpBlocklist {
         Self::new()
     }
 }
-

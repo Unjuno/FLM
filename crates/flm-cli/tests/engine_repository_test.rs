@@ -201,3 +201,71 @@ async fn test_engine_repository_cache_ttl_expiration() {
 
     assert!(cached.is_none(), "Cache entry should expire after TTL");
 }
+
+#[tokio::test]
+async fn test_list_cached_engine_states_respects_ttl() {
+    let (_temp_dir, config_db) = create_temp_db_dir();
+    let repo = SqliteEngineRepository::new(&config_db).await.unwrap();
+
+    let fresh_state = EngineState {
+        id: "engine-fresh".to_string(),
+        kind: EngineKind::Ollama,
+        name: "Fresh Engine".to_string(),
+        version: None,
+        status: EngineStatus::InstalledOnly,
+        capabilities: EngineCapabilities::default(),
+    };
+    let stale_state = EngineState {
+        id: "engine-stale".to_string(),
+        kind: EngineKind::Vllm,
+        name: "Stale Engine".to_string(),
+        version: None,
+        status: EngineStatus::InstalledOnly,
+        capabilities: EngineCapabilities::default(),
+    };
+
+    repo.cache_engine_state(&fresh_state).await.unwrap();
+    repo.cache_engine_state(&stale_state).await.unwrap();
+
+    let db_url = format!("sqlite://{}", config_db.to_string_lossy());
+    let pool = SqlitePool::connect(&db_url).await.unwrap();
+    sqlx::query(
+        "UPDATE engines_cache SET cached_at = datetime('now', '-600 seconds') WHERE engine_id = ?",
+    )
+    .bind("engine-stale")
+    .execute(&pool)
+    .await
+    .unwrap();
+
+    let cached = repo
+        .list_cached_engine_states(120)
+        .await
+        .expect("list cached states");
+
+    assert_eq!(cached.len(), 1);
+    assert_eq!(cached[0].id, "engine-fresh");
+}
+
+#[tokio::test]
+async fn test_clear_engine_cache() {
+    let (_temp_dir, config_db) = create_temp_db_dir();
+    let repo = SqliteEngineRepository::new(&config_db).await.unwrap();
+
+    let state = EngineState {
+        id: "engine-clear".to_string(),
+        kind: EngineKind::Ollama,
+        name: "Engine Clear".to_string(),
+        version: None,
+        status: EngineStatus::InstalledOnly,
+        capabilities: EngineCapabilities::default(),
+    };
+
+    repo.cache_engine_state(&state).await.unwrap();
+    repo.clear_engine_cache().await.unwrap();
+
+    let cached = repo
+        .list_cached_engine_states(120)
+        .await
+        .expect("list cached states");
+    assert!(cached.is_empty());
+}

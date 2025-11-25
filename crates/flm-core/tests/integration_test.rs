@@ -30,6 +30,8 @@ mod tests {
         let config = ProxyConfig {
             mode: ProxyMode::LocalHttp,
             port: 8080,
+            listen_addr: "127.0.0.1".to_string(),
+            trusted_proxy_ips: vec![],
             acme_email: None,
             acme_domain: None,
             acme_challenge: None,

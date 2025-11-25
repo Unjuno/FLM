@@ -72,16 +72,22 @@ impl LlmEngine for VllmEngine {
 
     async fn health_check(&self) -> Result<HealthStatus, EngineError> {
         let start = Instant::now();
-        let url = self.api_url("models");
+        // Use /health endpoint if available, fallback to /v1/models
+        let health_url = format!("{}/health", self.base_url);
+        let models_url = self.api_url("models");
 
-        let response =
-            self.client
-                .get(&url)
-                .send()
-                .await
-                .map_err(|e| EngineError::NetworkError {
-                    reason: format!("Request failed: {e}"),
-                })?;
+        // Try /health first, fallback to /v1/models if /health is not available
+        let response = match self.client.get(&health_url).send().await {
+            Ok(resp) if resp.status().is_success() => resp,
+            _ => {
+                // Fallback to /v1/models
+                self.client.get(&models_url).send().await.map_err(|e| {
+                    EngineError::NetworkError {
+                        reason: format!("Request failed: {e}"),
+                    }
+                })?
+            }
+        };
 
         let latency_ms = start.elapsed().as_millis() as u64;
         if response.status().is_success() {

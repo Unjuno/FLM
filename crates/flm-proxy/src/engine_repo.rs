@@ -34,7 +34,10 @@ impl EngineRepository for InMemoryEngineRepository {
         match self.engines.read() {
             Ok(engines) => engines.clone(),
             Err(_) => {
-                error!(error_type = "read_lock_failed", "Failed to acquire read lock on engines. Returning empty list.");
+                error!(
+                    error_type = "read_lock_failed",
+                    "Failed to acquire read lock on engines. Returning empty list."
+                );
                 Vec::new()
             }
         }
@@ -48,7 +51,10 @@ impl EngineRepository for InMemoryEngineRepository {
                 engines.push(engine);
             }
             Err(_) => {
-                error!(error_type = "write_lock_failed", "Failed to acquire write lock on engines. Engine registration skipped.");
+                error!(
+                    error_type = "write_lock_failed",
+                    "Failed to acquire write lock on engines. Engine registration skipped."
+                );
             }
         }
     }

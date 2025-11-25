@@ -2,7 +2,10 @@
 //!
 //! See `docs/CORE_API.md` section 5 for the complete specification.
 
-use crate::domain::proxy::{ProxyConfig, ProxyHandle, ProxyProfile};
+use crate::domain::proxy::{
+    ProxyConfig, ProxyEgressConfig, ProxyEgressMode, ProxyHandle, ProxyProfile,
+    DEFAULT_TOR_SOCKS_ENDPOINT,
+};
 use crate::error::ProxyError;
 use crate::ports::{ProxyController, ProxyRepository};
 use chrono::Utc;
@@ -49,8 +52,8 @@ where
     /// Returns `ProxyError::PortInUse` if the port is already in use
     /// Returns `ProxyError::InvalidConfig` if the configuration is invalid
     pub async fn start(&self, config: ProxyConfig) -> Result<ProxyHandle, ProxyError> {
-        // Validate configuration
-        Self::validate_config(&config)?;
+        // Validate and normalize configuration
+        let config = Self::normalize_config(config)?;
 
         // Check if port is already in use
         // Note: This is a basic check. The actual port binding will happen in ProxyController
@@ -73,6 +76,14 @@ where
                 reason: format!("Failed to save proxy profile: {e}"),
             })?;
 
+        // Save active handle to repository for persistence across CLI invocations
+        self.repository
+            .save_active_handle(handle.clone())
+            .await
+            .map_err(|e| ProxyError::InvalidConfig {
+                reason: format!("Failed to save active proxy handle: {e}"),
+            })?;
+
         Ok(handle)
     }
 
@@ -85,7 +96,18 @@ where
     /// * `Ok(())` if the proxy stopped successfully
     /// * `Err(ProxyError)` if stop failed
     pub async fn stop(&self, handle: ProxyHandle) -> Result<(), ProxyError> {
-        self.controller.stop(handle).await
+        // Stop the proxy via controller
+        self.controller.stop(handle.clone()).await?;
+
+        // Remove active handle from repository
+        self.repository
+            .remove_active_handle(&handle.id)
+            .await
+            .map_err(|e| ProxyError::InvalidConfig {
+                reason: format!("Failed to remove active proxy handle: {e}"),
+            })?;
+
+        Ok(())
     }
 
     /// Get status of all running proxy instances
@@ -94,8 +116,31 @@ where
     /// * `Ok(Vec<ProxyHandle>)` with all active proxy handles
     /// * `Err(ProxyError)` if status retrieval failed
     pub async fn status(&self) -> Result<Vec<ProxyHandle>, ProxyError> {
-        // Get active handles from controller
-        self.controller.status().await
+        // Get active handles from controller (in-memory state)
+        let controller_handles = self.controller.status().await?;
+
+        // Get active handles from repository (persisted state)
+        let repository_handles =
+            self.repository
+                .list_active_handles()
+                .await
+                .map_err(|e| ProxyError::InvalidConfig {
+                    reason: format!("Failed to list active proxy handles: {e}"),
+                })?;
+
+        // Merge handles: prefer controller handles (they have the most up-to-date running state)
+        // but include repository handles that might not be in controller (e.g., from a different process)
+        let mut all_handles: std::collections::HashMap<String, ProxyHandle> = repository_handles
+            .into_iter()
+            .map(|h| (h.id.clone(), h))
+            .collect();
+
+        // Update with controller handles (they have the most current state)
+        for handle in controller_handles {
+            all_handles.insert(handle.id.clone(), handle);
+        }
+
+        Ok(all_handles.into_values().collect())
     }
 
     /// Validate proxy configuration
@@ -106,7 +151,7 @@ where
     /// # Returns
     /// * `Ok(())` if the configuration is valid
     /// * `Err(ProxyError::InvalidConfig)` if the configuration is invalid
-    fn validate_config(config: &ProxyConfig) -> Result<(), ProxyError> {
+    fn normalize_config(mut config: ProxyConfig) -> Result<ProxyConfig, ProxyError> {
         // Validate port range (u16 is already 0-65535, but check for 0 explicitly)
         if config.port == 0 {
             return Err(ProxyError::InvalidConfig {
@@ -146,8 +191,65 @@ where
             }
         }
 
-        Ok(())
+        config.egress = normalize_egress(config.egress)?;
+
+        Ok(config)
     }
+}
+
+fn normalize_egress(mut egress: ProxyEgressConfig) -> Result<ProxyEgressConfig, ProxyError> {
+    match egress.mode {
+        ProxyEgressMode::Direct => {
+            egress.socks5_endpoint = None;
+            egress.fail_open = false;
+        }
+        ProxyEgressMode::Tor => {
+            if egress.socks5_endpoint.is_none() {
+                egress.socks5_endpoint = Some(DEFAULT_TOR_SOCKS_ENDPOINT.to_string());
+            }
+            if let Some(endpoint) = &egress.socks5_endpoint {
+                validate_socks_endpoint(endpoint)?;
+            }
+        }
+        ProxyEgressMode::CustomSocks5 => {
+            let endpoint = egress.socks5_endpoint.as_ref().ok_or_else(|| {
+                ProxyError::InvalidConfig {
+                    reason: "socks5 endpoint is required when using custom SOCKS5 mode".to_string(),
+                }
+            })?;
+            validate_socks_endpoint(endpoint)?;
+        }
+    }
+
+    Ok(egress)
+}
+
+fn validate_socks_endpoint(endpoint: &str) -> Result<(), ProxyError> {
+    let mut parts = endpoint.split(':');
+    let host = parts.next().ok_or_else(|| ProxyError::InvalidConfig {
+        reason: "Invalid socks5 endpoint (missing host)".to_string(),
+    })?;
+    let port = parts.next().ok_or_else(|| ProxyError::InvalidConfig {
+        reason: "Invalid socks5 endpoint (missing port)".to_string(),
+    })?;
+
+    if host.trim().is_empty() {
+        return Err(ProxyError::InvalidConfig {
+            reason: "Invalid socks5 endpoint: host cannot be empty".to_string(),
+        });
+    }
+
+    port.parse::<u16>().map_err(|_| ProxyError::InvalidConfig {
+        reason: "Invalid socks5 endpoint: port must be a number between 1-65535".to_string(),
+    })?;
+
+    if parts.next().is_some() {
+        return Err(ProxyError::InvalidConfig {
+            reason: "Invalid socks5 endpoint: unexpected extra ':'".to_string(),
+        });
+    }
+
+    Ok(())
 }
 
 /// Validate a domain name

@@ -2,6 +2,7 @@
 
 use crate::adapters::SqliteConfigRepository;
 use crate::cli::config::ConfigSubcommand;
+use crate::commands::CliUserError;
 use crate::utils::get_config_db_path;
 use flm_core::services::ConfigService;
 use serde_json::json;
@@ -46,10 +47,11 @@ pub async fn execute_get(
                     }
                 });
                 println!("{}", serde_json::to_string_pretty(&output)?);
-                std::process::exit(1);
+                return Err(Box::new(CliUserError::silent()));
             } else {
-                eprintln!("Key '{key}' not found");
-                std::process::exit(1);
+                return Err(Box::new(CliUserError::new(format!(
+                    "Key '{key}' not found"
+                ))));
             }
         }
     }

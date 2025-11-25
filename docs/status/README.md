@@ -1,6 +1,6 @@
 # Status Reports
 
-> Status: Reference | Audience: All contributors | Updated: 2025-11-23
+> Status: Reference | Audience: All contributors | Updated: 2025-11-25
 
 このディレクトリには、プロジェクトの進捗状況と完了レポートが整理されています。
 
@@ -24,10 +24,11 @@ docs/status/
 現在進行中または最新の参照情報：
 
 - **NEXT_STEPS.md** - 次の作業ステップと推奨事項（Ready）
+- **PHASE1_PROGRESS.md** - Phase 1実装進捗レポート（In Progress）
 - **PHASE1_NEXT_STEPS.md** - Phase 1の次のステップ（Ready for Next Implementation）
 - **PROXY_SERVICE_PHASE2_PROGRESS.md** - ProxyService Phase 2の実装進捗（In Progress）
 - **BOTNET_PROTECTION_PLAN.md** - ボットネット対策実装計画の進捗状況（Planning Complete）
-- **COMPILATION_ISSUE.md** - コンパイルエラー調査レポート（In Progress）
+- **COMPILATION_ISSUE.md / LINT_REMEDIATION_STATUS.md** - 調査系レポート（In Progress）
 - **TEST_ENVIRONMENT_SETUP.md** - テスト環境セットアップガイド（Setup Guide）
 - **TEST_ENVIRONMENT_STATUS.md** - テスト環境の状態（Environment Setup Complete）
 
@@ -38,7 +39,6 @@ docs/status/
 ### `phases/` - フェーズ完了レポート
 
 - **PHASE0_COMPLETE.md** - Phase 0完了レポート
-- **PHASE1_PROGRESS.md** - Phase 1実装進捗レポート（2025-01-27）
 - **PHASE1B_COMPLETE.md** - Phase 1B完了レポート（SecurityPolicy適用、ドメイン名検証）
 - **PHASE2_COMPLETE.md** - Phase 2完了レポート
 - **PHASE2_CLI_COMPLETE.md** - Phase 2 CLI完了レポート
@@ -143,7 +143,7 @@ docs/status/
 
 ---
 
-**注意**: 完了済みレポートは参照用に保持されています。最新の情報は `active/` ディレクトリを確認してください。
+**注意**: 完了済みレポートは参照用に保持されています。最新の情報は `active/` ディレクトリとリポジトリ直下の `reports/` を確認してください。
 
-**最終更新**: 2025-01-27
+**最終更新**: 2025-11-25
 

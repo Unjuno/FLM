@@ -8,10 +8,24 @@ use flm_core::domain::security::{ApiKeyRecord, SecurityPolicy};
 use flm_core::error::RepoError;
 use flm_core::ports::SecurityRepository;
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
-use tracing::error;
 #[cfg(unix)]
 use std::os::unix::fs::PermissionsExt;
 use std::path::Path;
+use tracing::error;
+
+/// Metadata for audit log entries (reduces clippy argument count).
+pub struct AuditLogMetadata<'a> {
+    pub severity: &'a str,
+    pub ip: Option<&'a str>,
+    pub details: Option<&'a str>,
+}
+
+/// Optional request context for intrusion attempts.
+pub struct IntrusionRequestContext<'a> {
+    pub request_path: Option<&'a str>,
+    pub user_agent: Option<&'a str>,
+    pub method: Option<&'a str>,
+}
 
 /// SQLite-based SecurityRepository implementation for flm-proxy
 #[derive(Clone)]
@@ -44,8 +58,7 @@ impl SqliteSecurityRepository {
             .ok()
             .and_then(|v| v.parse::<u32>().ok())
             .unwrap_or(10)
-            .max(1) // At least 1 connection
-            .min(100); // Cap at 100 connections
+            .clamp(1, 100); // At least 1 connection, cap at 100
 
         let pool = SqlitePoolOptions::new()
             .max_connections(max_connections)
@@ -68,7 +81,10 @@ impl SqliteSecurityRepository {
         #[cfg(unix)]
         {
             if let Err(_) = set_db_file_permissions(&db_path) {
-                warn!(error_type = "db_permissions_failed", "Failed to set database file permissions. Continuing anyway.");
+                warn!(
+                    error_type = "db_permissions_failed",
+                    "Failed to set database file permissions. Continuing anyway."
+                );
             }
         }
 
@@ -304,9 +320,7 @@ impl SqliteSecurityRepository {
         status: u16,
         latency_ms: Option<u64>,
         event_type: Option<&str>,
-        severity: &str,
-        ip: Option<&str>,
-        details: Option<&str>,
+        metadata: AuditLogMetadata<'_>,
     ) -> Result<(), RepoError> {
         sqlx::query(
             "INSERT INTO audit_logs (request_id, api_key_id, endpoint, status, latency_ms, event_type, severity, ip, details) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)",
@@ -317,9 +331,9 @@ impl SqliteSecurityRepository {
         .bind(status as i64)
         .bind(latency_ms.map(|v| v as i64))
         .bind(event_type)
-        .bind(severity)
-        .bind(ip)
-        .bind(details)
+        .bind(metadata.severity)
+        .bind(metadata.ip)
+        .bind(metadata.details)
         .execute(&self.pool)
         .await
         .map_err(|e| RepoError::IoError {
@@ -331,9 +345,11 @@ impl SqliteSecurityRepository {
     /// Get all blocked IPs from database
     ///
     /// Returns a vector of (IP address, failure_count, first_failure_at, blocked_until, permanent_block, last_attempt)
-    pub async fn get_blocked_ips(&self) -> Result<Vec<(std::net::IpAddr, u32, String, Option<String>, bool, String)>, RepoError> {
+    pub async fn get_blocked_ips(
+        &self,
+    ) -> Result<Vec<(std::net::IpAddr, u32, String, Option<String>, bool, String)>, RepoError> {
         use std::net::IpAddr;
-        
+
         let rows = sqlx::query_as::<_, (String, i64, String, Option<String>, i64, String)>(
             "SELECT ip, failure_count, first_failure_at, blocked_until, permanent_block, last_attempt FROM ip_blocklist"
         )
@@ -344,14 +360,29 @@ impl SqliteSecurityRepository {
         })?;
 
         let mut result = Vec::new();
-        for (ip_str, failure_count, first_failure_at, blocked_until, permanent_block, last_attempt) in rows {
+        for (
+            ip_str,
+            failure_count,
+            first_failure_at,
+            blocked_until,
+            permanent_block,
+            last_attempt,
+        ) in rows
+        {
             if let Ok(ip) = ip_str.parse::<IpAddr>() {
-                result.push((ip, failure_count as u32, first_failure_at, blocked_until, permanent_block != 0, last_attempt));
+                result.push((
+                    ip,
+                    failure_count as u32,
+                    first_failure_at,
+                    blocked_until,
+                    permanent_block != 0,
+                    last_attempt,
+                ));
             } else {
                 error!(ip = %ip_str, "Failed to parse IP address from database");
             }
         }
-        
+
         Ok(result)
     }
 
@@ -446,9 +477,7 @@ impl SqliteSecurityRepository {
         ip: &std::net::IpAddr,
         pattern: &str,
         score: u32,
-        request_path: Option<&str>,
-        user_agent: Option<&str>,
-        method: Option<&str>,
+        ctx: IntrusionRequestContext<'_>,
     ) -> Result<(), RepoError> {
         sqlx::query(
             "INSERT INTO intrusion_attempts (id, ip, pattern, score, request_path, user_agent, method) VALUES (?, ?, ?, ?, ?, ?, ?)"
@@ -457,15 +486,240 @@ impl SqliteSecurityRepository {
         .bind(ip.to_string())
         .bind(pattern)
         .bind(score as i64)
-        .bind(request_path)
-        .bind(user_agent)
-        .bind(method)
+        .bind(ctx.request_path)
+        .bind(ctx.user_agent)
+        .bind(ctx.method)
         .execute(&self.pool)
         .await
         .map_err(|e| RepoError::IoError {
             reason: format!("Failed to save intrusion attempt: {e}"),
         })?;
         Ok(())
+    }
+
+    /// List audit logs with optional filters
+    ///
+    /// # Arguments
+    /// * `limit` - Maximum number of logs to return (default: 100)
+    /// * `offset` - Number of logs to skip (default: 0)
+    /// * `event_type` - Filter by event type (optional)
+    /// * `severity` - Filter by severity (optional)
+    /// * `ip` - Filter by IP address (optional)
+    ///
+    /// # Returns
+    /// Vector of audit log entries: (id, request_id, api_key_id, endpoint, status, latency_ms, event_type, severity, ip, details, created_at)
+    pub async fn list_audit_logs(
+        &self,
+        limit: Option<u32>,
+        offset: Option<u32>,
+        event_type: Option<&str>,
+        severity: Option<&str>,
+        ip: Option<&str>,
+    ) -> Result<
+        Vec<(
+            i64,
+            String,
+            Option<String>,
+            String,
+            i64,
+            Option<i64>,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            String,
+        )>,
+        RepoError,
+    > {
+        let limit = limit.unwrap_or(100).min(1000); // Cap at 1000
+        let offset = offset.unwrap_or(0);
+
+        let mut query = String::from(
+            "SELECT id, request_id, api_key_id, endpoint, status, latency_ms, event_type, severity, ip, details, created_at FROM audit_logs WHERE 1=1"
+        );
+
+        if let Some(et) = event_type {
+            query.push_str(" AND event_type = ?");
+        }
+        if let Some(s) = severity {
+            query.push_str(" AND severity = ?");
+        }
+        if let Some(ip_addr) = ip {
+            query.push_str(" AND ip = ?");
+        }
+
+        query.push_str(" ORDER BY created_at DESC LIMIT ? OFFSET ?");
+
+        let mut sql_query = sqlx::query_as::<
+            _,
+            (
+                i64,
+                String,
+                Option<String>,
+                String,
+                i64,
+                Option<i64>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                String,
+            ),
+        >(&query);
+
+        if let Some(et) = event_type {
+            sql_query = sql_query.bind(et);
+        }
+        if let Some(s) = severity {
+            sql_query = sql_query.bind(s);
+        }
+        if let Some(ip_addr) = ip {
+            sql_query = sql_query.bind(ip_addr);
+        }
+
+        sql_query = sql_query.bind(limit as i64).bind(offset as i64);
+
+        let rows = sql_query
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| RepoError::IoError {
+                reason: format!("Failed to list audit logs: {e}"),
+            })?;
+
+        Ok(rows)
+    }
+
+    /// List intrusion attempts with optional filters
+    ///
+    /// # Arguments
+    /// * `limit` - Maximum number of attempts to return (default: 100)
+    /// * `offset` - Number of attempts to skip (default: 0)
+    /// * `ip` - Filter by IP address (optional)
+    /// * `min_score` - Minimum score filter (optional)
+    ///
+    /// # Returns
+    /// Vector of intrusion attempts: (id, ip, pattern, score, request_path, user_agent, method, created_at)
+    pub async fn list_intrusion_attempts(
+        &self,
+        limit: Option<u32>,
+        offset: Option<u32>,
+        ip: Option<&str>,
+        min_score: Option<u32>,
+    ) -> Result<
+        Vec<(
+            String,
+            String,
+            String,
+            i64,
+            Option<String>,
+            Option<String>,
+            Option<String>,
+            String,
+        )>,
+        RepoError,
+    > {
+        let limit = limit.unwrap_or(100).min(1000); // Cap at 1000
+        let offset = offset.unwrap_or(0);
+
+        let mut query = String::from(
+            "SELECT id, ip, pattern, score, request_path, user_agent, method, created_at FROM intrusion_attempts WHERE 1=1"
+        );
+
+        if let Some(ip_addr) = ip {
+            query.push_str(" AND ip = ?");
+        }
+        if let Some(ms) = min_score {
+            query.push_str(" AND score >= ?");
+        }
+
+        query.push_str(" ORDER BY created_at DESC LIMIT ? OFFSET ?");
+
+        let mut sql_query = sqlx::query_as::<
+            _,
+            (
+                String,
+                String,
+                String,
+                i64,
+                Option<String>,
+                Option<String>,
+                Option<String>,
+                String,
+            ),
+        >(&query);
+
+        if let Some(ip_addr) = ip {
+            sql_query = sql_query.bind(ip_addr);
+        }
+        if let Some(ms) = min_score {
+            sql_query = sql_query.bind(ms as i64);
+        }
+
+        sql_query = sql_query.bind(limit as i64).bind(offset as i64);
+
+        let rows = sql_query
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| RepoError::IoError {
+                reason: format!("Failed to list intrusion attempts: {e}"),
+            })?;
+
+        Ok(rows)
+    }
+
+    /// List anomaly detections with optional filters
+    ///
+    /// # Arguments
+    /// * `limit` - Maximum number of detections to return (default: 100)
+    /// * `offset` - Number of detections to skip (default: 0)
+    /// * `ip` - Filter by IP address (optional)
+    /// * `anomaly_type` - Filter by anomaly type (optional)
+    ///
+    /// # Returns
+    /// Vector of anomaly detections: (id, ip, anomaly_type, score, details, created_at)
+    pub async fn list_anomaly_detections(
+        &self,
+        limit: Option<u32>,
+        offset: Option<u32>,
+        ip: Option<&str>,
+        anomaly_type: Option<&str>,
+    ) -> Result<Vec<(String, String, String, i64, Option<String>, String)>, RepoError> {
+        let limit = limit.unwrap_or(100).min(1000); // Cap at 1000
+        let offset = offset.unwrap_or(0);
+
+        let mut query = String::from(
+            "SELECT id, ip, anomaly_type, score, details, created_at FROM anomaly_detections WHERE 1=1"
+        );
+
+        if let Some(ip_addr) = ip {
+            query.push_str(" AND ip = ?");
+        }
+        if let Some(at) = anomaly_type {
+            query.push_str(" AND anomaly_type = ?");
+        }
+
+        query.push_str(" ORDER BY created_at DESC LIMIT ? OFFSET ?");
+
+        let mut sql_query =
+            sqlx::query_as::<_, (String, String, String, i64, Option<String>, String)>(&query);
+
+        if let Some(ip_addr) = ip {
+            sql_query = sql_query.bind(ip_addr);
+        }
+        if let Some(at) = anomaly_type {
+            sql_query = sql_query.bind(at);
+        }
+
+        sql_query = sql_query.bind(limit as i64).bind(offset as i64);
+
+        let rows = sql_query
+            .fetch_all(&self.pool)
+            .await
+            .map_err(|e| RepoError::IoError {
+                reason: format!("Failed to list anomaly detections: {e}"),
+            })?;
+
+        Ok(rows)
     }
 }
 

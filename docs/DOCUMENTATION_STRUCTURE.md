@@ -1,6 +1,6 @@
 # ドキュメント構成ガイド
 
-> Status: Reference | Audience: All contributors | Updated: 2025-01-27
+> Status: Reference | Audience: All contributors | Updated: 2025-11-25
 
 このドキュメントは、FLMプロジェクトのドキュメント構成と整理方針を説明します。
 
@@ -71,6 +71,12 @@ docs/
 └── tests/                       # テスト関連ドキュメント
     └── ui-scenarios.md         # UIシナリオテスト
 ```
+
+補足:
+- ルート直下に `reports/` を設け、`*_TEST_REPORT*.md` や `*-results*.txt` を集約しています。README から最新版（例: `reports/FULL_TEST_EXECUTION_REPORT.md`）へリンクするルールです。
+- 旧プロトタイプの生成物（`coverage/`, `dist/`, `public/`, `test-results.txt`）は `archive/prototype/prototype-generated-assets.zip` に圧縮済みで、参照が必要な場合のみ解凍してください。
+- 自動化スクリプトは `archive/prototype/scripts/` に保管しており、新実装では Cargo/Make/just など既存ビルドツールを直接用います。
+- `docs/status/active` には進行中のみ、`docs/status/completed` には完了済みのみを置き、混在が発生した場合は即時移動します。
 
 ## ドキュメントの分類
 
@@ -166,10 +172,15 @@ docs/
 - `completed/safety/` - 安全性・監査レポート
 
 **特徴**:
-- 現在の進捗状況（`active/`）
-- 完了したタスクの記録（`completed/`）
-- 次のステップの明確化
-- レポートの分類（フェーズ/タスク/テスト/安全性/プロキシ/修正）
+- 現在の進捗状況は `active/` 配下に集約し、ステータスラベルも `Status: Active` に統一
+- 完了したタスクは `completed/` 配下へ移動し、`Status: Completed` に更新
+- `reports/` ディレクトリが生成するテスト／監査レポートと連携し、最新結果を `active/NEXT_STEPS.md` から参照
+- レポートはフェーズ/タスク/テスト/安全性/プロキシ/修正などの粒度でサブディレクトリに整理
+
+#### Active/Completed 運用ルール
+- 作業が完了したら、該当ドキュメントを `active/` から対応する `completed/*` サブディレクトリへ物理移動し、ヘッダーの `Status` を更新する。
+- `active/NEXT_STEPS.md` は「唯一の進行中タスクリスト」とし、他ファイルから重複情報を排除する。
+- 旧プロトタイプや参照専用資料には「Reference only / Frozen」と明記し、進行中にカウントしない。
 
 ## ドキュメント間の関係性
 
@@ -272,9 +283,10 @@ guides/SECURITY_BOTNET_PROTECTION.md (ユーザーガイド)
 1. `guides/SECURITY_BOTNET_PROTECTION.md` - ボットネット対策ガイド
 2. `guides/SECURITY_FIREWALL_GUIDE.md` - ファイアウォール設定
 3. `guides/MIGRATION_GUIDE.md` - 移行ガイド
+4. `reports/` 配下の最新テスト要約（公開可否を判断する際の根拠）
 
 ---
 
-**最終更新**: 2025-01-27  
+**最終更新**: 2025-11-25  
 **質問や提案**: Issueまたはドキュメントコメントでお知らせください。
 

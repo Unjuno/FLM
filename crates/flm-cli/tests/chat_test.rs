@@ -3,7 +3,6 @@
 //! These tests verify that chat commands work correctly with mock engines.
 
 use flm_cli::adapters::SqliteEngineRepository;
-use flm_cli::commands::chat::parse_model_id;
 use flm_core::domain::chat::{ChatMessage, ChatResponse, ChatStreamChunk, UsageStats};
 use flm_core::domain::models::EngineCapabilities;
 use flm_core::error::EngineError;
@@ -11,7 +10,6 @@ use flm_core::ports::{EngineRepository, LlmEngine};
 use flm_core::services::EngineService;
 use futures::stream;
 use std::sync::Arc;
-use tempfile::TempDir;
 
 /// Mock engine for testing
 struct MockEngine {
@@ -34,11 +32,13 @@ impl LlmEngine for MockEngine {
             chat: true,
             chat_stream: true,
             embeddings: true,
+            moderation: false,
+            tools: false,
         }
     }
 
     async fn health_check(&self) -> Result<flm_core::domain::engine::HealthStatus, EngineError> {
-        Ok(flm_core::domain::engine::HealthStatus::Healthy)
+        Ok(flm_core::domain::engine::HealthStatus::Healthy { latency_ms: 0 })
     }
 
     async fn list_models(&self) -> Result<Vec<flm_core::domain::engine::ModelInfo>, EngineError> {
@@ -103,8 +103,8 @@ impl LlmEngine for MockEngine {
         &self,
         _req: flm_core::domain::chat::EmbeddingRequest,
     ) -> Result<flm_core::domain::chat::EmbeddingResponse, EngineError> {
-        Err(EngineError::NotSupported {
-            engine_id: self.id.clone(),
+        Err(EngineError::InvalidResponse {
+            reason: "Embeddings not supported".to_string(),
         })
     }
 }
@@ -121,24 +121,6 @@ impl EngineRepository for ArcEngineRepositoryWrapper {
     async fn register(&self, engine: Arc<dyn LlmEngine>) {
         self.0.register(engine).await;
     }
-}
-
-#[test]
-fn test_parse_model_id_valid() {
-    let result = parse_model_id("flm://ollama/llama3:8b");
-    assert!(result.is_ok());
-    let (engine_id, model_name) = result.unwrap();
-    assert_eq!(engine_id, "ollama");
-    assert_eq!(model_name, "llama3:8b");
-}
-
-#[test]
-fn test_parse_model_id_invalid_format() {
-    let result = parse_model_id("ollama/llama3:8b");
-    assert!(result.is_err());
-
-    let result = parse_model_id("flm://ollama");
-    assert!(result.is_err());
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -185,3 +167,61 @@ async fn test_chat_with_mock_engine() {
     assert_eq!(response.usage.total_tokens, 30);
 }
 
+#[tokio::test(flavor = "multi_thread")]
+async fn test_chat_invalid_model_id() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let config_db = temp_dir.path().join("config.db");
+
+    // Test chat with invalid model ID format
+    use flm_cli::cli::chat::Chat;
+    let chat = Chat {
+        model: "invalid-model-id".to_string(),
+        prompt: "Hello".to_string(),
+        stream: false,
+        temperature: None,
+        max_tokens: None,
+    };
+
+    let result = flm_cli::commands::chat::execute(
+        chat,
+        Some(config_db.to_str().unwrap().to_string()),
+        "json".to_string(),
+    )
+    .await;
+
+    // Should fail with invalid model ID format
+    assert!(result.is_err(), "Chat with invalid model ID should fail");
+    let error_msg = result.unwrap_err().to_string();
+    assert!(
+        error_msg.contains("flm://")
+            || error_msg.contains("Invalid")
+            || error_msg.contains("model"),
+        "Error message should mention model ID issue. Got: {error_msg}"
+    );
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_chat_nonexistent_engine() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let config_db = temp_dir.path().join("config.db");
+
+    // Test chat with non-existent engine
+    use flm_cli::cli::chat::Chat;
+    let chat = Chat {
+        model: "flm://nonexistent-engine/test-model".to_string(),
+        prompt: "Hello".to_string(),
+        stream: false,
+        temperature: None,
+        max_tokens: None,
+    };
+
+    let result = flm_cli::commands::chat::execute(
+        chat,
+        Some(config_db.to_str().unwrap().to_string()),
+        "json".to_string(),
+    )
+    .await;
+
+    // Should fail because engine doesn't exist
+    assert!(result.is_err(), "Chat with non-existent engine should fail");
+}

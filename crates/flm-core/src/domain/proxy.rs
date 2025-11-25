@@ -21,6 +21,9 @@ pub enum ProxyMode {
     PackagedCa,
 }
 
+/// Default Tor SOCKS endpoint (Tor daemon)
+pub const DEFAULT_TOR_SOCKS_ENDPOINT: &str = "127.0.0.1:9050";
+
 /// ACME challenge kind
 ///
 /// Defines the ACME challenge method for certificate validation.
@@ -42,6 +45,9 @@ pub enum AcmeChallengeKind {
 pub struct ProxyConfig {
     /// TLS/HTTPS mode
     pub mode: ProxyMode,
+    /// Outbound egress configuration (Direct/Tor/SOCKS5)
+    #[serde(default = "ProxyEgressConfig::direct")]
+    pub egress: ProxyEgressConfig,
     /// HTTP port (HTTPS port is port + 1 for HTTPS-enabled modes)
     pub port: u16,
     /// Listen address (IP address to bind to, e.g., "127.0.0.1" or "0.0.0.0")
@@ -73,6 +79,24 @@ pub struct ProxyConfig {
 /// Default listen address (localhost only for security)
 fn default_listen_addr() -> String {
     "127.0.0.1".to_string()
+}
+
+impl Default for ProxyConfig {
+    fn default() -> Self {
+        Self {
+            mode: ProxyMode::LocalHttp,
+            egress: ProxyEgressConfig::direct(),
+            port: 8080,
+            listen_addr: default_listen_addr(),
+            trusted_proxy_ips: Vec::new(),
+            acme_email: None,
+            acme_domain: None,
+            acme_challenge: None,
+            acme_dns_profile_id: None,
+            config_db_path: None,
+            security_db_path: None,
+        }
+    }
 }
 
 /// Proxy profile (saved configuration)
@@ -110,8 +134,67 @@ pub struct ProxyHandle {
     pub https_port: Option<u16>,
     /// ACME domain (if using `HttpsAcme` mode)
     pub acme_domain: Option<String>,
+    /// Effective egress configuration of the running handle
+    #[serde(default = "ProxyEgressConfig::direct")]
+    pub egress: ProxyEgressConfig,
     /// Whether the proxy is currently running
     pub running: bool,
     /// Last error message (if any)
     pub last_error: Option<String>,
+}
+
+/// Outbound proxy mode for Tor/SOCKS5 support
+#[derive(Clone, Debug, PartialEq, Eq, Serialize, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+pub enum ProxyEgressMode {
+    /// Direct network egress (default)
+    Direct,
+    /// Tor SOCKS5 endpoint (defaults to 127.0.0.1:9050)
+    Tor,
+    /// Custom SOCKS5 endpoint (user supplied)
+    CustomSocks5,
+}
+
+/// Egress configuration for outbound HTTP clients
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct ProxyEgressConfig {
+    /// Selected egress mode
+    pub mode: ProxyEgressMode,
+    /// Optional `host:port` for Tor/Custom SOCKS5 endpoints
+    pub socks5_endpoint: Option<String>,
+    /// Whether to fall back to Direct mode if the SOCKS endpoint is unreachable
+    #[serde(default)]
+    pub fail_open: bool,
+}
+
+impl ProxyEgressConfig {
+    /// Default Direct config
+    pub fn direct() -> Self {
+        Self {
+            mode: ProxyEgressMode::Direct,
+            socks5_endpoint: None,
+            fail_open: false,
+        }
+    }
+
+    /// Helper for displaying the resolved endpoint with scheme.
+    pub fn display_endpoint(&self) -> Option<String> {
+        match self.mode {
+            ProxyEgressMode::Direct => None,
+            ProxyEgressMode::Tor => self
+                .socks5_endpoint
+                .as_ref()
+                .map(|ep| format!("tor://{ep}")),
+            ProxyEgressMode::CustomSocks5 => self
+                .socks5_endpoint
+                .as_ref()
+                .map(|ep| format!("socks5://{ep}")),
+        }
+    }
+}
+
+impl Default for ProxyEgressConfig {
+    fn default() -> Self {
+        Self::direct()
+    }
 }

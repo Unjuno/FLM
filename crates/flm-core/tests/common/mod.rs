@@ -17,14 +17,8 @@ pub fn create_test_engine_state() -> crate::domain::engine::EngineState {
 /// Create a test ProxyConfig
 pub fn create_test_proxy_config() -> crate::domain::proxy::ProxyConfig {
     crate::domain::proxy::ProxyConfig {
-        mode: crate::domain::proxy::ProxyMode::LocalHttp,
         port: 8080,
-        acme_email: None,
-        acme_domain: None,
-        acme_challenge: None,
-        acme_dns_profile_id: None,
-        config_db_path: None,
-        security_db_path: None,
+        ..Default::default()
     }
 }
 

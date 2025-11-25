@@ -155,6 +155,12 @@ export const ModelManagement: React.FC = () => {
               ← {returnTo === 'api/create' ? 'API作成に戻る' : 'ホームに戻る'}
             </button>
             <h1>モデル管理</h1>
+            <button
+              className="link-button"
+              onClick={() => navigate('/models/profiles')}
+            >
+              モデルプロファイル
+            </button>
           </div>
           <div className="tab-navigation">
             <button

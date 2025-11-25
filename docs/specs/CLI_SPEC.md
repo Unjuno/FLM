@@ -27,6 +27,7 @@ flm <command> [subcommand] [options]
 ### 3.1 `flm engines detect`
 - 対応エンジンを検出して JSON を出力
 - オプション: `--engine <name>` で限定検出（デフォルトは auto）、`--fresh` でキャッシュを無視
+- 既定では `config.db` の `engines_cache` テーブルを最大5分間再利用。`--fresh` を指定するとキャッシュを削除して再度検出を実行し、検出結果は再び `engines_cache` に保存される。
 - 出力には `status` フィールド（`InstalledOnly` / `RunningHealthy` / `RunningDegraded` / `ErrorNetwork` / `ErrorApi`）と `latency_ms` が含まれる
 - 例:
 ```bash
@@ -59,6 +60,9 @@ Rust製セキュアプロキシを起動し、Forward先を検出済みエンジ
 - `--bind <address>` (バインドするIPアドレス・デフォルト "127.0.0.1"。外部アクセスが必要な場合のみ "0.0.0.0" を使用)
 - `--engine-base-url <url>` (デフォルトは検出結果)
 - `--acme-email`, `--acme-domain`（https-acmeモード必須）
+- `--egress-mode <direct|tor|socks5>`（既定: `direct`。`tor` は `127.0.0.1:9050` を暗黙指定、`socks5` は任意エンドポイントを CLI から渡す）
+- `--socks5-endpoint <host:port>`（`--egress-mode tor` の場合はオプション、`--egress-mode socks5` の場合は必須）
+- `--egress-fail-open`（指定時のみ `ProxyConfig.egress.fail_open = true`。未指定は fail closed）
 - `--no-daemon` (フォアグラウンド実行)
 
 成功時出力:
@@ -77,6 +81,12 @@ Rust製セキュアプロキシを起動し、Forward先を検出済みエンジ
   }
 }
 ```
+
+- **Tor/上流プロキシ指定**:
+  - `--egress-mode tor` は Tor Browser / tor daemon が提供する `127.0.0.1:9050` SOCKS5 を使用し、起動前に CLI が 3 回までハンドシェイクを試行する。接続失敗時は exit code 1（`PROXY_INVALID_CONFIG`）を返し、Tor を起動するようユーザーへ案内する。
+  - `--egress-mode socks5` は任意の SOCKS5 プロキシ（例: 会社の出口ノード）を指定する。認証は Phase4 で検討。現行フェーズでは匿名 SOCKS5 のみ。
+  - `--egress-fail-open` を指定しない限り、Tor/上流プロキシに到達できない場合はプロキシを起動しない（`fail closed`）。`--egress-fail-open` を付けた場合は警告ログを出しつつ `Direct` にフォールバックする。
+  - `flm proxy status` は `egress.mode` と実際の SOCKS5 endpoint（Tor の場合は `tor://127.0.0.1:9050` と表示）を含める。
 
 **エンドポイントURL表示の注意**:
 - `listen_addr` は技術的なバインドアドレス（`0.0.0.0:8080`）であり、実際に使用するURLではない

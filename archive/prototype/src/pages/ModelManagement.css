@@ -110,6 +110,15 @@
   margin-top: var(--spacing-md);
 }
 
+.model-management-header .link-button {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--color-primary, #2563eb);
+  cursor: pointer;
+  font-weight: 600;
+}
+
 /* レスポンシブ対応 */
 @media (max-width: 768px) {
   .tab-navigation {

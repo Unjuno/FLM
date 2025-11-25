@@ -1,0 +1,117 @@
+   Compiling flm-proxy v0.1.0 (C:\Users\junny\Desktop\FLM\crates\flm-proxy)
+   Compiling flm-cli v0.1.0 (C:\Users\junny\Desktop\FLM\crates\flm-cli)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 5.09s
+     Running unittests src\lib.rs (target\debug\deps\flm_cli-7baab8cf34267077.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\flm-3d0c95977e846442.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\chat_test.rs (target\debug\deps\chat_test-0f5960741da3ce0d.exe)
+
+running 1 test
+test test_chat_with_mock_engine ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests\check_test.rs (target\debug\deps\check_test-4789f3dcabe7ba4c.exe)
+
+running 3 tests
+test test_check_nonexistent_databases ... ok
+test test_check_empty_databases ... ok
+test test_check_with_data ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.85s
+
+     Running tests\cli_test.rs (target\debug\deps\cli_test-ed7442b33345f4e4.exe)
+
+running 10 tests
+test test_engines_detect_invalid_engine ... ok
+test test_config_set_and_get ... ok
+test test_config_list ... ok
+test test_models_list ... ok
+test test_api_keys_create_and_list ... ok
+test test_api_keys_revoke ... ok
+test test_api_keys_rotate ... ok
+test test_engines_detect_text_format ... ok
+test test_engines_detect_specific_engine ... ok
+test test_engines_detect ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.92s
+
+     Running tests\engine_repository_test.rs (target\debug\deps\engine_repository_test-9ac4ec4a28f3fe7a.exe)
+
+running 5 tests
+test test_engine_repository_cache_nonexistent ... ok
+test test_engine_repository_cache_state ... ok
+test test_engine_repository_cache_multiple_engines ... ok
+test test_engine_repository_cache_update ... ok
+test test_engine_repository_cache_ttl_expiration ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.21s
+
+     Running tests\integration_test.rs (target\debug\deps\integration_test-9151b85ae9a70950.exe)
+
+running 4 tests
+test test_config_service_integration ... ok
+test test_security_service_integration ... ok
+test test_security_service_rotate ... ok
+test test_engine_service_detect_engines ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.61s
+
+     Running tests\process_controller_test.rs (target\debug\deps\process_controller_test-ebd6995f7cb0ea01.exe)
+
+running 5 tests
+test test_process_controller_detect_running ... ok
+test test_process_controller_llamacpp_detection ... ok
+test test_process_controller_detect_binaries ... ok
+test test_process_controller_lmstudio_detection ... ok
+test test_process_controller_vllm_detection ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.51s
+
+     Running tests\proxy_cli_test.rs (target\debug\deps\proxy_cli_test-65873e1a972e28cc.exe)
+
+running 3 tests
+test test_proxy_status_empty ... ok
+test test_proxy_stop_nonexistent ... ok
+test test_proxy_start_local_http ... FAILED
+
+failures:
+
+---- test_proxy_start_local_http stdout ----
+{
+  "data": {
+    "endpoint": "http://127.0.0.1:19080",
+    "id": "proxy-19080",
+    "listen_addr": "127.0.0.1:19080",
+    "mode": "local-http",
+    "pid": 22688,
+    "port": 19080,
+    "status": "running"
+  },
+  "version": "1.0"
+}
+{
+  "data": [],
+  "version": "1.0"
+}
+
+thread 'test_proxy_start_local_http' panicked at crates\flm-cli\tests\proxy_cli_test.rs:73:5:
+Proxy stop failed: Some("No proxy running on port 19080")
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    test_proxy_start_local_http
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.21s
+
+error: test failed, to rerun pass `-p flm-cli --test proxy_cli_test`

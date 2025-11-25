@@ -118,10 +118,12 @@ async fn execute_chat(
             }
         }
         if format != "text" {
-            println!("\nUsage: {} prompt + {} completion = {} total tokens",
+            println!(
+                "\nUsage: {} prompt + {} completion = {} total tokens",
                 response.usage.prompt_tokens,
                 response.usage.completion_tokens,
-                response.usage.total_tokens);
+                response.usage.total_tokens
+            );
         }
     }
 
@@ -172,10 +174,10 @@ async fn execute_chat_stream(
 
             if chunk.is_done {
                 if let Some(usage) = chunk.usage {
-                    println!("\n\nUsage: {} prompt + {} completion = {} total tokens",
-                        usage.prompt_tokens,
-                        usage.completion_tokens,
-                        usage.total_tokens);
+                    println!(
+                        "\n\nUsage: {} prompt + {} completion = {} total tokens",
+                        usage.prompt_tokens, usage.completion_tokens, usage.total_tokens
+                    );
                 }
                 break;
             }
@@ -185,4 +187,3 @@ async fn execute_chat_stream(
 
     Ok(())
 }
-

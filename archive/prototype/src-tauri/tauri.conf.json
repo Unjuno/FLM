@@ -53,7 +53,15 @@
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
-      "timestampUrl": ""
+      "timestampUrl": "",
+      "nsis": {
+        "displayLanguageSelector": true,
+        "installMode": "perMachine",
+        "installerIcon": "icons/icon.ico",
+        "headerImage": "icons/Square284x284Logo.png",
+        "sidebarImage": "icons/Square150x150Logo.png",
+        "license": "../LICENSE"
+      }
     },
     "macOS": {
       "frameworks": [],
@@ -71,7 +79,10 @@
         "bundleMediaFramework": false
       }
     },
-    "resources": [],
+    "resources": [
+      "resources/scripts/install-ca.ps1",
+      "resources/scripts/install-ca.sh"
+    ],
     "externalBin": [],
     "copyright": "© 2024 FLM. All rights reserved.",
     "category": "Utility",

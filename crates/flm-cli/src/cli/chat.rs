@@ -25,4 +25,3 @@ pub struct Chat {
     #[arg(long)]
     pub max_tokens: Option<u32>,
 }
-

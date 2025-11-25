@@ -1,183 +1,45 @@
 # 次の作業ステップ
 
-> Status: Ready | Updated: 2025-01-27 | Audience: All contributors
+> Status: Ready | Updated: 2025-11-25 | Audience: All contributors
 
-## 現在の状況
+## 現在のスナップショット（2025-11-25）
+- **完了済み**: Phase 0〜2、Security Phase 1〜3、主要CLI/Proxy/UI統合は `docs/status/completed/` と `reports/FULL_TEST_EXECUTION_REPORT.md` に記録済み。
+- **参照専用**: `archive/prototype/` はアーカイブ。生成物は `prototype-generated-assets.zip` に集約し、日常作業から切り離しています。
+- **アクティブファイル**: `docs/status/active/COMPILATION_ISSUE.md`, `PHASE1_PROGRESS.md`, `PROXY_SERVICE_PHASE2_PROGRESS.md`, `BOTNET_PROTECTION_PLAN.md`, `LINT_REMEDIATION_STATUS.md`, `TEST_ENVIRONMENT_STATUS.md` などが最新状態を追跡します。
 
-### ✅ 完了済み
-- **Phase 0**: ベース整備完了
-- **Phase 1A**: エンジン検出/モデル一覧機能完了
-- **Phase 1B**: ProxyService基本実装完了（`/v1/models`, `/v1/chat/completions`, `/v1/embeddings`）
-- **セキュリティ機能 Phase 1**: IPブロックリスト、侵入検知、監査ログ実装完了
-- **エンジンアダプター**: 4つすべて実装済み（Ollama, vLLM, LM Studio, llama.cpp）
-- **監査修正**: 中優先度の項目すべて対応完了
+## 優先タスク
+| # | 項目 | 期待成果 | 参照 |
+|---|------|----------|------|
+| 1 | Proxyコンパイルエラー解消 | `flm-proxy` の `axum` ハンドラーと `EngineProcessController` の `Sync` 問題を修正し、`reports/` に新しいビルドログを追加 | `docs/status/active/COMPILATION_ISSUE.md` |
+| 2 | Lint/Clippy差分解消 | `LINT_REMEDIATION_STATUS.md` にあるスタイル/Clippy修正を消化し、CIツールをグリーンに戻す | `docs/status/active/LINT_REMEDIATION_STATUS.md` |
+| 3 | Phase 3 パッケージング | `packaged-ca` モード実装、インストーラー/コード署名方針の確定、`PHASE3_PACKAGING_PLAN.md` の更新 | `docs/planning/PHASE3_PACKAGING_PLAN.md`, `docs/status/active/PHASE1_PROGRESS.md` |
+| 4 | セキュリティUIテスト拡充 | Botnet対策UIやセキュリティログUIの統合テストを追加し、結果を `reports/` に集約 | `docs/status/active/BOTNET_PROTECTION_PLAN.md`, `docs/status/active/TEST_ENVIRONMENT_STATUS.md` |
+| 5 | ドキュメント/レポート整備 | `docs/DOCUMENTATION_STRUCTURE.md`, `docs/status/README.md`, `reports/README.md` を最新構成に揃え、重複レポートを解消 | `docs/status/completed/tasks/FINAL_SUMMARY.md` (Housekeeping欄参照) |
 
-### 🔄 進行中・未完了
-- **セキュリティ機能 Phase 2/3**: 異常検知システム、リソース保護未実装
-- **監査低優先度項目**: 仕様書更新、使用例追加、ドメイン名検証
+## 実行順序の推奨
+1. **ビルド復旧** – `cargo check`, `cargo clippy`, `cargo test` を実行し、失敗時は `COMPILATION_ISSUE.md` に追記。成功ログは `reports/` へ。
+2. **Lint対応** – `LINT_REMEDIATION_STATUS.md` のTODOを順次消化し、完了後に `reports/` に結果を添付。
+3. **Phase 3 作業** – `packaged-ca` モード、インストーラーPoC、署名/配布フローを順に実装し、進捗を `PHASE3_PACKAGING_PLAN.md` に反映。
+4. **テスト拡充** – セキュリティUI/CLIの回帰テストを追加し、結果を `reports/FULL_TEST_EXECUTION_REPORT.md` にリンク。
+5. **ドキュメント更新** – 各タスク完了時に `docs/status/active/*` から `docs/status/completed/*` へ移動し、本ファイルの表と日付を更新。
 
-## 推奨作業順序
+## チェックリスト
+- [ ] Proxyビルドエラーの再発防止策を実装し、レポートを `reports/` に追加
+- [ ] Lint/Clippy差分ゼロを確認（`cargo fmt --check`, `cargo clippy` で検証）
+- [ ] `packaged-ca` モード用 `rcgen` API 改修を完了
+- [ ] セキュリティUIの統合テストを追加し `reports/` に結果を反映
+- [ ] ドキュメント更新後は `docs/status/README.md` と `docs/DOCUMENTATION_STRUCTURE.md` の該当セクションを同期
 
-### オプションA: セキュリティ機能拡張を優先（推奨）
-
-#### 1. セキュリティ機能 Phase 2 実装（高優先度）
-
-**目的**: 異常検知とリソース保護の実装
-
-**実装項目**:
-- [ ] 異常検知システム（簡易版）
-  - 大量リクエスト検出（1秒間に100リクエスト以上、1分間に1000リクエスト以上）
-  - 異常なリクエストパターン検出
-  - スコアリングシステム
-- [ ] リソース保護
-  - CPU使用率監視（閾値: 90%）
-  - メモリ使用率監視（閾値: 90%）
-  - 自動スロットリング
-- [ ] IPベースレート制限
-  - IP単位のレート制限（既存のAPIキーベースレート制限に追加）
-  - スライディングウィンドウ方式
-
-**参考**:
-- `docs/planning/BOTNET_PROTECTION_IMPLEMENTATION_PLAN.md` - 実装計画
-- `docs/status/completed/security/SECURITY_PHASE1_COMPLETE.md` - Phase 1完了レポート
-- `crates/flm-proxy/src/security/` - 既存のセキュリティ機能
-
-**見積もり**: 8-12時間
-
-#### 2. セキュリティ機能 Phase 3 実装（中優先度）
-
-**目的**: ハニーポットとUI統合
-
-**実装項目**:
-- [ ] ハニーポットエンドポイント
-  - 偽のエンドポイントで攻撃者を検出
-  - 自動ブロック
-- [ ] UI統合
-  - セキュリティイベントの可視化
-  - IPブロックリストの管理UI
-
-**見積もり**: 4-6時間
-
-#### 3. テスト実装（中優先度）
-
-**目的**: セキュリティ機能のテストカバレッジ向上
-
-**実装項目**:
-- [ ] IPブロックリストのテスト
-- [ ] 侵入検知のテスト
-- [ ] 監査ログのテスト
-- [ ] 異常検知のテスト（Phase 2実装後）
-
-**見積もり**: 4-6時間
-
-#### 3. 機能改善（低優先度）
-
-**実装項目**:
-- [ ] TTLチェック実装（キャッシュ有効期限）
-  - `EngineRepository::get_cached_engine_state()` のTTLチェック
-  - キャッシュの自動無効化
-- [ ] ドメイン名の検証実装
-  - `SecurityPolicy`の`acme_domain`検証
-  - 正規表現またはライブラリ使用
-
-**見積もり**: 2-3時間
-
-### オプションB: ドキュメント整備を優先
-
-#### 1. 仕様書の更新（低優先度）
-
-**目的**: 実装を反映して仕様書を更新
-
-**更新項目**:
-- [ ] `docs/specs/CORE_API.md` の更新
-  - `EngineRepository`で`Arc`を使用することを明記
-  - `ProxyController`、`ProxyRepository`、`ConfigRepository`、`SecurityRepository`が非同期であることを明記
-- [ ] 実装と仕様書の不整合を解消
-
-**見積もり**: 1-2時間
-
-#### 2. 使用例の追加（低優先度）
-
-**目的**: 開発者の理解を向上
-
-**追加項目**:
-- [ ] 主要なAPIに使用例を追加
-  - `SecurityService`の使用例
-  - `EngineService`の使用例
-  - `ProxyService`の使用例
-- [ ] READMEにクイックスタートガイドを追加
-
-**見積もり**: 2-3時間
-
-## 推奨される次のステップ
-
-### 即座に実施すべき項目（優先度: 高）
-
-1. **セキュリティ機能 Phase 2 実装**
-   - 異常検知システム（大量リクエスト検出、異常パターン検出）
-   - リソース保護（CPU/メモリ監視、自動スロットリング）
-   - IPベースレート制限
-
-   詳細: `docs/planning/BOTNET_PROTECTION_IMPLEMENTATION_PLAN.md` を参照
-
-### 短期対応推奨（優先度: 中）
-
-1. **セキュリティ機能のテスト実装**
-   - IPブロックリストのテスト
-   - 侵入検知のテスト
-   - 監査ログのテスト
-
-2. **セキュリティ機能 Phase 3 実装**
-   - ハニーポットエンドポイント
-   - UI統合
-
-### 長期対応（優先度: 低）
-
-1. **仕様書の更新**
-   - 実装を反映して仕様書を更新
-
-2. **使用例の追加**
-   - 主要なAPIに使用例を追加
-
-3. **ドメイン名の検証**
-   - `SecurityPolicy`の`acme_domain`検証を実装
-
-## 判断基準
-
-### セキュリティ機能拡張を優先する場合
-- 外部公開時のセキュリティを強化したい
-- 異常検知とリソース保護を実装したい
-- 実用的なセキュリティ機能を優先したい
-
-### テスト実装を優先する場合
-- 既存のセキュリティ機能の品質を保証したい
-- 回帰テストを追加したい
-- テストカバレッジを向上させたい
-
-### ドキュメント整備を優先する場合
-- 仕様書と実装の整合性を保ちたい
-- 新しい開発者のオンボーディングを改善したい
-- コードの保守性を向上させたい
-
-## 次のアクション
-
-どちらの方向性で進めるか決定してください：
-
-1. **セキュリティ機能拡張**: Phase 2実装から開始（推奨）
-2. **テスト実装**: セキュリティ機能のテストから開始
-3. **ドキュメント整備**: 仕様書更新から開始
-4. **その他**: 特定の機能や改善を指定
+## 参考リンク
+- `docs/planning/PLAN.md`
+- `docs/planning/PHASE3_PACKAGING_PLAN.md`
+- `docs/status/active/PHASE1_PROGRESS.md`
+- `docs/status/active/PROXY_SERVICE_PHASE2_PROGRESS.md`
+- `docs/status/active/BOTNET_PROTECTION_PLAN.md`
+- `docs/status/completed/tasks/FINAL_SUMMARY.md`
+- `reports/FULL_TEST_EXECUTION_REPORT.md`, `reports/FULL_TEST_EXECUTION_SUMMARY.md`
 
 ---
 
-**関連ドキュメント**:
-- `docs/planning/PLAN.md` - プロジェクト計画
-- `docs/planning/BOTNET_PROTECTION_IMPLEMENTATION_PLAN.md` - ボットネット対策実装計画
-- `docs/status/completed/security/SECURITY_PHASE1_COMPLETE.md` - セキュリティ機能Phase 1完了レポート
-- `docs/status/completed/tasks/FINAL_SUMMARY.md` - 最終サマリー
-- `docs/status/completed/phases/PHASE2_COMPLETE.md` - Phase 2完了レポート
-- `docs/audit/CORE_API_AUDIT.md` - Core API監査レポート
-- `docs/IMPLEMENTATION_STATUS.md` - 実装状況レポート
-
-**更新日**: 2025-01-27  
-**現在のフェーズ**: Phase 1B完了（セキュリティ機能Phase 1完了） / Phase 2準備中
+**更新日**: 2025-11-25  
+**現在のフェーズ**: Phase 2 完了 / Phase 3 パッケージング準備中 / ビルド & ドキュメント整備タスク進行中

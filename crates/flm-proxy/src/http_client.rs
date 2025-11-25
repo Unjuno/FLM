@@ -13,11 +13,14 @@ pub struct ReqwestHttpClient {
 impl ReqwestHttpClient {
     /// Create a new ReqwestHttpClient
     pub fn new() -> Result<Self, HttpError> {
-        let client = reqwest::Client::builder()
-            .build()
-            .map_err(|e| HttpError::NetworkError {
-                reason: format!("Failed to create HTTP client: {e}"),
-            })?;
+        Self::from_builder(reqwest::Client::builder())
+    }
+
+    /// Create a Reqwest client from a custom builder
+    pub fn from_builder(builder: reqwest::ClientBuilder) -> Result<Self, HttpError> {
+        let client = builder.build().map_err(|e| HttpError::NetworkError {
+            reason: format!("Failed to create HTTP client: {e}"),
+        })?;
         Ok(Self { client })
     }
 }

@@ -5,7 +5,7 @@
 
 use clap::Parser;
 use flm_cli::cli::{Cli, Commands};
-use flm_cli::commands;
+use flm_cli::commands::{self, CliUserError};
 
 #[tokio::main]
 async fn main() {
@@ -32,6 +32,14 @@ async fn main() {
             commands::models::execute(subcommand.clone(), cli.db_path_config, cli.format.clone())
                 .await
         }
+        Commands::ModelProfiles { subcommand } => {
+            commands::model_profiles::execute(
+                subcommand.clone(),
+                cli.db_path_config,
+                cli.format.clone(),
+            )
+            .await
+        }
         Commands::Proxy { subcommand } => {
             commands::proxy::execute(
                 subcommand.clone(),
@@ -49,6 +57,16 @@ async fn main() {
             )
             .await
         }
+        Commands::Api { subcommand } => match subcommand {
+            flm_cli::cli::api_prompts::ApiSubcommand::Prompts { subcommand } => {
+                commands::api_prompts::execute(
+                    subcommand.clone(),
+                    cli.db_path_config,
+                    cli.format.clone(),
+                )
+                .await
+            }
+        },
         Commands::Check { verbose } => {
             commands::check::execute(
                 *verbose,
@@ -63,8 +81,15 @@ async fn main() {
         }
     };
 
-    if let Err(e) = result {
-        eprintln!("Error: {e}");
-        std::process::exit(2); // Internal error
+    if let Err(err) = result {
+        if let Some(user_err) = err.downcast_ref::<CliUserError>() {
+            if let Some(message) = user_err.message() {
+                eprintln!("{message}");
+            }
+            std::process::exit(1);
+        } else {
+            eprintln!("Error: {}", err);
+            std::process::exit(2); // Internal error
+        }
     }
 }

@@ -31,4 +31,6 @@ pub trait ProxyRepository: Send + Sync {
         &self,
     ) -> Result<Vec<crate::domain::proxy::ProxyProfile>, crate::error::RepoError>;
     async fn list_active_handles(&self) -> Result<Vec<ProxyHandle>, crate::error::RepoError>;
+    async fn save_active_handle(&self, handle: ProxyHandle) -> Result<(), crate::error::RepoError>;
+    async fn remove_active_handle(&self, handle_id: &str) -> Result<(), crate::error::RepoError>;
 }

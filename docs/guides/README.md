@@ -1,6 +1,6 @@
 # Guides
 
-> Status: Reference | Audience: All contributors | Updated: 2025-01-27
+> Status: Reference | Audience: All contributors | Updated: 2025-11-25
 
 このディレクトリには、実装・運用に関するガイドとマニュアルが含まれています。
 
@@ -13,14 +13,15 @@ docs/guides/
 ├── SECURITY_FIREWALL_GUIDE.md        # ファイアウォール設定ガイド
 ├── MIGRATION_GUIDE.md                # 移行ガイド
 ├── TEST_STRATEGY.md                  # テスト戦略
-└── VERSIONING_POLICY.md              # バージョニングポリシー
+├── VERSIONING_POLICY.md              # バージョニングポリシー
+└── ENGINE_CACHE_FAQ.md               # エンジン検出キャッシュFAQ
 ```
 
 ## ガイド一覧
 
 ### SECURITY_BOTNET_PROTECTION.md - ボットネット対策ガイド
 
-**Status**: Canonical | **Audience**: All users | **Updated**: 2025-01-27
+**Status**: Canonical | **Audience**: All users | **Updated**: 2025-11-25
 
 外部公開時のボットネット対策機能の使い方。ユーザー向けの実用的なガイド。
 
@@ -36,7 +37,7 @@ docs/guides/
 
 ### SECURITY_FIREWALL_GUIDE.md - ファイアウォール設定ガイド
 
-**Status**: Canonical | **Audience**: UI backend / Ops | **Updated**: 2025-11-20
+**Status**: Canonical | **Audience**: UI backend / Ops | **Updated**: 2025-11-25
 
 ファイアウォール設定の自動化ガイド。Windows/macOS/Linux対応。
 
@@ -51,7 +52,7 @@ docs/guides/
 
 ### MIGRATION_GUIDE.md - 移行ガイド
 
-**Status**: Draft | **Audience**: CLI / Ops engineers | **Updated**: 2025-11-20
+**Status**: Draft | **Audience**: CLI / Ops engineers | **Updated**: 2025-11-25
 
 旧プロトタイプ（`archive/prototype/`）からの移行手順。
 
@@ -68,7 +69,7 @@ docs/guides/
 
 ### TEST_STRATEGY.md - テスト戦略
 
-**Status**: Draft | **Audience**: QA / Release engineers | **Updated**: 2025-11-20
+**Status**: Draft | **Audience**: QA / Release engineers | **Updated**: 2025-11-25
 
 プロジェクト全体のテスト戦略。単体テスト、統合テスト、E2Eテストの方針。
 
@@ -85,7 +86,7 @@ docs/guides/
 
 ### VERSIONING_POLICY.md - バージョニングポリシー
 
-**Status**: Canonical | **Audience**: Release/Platform engineers | **Updated**: 2025-11-20
+**Status**: Canonical | **Audience**: Release/Platform engineers | **Updated**: 2025-11-25
 
 バージョン管理ポリシー。Core/API/CLI/Proxyのバージョン管理方針。
 
@@ -122,10 +123,22 @@ docs/guides/
 - `SECURITY_FIREWALL_GUIDE.md` - ファイアウォール設定の実装
 - `MIGRATION_GUIDE.md` - データ移行の実装
 - `TEST_STRATEGY.md` - テストの実装
+- `ENGINE_CACHE_FAQ.md` - エンジン検出キャッシュの挙動とトラブルシュート
 
 ### 運用者向けガイド
 
 - `VERSIONING_POLICY.md` - リリース管理
+
+## CLI検証フロー（FORMAT → LINT → TYPECHECK → TEST）
+
+CLI の変更は必ず以下の順でツールを実行してください（`cargo` はワークスペースルートで実行）。
+
+1. **FORMAT_CMD**: `cargo fmt --all -- --check` （修正する場合は `cargo fmt --all`）
+2. **LINT_CMD**: `cargo clippy --all-targets --all-features -- -D warnings`
+3. **TYPECHECK_CMD**: `cargo check --workspace --all-targets`
+4. **TEST_CMD**: `cargo test --workspace --all-targets`（CLIのみ検証したい場合は `cargo test -p flm-cli --all-targets`）
+
+プロキシやUIと連携する CLI 機能を追加した場合は、上記に加えて `cargo test -p flm-cli --test cli_test` を実行してエンドツーエンドの CLI 実行結果を確認すること。
 
 ## 関連リソース
 

@@ -45,7 +45,7 @@ export const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
   const location = useLocation();
   const [collapsed, setCollapsed] = useState(defaultCollapsed);
   const [expandedCategories, setExpandedCategories] = useState<Set<string>>(
-    new Set(['基本機能'])
+    new Set(['基本機能', 'セキュリティ'])
   );
 
   // defaultCollapsed の変更を内部状態に反映
@@ -92,6 +92,27 @@ export const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
         label: 'ホーム',
         icon: '',
         description: 'アプリケーションのホーム画面',
+        category: '基本機能',
+      },
+      {
+        path: '/dashboard',
+        label: 'ダッシュボード',
+        icon: '',
+        description: 'エンジン状態、プロキシ状態、セキュリティアラートを表示',
+        category: '基本機能',
+      },
+      {
+        path: '/api/setup',
+        label: 'API設定',
+        icon: '',
+        description: 'モデル選択、APIキー管理、セキュリティポリシー、設定値',
+        category: '基本機能',
+      },
+      {
+        path: '/chat/tester',
+        label: 'Chat Tester',
+        icon: '',
+        description: 'Proxy経由でチャットテストを実行',
         category: '基本機能',
       },
       {
@@ -182,11 +203,54 @@ export const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
         ],
       },
       {
+        path: '/models/profiles',
+        label: 'モデルプロファイル',
+        icon: '',
+        description: 'モデルごとの推奨パラメータを管理',
+        category: '設定',
+      },
+      {
+        path: '/api/prompts',
+        label: 'APIプロンプト',
+        icon: '',
+        description: 'API応答テンプレートを編集',
+        category: '設定',
+      },
+      {
         path: '/certificates',
         label: '証明書管理',
         icon: '',
         description: 'SSL証明書の管理',
         category: '設定',
+      },
+      // セキュリティカテゴリ
+      {
+        path: '/security/ip-blocklist',
+        label: 'IPブロックリスト',
+        icon: '',
+        description: 'ブロックされたIPアドレスの管理',
+        category: 'セキュリティ',
+      },
+      {
+        path: '/security/audit-logs',
+        label: '監査ログ',
+        icon: '',
+        description: 'すべてのセキュリティイベントのログ',
+        category: 'セキュリティ',
+      },
+      {
+        path: '/security/intrusion',
+        label: '侵入検知',
+        icon: '',
+        description: '不正アクセス試行の検出イベント',
+        category: 'セキュリティ',
+      },
+      {
+        path: '/security/anomaly',
+        label: '異常検知',
+        icon: '',
+        description: '異常なリクエストパターンの検出',
+        category: 'セキュリティ',
       },
       {
         path: '/alerts/settings',
@@ -260,9 +324,12 @@ export const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
 
   // ナビゲーションハンドラ（ホーム中心のナビゲーション）
   // すべての機能はホーム画面から選択するため、すべての項目をクリックした場合はホームに遷移
-  const handleNavigation = useCallback(() => {
-    navigate('/');
-  }, [navigate]);
+  const handleNavigation = useCallback(
+    (path: string) => {
+      navigate(path);
+    },
+    [navigate]
+  );
 
   // className を安全に結合
   const sidebarClassName = useMemo(() => {
@@ -330,12 +397,12 @@ export const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                           position="right"
                           disabled={!collapsed}
                         >
-                          <button
-                            className={`sidebar-nav-link ${active ? 'active' : ''}`}
-                            onClick={() => handleNavigation()}
-                            aria-label={item.label}
-                            aria-current={active ? 'page' : undefined}
-                          >
+                            <button
+                              className={`sidebar-nav-link ${active ? 'active' : ''}`}
+                              onClick={() => handleNavigation(item.path)}
+                              aria-label={item.label}
+                              aria-current={active ? 'page' : undefined}
+                            >
                             <span className="sidebar-nav-icon">
                               {item.icon}
                             </span>
@@ -363,7 +430,7 @@ export const EnhancedSidebar: React.FC<EnhancedSidebarProps> = ({
                               >
                                 <button
                                   className={`sidebar-sub-nav-link ${isActive(child.path) ? 'active' : ''}`}
-                                  onClick={() => handleNavigation()}
+                                  onClick={() => handleNavigation(child.path)}
                                   aria-label={child.label}
                                 >
                                   <span className="sidebar-sub-nav-icon">

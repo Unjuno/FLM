@@ -49,7 +49,12 @@ impl IntrusionDetection {
         let mut detected_patterns = Vec::new();
 
         // 1. SQL injection attempt
-        if path.contains('\'') || path.contains(';') || path.contains("--") || path.contains("/*") || path.contains("*/") {
+        if path.contains('\'')
+            || path.contains(';')
+            || path.contains("--")
+            || path.contains("/*")
+            || path.contains("*/")
+        {
             score += 20;
             detected_patterns.push("sql_injection".to_string());
         }
@@ -63,8 +68,11 @@ impl IntrusionDetection {
         // 3. Suspicious User-Agent
         if let Some(ua) = user_agent {
             let ua_lower = ua.to_lowercase();
-            if ua_lower.contains("sqlmap") || ua_lower.contains("nikto") || 
-               ua_lower.contains("nmap") || ua_lower.contains("masscan") {
+            if ua_lower.contains("sqlmap")
+                || ua_lower.contains("nikto")
+                || ua_lower.contains("nmap")
+                || ua_lower.contains("masscan")
+            {
                 score += 10;
                 detected_patterns.push("suspicious_user_agent".to_string());
             }
@@ -75,25 +83,29 @@ impl IntrusionDetection {
         }
 
         // 4. Unusual HTTP methods
-        if method != "GET" && method != "POST" && method != "PUT" && method != "DELETE" && method != "PATCH" {
-            if method == "TRACE" || method == "OPTIONS" {
-                score += 10;
-                detected_patterns.push("unusual_method".to_string());
-            }
+        if method != "GET"
+            && method != "POST"
+            && method != "PUT"
+            && method != "DELETE"
+            && method != "PATCH"
+            && (method == "TRACE" || method == "OPTIONS")
+        {
+            score += 10;
+            detected_patterns.push("unusual_method".to_string());
         }
 
         // Update score for this IP
         if score > 0 {
             let mut ip_scores = self.ip_scores.write().await;
             let now = Instant::now();
-            
+
             let entry = ip_scores.entry(*ip).or_insert_with(|| IntrusionScore {
                 score: 0,
                 first_detection: now,
                 last_detection: now,
                 patterns: Vec::new(),
             });
-            
+
             entry.score += score;
             entry.last_detection = now;
             entry.patterns.extend(detected_patterns);
@@ -113,10 +125,10 @@ impl IntrusionDetection {
     /// Returns (should_block, block_duration_seconds)
     pub async fn should_block(&self, ip: &IpAddr) -> (bool, Option<u64>) {
         let ip_scores = self.ip_scores.read().await;
-        
+
         if let Some(score_entry) = ip_scores.get(ip) {
             let score = score_entry.score;
-            
+
             if score >= 200 {
                 // 24-hour block
                 (true, Some(86400))
@@ -145,6 +157,29 @@ impl IntrusionDetection {
             .map(|(ip, score)| (*ip, score.clone()))
             .collect()
     }
+
+    /// Add score directly for an IP address (e.g., for honeypot access)
+    ///
+    /// Returns the new total score for the IP.
+    pub async fn add_score(&self, ip: &IpAddr, points: u32, pattern: &str) -> u32 {
+        let mut ip_scores = self.ip_scores.write().await;
+        let now = Instant::now();
+
+        let entry = ip_scores.entry(*ip).or_insert_with(|| IntrusionScore {
+            score: 0,
+            first_detection: now,
+            last_detection: now,
+            patterns: Vec::new(),
+        });
+
+        entry.score += points;
+        entry.last_detection = now;
+        if !entry.patterns.contains(&pattern.to_string()) {
+            entry.patterns.push(pattern.to_string());
+        }
+
+        entry.score
+    }
 }
 
 impl Default for IntrusionDetection {
@@ -152,4 +187,3 @@ impl Default for IntrusionDetection {
         Self::new()
     }
 }
-

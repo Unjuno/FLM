@@ -78,4 +78,3 @@ async fn test_check_nonexistent_databases() {
     // Should succeed but with warnings
     assert!(result.is_ok());
 }
-

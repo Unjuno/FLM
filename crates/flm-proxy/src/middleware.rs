@@ -1,10 +1,14 @@
 //! Axum middleware for authentication and policy enforcement
 
+use crate::adapters::{AuditLogMetadata, IntrusionRequestContext};
+use crate::security::{AnomalyDetection, IntrusionDetection, IpBlocklist, ResourceProtection};
+use crate::utils;
 use axum::extract::Request;
 use axum::http::{HeaderMap, StatusCode};
 use axum::middleware::Next;
 use axum::response::{IntoResponse, Response};
 use axum::Json;
+use flm_core::domain::proxy::ProxyEgressConfig;
 use flm_core::services::SecurityService;
 use ipnet::IpNet;
 use std::net::IpAddr;
@@ -13,8 +17,6 @@ use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tokio::time::timeout;
 use tracing::{error, warn};
-use crate::security::{IpBlocklist, IntrusionDetection};
-use crate::utils;
 
 /// Application state for the proxy server
 #[derive(Clone)]
@@ -25,12 +27,20 @@ pub struct AppState {
     pub engine_repo: Arc<dyn flm_core::ports::EngineRepository + Send + Sync>,
     /// Rate limit state: API key ID -> (request count, reset time)
     pub rate_limit_state: Arc<RwLock<std::collections::HashMap<String, (u32, Instant)>>>,
+    /// IP-based rate limit state: IP address -> (request count, reset time)
+    pub ip_rate_limit_state: Arc<RwLock<std::collections::HashMap<IpAddr, (u32, Instant)>>>,
     /// Trusted proxy IP addresses (for X-Forwarded-For header validation)
     pub trusted_proxy_ips: Vec<String>,
     /// IP blocklist for botnet protection
     pub ip_blocklist: Arc<IpBlocklist>,
     /// Intrusion detection system
     pub intrusion_detection: Arc<IntrusionDetection>,
+    /// Anomaly detection system
+    pub anomaly_detection: Arc<AnomalyDetection>,
+    /// Resource protection system
+    pub resource_protection: Arc<ResourceProtection>,
+    /// Effective egress configuration (for telemetry/logging)
+    pub egress: ProxyEgressConfig,
 }
 
 /// Policy middleware
@@ -56,14 +66,20 @@ pub async fn policy_middleware(
         Ok(None) => {
             // No policy configured - fail closed for security
             // Log warning and deny access
-            warn!(error_type = "no_policy", "No security policy configured. Denying access for security.");
+            warn!(
+                error_type = "no_policy",
+                "No security policy configured. Denying access for security."
+            );
             return create_forbidden_response("No security policy configured. Access denied.")
                 .into_response();
         }
         Err(_) => {
             // Error fetching policy - fail closed for security
             // Log error and deny access (don't expose error details)
-            error!(error_type = "policy_fetch_error", "Failed to fetch security policy. Denying access for security.");
+            error!(
+                error_type = "policy_fetch_error",
+                "Failed to fetch security policy. Denying access for security."
+            );
             return create_forbidden_response("Security policy error. Access denied.")
                 .into_response();
         }
@@ -75,7 +91,10 @@ pub async fn policy_middleware(
         Err(_) => {
             // Invalid policy JSON - fail closed for security
             // Don't expose parsing error details
-            error!(error_type = "invalid_policy_json", "Invalid security policy JSON. Denying access for security.");
+            error!(
+                error_type = "invalid_policy_json",
+                "Invalid security policy JSON. Denying access for security."
+            );
             return create_forbidden_response("Invalid security policy. Access denied.")
                 .into_response();
         }
@@ -104,7 +123,24 @@ pub async fn policy_middleware(
     // 2. Extract CORS headers from policy
     let cors_headers = extract_cors_headers(&policy_json);
 
-    // 3. Check rate limit
+    // 3. Check IP-based rate limit (1000 req/min default)
+    // This is in addition to API key-based rate limiting
+    {
+        let ip_rate_limit_rpm = 1000u32; // Default: 1000 requests per minute
+        let ip_rate_limit_burst = 1000u32;
+        let (allowed, _, _) = check_ip_rate_limit_with_info(
+            &state,
+            &client_ip,
+            ip_rate_limit_rpm,
+            ip_rate_limit_burst,
+        )
+        .await;
+        if !allowed {
+            return create_rate_limit_response().into_response();
+        }
+    }
+
+    // 4. Check API key-based rate limit
     // Get API key ID from request extensions (set by auth_middleware)
     // Note: auth_middleware runs before policy_middleware, so the API key ID
     // should be available in request extensions if authentication succeeded.
@@ -117,13 +153,9 @@ pub async fn policy_middleware(
                         .and_then(|v| v.as_u64())
                         .unwrap_or(rpm);
 
-                    let (allowed, remaining, reset_time) = check_rate_limit_with_info(
-                        &state,
-                        api_key_id,
-                        rpm as u32,
-                        burst as u32,
-                    )
-                    .await;
+                    let (allowed, remaining, reset_time) =
+                        check_rate_limit_with_info(&state, api_key_id, rpm as u32, burst as u32)
+                            .await;
 
                     if !allowed {
                         return create_rate_limit_response().into_response();
@@ -186,14 +218,19 @@ pub async fn policy_middleware(
                 let reset_timestamp = match reset_time.duration_since(std::time::UNIX_EPOCH) {
                     Ok(duration) => duration.as_secs(),
                     Err(_) => {
-                        warn!(error_type = "reset_timestamp_calc_failed", "Failed to calculate reset timestamp. Using current time.");
+                        warn!(
+                            error_type = "reset_timestamp_calc_failed",
+                            "Failed to calculate reset timestamp. Using current time."
+                        );
                         std::time::SystemTime::now()
                             .duration_since(std::time::UNIX_EPOCH)
                             .unwrap_or_default()
                             .as_secs()
                     }
                 };
-                if let Ok(reset_value) = axum::http::HeaderValue::from_str(&reset_timestamp.to_string()) {
+                if let Ok(reset_value) =
+                    axum::http::HeaderValue::from_str(&reset_timestamp.to_string())
+                {
                     headers.insert(
                         axum::http::HeaderName::from_static("x-ratelimit-reset"),
                         reset_value,
@@ -225,17 +262,14 @@ pub async fn intrusion_detection_middleware(
     let client_ip = extract_client_ip(&request, &headers, &state.trusted_proxy_ips);
     let path = request.uri().path().to_string();
     let method = request.method().to_string();
-    let user_agent = headers.get("user-agent")
-        .and_then(|h| h.to_str().ok());
-    
+    let user_agent = headers.get("user-agent").and_then(|h| h.to_str().ok());
+
     // Check for intrusion patterns
-    let score = state.intrusion_detection.check_request(
-        &client_ip,
-        &path,
-        &method,
-        user_agent,
-    ).await;
-    
+    let score = state
+        .intrusion_detection
+        .check_request(&client_ip, &path, &method, user_agent)
+        .await;
+
     // If score > 0, log the intrusion attempt
     if score > 0 {
         let security_repo = Arc::clone(&state.security_repo);
@@ -246,7 +280,7 @@ pub async fn intrusion_detection_middleware(
         let path_clone = path.clone();
         let method_clone = method.clone();
         let user_agent_clone = user_agent.map(|s| s.to_string());
-        
+
         tokio::spawn(async move {
             let current_score = intrusion_detection.get_score(&client_ip_for_db).await;
             let id = format!(
@@ -254,7 +288,7 @@ pub async fn intrusion_detection_middleware(
                 chrono::Utc::now().timestamp_millis(),
                 rand::random::<u64>()
             );
-            
+
             // Save to database
             let _ = security_repo
                 .save_intrusion_attempt(
@@ -262,14 +296,17 @@ pub async fn intrusion_detection_middleware(
                     &client_ip_for_db,
                     "multiple_patterns",
                     current_score,
-                    Some(&path_clone),
-                    user_agent_clone.as_deref(),
-                    Some(&method_clone),
+                    IntrusionRequestContext {
+                        request_path: Some(&path_clone),
+                        user_agent: user_agent_clone.as_deref(),
+                        method: Some(&method_clone),
+                    },
                 )
                 .await;
-            
+
             // Check if should block
-            let (should_block, block_duration) = intrusion_detection.should_block(&client_ip_for_db).await;
+            let (should_block, block_duration) =
+                intrusion_detection.should_block(&client_ip_for_db).await;
             if should_block {
                 // Add to IP blocklist by recording failures
                 // Score 100-199 -> 1 hour block (equivalent to ~10 failures)
@@ -281,33 +318,253 @@ pub async fn intrusion_detection_middleware(
                 } else {
                     0 // Don't block yet
                 };
-                
+
                 for _ in 0..failures_to_record {
                     let _ = ip_blocklist.record_failure(client_ip_for_db).await;
                 }
-                
+
                 // Log the intrusion event
+                let request_id = format!("{id}-intrusion");
+                let detail_json = serde_json::json!({
+                    "score": current_score,
+                    "block_duration_seconds": block_duration,
+                    "failures_recorded": failures_to_record
+                })
+                .to_string();
                 let _ = security_repo
                     .save_audit_log(
-                        &format!("{}-intrusion", id),
+                        &request_id,
                         None,
                         &path_clone,
                         403,
                         None,
                         Some("intrusion"),
-                        "high",
-                        Some(&client_ip_str),
-                        Some(&serde_json::json!({
-                            "score": current_score,
-                            "block_duration_seconds": block_duration,
-                            "failures_recorded": failures_to_record
-                        }).to_string()),
+                        AuditLogMetadata {
+                            severity: "high",
+                            ip: Some(&client_ip_str),
+                            details: Some(detail_json.as_str()),
+                        },
                     )
                     .await;
             }
         });
     }
-    
+
+    next.run(request).await
+}
+
+/// Anomaly detection middleware
+///
+/// This middleware checks requests for unusual patterns and assigns scores.
+/// Should run after intrusion detection and before IP block check.
+pub async fn anomaly_detection_middleware(
+    axum::extract::State(state): axum::extract::State<AppState>,
+    headers: HeaderMap,
+    request: Request,
+    next: Next,
+) -> Response {
+    // Skip anomaly detection for /health endpoint
+    if request.uri().path() == "/health" {
+        return next.run(request).await;
+    }
+
+    // Extract client IP
+    let client_ip = extract_client_ip(&request, &headers, &state.trusted_proxy_ips);
+    let path = request.uri().path().to_string();
+    let method = request.method().to_string();
+
+    // Get request body size (if available)
+    let body_size = request
+        .headers()
+        .get("content-length")
+        .and_then(|h| h.to_str().ok())
+        .and_then(|s| s.parse::<usize>().ok());
+
+    // Record request start time
+    let request_start = Instant::now();
+
+    // Process request
+    let response = next.run(request).await;
+
+    // Calculate request duration
+    let request_duration = request_start.elapsed();
+
+    // Check if response is 404
+    let is_404 = response.status() == StatusCode::NOT_FOUND;
+
+    // Check for anomalies
+    let score = state
+        .anomaly_detection
+        .check_request(
+            &client_ip,
+            &path,
+            &method,
+            body_size,
+            Some(request_duration),
+            is_404,
+        )
+        .await;
+
+    // If score > 0, log the anomaly and check if should block
+    if score > 0 {
+        let security_repo = Arc::clone(&state.security_repo);
+        let anomaly_detection = Arc::clone(&state.anomaly_detection);
+        let ip_blocklist = Arc::clone(&state.ip_blocklist);
+        let client_ip_for_db = client_ip;
+        let client_ip_str = client_ip_for_db.to_string();
+        let path_clone = path.clone();
+        let method_clone = method.clone();
+
+        tokio::spawn(async move {
+            let current_score = anomaly_detection.get_score(&client_ip_for_db).await;
+            let id = format!(
+                "{}-{}",
+                chrono::Utc::now().timestamp_millis(),
+                rand::random::<u64>()
+            );
+
+            // Save to database (if we have an anomaly_detections table)
+            // For now, we'll log it as an audit log entry
+            let detail_json = serde_json::json!({
+                "anomaly_score": current_score,
+                "path": path_clone,
+                "method": method_clone,
+                "body_size": body_size,
+                "request_duration_ms": request_duration.as_millis(),
+                "is_404": is_404
+            })
+            .to_string();
+            let _ = security_repo
+                .save_audit_log(
+                    &id,
+                    None,
+                    &path_clone,
+                    200, // Status code doesn't matter for anomaly detection
+                    None,
+                    Some("anomaly"),
+                    AuditLogMetadata {
+                        severity: "medium",
+                        ip: Some(&client_ip_str),
+                        details: Some(detail_json.as_str()),
+                    },
+                )
+                .await;
+
+            // Check if should block
+            let (should_block, block_duration) =
+                anomaly_detection.should_block(&client_ip_for_db).await;
+            if should_block {
+                // Add to IP blocklist by recording failures
+                // Score 100-199 -> 1 hour block (equivalent to ~10 failures)
+                // Score 200+ -> 24 hour block (equivalent to ~20 failures)
+                let failures_to_record = if current_score >= 200 {
+                    20 // Permanent block threshold
+                } else if current_score >= 100 {
+                    10 // 24-hour block threshold
+                } else {
+                    0 // Don't block yet
+                };
+
+                for _ in 0..failures_to_record {
+                    let _ = ip_blocklist.record_failure(client_ip_for_db).await;
+                }
+
+                // Log the block event
+                let request_id = format!("{id}-anomaly-block");
+                let detail_json = serde_json::json!({
+                    "score": current_score,
+                    "block_duration_seconds": block_duration,
+                    "failures_recorded": failures_to_record
+                })
+                .to_string();
+                let _ = security_repo
+                    .save_audit_log(
+                        &request_id,
+                        None,
+                        &path_clone,
+                        403,
+                        None,
+                        Some("anomaly_block"),
+                        AuditLogMetadata {
+                            severity: "high",
+                            ip: Some(&client_ip_str),
+                            details: Some(detail_json.as_str()),
+                        },
+                    )
+                    .await;
+            }
+        });
+    }
+
+    response
+}
+
+/// Resource protection middleware
+///
+/// This middleware checks resource usage (CPU/memory) and throttles new connections if thresholds are exceeded.
+/// Should run before IP block check.
+pub async fn resource_protection_middleware(
+    axum::extract::State(state): axum::extract::State<AppState>,
+    request: Request,
+    next: Next,
+) -> Response {
+    // Skip resource protection for /health endpoint
+    if request.uri().path() == "/health" {
+        return next.run(request).await;
+    }
+
+    // Check if resource protection is active
+    if state.resource_protection.should_throttle().await {
+        let security_repo = Arc::clone(&state.security_repo);
+        let resource_protection = Arc::clone(&state.resource_protection);
+        let endpoint = request.uri().path().to_string();
+        let request_id = format!(
+            "{}-{}",
+            chrono::Utc::now().timestamp_millis(),
+            rand::random::<u64>()
+        );
+
+        // Log resource alert
+        tokio::spawn(async move {
+            let cpu_usage = resource_protection.get_last_cpu_usage().await;
+            let memory_usage = resource_protection.get_last_memory_usage().await;
+            let detail_json = serde_json::json!({
+                "cpu_usage": cpu_usage,
+                "memory_usage": memory_usage,
+                "cpu_threshold": 0.9,
+                "memory_threshold": 0.9
+            })
+            .to_string();
+            let _ = security_repo
+                .save_audit_log(
+                    &request_id,
+                    None,
+                    &endpoint,
+                    503, // Service Unavailable
+                    None,
+                    Some("resource_alert"),
+                    AuditLogMetadata {
+                        severity: "high",
+                        ip: None,
+                        details: Some(detail_json.as_str()),
+                    },
+                )
+                .await;
+        });
+
+        return (
+            StatusCode::SERVICE_UNAVAILABLE,
+            Json(serde_json::json!({
+                "error": {
+                    "message": "Service temporarily unavailable due to high resource usage",
+                    "type": "resource_throttle",
+                    "code": "resource_throttle"
+                }
+            })),
+        )
+            .into_response();
+    }
+
     next.run(request).await
 }
 
@@ -328,7 +585,7 @@ pub async fn ip_block_check_middleware(
 
     // Extract client IP
     let client_ip = extract_client_ip(&request, &headers, &state.trusted_proxy_ips);
-    
+
     // Check if IP is blocked
     if state.ip_blocklist.is_blocked(&client_ip).await {
         let client_ip_str = client_ip.to_string();
@@ -339,9 +596,13 @@ pub async fn ip_block_check_middleware(
             rand::random::<u64>()
         );
         let endpoint = request.uri().path().to_string();
-        
+
         // Log blocked request
         tokio::spawn(async move {
+            let detail_json = serde_json::json!({
+                "reason": "ip_blocked"
+            })
+            .to_string();
             let _ = security_repo
                 .save_audit_log(
                     &request_id,
@@ -350,15 +611,15 @@ pub async fn ip_block_check_middleware(
                     403,
                     None,
                     Some("ip_blocked"),
-                    "high",
-                    Some(&client_ip_str),
-                    Some(&serde_json::json!({
-                        "reason": "ip_blocked"
-                    }).to_string()),
+                    AuditLogMetadata {
+                        severity: "high",
+                        ip: Some(&client_ip_str),
+                        details: Some(detail_json.as_str()),
+                    },
                 )
                 .await;
         });
-        
+
         return (
             StatusCode::FORBIDDEN,
             Json(serde_json::json!({
@@ -371,7 +632,7 @@ pub async fn ip_block_check_middleware(
         )
             .into_response();
     }
-    
+
     next.run(request).await
 }
 
@@ -386,8 +647,14 @@ pub async fn auth_middleware(
     mut request: Request,
     next: Next,
 ) -> Response {
-    // Skip authentication for /health endpoint
-    if request.uri().path() == "/health" {
+    // Skip authentication for /health endpoint and honeypot endpoints
+    let path = request.uri().path();
+    if path == "/health"
+        || path == "/admin"
+        || path == "/api/v1/users"
+        || path == "/wp-admin"
+        || path == "/phpmyadmin"
+    {
         return next.run(request).await;
     }
 
@@ -406,12 +673,16 @@ pub async fn auth_middleware(
                 rand::random::<u64>()
             );
             let endpoint = request.uri().path().to_string();
-            
+
             // Record failure and check if should block
             let should_block = ip_blocklist.record_failure(client_ip).await;
-            
+
             // Log security event
             tokio::spawn(async move {
+                let detail_json = serde_json::json!({
+                    "reason": "missing_authorization_header"
+                })
+                .to_string();
                 let _ = security_repo
                     .save_audit_log(
                         &request_id,
@@ -420,20 +691,20 @@ pub async fn auth_middleware(
                         401,
                         None,
                         Some("auth_failure"),
-                        "medium",
-                        Some(&client_ip_str),
-                        Some(&serde_json::json!({
-                            "reason": "missing_authorization_header"
-                        }).to_string()),
+                        AuditLogMetadata {
+                            severity: "medium",
+                            ip: Some(&client_ip_str),
+                            details: Some(detail_json.as_str()),
+                        },
                     )
                     .await;
-                
+
                 // Sync to database if needed
                 if should_block {
                     // Sync will be handled by background task
                 }
             });
-            
+
             return create_unauthorized_response().into_response();
         }
     };
@@ -451,12 +722,16 @@ pub async fn auth_middleware(
             rand::random::<u64>()
         );
         let endpoint = request.uri().path().to_string();
-        
+
         // Record failure
         let _ = ip_blocklist.record_failure(client_ip).await;
-        
+
         // Log security event
         tokio::spawn(async move {
+            let detail_json = serde_json::json!({
+                "reason": "invalid_authorization_format"
+            })
+            .to_string();
             let _ = security_repo
                 .save_audit_log(
                     &request_id,
@@ -465,15 +740,15 @@ pub async fn auth_middleware(
                     401,
                     None,
                     Some("auth_failure"),
-                    "medium",
-                    Some(&client_ip_str),
-                    Some(&serde_json::json!({
-                        "reason": "invalid_authorization_format"
-                    }).to_string()),
+                    AuditLogMetadata {
+                        severity: "medium",
+                        ip: Some(&client_ip_str),
+                        details: Some(detail_json.as_str()),
+                    },
                 )
                 .await;
         });
-        
+
         return create_unauthorized_response().into_response();
     }
 
@@ -489,7 +764,7 @@ pub async fn auth_middleware(
     let client_ip = extract_client_ip(&request, &headers, &state.trusted_proxy_ips);
     let client_ip_str = client_ip.to_string();
     let ip_blocklist: Arc<IpBlocklist> = Arc::clone(&state.ip_blocklist);
-    
+
     // Verify the API key
     match state.security_service.verify_api_key(token).await {
         Ok(Some(record)) => {
@@ -509,12 +784,16 @@ pub async fn auth_middleware(
             let endpoint = request.uri().path().to_string();
             let ip_blocklist_for_sync: Arc<IpBlocklist> = Arc::clone(&ip_blocklist);
             let security_repo_for_sync = security_repo.clone();
-            
+
             // Record failure and check if should block
             let should_block = ip_blocklist.record_failure(client_ip).await;
-            
+
             // Log security event
             tokio::spawn(async move {
+                let detail_json = serde_json::json!({
+                    "reason": "invalid_or_revoked_api_key"
+                })
+                .to_string();
                 let _ = security_repo
                     .save_audit_log(
                         &request_id,
@@ -523,22 +802,25 @@ pub async fn auth_middleware(
                         401,
                         None,
                         Some("auth_failure"),
-                        "medium",
-                        Some(&client_ip_str),
-                        Some(&serde_json::json!({
-                            "reason": "invalid_or_revoked_api_key"
-                        }).to_string()),
+                        AuditLogMetadata {
+                            severity: "medium",
+                            ip: Some(&client_ip_str),
+                            details: Some(detail_json.as_str()),
+                        },
                     )
                     .await;
-                
+
                 // Sync to database if block was applied
                 if should_block {
-                    if let Err(e) = ip_blocklist_for_sync.sync_to_db(&security_repo_for_sync).await {
+                    if let Err(e) = ip_blocklist_for_sync
+                        .sync_to_db(&security_repo_for_sync)
+                        .await
+                    {
                         error!(error = %e, "Failed to sync IP blocklist to database");
                     }
                 }
             });
-            
+
             create_unauthorized_response().into_response()
         }
         Err(_) => {
@@ -551,6 +833,10 @@ pub async fn auth_middleware(
             );
             let endpoint = request.uri().path().to_string();
             tokio::spawn(async move {
+                let detail_json = serde_json::json!({
+                    "reason": "verification_error"
+                })
+                .to_string();
                 let _ = security_repo
                     .save_audit_log(
                         &request_id,
@@ -559,11 +845,11 @@ pub async fn auth_middleware(
                         500,
                         None,
                         Some("auth_failure"),
-                        "high",
-                        Some(&client_ip_str),
-                        Some(&serde_json::json!({
-                            "reason": "verification_error"
-                        }).to_string()),
+                        AuditLogMetadata {
+                            severity: "high",
+                            ip: Some(&client_ip_str),
+                            details: Some(detail_json.as_str()),
+                        },
                     )
                     .await;
             });
@@ -573,10 +859,10 @@ pub async fn auth_middleware(
 }
 
 /// Extract client IP from request
-/// 
+///
 /// Security: Only trusts X-Forwarded-For and X-Real-IP headers if the request
 /// comes from a trusted proxy IP. Otherwise, uses the direct connection IP.
-fn extract_client_ip(
+pub fn extract_client_ip(
     request: &Request,
     headers: &HeaderMap,
     trusted_proxy_ips: &[String],
@@ -589,12 +875,13 @@ fn extract_client_ip(
         .unwrap_or_else(|| {
             // Fallback to localhost if connection info is not available
             // This should never fail, but handle it gracefully to prevent panic
-            "127.0.0.1"
-                .parse()
-                .unwrap_or_else(|_| {
-                    error!(error_type = "ip_parse_failed", "CRITICAL: Failed to parse 127.0.0.1, this should never happen");
-                    std::net::IpAddr::V4(std::net::Ipv4Addr::new(127, 0, 0, 1))
-                })
+            "127.0.0.1".parse().unwrap_or_else(|_| {
+                error!(
+                    error_type = "ip_parse_failed",
+                    "CRITICAL: Failed to parse 127.0.0.1, this should never happen"
+                );
+                std::net::IpAddr::V4(std::net::Ipv4Addr::new(127, 0, 0, 1))
+            })
         });
 
     // If no trusted proxies configured, only use direct connection IP
@@ -681,29 +968,31 @@ async fn check_rate_limit_with_info(
     let now = Instant::now();
     let window_duration = Duration::from_secs(60); // 1 minute window
 
-        // Try to load from database if not in memory cache
-        let (count, reset_time) = if let Some((mem_count, mem_reset)) = rate_limit_state.get(api_key_id) {
-            (*mem_count, *mem_reset)
-        } else {
-            // Load from database
-            if let Ok(Some((db_count, db_reset_at))) = state.security_repo
-                .fetch_rate_limit_state(api_key_id)
-                .await
-            {
-                // Parse reset_at timestamp
-                if let Ok(reset_chrono) = chrono::DateTime::parse_from_rfc3339(&db_reset_at) {
-                let reset_system = reset_chrono.with_timezone(&chrono::Utc);
-                let reset_duration = reset_system
-                    .signed_duration_since(chrono::Utc::now())
+    // Try to load from database if not in memory cache
+    let (count, reset_time) = if let Some((mem_count, mem_reset)) = rate_limit_state.get(api_key_id)
+    {
+        (*mem_count, *mem_reset)
+    } else {
+        // Load from database
+        if let Ok(Some((db_count, db_reset_at))) =
+            state.security_repo.fetch_rate_limit_state(api_key_id).await
+        {
+            // Parse reset_at timestamp
+            if let Ok(reset_chrono) = chrono::DateTime::parse_from_rfc3339(&db_reset_at) {
+                let reset_utc = reset_chrono.with_timezone(&chrono::Utc);
+                let now_utc = chrono::Utc::now();
+                let reset_duration = reset_utc
+                    .signed_duration_since(now_utc)
                     .to_std()
                     .unwrap_or_default();
-                let reset_instant = now + reset_duration;
-                
-                // If expired, reset
-                if now > reset_instant {
-                    (0, now + window_duration)
-                } else {
+
+                // Calculate reset_instant: if reset_at is in the future, use it; otherwise reset
+                if reset_duration > Duration::ZERO {
+                    let reset_instant = now + reset_duration;
                     (db_count, reset_instant)
+                } else {
+                    // Expired, reset
+                    (0, now + window_duration)
                 }
             } else {
                 // Invalid timestamp, reset
@@ -715,8 +1004,74 @@ async fn check_rate_limit_with_info(
         }
     };
 
-    // Store in memory cache
-    rate_limit_state.insert(api_key_id.to_string(), (count, reset_time));
+    // Reset if window has expired
+    let (count, reset_time) = if now > reset_time {
+        (0, now + window_duration)
+    } else {
+        (count, reset_time)
+    };
+
+    // Check if limit would be exceeded after incrementing
+    // We check count + 1 > burst to determine if this request should be allowed
+    let new_count = count + 1;
+    let allowed = new_count <= burst;
+
+    // Calculate remaining requests (after this request is counted, if allowed)
+    let remaining = if allowed {
+        burst.saturating_sub(new_count)
+    } else {
+        0
+    };
+
+    // Always increment count for tracking purposes (even if over limit)
+    rate_limit_state.insert(api_key_id.to_string(), (new_count, reset_time));
+
+    // Persist to database asynchronously (don't block the request)
+    let security_repo = Arc::clone(&state.security_repo);
+    let api_key_id_clone = api_key_id.to_string();
+    let reset_at = chrono::Utc::now()
+        .checked_add_signed(chrono::Duration::seconds(
+            reset_time.saturating_duration_since(now).as_secs() as i64,
+        ))
+        .unwrap_or_else(chrono::Utc::now)
+        .to_rfc3339();
+
+    tokio::spawn(async move {
+        if let Err(e) = security_repo
+            .save_rate_limit_state(&api_key_id_clone, new_count, &reset_at)
+            .await
+        {
+            error!(error_type = "rate_limit_persist_failed", api_key_id = %utils::mask_identifier(&api_key_id_clone), "Failed to persist rate limit state: {}", e);
+        }
+    });
+
+    // Convert reset_time to SystemTime for header
+    let reset_duration = reset_time.saturating_duration_since(now);
+    let reset_system_time = std::time::SystemTime::now() + reset_duration;
+
+    (allowed, remaining, reset_system_time)
+}
+
+/// Check IP-based rate limit
+///
+/// Returns (allowed, remaining, reset_time)
+async fn check_ip_rate_limit_with_info(
+    state: &AppState,
+    ip: &IpAddr,
+    _rpm: u32,
+    burst: u32,
+) -> (bool, u32, std::time::SystemTime) {
+    let mut ip_rate_limit_state = state.ip_rate_limit_state.write().await;
+    let now = Instant::now();
+    let window_duration = Duration::from_secs(60); // 1 minute window
+
+    // Get current state for this IP
+    let (count, reset_time) = if let Some((mem_count, mem_reset)) = ip_rate_limit_state.get(ip) {
+        (*mem_count, *mem_reset)
+    } else {
+        // New IP, create entry
+        (0, now + window_duration)
+    };
 
     // Reset if window has expired
     let (count, reset_time) = if now > reset_time {
@@ -725,33 +1080,19 @@ async fn check_rate_limit_with_info(
         (count, reset_time)
     };
 
-    // Check if limit exceeded (before incrementing)
-    let allowed = count < burst;
-    let remaining = if count < burst {
-        burst.saturating_sub(count + 1)
+    // Check if limit would be exceeded after incrementing
+    let new_count = count + 1;
+    let allowed = new_count <= burst;
+
+    // Calculate remaining requests (after this request is counted, if allowed)
+    let remaining = if allowed {
+        burst.saturating_sub(new_count)
     } else {
         0
     };
 
-    // Increment count if allowed
-    let new_count = if allowed { count + 1 } else { count };
-    rate_limit_state.insert(api_key_id.to_string(), (new_count, reset_time));
-
-    // Persist to database asynchronously (don't block the request)
-    let security_repo = Arc::clone(&state.security_repo);
-    let api_key_id_clone = api_key_id.to_string();
-    let reset_at = chrono::Utc::now()
-        .checked_add_signed(chrono::Duration::seconds(
-            reset_time.saturating_duration_since(now).as_secs() as i64
-        ))
-        .unwrap_or_else(chrono::Utc::now)
-        .to_rfc3339();
-    
-    tokio::spawn(async move {
-        if let Err(e) = security_repo.save_rate_limit_state(&api_key_id_clone, new_count, &reset_at).await {
-            error!(error_type = "rate_limit_persist_failed", api_key_id = %utils::mask_identifier(&api_key_id_clone), "Failed to persist rate limit state: {}", e);
-        }
-    });
+    // Always increment count for tracking purposes (even if over limit)
+    ip_rate_limit_state.insert(*ip, (new_count, reset_time));
 
     // Convert reset_time to SystemTime for header
     let reset_duration = reset_time.saturating_duration_since(now);
@@ -887,38 +1228,35 @@ fn create_internal_error_response() -> (StatusCode, axum::Json<serde_json::Value
 ///
 /// This middleware adds security headers to prevent XSS, clickjacking,
 /// MIME type sniffing, and other attacks.
-pub async fn add_security_headers(
-    request: Request,
-    next: Next,
-) -> Response {
+pub async fn add_security_headers(request: Request, next: Next) -> Response {
     let mut response = next.run(request).await;
     let headers = response.headers_mut();
-    
+
     // X-Content-Type-Options: Prevent MIME type sniffing
     let value = axum::http::HeaderValue::from_static("nosniff");
     headers.insert(axum::http::header::X_CONTENT_TYPE_OPTIONS, value);
-    
+
     // X-Frame-Options: Prevent clickjacking
     let value = axum::http::HeaderValue::from_static("DENY");
     headers.insert(
         axum::http::header::HeaderName::from_static("x-frame-options"),
         value,
     );
-    
+
     // X-XSS-Protection: Enable XSS filter (legacy browsers)
     let value = axum::http::HeaderValue::from_static("1; mode=block");
     headers.insert(
         axum::http::header::HeaderName::from_static("x-xss-protection"),
         value,
     );
-    
+
     // Referrer-Policy: Prevent referrer leakage
     let value = axum::http::HeaderValue::from_static("no-referrer");
     headers.insert(
         axum::http::header::HeaderName::from_static("referrer-policy"),
         value,
     );
-    
+
     // Content-Security-Policy: Restrict resource loading
     let csp = "default-src 'self'; script-src 'none'; style-src 'none'; img-src 'none'; font-src 'none'; connect-src 'self'; frame-ancestors 'none'; base-uri 'self'; form-action 'none'";
     if let Ok(value) = axum::http::HeaderValue::from_str(csp) {
@@ -927,7 +1265,7 @@ pub async fn add_security_headers(
             value,
         );
     }
-    
+
     // Permissions-Policy: Restrict browser features
     let permissions = "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=(), usb=()";
     if let Ok(value) = axum::http::HeaderValue::from_str(permissions) {
@@ -936,7 +1274,7 @@ pub async fn add_security_headers(
             value,
         );
     }
-    
+
     response
 }
 
@@ -944,12 +1282,9 @@ pub async fn add_security_headers(
 ///
 /// This middleware applies a 60-second timeout to non-streaming requests.
 /// Streaming requests should not use this middleware.
-pub async fn request_timeout_middleware(
-    request: Request,
-    next: Next,
-) -> Response {
+pub async fn request_timeout_middleware(request: Request, next: Next) -> Response {
     const TIMEOUT_DURATION: Duration = Duration::from_secs(60);
-    
+
     match timeout(TIMEOUT_DURATION, next.run(request)).await {
         Ok(response) => response,
         Err(_) => {
@@ -973,12 +1308,9 @@ pub async fn request_timeout_middleware(
 ///
 /// This middleware applies a 30-minute timeout to streaming requests.
 /// Streaming requests can take longer, but we still need a timeout to prevent resource exhaustion.
-pub async fn streaming_timeout_middleware(
-    request: Request,
-    next: Next,
-) -> Response {
+pub async fn streaming_timeout_middleware(request: Request, next: Next) -> Response {
     const TIMEOUT_DURATION: Duration = Duration::from_secs(1800); // 30 minutes
-    
+
     match timeout(TIMEOUT_DURATION, next.run(request)).await {
         Ok(response) => response,
         Err(_) => {
@@ -1008,37 +1340,34 @@ pub async fn audit_logging_middleware(
     next: Next,
 ) -> Response {
     use std::time::SystemTime;
-    
+
     let start_time = SystemTime::now();
     let endpoint = request.uri().path().to_string();
     let headers = request.headers().clone();
-    
+
     // Generate unique request ID using timestamp and random component
     let request_id = format!(
         "{}-{}",
         chrono::Utc::now().timestamp_millis(),
         rand::random::<u64>()
     );
-    
+
     // Get API key ID from request extensions (set by auth_middleware)
     let api_key_id = request.extensions().get::<String>().cloned();
-    
+
     // Extract client IP
     let client_ip = extract_client_ip(&request, &headers, &state.trusted_proxy_ips);
     let client_ip_str = client_ip.to_string();
-    
+
     // Process request
     let response = next.run(request).await;
-    
+
     // Calculate latency
-    let latency_ms = start_time
-        .elapsed()
-        .ok()
-        .map(|d| d.as_millis() as u64);
-    
+    let latency_ms = start_time.elapsed().ok().map(|d| d.as_millis() as u64);
+
     // Get status code
     let status = response.status().as_u16();
-    
+
     // Determine event type and severity based on status code
     let (event_type, severity) = if status == 200 || status == 201 {
         (Some("auth_success"), "low")
@@ -1051,13 +1380,18 @@ pub async fn audit_logging_middleware(
     } else {
         (None, "low")
     };
-    
+
     // Save audit log asynchronously (don't block response)
     let security_repo = Arc::clone(&state.security_repo);
     let masked_api_key_id = api_key_id.as_ref().map(|id| utils::mask_identifier(id));
     let endpoint_clone = endpoint.clone();
     let client_ip_str_clone = client_ip_str.clone();
     tokio::spawn(async move {
+        let metadata = AuditLogMetadata {
+            severity,
+            ip: Some(&client_ip_str_clone),
+            details: None, // details can be added later for specific events
+        };
         if let Err(e) = security_repo
             .save_audit_log(
                 &request_id,
@@ -1066,9 +1400,7 @@ pub async fn audit_logging_middleware(
                 status,
                 latency_ms,
                 event_type,
-                severity,
-                Some(&client_ip_str_clone),
-                None, // details can be added later for specific events
+                metadata,
             )
             .await
         {
@@ -1080,6 +1412,6 @@ pub async fn audit_logging_middleware(
             );
         }
     });
-    
+
     response
 }

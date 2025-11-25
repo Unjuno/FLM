@@ -186,6 +186,23 @@ pub enum ProxyMode {
 }
 
 #[derive(Clone, Debug)]
+pub enum ProxyEgressMode {
+    Direct,
+    Tor,
+    CustomSocks5,
+}
+
+#[derive(Clone, Debug)]
+pub struct ProxyEgressConfig {
+    pub mode: ProxyEgressMode,
+    /// `host:port` 形式の SOCKS5 エンドポイント。Tor/Custom のみ必須。
+    pub socks5_endpoint: Option<String>,
+    /// `true` の場合は Tor 断絶時に Direct へフォールバック（既定は `false`=fail closed）
+    #[serde(default)]
+    pub fail_open: bool,
+}
+
+#[derive(Clone, Debug)]
 pub enum AcmeChallengeKind {
     Http01,
     Dns01,
@@ -210,6 +227,9 @@ pub struct ProxyConfig {
     pub acme_challenge: Option<AcmeChallengeKind>,
     /// DNS-01 自動化で使用する資格情報プロフィールID（CLIが secrets store に保持）
     pub acme_dns_profile_id: Option<String>,
+    /// すべての外向きHTTP(S)通信（エンジン/ACME/アップストリーム）に適用するSOCKS5/Tor設定
+    #[serde(default)]
+    pub egress: ProxyEgressConfig,
 }
 
 #[derive(Clone, Debug)]
@@ -394,6 +414,9 @@ pub enum HttpError {
 - `acme_dns_profile_id`: `Dns01` のみ必須。CLI/Tauri が OS のシークレットストアに保持している DNS プロバイダ資格情報のキー。`Http01` の場合は `None`。
 - `PackagedCa` モード時は `acme_email` / `acme_domain` は無視される（証明書はパッケージ同梱）。
 - `ProxyHandle.https_port`: `ProxyConfig.mode` が `LocalHttp` 以外の場合は常に `Some(port + 1)` を返し、`LocalHttp` では `None`。
+- `egress.mode`: 省略時は `Direct`。`Tor` または `CustomSocks5` を指定した場合、Proxy は outbound HTTP(S) を必ず SOCKS5 経由で送信する。
+- `egress.socks5_endpoint`: `Tor`/`CustomSocks5` 時に必須（例: `127.0.0.1:9050`）。`Direct` の場合は `None`。
+- `egress.fail_open`: 省略時は `false`（Tor断絶時は起動失敗）。`true` にすると Tor が落ちても `Direct` へフォールバックして起動を継続する。
 
 ### SecurityPolicy エッジケース
 
@@ -440,10 +463,21 @@ pub trait LlmEngine: Send + Sync {
 
 ## 4. ポート（抽象インターフェイス）
 
+**注意**: 以下のtraitはすべて非同期（`#[async_trait]`）です。実装時は `async_trait` マクロを使用してください。
+
 ```rust
 #[async_trait]
 pub trait EngineRepository: Send + Sync {
+    /// List all registered engines
+    /// 
+    /// **注意**: 戻り値は `Arc<dyn LlmEngine>` のベクターです。
+    /// エンジンは共有所有権（`Arc`）で管理され、複数のサービスから参照可能です。
     async fn list_registered(&self) -> Vec<Arc<dyn LlmEngine>>;
+    
+    /// Register a new engine
+    /// 
+    /// **注意**: エンジンは `Arc<dyn LlmEngine>` として登録されます。
+    /// 実装側では `Arc` を適切に管理し、エンジンの共有所有権を維持する必要があります。
     async fn register(&self, engine: Arc<dyn LlmEngine>);
 }
 

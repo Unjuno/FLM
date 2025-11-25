@@ -1,6 +1,6 @@
 # FLM V2 監査ドキュメント
 
-> Status: Reference | Audience: All contributors | Updated: 2025-01-27
+> Status: Reference | Audience: All contributors | Updated: 2025-11-25
 
 ## 概要
 
@@ -37,7 +37,7 @@ docs/audit/
 
 #### CORE_API_AUDIT.md - Core API監査レポート
 
-**Status**: ✅ Complete | **Date**: 2025-11-21 | **Phase**: All Phases
+**Status**: ✅ Complete | **Date**: 2025-11-25 | **Phase**: All Phases
 
 Core API（`flm-core`）の包括的な監査レポート。Domain層、Service層、Port層の設計と実装を監査。
 
@@ -54,19 +54,19 @@ Core API（`flm-core`）の包括的な監査レポート。Domain層、Service�
 
 #### CORE_API_AUDIT_COMPLETE.md - Core API監査完了サマリー
 
-**Status**: ✅ Complete | **Date**: 2025-11-21
+**Status**: ✅ Complete | **Date**: 2025-11-25
 
 Core API監査の完了サマリー。全フェーズの監査結果をまとめたもの。
 
 #### CORE_API_AUDIT_KYK.md - Core API監査KYK
 
-**Status**: KYK Complete | **Date**: 2025-11-21
+**Status**: KYK Complete | **Date**: 2025-11-25
 
 Core API監査における危険予知活動（KYK）の記録。
 
 #### CORE_API_AUDIT_PHASE2-6_SUMMARY.md - Phase別サマリー
 
-**Status**: Completed | **Date**: 2025-11-21
+**Status**: Completed | **Date**: 2025-11-25
 
 Core API監査のPhase別サマリー。各フェーズの監査結果を記録。
 

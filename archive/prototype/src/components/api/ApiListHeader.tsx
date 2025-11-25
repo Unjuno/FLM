@@ -30,6 +30,14 @@ export const ApiListHeader: React.FC<ApiListHeaderProps> = ({ onRefresh }) => {
         <h1>{t('apiList.title')}</h1>
       </div>
       <div className="header-actions">
+        <Tooltip content="APIプロンプトテンプレートを管理">
+          <button
+            className="secondary"
+            onClick={() => navigate('/api/prompts')}
+          >
+            APIプロンプト
+          </button>
+        </Tooltip>
         <Tooltip content={t('apiList.createApiTooltip')}>
           <button
             className="create-button"

@@ -2,7 +2,7 @@
 
 // import.meta.envをグローバルにモック（すべてのテスト環境で使用可能）
 if (typeof global !== 'undefined') {
-  // @ts-ignore
+  // @ts-expect-error
   global.import = {
     meta: {
       env: {
@@ -26,7 +26,7 @@ if (
   typeof window !== 'undefined' &&
   typeof window.ResizeObserver === 'undefined'
 ) {
-  // @ts-ignore
+  // @ts-expect-error
   window.ResizeObserver = class ResizeObserver {
     observe() {}
     unobserve() {}

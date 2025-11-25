@@ -1,0 +1,73 @@
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 0.94s
+     Running unittests src\lib.rs (target\debug\deps\flm_cli-7baab8cf34267077.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running unittests src\main.rs (target\debug\deps\flm-3d0c95977e846442.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\chat_test.rs (target\debug\deps\chat_test-0f5960741da3ce0d.exe)
+
+running 1 test
+test test_chat_with_mock_engine ... ok
+
+test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.13s
+
+     Running tests\check_test.rs (target\debug\deps\check_test-4789f3dcabe7ba4c.exe)
+
+running 3 tests
+test test_check_nonexistent_databases ... ok
+test test_check_empty_databases ... ok
+test test_check_with_data ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.71s
+
+     Running tests\cli_test.rs (target\debug\deps\cli_test-ed7442b33345f4e4.exe)
+
+running 10 tests
+test test_engines_detect_invalid_engine ... ok
+test test_config_set_and_get ... ok
+test test_models_list ... ok
+test test_config_list ... ok
+test test_api_keys_create_and_list ... ok
+test test_api_keys_revoke ... ok
+test test_api_keys_rotate ... ok
+test test_engines_detect_specific_engine ... ok
+test test_engines_detect ... ok
+test test_engines_detect_text_format ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.65s
+
+     Running tests\engine_repository_test.rs (target\debug\deps\engine_repository_test-9ac4ec4a28f3fe7a.exe)
+
+running 5 tests
+test test_engine_repository_cache_nonexistent ... ok
+test test_engine_repository_cache_ttl_expiration ... ok
+test test_engine_repository_cache_state ... ok
+test test_engine_repository_cache_multiple_engines ... ok
+test test_engine_repository_cache_update ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.19s
+
+     Running tests\integration_test.rs (target\debug\deps\integration_test-9151b85ae9a70950.exe)
+
+running 4 tests
+test test_config_service_integration ... ok
+test test_security_service_integration ... ok
+test test_security_service_rotate ... ok
+test test_engine_service_detect_engines ... ok
+
+test result: ok. 4 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.53s
+
+     Running tests\process_controller_test.rs (target\debug\deps\process_controller_test-ebd6995f7cb0ea01.exe)
+
+running 5 tests
+test test_process_controller_detect_binaries ... ok
+test test_process_controller_detect_running ... ok
+test test_process_controller_lmstudio_detection ... ok
+test test_process_controller_vllm_detection ... ok

@@ -95,6 +95,19 @@ impl ProxyRepository for MockProxyRepository {
         let handles = self.handles.lock().unwrap();
         Ok(handles.clone())
     }
+
+    async fn save_active_handle(&self, handle: ProxyHandle) -> Result<(), RepoError> {
+        let mut handles = self.handles.lock().unwrap();
+        handles.retain(|h| h.id != handle.id);
+        handles.push(handle);
+        Ok(())
+    }
+
+    async fn remove_active_handle(&self, handle_id: &str) -> Result<(), RepoError> {
+        let mut handles = self.handles.lock().unwrap();
+        handles.retain(|h| h.id != handle_id);
+        Ok(())
+    }
 }
 
 #[tokio::test]
@@ -106,6 +119,8 @@ async fn test_proxy_service_start_local_http() {
     let config = ProxyConfig {
         mode: ProxyMode::LocalHttp,
         port: 8080,
+        listen_addr: "127.0.0.1".to_string(),
+        trusted_proxy_ips: vec![],
         acme_email: None,
         acme_domain: None,
         acme_challenge: None,
@@ -134,6 +149,8 @@ async fn test_proxy_service_start_invalid_port() {
     let config = ProxyConfig {
         mode: ProxyMode::LocalHttp,
         port: 0, // Invalid port
+        listen_addr: "127.0.0.1".to_string(),
+        trusted_proxy_ips: vec![],
         acme_email: None,
         acme_domain: None,
         acme_challenge: None,
@@ -161,6 +178,8 @@ async fn test_proxy_service_start_https_acme_missing_email() {
     let config = ProxyConfig {
         mode: ProxyMode::HttpsAcme,
         port: 8080,
+        listen_addr: "127.0.0.1".to_string(),
+        trusted_proxy_ips: vec![],
         acme_email: None, // Missing email
         acme_domain: Some("example.com".to_string()),
         acme_challenge: Some(AcmeChallengeKind::Http01),
@@ -188,6 +207,8 @@ async fn test_proxy_service_start_https_acme_missing_domain() {
     let config = ProxyConfig {
         mode: ProxyMode::HttpsAcme,
         port: 8080,
+        listen_addr: "127.0.0.1".to_string(),
+        trusted_proxy_ips: vec![],
         acme_email: Some("test@example.com".to_string()),
         acme_domain: None, // Missing domain
         acme_challenge: Some(AcmeChallengeKind::Http01),
@@ -215,6 +236,8 @@ async fn test_proxy_service_start_https_acme_valid() {
     let config = ProxyConfig {
         mode: ProxyMode::HttpsAcme,
         port: 8080,
+        listen_addr: "127.0.0.1".to_string(),
+        trusted_proxy_ips: vec![],
         acme_email: Some("test@example.com".to_string()),
         acme_domain: Some("example.com".to_string()),
         acme_challenge: Some(AcmeChallengeKind::Http01),
@@ -240,6 +263,8 @@ async fn test_proxy_service_stop() {
     let config = ProxyConfig {
         mode: ProxyMode::LocalHttp,
         port: 8080,
+        listen_addr: "127.0.0.1".to_string(),
+        trusted_proxy_ips: vec![],
         acme_email: None,
         acme_domain: None,
         acme_challenge: None,

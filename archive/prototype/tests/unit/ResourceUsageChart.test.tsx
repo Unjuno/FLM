@@ -5,24 +5,24 @@
  */
 
 // ResizeObserverをモック（テスト実行前に設定が必要）
-// @ts-ignore
+// @ts-expect-error
 if (
   typeof global !== 'undefined' &&
   typeof global.ResizeObserver === 'undefined'
 ) {
-  // @ts-ignore
+  // @ts-expect-error
   global.ResizeObserver = class ResizeObserver {
     observe() {}
     unobserve() {}
     disconnect() {}
   };
 }
-// @ts-ignore
+// @ts-expect-error
 if (
   typeof window !== 'undefined' &&
   typeof window.ResizeObserver === 'undefined'
 ) {
-  // @ts-ignore
+  // @ts-expect-error
   window.ResizeObserver = class ResizeObserver {
     observe() {}
     unobserve() {}

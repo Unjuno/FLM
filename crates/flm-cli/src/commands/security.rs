@@ -1,12 +1,15 @@
 //! Security command implementation
 
 use crate::adapters::SqliteSecurityRepository;
-use crate::cli::security::{BackupSubcommand, PolicySubcommand, SecuritySubcommand};
+use crate::cli::security::{
+    BackupSubcommand, IpBlocklistSubcommand, PolicySubcommand, SecuritySubcommand,
+};
 use crate::utils::get_security_db_path;
 use flm_core::domain::security::SecurityPolicy;
 use flm_core::services::SecurityService;
 use serde_json::json;
 use std::fs;
+use std::net::IpAddr;
 use std::path::PathBuf;
 
 /// Execute security command
@@ -22,6 +25,28 @@ pub async fn execute(
         SecuritySubcommand::Backup { subcommand } => {
             execute_backup(subcommand, db_path, format).await
         }
+        SecuritySubcommand::IpBlocklist { subcommand } => {
+            execute_ip_blocklist(subcommand, db_path, format).await
+        }
+        SecuritySubcommand::AuditLogs {
+            event_type,
+            severity,
+            ip,
+            limit,
+            offset,
+        } => execute_audit_logs(event_type, severity, ip, limit, offset, db_path, format).await,
+        SecuritySubcommand::Intrusion {
+            ip,
+            min_score,
+            limit,
+            offset,
+        } => execute_intrusion(ip, min_score, limit, offset, db_path, format).await,
+        SecuritySubcommand::Anomaly {
+            ip,
+            anomaly_type,
+            limit,
+            offset,
+        } => execute_anomaly(ip, anomaly_type, limit, offset, db_path, format).await,
     }
 }
 
@@ -33,7 +58,9 @@ async fn execute_policy(
 ) -> Result<(), Box<dyn std::error::Error>> {
     match subcommand {
         PolicySubcommand::Show => execute_policy_show(db_path, format).await,
-        PolicySubcommand::Set { json, file } => execute_policy_set(json, file, db_path, format).await,
+        PolicySubcommand::Set { json, file } => {
+            execute_policy_set(json, file, db_path, format).await
+        }
     }
 }
 
@@ -93,11 +120,8 @@ async fn execute_policy_set(
 ) -> Result<(), Box<dyn std::error::Error>> {
     let policy_json = match (json, file) {
         (Some(json_str), None) => json_str,
-        (None, Some(file_path)) => {
-            fs::read_to_string(&file_path).map_err(|e| {
-                format!("Failed to read policy file '{}': {}", file_path, e)
-            })?
-        }
+        (None, Some(file_path)) => fs::read_to_string(&file_path)
+            .map_err(|e| format!("Failed to read policy file '{}': {}", file_path, e))?,
         (Some(_), Some(_)) => {
             return Err("Cannot specify both --json and --file".into());
         }
@@ -150,12 +174,8 @@ async fn execute_backup(
     format: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
     match subcommand {
-        BackupSubcommand::Create { output } => {
-            execute_backup_create(output, db_path, format).await
-        }
-        BackupSubcommand::Restore { file } => {
-            execute_backup_restore(file, db_path, format).await
-        }
+        BackupSubcommand::Create { output } => execute_backup_create(output, db_path, format).await,
+        BackupSubcommand::Restore { file } => execute_backup_restore(file, db_path, format).await,
     }
 }
 
@@ -178,8 +198,8 @@ pub async fn execute_backup_create(
         PathBuf::from(output_path)
     } else {
         // Use OS config directory/flm/backups/
-        let app_data_dir = crate::utils::paths::get_app_data_dir()
-            .unwrap_or_else(|_| PathBuf::from("."));
+        let app_data_dir =
+            crate::utils::paths::get_app_data_dir().unwrap_or_else(|_| PathBuf::from("."));
         app_data_dir.join("backups")
     };
 
@@ -199,7 +219,12 @@ pub async fn execute_backup_create(
     for entry in fs::read_dir(&backup_dir)? {
         let entry = entry?;
         let path = entry.path();
-        if path.is_file() && path.file_name().and_then(|n| n.to_str()).map_or(false, |n| n.starts_with("security.db.bak.")) {
+        if path.is_file()
+            && path
+                .file_name()
+                .and_then(|n| n.to_str())
+                .map_or(false, |n| n.starts_with("security.db.bak."))
+        {
             if let Ok(metadata) = entry.metadata() {
                 if let Ok(modified) = metadata.modified() {
                     backup_files.push((path, modified));
@@ -258,7 +283,10 @@ pub async fn execute_backup_restore(
     // Check if security.db exists and warn user
     if security_db_path.exists() {
         if format != "json" {
-            eprintln!("Warning: security.db already exists at: {}", security_db_path.display());
+            eprintln!(
+                "Warning: security.db already exists at: {}",
+                security_db_path.display()
+            );
             eprintln!("This operation will overwrite the existing database.");
             eprintln!("Make sure the application is stopped before proceeding.");
         }
@@ -294,7 +322,9 @@ pub async fn execute_backup_restore(
                 println!("Backup restored successfully");
                 println!("  Restored to: {}", security_db_path.display());
                 println!("  Migrations applied");
-                println!("\nNote: The application should be restarted to use the restored database.");
+                println!(
+                    "\nNote: The application should be restarted to use the restored database."
+                );
             }
         }
         Err(e) => {
@@ -305,3 +335,385 @@ pub async fn execute_backup_restore(
     Ok(())
 }
 
+/// Execute IP blocklist command
+async fn execute_ip_blocklist(
+    subcommand: IpBlocklistSubcommand,
+    db_path: Option<String>,
+    format: String,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let db_path = db_path
+        .map(PathBuf::from)
+        .unwrap_or_else(get_security_db_path);
+
+    let repo = SqliteSecurityRepository::new(&db_path).await?;
+
+    match subcommand {
+        IpBlocklistSubcommand::List => {
+            let blocked_ips = repo.get_blocked_ips().await?;
+
+            if format == "json" {
+                let ip_list: Vec<serde_json::Value> = blocked_ips
+                    .iter()
+                    .map(
+                        |(
+                            ip,
+                            failure_count,
+                            first_failure_at,
+                            blocked_until,
+                            permanent_block,
+                            last_attempt,
+                        )| {
+                            json!({
+                                "ip": ip.to_string(),
+                                "failure_count": failure_count,
+                                "first_failure_at": first_failure_at,
+                                "blocked_until": blocked_until,
+                                "permanent_block": permanent_block,
+                                "last_attempt": last_attempt
+                            })
+                        },
+                    )
+                    .collect();
+
+                let output = json!({
+                    "version": "1.0",
+                    "data": {
+                        "blocked_ips": ip_list
+                    }
+                });
+                println!("{}", serde_json::to_string_pretty(&output)?);
+            } else {
+                if blocked_ips.is_empty() {
+                    println!("No blocked IPs found");
+                } else {
+                    println!("Blocked IPs:");
+                    for (
+                        ip,
+                        failure_count,
+                        first_failure_at,
+                        blocked_until,
+                        permanent_block,
+                        last_attempt,
+                    ) in blocked_ips
+                    {
+                        println!("  IP: {}", ip);
+                        println!("    Failures: {}", failure_count);
+                        println!("    First failure: {}", first_failure_at);
+                        if let Some(until) = blocked_until {
+                            println!("    Blocked until: {}", until);
+                        }
+                        println!("    Permanent: {}", permanent_block);
+                        println!("    Last attempt: {}", last_attempt);
+                        println!();
+                    }
+                }
+            }
+        }
+        IpBlocklistSubcommand::Unblock { ip } => {
+            let ip_addr: IpAddr = ip
+                .parse()
+                .map_err(|e| format!("Invalid IP address: {}", e))?;
+
+            repo.unblock_ip(&ip_addr).await?;
+
+            if format == "json" {
+                let output = json!({
+                    "version": "1.0",
+                    "data": {
+                        "ip": ip,
+                        "unblocked": true
+                    }
+                });
+                println!("{}", serde_json::to_string_pretty(&output)?);
+            } else {
+                println!("IP {} unblocked successfully", ip);
+            }
+        }
+        IpBlocklistSubcommand::Clear => {
+            repo.clear_temporary_blocks().await?;
+
+            if format == "json" {
+                let output = json!({
+                    "version": "1.0",
+                    "data": {
+                        "cleared": true
+                    }
+                });
+                println!("{}", serde_json::to_string_pretty(&output)?);
+            } else {
+                println!("All temporary blocks cleared (permanent blocks remain)");
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Execute audit logs command
+async fn execute_audit_logs(
+    event_type: Option<String>,
+    severity: Option<String>,
+    ip: Option<String>,
+    limit: u32,
+    offset: u32,
+    db_path: Option<String>,
+    format: String,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let db_path = db_path
+        .map(PathBuf::from)
+        .unwrap_or_else(get_security_db_path);
+
+    let repo = SqliteSecurityRepository::new(&db_path).await?;
+
+    let logs = repo
+        .list_audit_logs(
+            Some(limit),
+            Some(offset),
+            event_type.as_deref(),
+            severity.as_deref(),
+            ip.as_deref(),
+        )
+        .await?;
+
+    if format == "json" {
+        let log_list: Vec<serde_json::Value> = logs
+            .iter()
+            .map(
+                |(
+                    id,
+                    request_id,
+                    api_key_id,
+                    endpoint,
+                    status,
+                    latency_ms,
+                    event_type,
+                    severity,
+                    ip,
+                    details,
+                    created_at,
+                )| {
+                    json!({
+                        "id": id,
+                        "request_id": request_id,
+                        "api_key_id": api_key_id,
+                        "endpoint": endpoint,
+                        "status": status,
+                        "latency_ms": latency_ms,
+                        "event_type": event_type,
+                        "severity": severity,
+                        "ip": ip,
+                        "details": details,
+                        "created_at": created_at
+                    })
+                },
+            )
+            .collect();
+
+        let output = json!({
+            "version": "1.0",
+            "data": {
+                "logs": log_list,
+                "limit": limit,
+                "offset": offset
+            }
+        });
+        println!("{}", serde_json::to_string_pretty(&output)?);
+    } else {
+        if logs.is_empty() {
+            println!("No audit logs found");
+        } else {
+            println!(
+                "Audit Logs (showing {} entries, offset {}):",
+                logs.len(),
+                offset
+            );
+            for (
+                id,
+                request_id,
+                api_key_id,
+                endpoint,
+                status,
+                latency_ms,
+                event_type,
+                severity,
+                ip,
+                details,
+                created_at,
+            ) in logs
+            {
+                println!(
+                    "  [{}] {} - {} - Status: {}",
+                    created_at, endpoint, request_id, status
+                );
+                if let Some(et) = event_type {
+                    println!(
+                        "    Event: {} (Severity: {})",
+                        et,
+                        severity.as_deref().unwrap_or("unknown")
+                    );
+                }
+                if let Some(ip_addr) = ip {
+                    println!("    IP: {}", ip_addr);
+                }
+                if let Some(latency) = latency_ms {
+                    println!("    Latency: {}ms", latency);
+                }
+                println!();
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Execute intrusion command
+async fn execute_intrusion(
+    ip: Option<String>,
+    min_score: Option<u32>,
+    limit: u32,
+    offset: u32,
+    db_path: Option<String>,
+    format: String,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let db_path = db_path
+        .map(PathBuf::from)
+        .unwrap_or_else(get_security_db_path);
+
+    let repo = SqliteSecurityRepository::new(&db_path).await?;
+
+    let attempts = repo
+        .list_intrusion_attempts(Some(limit), Some(offset), ip.as_deref(), min_score)
+        .await?;
+
+    if format == "json" {
+        let attempt_list: Vec<serde_json::Value> = attempts
+            .iter()
+            .map(
+                |(id, ip, pattern, score, request_path, user_agent, method, created_at)| {
+                    json!({
+                        "id": id,
+                        "ip": ip,
+                        "pattern": pattern,
+                        "score": score,
+                        "request_path": request_path,
+                        "user_agent": user_agent,
+                        "method": method,
+                        "created_at": created_at
+                    })
+                },
+            )
+            .collect();
+
+        let output = json!({
+            "version": "1.0",
+            "data": {
+                "attempts": attempt_list,
+                "limit": limit,
+                "offset": offset
+            }
+        });
+        println!("{}", serde_json::to_string_pretty(&output)?);
+    } else {
+        if attempts.is_empty() {
+            println!("No intrusion attempts found");
+        } else {
+            println!(
+                "Intrusion Attempts (showing {} entries, offset {}):",
+                attempts.len(),
+                offset
+            );
+            for (id, ip, pattern, score, request_path, user_agent, method, created_at) in attempts {
+                println!(
+                    "  [{}] IP: {} - Pattern: {} - Score: {}",
+                    created_at, ip, pattern, score
+                );
+                if let Some(path) = request_path {
+                    println!(
+                        "    Path: {} ({})",
+                        path,
+                        method.as_deref().unwrap_or("unknown")
+                    );
+                }
+                if let Some(ua) = user_agent {
+                    println!("    User-Agent: {}", ua);
+                }
+                println!();
+            }
+        }
+    }
+
+    Ok(())
+}
+
+/// Execute anomaly command
+async fn execute_anomaly(
+    ip: Option<String>,
+    anomaly_type: Option<String>,
+    limit: u32,
+    offset: u32,
+    db_path: Option<String>,
+    format: String,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let db_path = db_path
+        .map(PathBuf::from)
+        .unwrap_or_else(get_security_db_path);
+
+    let repo = SqliteSecurityRepository::new(&db_path).await?;
+
+    let detections = repo
+        .list_anomaly_detections(
+            Some(limit),
+            Some(offset),
+            ip.as_deref(),
+            anomaly_type.as_deref(),
+        )
+        .await?;
+
+    if format == "json" {
+        let detection_list: Vec<serde_json::Value> = detections
+            .iter()
+            .map(|(id, ip, anomaly_type, score, details, created_at)| {
+                json!({
+                    "id": id,
+                    "ip": ip,
+                    "anomaly_type": anomaly_type,
+                    "score": score,
+                    "details": details,
+                    "created_at": created_at
+                })
+            })
+            .collect();
+
+        let output = json!({
+            "version": "1.0",
+            "data": {
+                "detections": detection_list,
+                "limit": limit,
+                "offset": offset
+            }
+        });
+        println!("{}", serde_json::to_string_pretty(&output)?);
+    } else {
+        if detections.is_empty() {
+            println!("No anomaly detections found");
+        } else {
+            println!(
+                "Anomaly Detections (showing {} entries, offset {}):",
+                detections.len(),
+                offset
+            );
+            for (id, ip, anomaly_type, score, details, created_at) in detections {
+                println!(
+                    "  [{}] IP: {} - Type: {} - Score: {}",
+                    created_at, ip, anomaly_type, score
+                );
+                if let Some(d) = details {
+                    println!("    Details: {}", d);
+                }
+                println!();
+            }
+        }
+    }
+
+    Ok(())
+}

@@ -93,6 +93,10 @@
 
 すべてのタスクが完了しました。プロジェクトは次のフェーズに進む準備ができています。
 
+## Housekeeping（2025-11-25）
+
+- `docs/status/completed/ALL_TASKS_COMPLETE.md` と本ファイル配下の `tasks/ALL_TASKS_COMPLETE.md` が重複していたため、前者を削除し本ディレクトリ配下を正としました。
+
 ---
 
 **関連ドキュメント**:

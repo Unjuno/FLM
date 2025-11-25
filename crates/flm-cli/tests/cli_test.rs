@@ -115,6 +115,8 @@ fn test_config_set_and_get() {
             "test_key",
             "--db-path-config",
             config_db.to_str().unwrap(),
+            "--format",
+            "text",
         ])
         .output()
         .expect("Failed to execute flm config get");
@@ -170,6 +172,8 @@ fn test_config_list() {
             "list",
             "--db-path-config",
             config_db.to_str().unwrap(),
+            "--format",
+            "text",
         ])
         .output()
         .expect("Failed to execute flm config list");
@@ -201,6 +205,8 @@ fn test_api_keys_create_and_list() {
             "test_key",
             "--db-path-security",
             security_db.to_str().unwrap(),
+            "--format",
+            "text",
         ])
         .output()
         .expect("Failed to execute flm api-keys create");
@@ -228,6 +234,8 @@ fn test_api_keys_create_and_list() {
             "list",
             "--db-path-security",
             security_db.to_str().unwrap(),
+            "--format",
+            "text",
         ])
         .output()
         .expect("Failed to execute flm api-keys list");
@@ -259,6 +267,8 @@ fn test_api_keys_revoke() {
             "test_key_to_revoke",
             "--db-path-security",
             security_db.to_str().unwrap(),
+            "--format",
+            "text",
         ])
         .output()
         .expect("Failed to execute flm api-keys create");
@@ -290,6 +300,8 @@ fn test_api_keys_revoke() {
             &key_id,
             "--db-path-security",
             security_db.to_str().unwrap(),
+            "--format",
+            "text",
         ])
         .output()
         .expect("Failed to execute flm api-keys revoke");
@@ -317,6 +329,8 @@ fn test_api_keys_revoke() {
             "list",
             "--db-path-security",
             security_db.to_str().unwrap(),
+            "--format",
+            "text",
         ])
         .output()
         .expect("Failed to execute flm api-keys list");
@@ -347,6 +361,8 @@ fn test_api_keys_rotate() {
             "original_key",
             "--db-path-security",
             security_db.to_str().unwrap(),
+            "--format",
+            "text",
         ])
         .output()
         .expect("Failed to execute flm api-keys create");
@@ -378,6 +394,8 @@ fn test_api_keys_rotate() {
             &original_key_id,
             "--db-path-security",
             security_db.to_str().unwrap(),
+            "--format",
+            "text",
         ])
         .output()
         .expect("Failed to execute flm api-keys rotate");
@@ -426,6 +444,8 @@ fn test_api_keys_rotate() {
             "list",
             "--db-path-security",
             security_db.to_str().unwrap(),
+            "--format",
+            "text",
         ])
         .output()
         .expect("Failed to execute flm api-keys list");

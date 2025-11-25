@@ -1,0 +1,136 @@
+.model-profiles-page {
+  width: 100%;
+  min-height: 100vh;
+}
+
+.model-profiles-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.model-profiles-header .header-top {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.model-profiles-header .header-description {
+  margin-top: 8px;
+  color: var(--text-muted, #555);
+}
+
+.model-profiles-layout {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr;
+  gap: 24px;
+}
+
+.model-profiles-layout .card {
+  background: var(--surface-elevated, #fff);
+  border-radius: 16px;
+  padding: 24px;
+  box-shadow: 0 2px 14px rgba(15, 23, 42, 0.08);
+}
+
+.section-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.filter-row {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-row input {
+  flex: 1 1 200px;
+}
+
+.filter-row button {
+  flex: 0 0 auto;
+}
+
+.profiles-table-wrapper {
+  overflow-x: auto;
+}
+
+.profiles-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.profiles-table th,
+.profiles-table td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+}
+
+.profiles-table th {
+  font-weight: 600;
+  color: var(--text-strong, #1e293b);
+}
+
+.profiles-table tr:last-child td {
+  border-bottom: none;
+}
+
+.row-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.link-button {
+  background: none;
+  border: none;
+  color: var(--accent, #2563eb);
+  cursor: pointer;
+  padding: 0;
+}
+
+.link-button.danger {
+  color: var(--danger, #dc2626);
+}
+
+.profiles-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.profiles-form label {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  font-weight: 600;
+  color: var(--text-strong, #1e293b);
+}
+
+.profiles-form input,
+.profiles-form textarea {
+  width: 100%;
+}
+
+.form-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
+}
+
+.muted {
+  color: var(--text-muted, #6b7280);
+}
+
+@media (max-width: 1024px) {
+  .model-profiles-layout {
+    grid-template-columns: 1fr;
+  }
+}
+

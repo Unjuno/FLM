@@ -1,0 +1,155 @@
+.security-intrusion {
+  padding: 20px;
+}
+
+.security-intrusion .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.security-intrusion .page-header h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.security-intrusion .page-actions {
+  display: flex;
+  gap: 10px;
+}
+
+.security-intrusion .filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: var(--bg-secondary, #f5f5f5);
+  border-radius: 8px;
+}
+
+.security-intrusion .filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  min-width: 150px;
+}
+
+.security-intrusion .filter-group label {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary, #666);
+}
+
+.security-intrusion .filter-actions {
+  display: flex;
+  gap: 10px;
+  align-items: flex-end;
+}
+
+.security-intrusion .intrusion-table {
+  overflow-x: auto;
+  margin-bottom: 20px;
+}
+
+.security-intrusion .intrusion-table table {
+  width: 100%;
+  border-collapse: collapse;
+  background: white;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.security-intrusion .intrusion-table th {
+  background: var(--bg-secondary, #f5f5f5);
+  padding: 12px;
+  text-align: left;
+  font-weight: 600;
+  border-bottom: 2px solid var(--border-color, #ddd);
+  white-space: nowrap;
+}
+
+.security-intrusion .intrusion-table td {
+  padding: 12px;
+  border-bottom: 1px solid var(--border-color, #eee);
+  font-size: 13px;
+}
+
+.security-intrusion .intrusion-table tr:hover {
+  background: var(--bg-hover, #f9f9f9);
+}
+
+.security-intrusion .pattern-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  background: var(--bg-secondary, #f5f5f5);
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
+}
+
+.security-intrusion .score-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: 600;
+  min-width: 40px;
+  text-align: center;
+}
+
+.security-intrusion .score-badge.score-critical {
+  background: #fee;
+  color: #c33;
+}
+
+.security-intrusion .score-badge.score-high {
+  background: #fdd;
+  color: #c66;
+}
+
+.security-intrusion .score-badge.score-medium {
+  background: #ffe;
+  color: #c93;
+}
+
+.security-intrusion .score-badge.score-low {
+  background: #efe;
+  color: #393;
+}
+
+.security-intrusion .user-agent-cell {
+  max-width: 300px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.security-intrusion .empty-state {
+  text-align: center;
+  padding: 40px;
+  color: var(--text-secondary, #666);
+}
+
+.security-intrusion code {
+  font-family: 'Courier New', monospace;
+  background: var(--bg-secondary, #f5f5f5);
+  padding: 2px 6px;
+  border-radius: 4px;
+  font-size: 12px;
+}
+
+.security-intrusion .pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 15px;
+  margin-top: 20px;
+}
+
+.security-intrusion .page-info {
+  font-size: 14px;
+  color: var(--text-secondary, #666);
+}
+

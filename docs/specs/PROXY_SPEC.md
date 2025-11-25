@@ -287,7 +287,27 @@ Proxy / UI / CLI は `SecurityPolicy.policy_json` に以下のキーが存在す
 * **改ざん検知**: 配布チャネルの改ざんを検知する仕組み（将来実装予定）
 * **警告**: 公式サイト以外からのダウンロードを警告
 
-## 11. 未決事項
+## 11. アウトバウンドプロキシ / Tor
+
+`ProxyConfig.egress` は Proxy がエンジン／ACME／外部HTTPクライアントへ発生させる**すべての外向き通信**に適用される。要件:
+
+1. **Direct**: 既存挙動（OS ルーティングに従う）。
+2. **Tor**:
+   - SOCKS5 エンドポイントは CLI/UI から `tor://host:port` 形式で渡される（デフォルト `127.0.0.1:9050`）。Proxy 起動時に reqwest の `socks` feature で handshake を実施し、失敗時は `ProxyError::InvalidConfig` を返す。
+   - ACME HTTP-01/DNS-01 を Tor 経由で発行する際は `tor_bootstrap` を 30 秒待機し、ACME 側で exit node ブロックが発生した場合は `AcmeError` にフォールバックする。CLI は `https-acme` + `Tor` を組み合わせた場合に warning を表示し、ユーザーが `--force` しない限りは `local-http` へ切り替える。
+   - Streaming や SSE でも Tor 由来の追加遅延を想定し、`CONNECT` タイムアウトを 20 秒に拡大する。タイムアウト時は接続ごとに `tor_unreachable` イベントを audit log に記録し、fail_open=false の場合は Proxy 自体を停止する。
+3. **CustomSocks5**:
+   - CLI/UI が提供する `socks5://host:port` を使用。Tor と同じコードパスを共有しつつ、`tor` 固有の bootstrapping は実施しない。
+   - 認証付き SOCKS5 は Phase4 の拡張範囲外（現状は匿名のみ）。
+
+追加要件:
+
+- `ProxyHandle` と `ProxyService::status` のレスポンスに `egress` フィールドを追加し、UI/CLI が「Tor 経由」「Direct」などを表示できるようにする。
+- `egress.fail_open = false`（既定）のときは Tor/Custom SOCKS5 へ到達できない場合にプロキシを自動停止し、CLI/UI は exit code 1 でユーザーに Tor 起動を促す。`true` の場合は `Direct` にフォールバックするが、監査ログに `egress_fail_open_triggered` を必ず残す。
+- Tor を経由する場合でも、ローカルエンジン（例: `http://127.0.0.1:11434`）へのアクセスは OS ルールに従う必要があるため、`tor` は「外部HTTPクライアントのみ SOCKS5 経由」とし、ループバックアクセスには適用しない。これによりエンジンとの通信が極端に遅くなることを避ける。
+- DNS リーク防止のため、Tor/CustomSocks5 経由の HTTP クライアントは `socks5h` スキーム（ホスト名解決を SOCKS5 サーバー側で実施）を必須とする。
+
+## 12. 未決事項
 
 - `/v1/audio/*` 等の将来 API は `EngineCapabilities` を確認して動的にサポート
 - ProxyService でのホットリロード（設定変更を再起動無しで反映するか）

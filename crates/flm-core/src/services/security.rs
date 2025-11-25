@@ -399,6 +399,22 @@ fn validate_security_policy(policy_json: &str) -> Result<(), RepoError> {
         }
     }
 
+    // Validate acme_domain if present
+    if let Some(acme_domain) = policy.get("acme_domain") {
+        if let Some(domain_str) = acme_domain.as_str() {
+            if !domain_str.is_empty() {
+                // Use validate_domain_name for validation (same as CORS validation)
+                validate_domain_name(domain_str).map_err(|e| RepoError::ValidationError {
+                    reason: format!("Invalid ACME domain name: {e}"),
+                })?;
+            }
+        } else if !acme_domain.is_null() {
+            return Err(RepoError::ValidationError {
+                reason: "acme_domain must be a string or null".to_string(),
+            });
+        }
+    }
+
     // Validate CORS allowed_origins if present
     if let Some(cors) = policy.get("cors") {
         if let Some(allowed_origins) = cors.get("allowed_origins") {

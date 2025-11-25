@@ -112,6 +112,10 @@ flm/
 - 単体テスト／統合テストを CLI ＋ Rustサービスで構築し、下記合格基準を満たす。**Phase 1 の成功基準は 2 つのサブフェーズ（1A: エンジン検出/モデル一覧、1B: Proxy/セキュリティ）で個別に判定し、どちらかが遅延した場合でもリリースできるようにする**  
   - Phase1A ロールバック条件: 対象 4 エンジン × 3 OS × 3 回の検出テストのうち 1 つでも `ErrorApi`/`ErrorNetwork` が 3 連続した場合は release branch をブロックし、registry / detection ロジックを修正後に再実行。  
   - Phase1B ロールバック条件: プロキシ統合テスト（local-http/dev-selfsigned/https-acme）で 2 回連続失敗、または負荷テスト(100 req/min SSE)の P95 レイテンシ > 2s を検知した場合は phased rollout を停止し、直近の安定タグへ戻す。
+- **Phase1C: Tor / 上流プロキシ経由オプション**  
+  - CLI: `flm proxy start --egress-mode tor|socks5` と `--egress-fail-open`/`--socks5-endpoint` を追加し、Tor ソケット(127.0.0.1:9050)への疎通確認 → 失敗時は `PROXY_INVALID_CONFIG`。`flm proxy status` でも egress 情報を表示。  
+  - Core/Proxy: `ProxyConfig.egress`（`Direct`/`Tor`/`CustomSocks5` + fail_open）を定義し、reqwest の `socks` feature で outbound HTTP/ACME 全体を SOCKS5 経由に切り替える。Tor断で fail-closed 既定。  
+  - テスト: CLI 統合テストは `tor_mock`（SOCKS5 echo server）で接続確認、Proxy 統合テストは `tor`/`direct` 切替でチャット→SSE を流し遅延許容範囲を検証。ACME + Tor は warning を出し `local-http` fallback を確認。
 
 ### Phase 2: 最小 UI
 - React/Tauri で RustコアAPIを直接呼び出す設定画面を実装（Core API 凍結済みを前提）
@@ -175,6 +179,7 @@ flm/
 - [ ] docs/specs/CORE_API.md / PROXY_SPEC.md / ENGINE_DETECT.md / DB_SCHEMA.md の初版確定
 - [ ] Setup Wizard + Firewall Automation を Windows/macOS/Linux で検証（`docs/guides/SECURITY_FIREWALL_GUIDE.md` 参照）
 - [ ] UI 多言語対応の設計（`docs/specs/UI_EXTENSIONS.md` セクション4）
+- [ ] Tor/SOCKS5 egress オプションの CLI/Proxy 実装（`CLI_SPEC` / `PROXY_SPEC` / `CORE_API` 同期、`tor_mock` でテスト）
 
 ---
 

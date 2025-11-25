@@ -1,8 +1,14 @@
 # FLM Documentation
 
-> Status: Reference | Audience: All contributors | Updated: 2025-11-23
+> Status: Reference | Audience: All contributors | Updated: 2025-11-25
 
 FLMプロジェクトのドキュメント集約ディレクトリです。
+
+## スコープ
+- ルート `README.md` はリポジトリ全体の概要、ビルド手順、主要な実装ガイドラインを提供します。
+- 本ファイルは `docs/` 配下の索引であり、計画・仕様・ガイド・進捗レポートを探すための入口です。
+- テスト／監査の実行結果はリポジトリ直下の `reports/` に集約され、`docs/status/active/` から参照されます。
+- 旧プロトタイプ関連情報は `archive/prototype/` に隔離されており、本ドキュメントでは参照専用として取り扱います。
 
 ## ディレクトリ構造
 
@@ -102,9 +108,9 @@ docs/
 
 プロジェクトの進捗状況と完了レポートです。詳細は `status/README.md` を参照してください。
 
-- **active/** - 現在進行中または参照中のレポート
-  - `NEXT_STEPS.md` - 次の作業ステップ
-  - `BOTNET_PROTECTION_PLAN.md` - ボットネット対策実装計画の進捗
+- **active/** - 現在進行中のレポートのみを配置
+  - `NEXT_STEPS.md` - 唯一の公式タスクリスト
+  - `BOTNET_PROTECTION_PLAN.md` - ボットネット対策実装進捗
   - `PROXY_SERVICE_PHASE2_PROGRESS.md` - ProxyService Phase 2の実装進捗
 - **completed/** - 完了済みのレポート
   - `phases/` - フェーズ完了レポート
@@ -113,6 +119,14 @@ docs/
   - `safety/` - 安全性・監査レポート
   - `proxy/` - ProxyServiceレポート
   - `fixes/` - バグ修正レポート
+
+`reports/` ディレクトリに格納された最新テスト／監査結果は `status/active` からリンクされ、完了後は該当する `completed/*` レポートで要約されます。
+
+### `../reports/` - 実行レポート（リポジトリ直下）
+
+- `*_TEST_REPORT*.md` - 実行サマリー。`FULL_TEST_EXECUTION_REPORT.md` が詳細版、`FULL_TEST_EXECUTION_SUMMARY.md` が要約版。
+- `*-results*.txt` - テストハーネスの生ログ。必要に応じてリンクまたは添付。
+- 新しいレポートを追加した場合は `docs/status/active/NEXT_STEPS.md` または関連レポートから参照を張り、完了後に `docs/status/completed/` に要約を残す。
 
 ### `templates/` - テンプレート
 
@@ -149,9 +163,9 @@ docs/
 
 ## 注意事項
 
-- `archive/prototype/` は旧実装のアーカイブです。新機能の追加や修正は行わないでください。
-- 最新の仕様は `specs/` ディレクトリを参照してください。
-- 進捗状況は `status/active/` を確認してください。
+- `archive/prototype/` は旧実装のアーカイブです。新機能の追加や修正は行わないでください（生成物は `prototype-generated-assets.zip` に圧縮済み）。
+- 最新の仕様は `specs/` ディレクトリと `docs/DOCUMENTATION_STRUCTURE.md` の定義に従います。
+- 進捗状況は `status/active/` と `reports/` を併読して把握してください。
 
 ---
 

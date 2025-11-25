@@ -89,6 +89,46 @@ impl SqliteEngineRepository {
         Ok(())
     }
 
+    /// List cached engine states that are still within the TTL window.
+    pub async fn list_cached_engine_states(
+        &self,
+        ttl_seconds: u64,
+    ) -> Result<Vec<EngineState>, RepoError> {
+        let rows = sqlx::query_as::<_, (String,)>(
+            "SELECT state_json FROM engines_cache
+             WHERE datetime(cached_at, '+' || ? || ' seconds') >= datetime('now')
+             ORDER BY cached_at DESC",
+        )
+        .bind(ttl_seconds.to_string())
+        .fetch_all(&self.pool)
+        .await
+        .map_err(|e| RepoError::IoError {
+            reason: format!("Failed to read cached engine states: {e}"),
+        })?;
+
+        let mut states = Vec::with_capacity(rows.len());
+        for (state_json,) in rows {
+            let state: EngineState =
+                serde_json::from_str(&state_json).map_err(|e| RepoError::IoError {
+                    reason: format!("Failed to deserialize engine state: {e}"),
+                })?;
+            states.push(state);
+        }
+
+        Ok(states)
+    }
+
+    /// Clear all cached engine states.
+    pub async fn clear_engine_cache(&self) -> Result<(), RepoError> {
+        sqlx::query("DELETE FROM engines_cache")
+            .execute(&self.pool)
+            .await
+            .map_err(|e| RepoError::IoError {
+                reason: format!("Failed to clear engine cache: {e}"),
+            })?;
+        Ok(())
+    }
+
     /// Get a cached engine state
     ///
     /// # Arguments
