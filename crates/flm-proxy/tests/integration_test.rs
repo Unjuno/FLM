@@ -278,14 +278,8 @@ async fn test_rate_limit_basic() {
     let config = ProxyConfig {
         mode: ProxyMode::LocalHttp,
         port: 18084,
-        listen_addr: "127.0.0.1".to_string(),
-        trusted_proxy_ips: Vec::new(),
-        acme_email: None,
-        acme_domain: None,
-        acme_challenge: None,
-        acme_dns_profile_id: None,
-        config_db_path: None,
         security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        ..Default::default()
     };
 
     let handle = controller.start(config).await.unwrap();
@@ -384,14 +378,8 @@ async fn test_rate_limit_multiple_keys() {
     let config = ProxyConfig {
         mode: ProxyMode::LocalHttp,
         port: 18085,
-        listen_addr: "127.0.0.1".to_string(),
-        trusted_proxy_ips: Vec::new(),
-        acme_email: None,
-        acme_domain: None,
-        acme_challenge: None,
-        acme_dns_profile_id: None,
-        config_db_path: None,
         security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        ..Default::default()
     };
 
     let handle = controller.start(config).await.unwrap();
@@ -475,14 +463,8 @@ async fn test_ip_rate_limit() {
     let config = ProxyConfig {
         mode: ProxyMode::LocalHttp,
         port: 18086,
-        listen_addr: "127.0.0.1".to_string(),
-        trusted_proxy_ips: Vec::new(),
-        acme_email: None,
-        acme_domain: None,
-        acme_challenge: None,
-        acme_dns_profile_id: None,
-        config_db_path: None,
         security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        ..Default::default()
     };
 
     let handle = controller.start(config).await.unwrap();
@@ -561,14 +543,8 @@ async fn test_honeypot_endpoints() {
     let config = ProxyConfig {
         mode: ProxyMode::LocalHttp,
         port: 18087,
-        listen_addr: "127.0.0.1".to_string(),
-        trusted_proxy_ips: Vec::new(),
-        acme_email: None,
-        acme_domain: None,
-        acme_challenge: None,
-        acme_dns_profile_id: None,
-        config_db_path: None,
         security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        ..Default::default()
     };
 
     let handle = controller.start(config).await.unwrap();
@@ -664,14 +640,8 @@ async fn test_ip_blocklist_blocked_request() {
     let config = ProxyConfig {
         mode: ProxyMode::LocalHttp,
         port: 18090,
-        listen_addr: "127.0.0.1".to_string(),
-        trusted_proxy_ips: Vec::new(),
-        acme_email: None,
-        acme_domain: None,
-        acme_challenge: None,
-        acme_dns_profile_id: None,
-        config_db_path: None,
         security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        ..Default::default()
     };
 
     let handle = controller.start(config).await.unwrap();
@@ -740,14 +710,8 @@ async fn test_intrusion_detection_pattern() {
     let config = ProxyConfig {
         mode: ProxyMode::LocalHttp,
         port: 18091,
-        listen_addr: "127.0.0.1".to_string(),
-        trusted_proxy_ips: Vec::new(),
-        acme_email: None,
-        acme_domain: None,
-        acme_challenge: None,
-        acme_dns_profile_id: None,
-        config_db_path: None,
         security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        ..Default::default()
     };
 
     let handle = controller.start(config).await.unwrap();

@@ -1,7 +1,7 @@
 //! Tests for ProxyService
 
 use flm_core::domain::proxy::{
-    AcmeChallengeKind, ProxyConfig, ProxyHandle, ProxyMode, ProxyProfile,
+    AcmeChallengeKind, ProxyConfig, ProxyEgressConfig, ProxyHandle, ProxyMode, ProxyProfile,
 };
 use flm_core::error::{ProxyError, RepoError};
 use flm_core::ports::{ProxyController, ProxyRepository};
@@ -35,6 +35,7 @@ impl ProxyController for MockProxyController {
                 _ => Some(config.port + 1),
             },
             acme_domain: config.acme_domain.clone(),
+            egress: ProxyEgressConfig::direct(),
             running: true,
             last_error: None,
         };
@@ -119,14 +120,7 @@ async fn test_proxy_service_start_local_http() {
     let config = ProxyConfig {
         mode: ProxyMode::LocalHttp,
         port: 8080,
-        listen_addr: "127.0.0.1".to_string(),
-        trusted_proxy_ips: vec![],
-        acme_email: None,
-        acme_domain: None,
-        acme_challenge: None,
-        acme_dns_profile_id: None,
-        config_db_path: None,
-        security_db_path: None,
+        ..Default::default()
     };
 
     let handle = service.start(config).await.unwrap();
@@ -149,14 +143,7 @@ async fn test_proxy_service_start_invalid_port() {
     let config = ProxyConfig {
         mode: ProxyMode::LocalHttp,
         port: 0, // Invalid port
-        listen_addr: "127.0.0.1".to_string(),
-        trusted_proxy_ips: vec![],
-        acme_email: None,
-        acme_domain: None,
-        acme_challenge: None,
-        acme_dns_profile_id: None,
-        config_db_path: None,
-        security_db_path: None,
+        ..Default::default()
     };
 
     let result = service.start(config).await;
@@ -178,14 +165,10 @@ async fn test_proxy_service_start_https_acme_missing_email() {
     let config = ProxyConfig {
         mode: ProxyMode::HttpsAcme,
         port: 8080,
-        listen_addr: "127.0.0.1".to_string(),
-        trusted_proxy_ips: vec![],
         acme_email: None, // Missing email
         acme_domain: Some("example.com".to_string()),
         acme_challenge: Some(AcmeChallengeKind::Http01),
-        acme_dns_profile_id: None,
-        config_db_path: None,
-        security_db_path: None,
+        ..Default::default()
     };
 
     let result = service.start(config).await;
@@ -207,14 +190,10 @@ async fn test_proxy_service_start_https_acme_missing_domain() {
     let config = ProxyConfig {
         mode: ProxyMode::HttpsAcme,
         port: 8080,
-        listen_addr: "127.0.0.1".to_string(),
-        trusted_proxy_ips: vec![],
         acme_email: Some("test@example.com".to_string()),
         acme_domain: None, // Missing domain
         acme_challenge: Some(AcmeChallengeKind::Http01),
-        acme_dns_profile_id: None,
-        config_db_path: None,
-        security_db_path: None,
+        ..Default::default()
     };
 
     let result = service.start(config).await;
@@ -236,14 +215,10 @@ async fn test_proxy_service_start_https_acme_valid() {
     let config = ProxyConfig {
         mode: ProxyMode::HttpsAcme,
         port: 8080,
-        listen_addr: "127.0.0.1".to_string(),
-        trusted_proxy_ips: vec![],
         acme_email: Some("test@example.com".to_string()),
         acme_domain: Some("example.com".to_string()),
         acme_challenge: Some(AcmeChallengeKind::Http01),
-        acme_dns_profile_id: None,
-        config_db_path: None,
-        security_db_path: None,
+        ..Default::default()
     };
 
     let handle = service.start(config).await.unwrap();
@@ -263,14 +238,7 @@ async fn test_proxy_service_stop() {
     let config = ProxyConfig {
         mode: ProxyMode::LocalHttp,
         port: 8080,
-        listen_addr: "127.0.0.1".to_string(),
-        trusted_proxy_ips: vec![],
-        acme_email: None,
-        acme_domain: None,
-        acme_challenge: None,
-        acme_dns_profile_id: None,
-        config_db_path: None,
-        security_db_path: None,
+        ..Default::default()
     };
 
     let handle = service.start(config).await.unwrap();

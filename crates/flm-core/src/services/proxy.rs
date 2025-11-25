@@ -212,11 +212,14 @@ fn normalize_egress(mut egress: ProxyEgressConfig) -> Result<ProxyEgressConfig, 
             }
         }
         ProxyEgressMode::CustomSocks5 => {
-            let endpoint = egress.socks5_endpoint.as_ref().ok_or_else(|| {
-                ProxyError::InvalidConfig {
-                    reason: "socks5 endpoint is required when using custom SOCKS5 mode".to_string(),
-                }
-            })?;
+            let endpoint =
+                egress
+                    .socks5_endpoint
+                    .as_ref()
+                    .ok_or_else(|| ProxyError::InvalidConfig {
+                        reason: "socks5 endpoint is required when using custom SOCKS5 mode"
+                            .to_string(),
+                    })?;
             validate_socks_endpoint(endpoint)?;
         }
     }

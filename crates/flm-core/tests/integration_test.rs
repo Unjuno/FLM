@@ -30,14 +30,7 @@ mod tests {
         let config = ProxyConfig {
             mode: ProxyMode::LocalHttp,
             port: 8080,
-            listen_addr: "127.0.0.1".to_string(),
-            trusted_proxy_ips: vec![],
-            acme_email: None,
-            acme_domain: None,
-            acme_challenge: None,
-            acme_dns_profile_id: None,
-            config_db_path: None,
-            security_db_path: None,
+            ..Default::default()
         };
 
         let json = serde_json::to_string(&config).unwrap();

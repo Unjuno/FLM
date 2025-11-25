@@ -92,6 +92,9 @@ async fn test_full_workflow() {
         subcommand: ProxySubcommand::Start {
             port: 19090,
             mode: "local-http".to_string(),
+            egress_mode: "direct".to_string(),
+            socks5_endpoint: None,
+            egress_fail_open: false,
             bind: "127.0.0.1".to_string(),
             acme_email: None,
             acme_domain: None,

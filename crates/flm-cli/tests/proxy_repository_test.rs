@@ -28,14 +28,7 @@ async fn test_proxy_repository_save_and_load_profile() {
         config: ProxyConfig {
             mode: ProxyMode::LocalHttp,
             port: 8080,
-            listen_addr: "127.0.0.1".to_string(),
-            trusted_proxy_ips: vec![],
-            acme_email: None,
-            acme_domain: None,
-            acme_challenge: None,
-            acme_dns_profile_id: None,
-            config_db_path: None,
-            security_db_path: None,
+            ..Default::default()
         },
         created_at: "2025-01-01T00:00:00Z".to_string(),
     };
@@ -77,14 +70,7 @@ async fn test_proxy_repository_list_profiles() {
         config: ProxyConfig {
             mode: ProxyMode::LocalHttp,
             port: 8080,
-            listen_addr: "127.0.0.1".to_string(),
-            trusted_proxy_ips: vec![],
-            acme_email: None,
-            acme_domain: None,
-            acme_challenge: None,
-            acme_dns_profile_id: None,
-            config_db_path: None,
-            security_db_path: None,
+            ..Default::default()
         },
         created_at: "2025-01-01T00:00:00Z".to_string(),
     };
@@ -94,14 +80,7 @@ async fn test_proxy_repository_list_profiles() {
         config: ProxyConfig {
             mode: ProxyMode::DevSelfSigned,
             port: 8443,
-            listen_addr: "127.0.0.1".to_string(),
-            trusted_proxy_ips: vec![],
-            acme_email: None,
-            acme_domain: None,
-            acme_challenge: None,
-            acme_dns_profile_id: None,
-            config_db_path: None,
-            security_db_path: None,
+            ..Default::default()
         },
         created_at: "2025-01-02T00:00:00Z".to_string(),
     };
@@ -132,14 +111,10 @@ async fn test_proxy_repository_save_profile_with_acme_config() {
         config: ProxyConfig {
             mode: ProxyMode::HttpsAcme,
             port: 8080,
-            listen_addr: "127.0.0.1".to_string(),
-            trusted_proxy_ips: vec![],
             acme_email: Some("test@example.com".to_string()),
             acme_domain: Some("example.com".to_string()),
             acme_challenge: Some(AcmeChallengeKind::Http01),
-            acme_dns_profile_id: None,
-            config_db_path: None,
-            security_db_path: None,
+            ..Default::default()
         },
         created_at: "2025-01-01T00:00:00Z".to_string(),
     };
@@ -179,14 +154,7 @@ async fn test_proxy_repository_replace_existing_profile() {
         config: ProxyConfig {
             mode: ProxyMode::LocalHttp,
             port: 8080,
-            listen_addr: "127.0.0.1".to_string(),
-            trusted_proxy_ips: vec![],
-            acme_email: None,
-            acme_domain: None,
-            acme_challenge: None,
-            acme_dns_profile_id: None,
-            config_db_path: None,
-            security_db_path: None,
+            ..Default::default()
         },
         created_at: "2025-01-01T00:00:00Z".to_string(),
     };
@@ -200,14 +168,7 @@ async fn test_proxy_repository_replace_existing_profile() {
         config: ProxyConfig {
             mode: ProxyMode::DevSelfSigned,
             port: 8443,
-            listen_addr: "127.0.0.1".to_string(),
-            trusted_proxy_ips: vec![],
-            acme_email: None,
-            acme_domain: None,
-            acme_challenge: None,
-            acme_dns_profile_id: None,
-            config_db_path: None,
-            security_db_path: None,
+            ..Default::default()
         },
         created_at: "2025-01-02T00:00:00Z".to_string(),
     };

@@ -77,7 +77,11 @@ Rust製セキュアプロキシを起動し、Forward先を検出済みエンジ
       "localhost": "http://localhost:8080",
       "local_network": "http://192.168.1.100:8080"
     },
-    "pid": 12345
+    "pid": 12345,
+    "egress": {
+      "mode": "direct",
+      "fail_open": false
+    }
   }
 }
 ```
@@ -107,7 +111,7 @@ flm proxy stop --port 8080
 ### 3.5 `flm proxy status`
 現在稼働中のプロキシハンドル一覧を取得し、モード/ポート/ACME 情報を確認する。
 
-- 出力: `ProxyService::status` が返すハンドル配列を JSON でそのまま表示（`id`, `mode`, `port`, `listen_addr`, `acme_domain`, `running`, `last_error` など）
+- 出力: `ProxyService::status` が返すハンドル配列を JSON でそのまま表示（`id`, `mode`, `port`, `listen_addr`, `acme_domain`, `egress`, `running`, `last_error` など）
 - `--format text` の場合はテーブル表示
 - ハンドルが存在しない場合は空配列
 

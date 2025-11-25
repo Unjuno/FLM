@@ -20,6 +20,9 @@ async fn test_proxy_start_local_http() {
     let subcommand = ProxySubcommand::Start {
         port: 19080,
         mode: "local-http".to_string(),
+        egress_mode: "direct".to_string(),
+        socks5_endpoint: None,
+        egress_fail_open: false,
         bind: "127.0.0.1".to_string(),
         acme_email: None,
         acme_domain: None,
@@ -147,6 +150,9 @@ async fn test_proxy_start_invalid_mode() {
     let subcommand = ProxySubcommand::Start {
         port: 19081,
         mode: "invalid-mode".to_string(),
+        egress_mode: "direct".to_string(),
+        socks5_endpoint: None,
+        egress_fail_open: false,
         bind: "127.0.0.1".to_string(),
         acme_email: None,
         acme_domain: None,
@@ -178,6 +184,9 @@ async fn test_proxy_start_multiple_ports() {
     let subcommand1 = ProxySubcommand::Start {
         port: 19082,
         mode: "local-http".to_string(),
+        egress_mode: "direct".to_string(),
+        socks5_endpoint: None,
+        egress_fail_open: false,
         bind: "127.0.0.1".to_string(),
         acme_email: None,
         acme_domain: None,
@@ -204,6 +213,9 @@ async fn test_proxy_start_multiple_ports() {
     let subcommand2 = ProxySubcommand::Start {
         port: 19083,
         mode: "local-http".to_string(),
+        egress_mode: "direct".to_string(),
+        socks5_endpoint: None,
+        egress_fail_open: false,
         bind: "127.0.0.1".to_string(),
         acme_email: None,
         acme_domain: None,
@@ -278,6 +290,9 @@ async fn test_proxy_stop_by_handle_id() {
     let subcommand = ProxySubcommand::Start {
         port: 19084,
         mode: "local-http".to_string(),
+        egress_mode: "direct".to_string(),
+        socks5_endpoint: None,
+        egress_fail_open: false,
         bind: "127.0.0.1".to_string(),
         acme_email: None,
         acme_domain: None,

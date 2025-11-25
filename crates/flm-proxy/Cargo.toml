@@ -38,6 +38,10 @@ rustls = "0.21"
 tokio-rustls = "0.24"
 rustls-pemfile = "1.0"
 
+[features]
+default = []
+packaged-ca = []
+
 [dev-dependencies]
 tempfile = "3.8"
 

@@ -200,10 +200,7 @@ fn parse_egress_config(
                 fail_open,
             })
         }
-        _ => Err(format!(
-            "Invalid egress mode: '{mode}'. Valid modes: direct, tor, socks5"
-        )
-        .into()),
+        _ => Err(format!("Invalid egress mode: '{mode}'. Valid modes: direct, tor, socks5").into()),
     }
 }
 

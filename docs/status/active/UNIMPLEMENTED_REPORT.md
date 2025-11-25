@@ -26,15 +26,12 @@
 1. **Phase3 CLI コマンド未実装**  
    - `flm model-profiles`, `flm api prompts`, `flm migrate legacy` は仕様のみ。DB側の `model_profiles` / `api_prompts` テーブルも Post-MVP 計画。  
    - 参照: `docs/specs/CLI_SPEC.md`, `docs/specs/DB_SCHEMA.md`
-2. **Tor/SOCKS5 egress 実装待ち**  
-   - 仕様はあるが CLI/Proxy 実装、監査ログ、`ProxyHandle.egress` 表示などが未着手。  
-   - 参照: `docs/specs/PROXY_SPEC.md`, `docs/planning/PLAN.md`
-3. **Packaged-CA モード**  
+2. **Packaged-CA モード**  
    - ルートCA生成、サーバ証明書自動発行、OS信頼ストア登録、アンインストーラでの削除、Linux GPG署名が未実装。  
    - `rcgen` API不一致で Step1 から停滞。参照: `docs/planning/PHASE3_PACKAGING_PLAN.md`
-4. **Migration ガイド／ツール**  
+3. **Migration ガイド／ツール**  
    - `MIGRATION_GUIDE.md` は Draft、`flm migrate legacy` CLI も未実装。  
-5. **バージョン管理ツール**  
+4. **バージョン管理ツール**  
    - `scripts/tag_core_api.sh`, `scripts/align_versions.rs` が “TBD”。Core API changelog も `1.0.0 - TBD` のまま。  
    - 参照: `docs/guides/VERSIONING_POLICY.md`, `docs/changelog/CHANGELOG.md`
 

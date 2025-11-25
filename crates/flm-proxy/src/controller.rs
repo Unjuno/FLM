@@ -9,18 +9,22 @@ use flm_core::domain::proxy::{
 };
 use flm_core::error::ProxyError;
 use flm_core::ports::ProxyController;
+#[cfg(feature = "packaged-ca")]
 use flm_core::services::certificate::{
     generate_server_cert, is_certificate_valid, save_certificate_files,
 };
 use serde_json::json;
 use std::net::SocketAddr;
+#[cfg(feature = "packaged-ca")]
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::net::TcpStream;
 use tokio::sync::{oneshot, RwLock};
 use tokio::task::JoinHandle;
 use tokio::time::{timeout, Duration};
-use tracing::{error, info, warn};
+#[cfg(feature = "packaged-ca")]
+use tracing::info;
+use tracing::{error, warn};
 
 use crate::adapters::{AuditLogMetadata, SqliteSecurityRepository};
 use crate::middleware::AppState;
@@ -118,7 +122,7 @@ impl ProxyController for AxumProxyController {
                 _ => Some(config.port + 1),
             },
             acme_domain: config.acme_domain.clone(),
-             egress: config.egress.clone(),
+            egress: config.egress.clone(),
             running: true,
             last_error: None,
         };
@@ -206,12 +210,13 @@ async fn start_local_http_server(
     let process_controller: Box<dyn flm_core::ports::EngineProcessController + Send + Sync> =
         Box::new(crate::process_controller::NoopProcessController);
     let http_client_builder = http_client_builder_for_egress(&config.egress)?;
-    let http_client: Box<dyn flm_core::ports::HttpClient + Send + Sync> =
-        Box::new(crate::http_client::ReqwestHttpClient::from_builder(http_client_builder).map_err(
-            |e| ProxyError::InvalidConfig {
+    let http_client: Box<dyn flm_core::ports::HttpClient + Send + Sync> = Box::new(
+        crate::http_client::ReqwestHttpClient::from_builder(http_client_builder).map_err(|e| {
+            ProxyError::InvalidConfig {
                 reason: format!("Failed to create HTTP client: {e}"),
-            },
-        )?);
+            }
+        })?,
+    );
 
     // Use simple in-memory engine repository
     let engine_repo_impl = Arc::new(crate::engine_repo::InMemoryEngineRepository::new());
@@ -1389,6 +1394,8 @@ async fn handle_chat_stream(
 /// This function starts an HTTPS server using a server certificate signed by
 /// the packaged root CA. The certificate is automatically generated if it
 /// doesn't exist or is expired.
+#[cfg(feature = "packaged-ca")]
+#[cfg(feature = "packaged-ca")]
 async fn start_packaged_ca_server(
     mut config: ProxyConfig,
     shutdown_rx: oneshot::Receiver<()>,
@@ -1501,14 +1508,13 @@ async fn start_packaged_ca_server(
     let process_controller: Box<dyn flm_core::ports::EngineProcessController + Send + Sync> =
         Box::new(crate::process_controller::NoopProcessController);
     let http_client_builder = http_client_builder_for_egress(&config.egress)?;
-    let http_client: Box<dyn flm_core::ports::HttpClient + Send + Sync> =
-        Box::new(crate::http_client::ReqwestHttpClient::from_builder(http_client_builder).map_err(
-            |e| {
-                ProxyError::InvalidConfig {
-                    reason: format!("Failed to create HTTP client: {e}"),
-                }
-            },
-        )?);
+    let http_client: Box<dyn flm_core::ports::HttpClient + Send + Sync> = Box::new(
+        crate::http_client::ReqwestHttpClient::from_builder(http_client_builder).map_err(|e| {
+            ProxyError::InvalidConfig {
+                reason: format!("Failed to create HTTP client: {e}"),
+            }
+        })?,
+    );
 
     // Use simple in-memory engine repository
     let engine_repo_impl = Arc::new(crate::engine_repo::InMemoryEngineRepository::new());
@@ -1616,7 +1622,18 @@ async fn start_packaged_ca_server(
     Ok(join_handle)
 }
 
+#[cfg(not(feature = "packaged-ca"))]
+async fn start_packaged_ca_server(
+    _config: ProxyConfig,
+    _shutdown_rx: oneshot::Receiver<()>,
+) -> Result<JoinHandle<Result<(), ProxyError>>, ProxyError> {
+    Err(ProxyError::InvalidConfig {
+        reason: "packaged-ca mode is not enabled in this build".to_string(),
+    })
+}
+
 /// Generate and save server certificate
+#[cfg(feature = "packaged-ca")]
 fn generate_and_save_cert(cert_dir: &PathBuf) -> Result<(String, String), ProxyError> {
     // For Phase 3, we generate a self-signed certificate
     // TODO: In full implementation, sign with root CA
@@ -1708,6 +1725,7 @@ async fn log_egress_audit_event(
     severity: &'static str,
     details: serde_json::Value,
 ) {
+    let details_string = details.to_string();
     if let Err(err) = repo
         .save_audit_log(
             "system",
@@ -1719,7 +1737,7 @@ async fn log_egress_audit_event(
             AuditLogMetadata {
                 severity,
                 ip: None,
-                details: Some(details.to_string()),
+                details: Some(details_string.as_str()),
             },
         )
         .await
@@ -1754,9 +1772,7 @@ async fn verify_socks_endpoint(endpoint: &str) -> Result<(), ProxyError> {
     }
 
     Err(ProxyError::InvalidConfig {
-        reason: format!(
-            "Unable to reach SOCKS5 endpoint {endpoint}: {last_error}"
-        ),
+        reason: format!("Unable to reach SOCKS5 endpoint {endpoint}: {last_error}"),
     })
 }
 
@@ -1767,17 +1783,18 @@ fn http_client_builder_for_egress(
     match egress.mode {
         ProxyEgressMode::Direct => Ok(builder),
         ProxyEgressMode::Tor | ProxyEgressMode::CustomSocks5 => {
-            let endpoint = egress.socks5_endpoint.as_ref().ok_or_else(|| {
+            let endpoint =
+                egress
+                    .socks5_endpoint
+                    .as_ref()
+                    .ok_or_else(|| ProxyError::InvalidConfig {
+                        reason: "socks5 endpoint missing for proxy egress".to_string(),
+                    })?;
+            let proxy = reqwest::Proxy::all(&format!("socks5h://{endpoint}")).map_err(|e| {
                 ProxyError::InvalidConfig {
-                    reason: "socks5 endpoint missing for proxy egress".to_string(),
+                    reason: format!("Failed to configure SOCKS proxy: {e}"),
                 }
             })?;
-            let proxy =
-                reqwest::Proxy::all(&format!("socks5h://{endpoint}")).map_err(|e| {
-                    ProxyError::InvalidConfig {
-                        reason: format!("Failed to configure SOCKS proxy: {e}"),
-                    }
-                })?;
             Ok(builder.proxy(proxy))
         }
     }
