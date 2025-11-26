@@ -1,0 +1,53 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://flm.dev/schemas/security_policy.json",
+  "$comment": "SPDX-License-Identifier: MIT",
+  "title": "SecurityPolicy",
+  "description": "Phase 1/2 SecurityPolicy JSON contract used by CLI/UI/Proxy.",
+  "type": "object",
+  "additionalProperties": true,
+  "properties": {
+    "ip_whitelist": {
+      "type": "array",
+      "description": "List of CIDR/IPv4/IPv6 strings. Empty or omitted disables IP filtering.",
+      "items": {
+        "type": "string",
+        "minLength": 1
+      }
+    },
+    "cors": {
+      "type": "object",
+      "additionalProperties": true,
+      "properties": {
+        "allowed_origins": {
+          "type": "array",
+          "description": "Allowed origins. Empty array means wildcard (*).",
+          "items": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "rate_limit": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "rpm": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Requests per minute per API key. 0 disables rate limiting."
+        },
+        "burst": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "Optional burst window. Defaults to rpm when omitted."
+        }
+      },
+      "required": [
+        "rpm"
+      ]
+    }
+  }
+}
+

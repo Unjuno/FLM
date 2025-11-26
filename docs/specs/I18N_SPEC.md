@@ -1,5 +1,14 @@
 # FLM Internationalization (i18n) Specification
-> Status: Canonical | Audience: UI engineers | Updated: 2025-11-20
+> Status: Draft | Audience: UI engineers | Updated: 2025-11-20
+> Phase 2 実装中の暫定仕様です。確定内容は `docs/planning/PLAN.md` の UI フェーズと同期します。
+
+> 章別リビジョン:
+>
+> | 節 | バージョン | 最終更新 |
+> | --- | --- | --- |
+> | 2. UI多言語対応 | Draft | 2025-11-20 |
+> | 3. CLI多言語対応 | v1.0.0 | 2025-11-20 |
+> | 7. 実装すべき項目 | Draft backlog | 2025-11-25 |
 
 ## 1. 概要
 

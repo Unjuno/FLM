@@ -1,6 +1,14 @@
 # FLM Proxy Specification
 > Status: Canonical | Audience: Proxy/Network engineers | Updated: 2025-11-20
 
+> 章別リビジョン:
+>
+> | 節 | バージョン | 最終更新 |
+> | --- | --- | --- |
+> | 3. ルーティングルール | v1.0.0 | 2025-11-20 |
+> | 6. TLS/HTTPS モード | Draft addendum (packaged-ca) | 2025-11-25 |
+> | 9. セキュリティポリシー連携 | v1.0.0 | 2025-11-20 |
+
 **注意**: 本プロキシ仕様は**個人利用・シングルユーザー環境向け**のアプリケーション向けです。マルチユーザー対応やロールベースアクセス制御（RBAC）機能は提供されていません。
 
 ## 1. 役割
@@ -93,6 +101,7 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 ## 6. TLS / HTTPS モード
 
 ### 6.1 モード選択フローチャート
+> `packaged-ca` は Phase 3 Draft（未実装）。要件は `docs/planning/PHASE3_PACKAGING_PLAN.md` を参照。
 
 ```
 インターネット公開？
@@ -116,7 +125,7 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 | `local-http`    | HTTPのみ。ローカルネットワーク限定（ファイアウォール必須） | CLIデフォルト、ローカル検証 |
 | `dev-selfsigned`| 自己署名証明書で HTTPS 提供。LAN / 開発用途専用。Wizard はルート証明書の生成・配布・削除手順を提示する（手動インストールが必要） | LAN/開発用途 |
 | `https-acme`    | ACME (Let's Encrypt など) で証明書を取得し HTTPS 提供 | インターネット公開（CLI版の既定） |
-| `packaged-ca`   | パッケージに同梱されたルートCA証明書を使用。インストール時にOS信頼ストアへ自動登録されるため、ブラウザ警告なしでHTTPS利用可能。大衆向け配布に最適。Phase 3 で実装予定 | パッケージ版（Phase 3）の既定 |
+| `packaged-ca`   | パッケージに同梱されたルートCA証明書を使用。インストール時にOS信頼ストアへ自動登録されるため、ブラウザ警告なしでHTTPS利用可能。**Status: Draft（Phase 3未実装）** | パッケージ版（Phase 3）の既定 |
 
 **ポート設定**: `--port` で指定した値は HTTP 用ポートとして扱い、HTTPS は `port + 1` をデフォルトとする（例: 8080/8081）。
 
@@ -189,6 +198,21 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 ## 9. セキュリティポリシー JSON の前提
 
 Proxy / UI / CLI は `SecurityPolicy.policy_json` に以下のキーが存在する前提で動作する。
+- `proxy-daemon.json`（Windows: `%APPDATA%\flm\run\`, macOS: `~/Library/Application Support/flm/run/`, Linux: `~/.local/share/flm/run/`）には `{ port, token, pid, updated_at }` を保存し、CLI 側が 2 プロセス間の発見／再接続に利用する。ファイル権限は 600 (Unix) / ACL 限定 (Windows) が必須。
+- デーモン停止時やクラッシュ時は state file を削除し、CLI が自動再起動を試みられるようにする。
+
+## 10. 管理 API / デーモン
+
+- デフォルト運用では `flm-proxy --daemon` が起動し、127.0.0.1 のランダム空きポートで管理 API (`/admin/*`) を公開する。
+- すべての管理リクエストは `Authorization: Bearer <token>` を必須とし、token は CLI が起動時に生成・渡下する。現在は平文 HTTP だが loopback 接続のみに限定される。将来的に TLS / Unix domain socket / Windows named pipe を追加する。
+- 提供エンドポイント:
+  - `GET /admin/health` → `{ "status": "ok" }`
+  - `POST /admin/start` → `ProxyConfig` を受け取り新しいインスタンスを起動、`ProxyHandle` を返す
+  - `POST /admin/stop` → `{ port?, handle_id? }` を受け取り該当インスタンスを停止
+  - `GET /admin/status` → 稼働中 `ProxyHandle` の配列
+- すべての API は Axum で実装し、`ProxyService` を直接呼び出すため、Core ドメインのバリデーション／永続化が常に適用される。
+- ループバック HTTP 上であっても、CLI 以外からのアクセスを防ぐため token を必須とし、一定回数の認証失敗は audit log に記録する。
+
 
 **JSONスキーマの定義**: `docs/specs/CORE_API.md` の「SecurityPolicy エッジケース」セクションを参照（唯一の定義源）。
 
@@ -322,3 +346,10 @@ Proxy / UI / CLI は `SecurityPolicy.policy_json` に以下のキーが存在す
 - `docs/guides/SECURITY_FIREWALL_GUIDE.md` - ファイアウォール設定ガイド
 - `docs/specs/CLI_SPEC.md` - CLI仕様
 - `docs/specs/ENGINE_DETECT.md` - エンジン検出仕様
+
+## Changelog
+
+| バージョン | 日付 | 変更概要 |
+|-----------|------|----------|
+| `1.1.0` | 2025-11-25 | TLS/`packaged-ca` モードのドラフト要件と ACME フォールバック手順を追加。 |
+| `1.0.0` | 2025-11-20 | 初版公開。ルーティング / ミドルウェア / セキュリティポリシー連携を定義。 |

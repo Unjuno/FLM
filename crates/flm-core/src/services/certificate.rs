@@ -6,10 +6,13 @@
 use anyhow::{anyhow, Context, Result};
 use chrono::{DateTime, Utc};
 use rcgen::{
-    Certificate, CertificateParams, DistinguishedName, DnType, KeyPair, PKCS_ECDSA_P256_SHA256,
+    Certificate, CertificateParams, DistinguishedName, DnType, KeyPair, SanType,
+    PKCS_ECDSA_P256_SHA256,
 };
 use ring::digest;
+use std::collections::BTreeSet;
 use std::fs;
+use std::net::IpAddr;
 use std::path::{Path, PathBuf};
 use std::process::Command;
 
@@ -86,7 +89,7 @@ pub fn generate_root_ca(common_name: &str, validity_days: u32) -> Result<RootCaI
     let fingerprint_hex = fingerprint
         .as_ref()
         .iter()
-        .map(|b| format!("{:02x}", b))
+        .map(|b| format!("{b:02x}"))
         .collect::<Vec<_>>()
         .join(":");
 
@@ -127,16 +130,18 @@ pub struct ServerCertInfo {
 /// # Returns
 /// Server certificate information including certificate and private key
 pub fn generate_server_cert(
-    _root_ca_cert_pem: &str,
-    _root_ca_key_pem: &str,
+    root_ca_cert_pem: &str,
+    root_ca_key_pem: &str,
     common_name: &str,
     validity_days: u32,
     san_ips: Option<Vec<String>>,
 ) -> Result<ServerCertInfo> {
-    // Note: For Phase 3, we'll simplify the root CA loading
-    // In a full implementation, we would parse the root CA certificate from PEM
-    // and use it for signing. For now, we'll generate a self-signed certificate
-    // and note that proper root CA signing will be implemented in the full version.
+    let root_ca_key =
+        KeyPair::from_pem(root_ca_key_pem).context("Failed to parse packaged root CA key")?;
+    let root_ca_params = CertificateParams::from_ca_cert_pem(root_ca_cert_pem, root_ca_key)
+        .context("Failed to parse packaged root CA certificate")?;
+    let root_ca_cert =
+        Certificate::from_params(root_ca_params).context("Failed to load packaged root CA")?;
 
     // Generate server key pair
     let server_key_pair =
@@ -157,27 +162,7 @@ pub fn generate_server_cert(
     params.key_pair = Some(server_key_pair);
 
     // Add Subject Alternative Names
-    let mut san_names = vec![
-        "localhost".to_string(),
-        "127.0.0.1".to_string(),
-        "::1".to_string(),
-    ];
-
-    // Add RFC1918 private IP ranges (common addresses)
-    if let Some(ips) = san_ips {
-        san_names.extend(ips);
-    }
-
-    params.subject_alt_names = san_names
-        .iter()
-        .map(|name| {
-            if name.contains(':') || name.parse::<std::net::IpAddr>().is_ok() {
-                rcgen::SanType::IpAddress(name.parse().unwrap())
-            } else {
-                rcgen::SanType::DnsName(name.clone())
-            }
-        })
-        .collect();
+    params.subject_alt_names = build_subject_alt_names(san_ips);
 
     // Set validity period
     let not_before = Utc::now();
@@ -190,30 +175,23 @@ pub fn generate_server_cert(
     params.not_before = not_before_time;
     params.not_after = not_after_time;
 
-    // Generate server certificate
-    // Note: rcgen 0.12 API - Certificate::from_params() takes ownership of params
     let server_cert =
         Certificate::from_params(params).context("Failed to create server certificate")?;
 
-    // Sign with root CA
-    // Note: For Phase 3, we'll generate a self-signed certificate
-    // Full implementation will use serialize_pem_with_signer() with the root CA
-    // TODO: Implement proper root CA signing when root CA loading is complete
     let certificate_pem = server_cert
-        .serialize_pem()
-        .context("Failed to serialize server certificate")?;
+        .serialize_pem_with_signer(&root_ca_cert)
+        .context("Failed to serialize signed server certificate")?;
 
     let private_key_pem = server_cert.serialize_private_key_pem();
 
-    // Calculate fingerprint
     let der = server_cert
-        .serialize_der()
-        .context("Failed to serialize server certificate to DER")?;
+        .serialize_der_with_signer(&root_ca_cert)
+        .context("Failed to serialize signed server certificate to DER")?;
     let fingerprint = digest::digest(&digest::SHA256, &der);
     let fingerprint_hex = fingerprint
         .as_ref()
         .iter()
-        .map(|b| format!("{:02x}", b))
+        .map(|b| format!("{b:02x}"))
         .collect::<Vec<_>>()
         .join(":");
 
@@ -242,14 +220,14 @@ pub fn save_certificate_files(
 ) -> Result<PathBuf> {
     // Create directory if it doesn't exist
     fs::create_dir_all(cert_dir)
-        .with_context(|| format!("Failed to create certificate directory: {:?}", cert_dir))?;
+        .with_context(|| format!("Failed to create certificate directory: {cert_dir:?}"))?;
 
     let cert_path = cert_dir.join(cert_filename);
     let key_path = cert_dir.join(key_filename);
 
     // Save certificate
     fs::write(&cert_path, cert_pem)
-        .with_context(|| format!("Failed to write certificate to {:?}", cert_path))?;
+        .with_context(|| format!("Failed to write certificate to {cert_path:?}"))?;
 
     // Save private key with restricted permissions (600)
     #[cfg(unix)]
@@ -258,11 +236,11 @@ pub fn save_certificate_files(
         let mut perms = fs::metadata(&cert_dir)?.permissions();
         perms.set_mode(0o600);
         fs::set_permissions(&key_path, perms)
-            .with_context(|| format!("Failed to set permissions on {:?}", key_path))?;
+            .with_context(|| format!("Failed to set permissions on {key_path:?}"))?;
     }
 
     fs::write(&key_path, key_pem)
-        .with_context(|| format!("Failed to write private key to {:?}", key_path))?;
+        .with_context(|| format!("Failed to write private key to {key_path:?}"))?;
 
     Ok(cert_path)
 }
@@ -287,10 +265,10 @@ pub fn is_certificate_valid(cert_pem: &str) -> bool {
                     // Convert x509-parser's OffsetDateTime to chrono's DateTime<Utc>
                     let not_before_utc =
                         DateTime::<Utc>::from_timestamp(not_before.unix_timestamp(), 0)
-                            .unwrap_or_else(|| Utc::now());
+                            .unwrap_or_else(Utc::now);
                     let not_after_utc =
                         DateTime::<Utc>::from_timestamp(not_after.unix_timestamp(), 0)
-                            .unwrap_or_else(|| Utc::now());
+                            .unwrap_or_else(Utc::now);
 
                     now >= not_before_utc && now <= not_after_utc
                 }
@@ -298,6 +276,103 @@ pub fn is_certificate_valid(cert_pem: &str) -> bool {
             }
         }
         Err(_) => false,
+    }
+}
+
+fn build_subject_alt_names(additional: Option<Vec<String>>) -> Vec<SanType> {
+    let mut entries: BTreeSet<String> = BTreeSet::new();
+    entries.insert("localhost".to_string());
+    entries.insert("127.0.0.1".to_string());
+    entries.insert("::1".to_string());
+    entries.insert("10.0.0.1".to_string());
+    entries.insert("172.16.0.1".to_string());
+    entries.insert("192.168.0.1".to_string());
+
+    if let Some(values) = additional {
+        for value in values {
+            let trimmed = value.trim();
+            if trimmed.is_empty() {
+                continue;
+            }
+            entries.insert(trimmed.to_string());
+        }
+    }
+
+    entries
+        .into_iter()
+        .map(|entry| match entry.parse::<IpAddr>() {
+            Ok(ip) => SanType::IpAddress(ip),
+            Err(_) => SanType::DnsName(entry),
+        })
+        .collect()
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use x509_parser::extensions::GeneralName;
+
+    #[test]
+    fn generate_server_cert_uses_packaged_root() {
+        let root = generate_root_ca("Test Root CA", 365).unwrap();
+
+        let server = generate_server_cert(
+            &root.certificate_pem,
+            &root.private_key_pem,
+            "FLM Proxy Server",
+            90,
+            Some(vec!["custom.local".into(), "192.168.1.50".into()]),
+        )
+        .unwrap();
+
+        let (_, root_pem) =
+            x509_parser::pem::parse_x509_pem(root.certificate_pem.as_bytes()).unwrap();
+        let (_, root_cert) = x509_parser::parse_x509_certificate(&root_pem.contents).unwrap();
+
+        let (_, server_pem) =
+            x509_parser::pem::parse_x509_pem(server.certificate_pem.as_bytes()).unwrap();
+        let (_, server_cert) = x509_parser::parse_x509_certificate(&server_pem.contents).unwrap();
+
+        assert_eq!(
+            server_cert.tbs_certificate.issuer,
+            root_cert.tbs_certificate.subject
+        );
+
+        let san = server_cert
+            .subject_alternative_name()
+            .expect("Failed to parse SAN extension")
+            .expect("SAN extension missing")
+            .value;
+
+        let mut has_localhost = false;
+        let mut has_custom = false;
+        let mut has_private_ip = false;
+
+        for name in san.general_names.iter() {
+            match name {
+                GeneralName::DNSName(dns) => {
+                    if *dns == "localhost" {
+                        has_localhost = true;
+                    }
+                    if *dns == "custom.local" {
+                        has_custom = true;
+                    }
+                }
+                GeneralName::IPAddress(ip) => {
+                    if ip == &[192, 168, 1, 50] {
+                        has_private_ip = true;
+                    }
+                }
+                _ => {}
+            }
+        }
+
+        assert!(has_localhost, "SAN should include localhost");
+        assert!(has_custom, "SAN should include caller provided DNS entries");
+        assert!(
+            has_private_ip,
+            "SAN should include caller provided private IP addresses"
+        );
     }
 }
 
@@ -344,8 +419,7 @@ fn install_certificate_windows(cert_path: &Path) -> Result<()> {
         .ok_or_else(|| anyhow!("invalid certificate path"))?;
 
     let current_user_script = format!(
-        r#"Import-Certificate -FilePath "{}" -CertStoreLocation Cert:\CurrentUser\Root"#,
-        cert_str
+        r#"Import-Certificate -FilePath "{cert_str}" -CertStoreLocation Cert:\CurrentUser\Root"#
     );
     let current_user_output = Command::new("powershell")
         .args([
@@ -361,8 +435,7 @@ fn install_certificate_windows(cert_path: &Path) -> Result<()> {
     }
 
     let local_machine_script = format!(
-        r#"Import-Certificate -FilePath "{}" -CertStoreLocation Cert:\LocalMachine\Root"#,
-        cert_str
+        r#"Import-Certificate -FilePath "{cert_str}" -CertStoreLocation Cert:\LocalMachine\Root"#
     );
     let local_machine_output = Command::new("powershell")
         .args([

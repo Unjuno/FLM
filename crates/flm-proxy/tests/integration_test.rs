@@ -257,10 +257,10 @@ async fn test_rate_limit_basic() {
     // Create API key
     let api_key = security_service.create_api_key("test-key").await.unwrap();
 
-    // Set policy with rate limit (low limit for testing)
+    // Set policy with rate limit (low limit for testing, burst > rpm to verify rpm enforcement)
     let policy_json = serde_json::json!({
         "rate_limit": {
-            "rpm": 5,
+            "rpm": 3,
             "burst": 5
         }
     });
@@ -285,10 +285,9 @@ async fn test_rate_limit_basic() {
     let handle = controller.start(config).await.unwrap();
     sleep(Duration::from_millis(500)).await;
 
-    // Make requests up to the limit
-    // Use /v1/models endpoint which requires authentication
+    // Make requests up to the RPM limit (burst allows 5, but RPM should cap at 3 per minute)
     let client = reqwest::Client::new();
-    for i in 0..5 {
+    for i in 0..3 {
         let response = client
             .get("http://localhost:18084/v1/models")
             .header("Authorization", format!("Bearer {}", api_key.plain))
@@ -296,7 +295,7 @@ async fn test_rate_limit_basic() {
             .await
             .unwrap();
 
-        // First 5 requests should succeed (200 OK or 404 if no engines, but not 429)
+        // First 3 requests should succeed
         let status = response.status();
         assert_ne!(
             status,
@@ -313,7 +312,7 @@ async fn test_rate_limit_basic() {
         }
     }
 
-    // Next request should be rate limited
+    // Next request should be rate limited due to RPM window exhaustion
     let response = client
         .get("http://localhost:18084/v1/models")
         .header("Authorization", format!("Bearer {}", api_key.plain))
@@ -322,7 +321,7 @@ async fn test_rate_limit_basic() {
         .unwrap();
 
     let status = response.status();
-    eprintln!("6th request status: {:?}", status);
+    eprintln!("4th request status: {:?}", status);
     assert_eq!(
         status,
         reqwest::StatusCode::TOO_MANY_REQUESTS,
@@ -357,11 +356,11 @@ async fn test_rate_limit_multiple_keys() {
     let api_key1 = security_service.create_api_key("test-key-1").await.unwrap();
     let api_key2 = security_service.create_api_key("test-key-2").await.unwrap();
 
-    // Set policy with rate limit
+    // Set policy with rate limit (burst > rpm to ensure per-key RPM enforcement)
     let policy_json = serde_json::json!({
         "rate_limit": {
-            "rpm": 3,
-            "burst": 3
+            "rpm": 2,
+            "burst": 4
         }
     });
 
@@ -385,10 +384,9 @@ async fn test_rate_limit_multiple_keys() {
     let handle = controller.start(config).await.unwrap();
     sleep(Duration::from_millis(500)).await;
 
-    // Exhaust rate limit for key1
-    // Use /v1/models endpoint which requires authentication
+    // Exhaust rate limit for key1 (RPM = 2, burst allows spikes but should still cap at RPM)
     let client = reqwest::Client::new();
-    for _ in 0..3 {
+    for _ in 0..2 {
         let response = client
             .get("http://localhost:18085/v1/models")
             .header("Authorization", format!("Bearer {}", api_key1.plain))
@@ -524,8 +522,8 @@ async fn test_honeypot_endpoints() {
     let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
     let security_service = Arc::new(SecurityService::new(security_repo));
 
-    // Create API key
-    let api_key = security_service.create_api_key("test-key").await.unwrap();
+    // Create API key (not used in this test, but needed for database setup)
+    let _api_key = security_service.create_api_key("test-key").await.unwrap();
 
     // Set policy
     let policy_json = serde_json::json!({});
@@ -737,4 +735,178 @@ async fn test_intrusion_detection_pattern() {
     );
 
     controller.stop(handle).await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_proxy_models_endpoint_no_auth() {
+    use flm_core::domain::security::SecurityPolicy;
+    use flm_core::services::SecurityService;
+    use flm_proxy::adapters::SqliteSecurityRepository;
+    use std::sync::Arc;
+
+    // Create temporary database path
+    let security_db = std::env::temp_dir().join(format!(
+        "flm-test-models-no-auth-{}.db",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+
+    // Create security service
+    let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
+    let security_service = Arc::new(SecurityService::new(security_repo));
+
+    // Create API key
+    let _api_key = security_service.create_api_key("test-key").await.unwrap();
+
+    // Set policy
+    let policy_json = serde_json::json!({});
+
+    let policy = SecurityPolicy {
+        id: "default".to_string(),
+        policy_json: serde_json::to_string(&policy_json).unwrap(),
+        updated_at: chrono::Utc::now().to_rfc3339(),
+    };
+
+    security_service.set_policy(policy).await.unwrap();
+
+    // Start proxy
+    let controller = AxumProxyController::new();
+    let config = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: 18092,
+        security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        ..Default::default()
+    };
+
+    let handle = controller.start(config).await.unwrap();
+    sleep(Duration::from_millis(500)).await;
+
+    // Test /v1/models endpoint without authentication
+    let client = reqwest::Client::new();
+    let response = client
+        .get("http://localhost:18092/v1/models")
+        .send()
+        .await
+        .unwrap();
+
+    // Should return 401 Unauthorized
+    assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
+
+    controller.stop(handle).await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_proxy_models_endpoint_with_auth() {
+    use flm_core::domain::security::SecurityPolicy;
+    use flm_core::services::SecurityService;
+    use flm_proxy::adapters::SqliteSecurityRepository;
+    use std::sync::Arc;
+
+    // Create temporary database path
+    let security_db = std::env::temp_dir().join(format!(
+        "flm-test-models-auth-{}.db",
+        std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .unwrap()
+            .as_nanos()
+    ));
+
+    // Create security service
+    let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
+    let security_service = Arc::new(SecurityService::new(security_repo));
+
+    // Create API key
+    let api_key = security_service.create_api_key("test-key").await.unwrap();
+
+    // Set policy
+    let policy_json = serde_json::json!({});
+
+    let policy = SecurityPolicy {
+        id: "default".to_string(),
+        policy_json: serde_json::to_string(&policy_json).unwrap(),
+        updated_at: chrono::Utc::now().to_rfc3339(),
+    };
+
+    security_service.set_policy(policy).await.unwrap();
+
+    // Start proxy
+    let controller = AxumProxyController::new();
+    let config = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: 18093,
+        security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        ..Default::default()
+    };
+
+    let handle = controller.start(config).await.unwrap();
+    sleep(Duration::from_millis(500)).await;
+
+    // Test /v1/models endpoint with authentication
+    let client = reqwest::Client::new();
+    let response = client
+        .get("http://localhost:18093/v1/models")
+        .header("Authorization", format!("Bearer {}", api_key.plain))
+        .send()
+        .await
+        .unwrap();
+
+    // Should return 200 OK
+    assert_eq!(response.status(), reqwest::StatusCode::OK);
+
+    // Verify response format
+    let body: serde_json::Value = response.json().await.unwrap();
+    assert_eq!(body["object"], "list");
+    assert!(body["data"].is_array());
+
+    controller.stop(handle).await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_proxy_controller_status() {
+    let controller = AxumProxyController::new();
+
+    // Initially, status should return empty list
+    let status = controller.status().await.unwrap();
+    assert!(status.is_empty());
+
+    // Start a proxy
+    let config = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: 18094,
+        ..Default::default()
+    };
+
+    let handle = controller.start(config.clone()).await.unwrap();
+    sleep(Duration::from_millis(500)).await;
+
+    // Check status
+    let status = controller.status().await.unwrap();
+    assert_eq!(status.len(), 1);
+    assert_eq!(status[0].port, 18094);
+    assert_eq!(status[0].id, handle.id);
+    assert!(status[0].running);
+
+    // Start another proxy on different port
+    let config2 = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: 18095,
+        ..Default::default()
+    };
+
+    let handle2 = controller.start(config2).await.unwrap();
+    sleep(Duration::from_millis(500)).await;
+
+    // Check status again
+    let status = controller.status().await.unwrap();
+    assert_eq!(status.len(), 2);
+
+    // Stop both proxies
+    controller.stop(handle).await.unwrap();
+    controller.stop(handle2).await.unwrap();
+
+    // Status should be empty again
+    let status = controller.status().await.unwrap();
+    assert!(status.is_empty());
 }

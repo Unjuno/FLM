@@ -55,3 +55,9 @@
 - `docs/specs/CORE_API.md` - コアAPI仕様（EngineStatus、EngineRegistry）
 - `docs/specs/CLI_SPEC.md` - CLI仕様（`flm engines detect`コマンド）
 - `docs/planning/PLAN.md` - プロジェクト計画
+
+## Changelog
+
+| バージョン | 日付 | 変更概要 |
+|-----------|------|----------|
+| `1.0.0` | 2025-11-20 | 初版公開。Ollama / vLLM / LM Studio / llama.cpp の検出フローを定義。 |

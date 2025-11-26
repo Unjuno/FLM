@@ -35,14 +35,24 @@
   - Collect P50/P95 latency, error率 < 0.5%
 
 ### 2.3 `ci-acme-smoke`
-- Nightly schedule
+- ✅ 2025-11-25 に実装: `scripts/ci-acme-smoke.sh` と `scripts/ci-acme-smoke.ps1` を追加
+- Nightly schedule (推奨)
 - Matrix: `{challenge: [http-01, dns-01]}`
 - Steps:
-  1. Provision ephemeral domain (e.g., `ci-<sha>.example.test`)
+  1. Provision ephemeral domain (e.g., `ci-<sha>.example.test`) - 環境変数 `ACME_DOMAIN` で指定
   2. Execute `flm proxy start --mode https-acme --challenge $challenge --domain $domain --email ci@example.test`
-  3. Verify certificate issuance < 90s
-  4. Run HTTPS request + SSE
-  5. Tear down domain/DNS records
+  3. Verify certificate issuance < 90s (スクリプトで自動検証)
+  4. Run HTTPS request to `/health` endpoint (証明書が有効であることを確認)
+  5. Optionally test `/v1/models` endpoint if `API_KEY` is set
+  6. Stop proxy and cleanup
+- Usage:
+  ```bash
+  # With domain
+  ACME_DOMAIN=test.example.com ACME_EMAIL=ci@example.test ./scripts/ci-acme-smoke.sh
+  
+  # Skip if no domain
+  ./scripts/ci-acme-smoke.sh --skip-if-no-domain
+  ```
 
 ## 3. Coverage Targets
 - `flm-core`: line coverage 80%+, mutation score 60%+ (`cargo mutants` optional)

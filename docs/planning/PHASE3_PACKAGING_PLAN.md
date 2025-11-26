@@ -161,6 +161,17 @@ Phase 3では、FLMをパッケージ版として配布するための準備を�
 6. **Step 6**: コード署名の設定
 7. **Step 7**: セキュリティ対策の実装
 
+## スケジュール（2025-11-25 更新）
+
+| 期間 | マイルストーン | 依存 / アウトプット |
+| ---- | -------------- | -------------------- |
+| 11/25〜12/06 | Step 1完了：`rcgen` API更新 & `certificate.rs` 雛形作成 | `rcgen` 0.13ドキュメントレビュー、`docs/specs/UI_MINIMAL.md` で必要となる証明書抽象化を共有 |
+| 12/09〜12/13 | Step 2完了：サーバー証明書自動生成 + キャッシュ実装 | 新規 `crates/flm-proxy/src/certificate.rs`、再起動テストログを `reports/` へ追加 |
+| 12/16〜12/20 | Step 3-4：`packaged-ca` モード統合と OS 信頼ストア登録（Windows/macOS優先） | Proxy/E2Eテストを `reports/FULL_TEST_EXECUTION_REPORT.md` に追記、UI Wizard（`UI_MINIMAL`）へ TLS ステータス提供 |
+| 01/06〜01/17 | Step 5-7：インストーラー PoC、コード署名、ハッシュ公開 | `.github/workflows/build.yml` 改訂、`docs/specs/UI_MINIMAL.md#phase-2-残タスク--スケジュール` と連動して外部公開ウィザードのメッセージ更新 |
+
+> このスケジュールは UI 側 Phase 2 残タスクのマイルストーン（`UI_MINIMAL.md`）と同期済み。UI で TLS/証明書状態を表示する直前の週に `packaged-ca` を安定化させることで、Setup Wizard の案内文と整合させる。
+
 ## 既知の問題
 
 - **rcgen APIの不一致**: `rcgen` 0.13では`Certificate::from_params()`が存在しない

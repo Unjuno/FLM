@@ -33,14 +33,14 @@ sqlx = { version = "0.7", features = ["runtime-tokio-native-tls", "sqlite", "mig
 axum = "0.7"
 hyper = { version = "1.0", features = ["full"] }
 tower = { version = "0.4", features = ["limit", "timeout"] }
-tower-http = { version = "0.5", features = ["cors", "trace"] }
+tower-http = { version = "0.5", features = ["auth", "cors", "trace"] }
 
 # Security
 argon2 = "0.5"
 ring = "0.17"
 
 # Certificate management (Phase 3)
-rcgen = "0.12"
+rcgen = { version = "0.12", features = ["pem", "x509-parser"] }
 x509-parser = "0.18"
 time = "0.3"
 

@@ -1,6 +1,6 @@
 # ProxyService Phase 2 実装進捗
 
-> Status: In Progress | Date: 2025-11-21
+> Status: Complete | Date: 2025-11-25
 
 ## 実装完了項目
 
@@ -28,34 +28,25 @@
 
 **ファイル**: `crates/flm-proxy/src/controller.rs`
 
-## 実装中項目
+## 実装完了項目（2025-11-25更新）
 
-### ⏳ 認証ミドルウェア
-- [ ] Bearer Token抽出
-- [ ] APIキー検証
-- [ ] エラーレスポンス（401 Unauthorized）
+### ✅ 認証ミドルウェア
+- ✅ Bearer Token抽出
+- ✅ APIキー検証
+- ✅ エラーレスポンス（401 Unauthorized）
 
-### ⏳ `/v1/models`エンドポイント実装
-- [ ] EngineService統合
-- [ ] モデル一覧取得
-- [ ] OpenAI互換JSON形式への変換
+### ✅ `/v1/models`エンドポイント実装
+- ✅ EngineService統合
+- ✅ モデル一覧取得
+- ✅ OpenAI互換JSON形式への変換
 
-## 次のステップ
+### ✅ 統合テスト実装
+- ✅ プロキシ起動/停止テスト（`test_proxy_start_and_stop`）
+- ✅ 認証テスト（`test_proxy_models_endpoint_no_auth`, `test_proxy_models_endpoint_with_auth`）
+- ✅ エンドポイントテスト（`test_proxy_health_endpoint`, `test_proxy_models_endpoint_with_auth`）
+- ✅ ProxyController::statusテスト（`test_proxy_controller_status`）
 
-1. **認証ミドルウェア実装**
-   - Bearer Token抽出
-   - SecurityServiceを使用したAPIキー検証
-   - エラーハンドリング
-
-2. **`/v1/models`エンドポイント実装**
-   - EngineService統合
-   - モデル一覧取得
-   - OpenAI互換形式への変換
-
-3. **統合テスト実装**
-   - プロキシ起動/停止テスト
-   - 認証テスト
-   - エンドポイントテスト
+**テスト結果**: すべての統合テストが成功（14テスト、すべて成功）
 
 ## コンパイル状況
 

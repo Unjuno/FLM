@@ -1,6 +1,13 @@
 # FLM CLI Specification
 > Status: Canonical | Audience: CLI developers & QA | Updated: 2025-11-20
 
+> 章別リビジョン:
+>
+> | 節 | バージョン | 最終更新 |
+> | --- | --- | --- |
+> | 3.1-3.10 コマンド仕様 | v1.0.0 | 2025-11-20 |
+> | 3.11-3.13 Phase3 Draft群 | Draft | 2025-11-25 |
+
 ## 1. 概要
 - 実行形式: `flm` (Rust 製単体バイナリ)
 - 対象ユーザー: 個人利用・シングルユーザー環境（マルチユーザー/RBAC非対応）
@@ -17,6 +24,7 @@ flm <command> [subcommand] [options]
 - 出力: デフォルト JSON（`--format text` で人間向け表示）
 - `--db-path-config`, `--db-path-security` で DB パス上書き可能（省略時は既定）
 - ログ: `stderr` に INFO/ERROR をJSON Linesで出力、`stdout` は純粋な結果
+- Proxy 制御系は `flm-proxy` バイナリを子プロセスとして常駐起動させる。CLI と同じディレクトリ、または `PATH` 上に `flm-proxy` が存在することが必須（`cargo install --path .` で両方導入する想定）。同梱インストーラは 2 バイナリを同一ディレクトリへ配置すること。
 - JSON 出力/IPCポリシー:
   - すべての JSON 出力は `{ "version": "1.0", "data": { ... } }` 形式で返し、`version` の major が変化した場合のみ breaking change とみなす。
   - CLI が UI/Proxy へ IPC で結果を渡す際は `serde` の `deny_unknown_fields` を避け、未知フィールドを無視できるよう `#[serde(default)]` を付与。これにより Core でフィールド追加しても下位互換を維持できる。
@@ -64,6 +72,8 @@ Rust製セキュアプロキシを起動し、Forward先を検出済みエンジ
 - `--socks5-endpoint <host:port>`（`--egress-mode tor` の場合はオプション、`--egress-mode socks5` の場合は必須）
 - `--egress-fail-open`（指定時のみ `ProxyConfig.egress.fail_open = true`。未指定は fail closed）
 - `--no-daemon` (フォアグラウンド実行)
+- デーモンモード（既定）: CLI が `flm-proxy --daemon` を起動し、127.0.0.1 上のランダムポートで管理 API を公開する。`%APPDATA%/flm/run/proxy-daemon.json`（macOS: `~/Library/Application Support/flm/run/`, Linux: `~/.local/share/flm/run/`）に `{ "port": <u16>, "token": "<bearer>", "pid": <u32> }` を保存し、Stop/Status 時はこのファイルを参照する。
+- フォアグラウンドモード: `--no-daemon` 指定時のみ、旧来の「CLI プロセス内で Axum を起動する」手法を使用する。テスト用フラグであり、本番運用ではデーモンモードを必須とする。
 
 成功時出力:
 ```json
@@ -92,6 +102,10 @@ Rust製セキュアプロキシを起動し、Forward先を検出済みエンジ
   - `--egress-fail-open` を指定しない限り、Tor/上流プロキシに到達できない場合はプロキシを起動しない（`fail closed`）。`--egress-fail-open` を付けた場合は警告ログを出しつつ `Direct` にフォールバックする。
   - `flm proxy status` は `egress.mode` と実際の SOCKS5 endpoint（Tor の場合は `tor://127.0.0.1:9050` と表示）を含める。
 
+**バイナリ配置要件**:
+- CLI は `std::env::current_exe()` からの相対パス、または `PATH` 走査で `flm-proxy` を探す。どちらでも発見できない場合は直ちにエラーとし、インストール手順を案内する。
+- 配布物は `flm` と `flm-proxy` を同一ディレクトリに配置すること。開発環境では `cargo install --path .` で 2 バイナリをまとめて導入する。
+
 **エンドポイントURL表示の注意**:
 - `listen_addr` は技術的なバインドアドレス（`0.0.0.0:8080`）であり、実際に使用するURLではない
 - `endpoints` フィールドに、ユーザーが実際に使用可能なURLを提供:
@@ -103,6 +117,11 @@ Rust製セキュアプロキシを起動し、Forward先を検出済みエンジ
 ### 3.4 `flm proxy stop`
 指定プロファイル/ポートのプロキシを停止し、Graceful shutdown を確認。
 
+- 実行手順:
+  1. `proxy-daemon.json` を読み込み、デーモンが存在すれば `/admin/stop` へ RPC（`Authorization: Bearer <token>`）。
+  2. デーモンが存在しない／応答しない場合のみ、CLI 内部で `ProxyService::status` を呼び出してフォアグラウンド起動中のハンドルを停止する。
+  3. いずれのパスでも `--port` または `--handle-id` の指定が必須。
+
 例:
 ```bash
 flm proxy stop --port 8080
@@ -111,6 +130,7 @@ flm proxy stop --port 8080
 ### 3.5 `flm proxy status`
 現在稼働中のプロキシハンドル一覧を取得し、モード/ポート/ACME 情報を確認する。
 
+- デーモン優先で `/admin/status` を呼び出し、見つからない場合のみローカルの `ProxyRepository` から状態を取得する。
 - 出力: `ProxyService::status` が返すハンドル配列を JSON でそのまま表示（`id`, `mode`, `port`, `listen_addr`, `acme_domain`, `egress`, `running`, `last_error` など）
 - `--format text` の場合はテーブル表示
 - ハンドルが存在しない場合は空配列
@@ -174,6 +194,7 @@ flm chat --model flm://ollama/llama3:8b --prompt "Hello" --stream
 ```
 
 ### 3.11 `flm model-profiles` （Phase3予定）
+> Status: Draft（Phase 3対象）。実装計画は `docs/planning/PLAN.md` / `docs/planning/PHASE3_PACKAGING_PLAN.md` を参照。
 モデルごとの詳細設定（`docs/specs/UI_EXTENSIONS.md` セクション1）を CLI から管理する。
 
 - `flm model-profiles list [--engine <id>] [--model <id>]`
@@ -183,6 +204,7 @@ flm chat --model flm://ollama/llama3:8b --prompt "Hello" --stream
 `profile.json` は `{"temperature":0.7,"max_tokens":512,...}` の形式で保存し、`config.db` の `model_profiles` テーブルに書き込む。CLI は `version` フィールドを自動付与し、UI/Proxy から呼び出せるよう Core API へ連携する。
 
 ### 3.12 `flm api prompts` （Phase3予定）
+> Status: Draft（Phase 3対象）。CLI/UI連携仕様は `docs/specs/UI_EXTENSIONS.md` の Draft セクションと同期させる。
 エンドポイント別プロンプトテンプレートを管理するコマンド。UI Extensions の API-specific prompt 管理と同一仕様。
 
 - `flm api prompts list`
@@ -192,6 +214,7 @@ flm chat --model flm://ollama/llama3:8b --prompt "Hello" --stream
 テンプレは `config.db` の `api_prompts` テーブルに保存し、`EngineService::chat` 呼び出し前に適用される。CLI は `version` と `updated_at` を保存し、後方互換のため JSON schema を `docs/specs/CORE_API.md` と同期させる。
 
 ### 3.13 `flm migrate legacy`
+> Status: Draft（Phase 3対象）。実装の優先度と完了条件は `docs/planning/PLAN.md` の Phase 3 ロードマップに従う。
 アーカイブ済みプロトタイプ（`archive/prototype/`）からデータを新スキーマへ移行するユーティリティ。`docs/planning/PLAN.md` / `docs/specs/DB_SCHEMA.md` のデータ移行戦略と同じ手順を実行する。
 
 - `flm migrate legacy --source <path> --tmp <dir>`: 旧 SQLite / JSON をパースし、`config.db` / `security.db` へ取り込むための `.sql` + `.json` を `<tmp>` に生成。デフォルトは `./tmp/flm-migrate-<timestamp>`。
@@ -263,3 +286,9 @@ flm check --verbose
 - `docs/specs/PROXY_SPEC.md` - プロキシ仕様
 - `docs/specs/ENGINE_DETECT.md` - エンジン検出仕様
 - `docs/specs/DB_SCHEMA.md` - データベーススキーマ
+
+## Changelog
+
+| バージョン | 日付 | 変更概要 |
+|-----------|------|----------|
+| `1.0.0` | 2025-11-20 | 初版公開。主要CLIコマンド（engines, models, proxy, api-keys, config, security）の仕様を定義。 |

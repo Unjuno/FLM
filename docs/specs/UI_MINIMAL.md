@@ -77,6 +77,17 @@ Setup Wizard
  └─ Step 4: Firewall script preview + Apply/Copy buttons
 ```
 
+## Phase 2 残タスク & スケジュール（2025-11-25 更新）
+
+| 期間 | UIタスク | 依存 / 成果物 |
+| ---- | -------- | ------------- |
+| 11/25〜12/06 | Dashboard / Security Alerts を最新のエンジン検出・ポリシーフラグに対応。`Proxy Status` で TLS 状態プレースホルダーを表示。 | `docs/planning/PHASE3_PACKAGING_PLAN.md` Step1（証明書API整備）と同期し、`packaged-ca` の状態フィールドを先行実装。 |
+| 12/09〜12/13 | IPブロックリスト管理UIと Botnet ログタイムラインを API Setup に追加。 | Packaging Step2（サーバー証明書自動生成）完了後、セキュリティイベントAPIを UI へ配線。 |
+| 12/16〜12/20 | Setup Wizard Step 2/3 に `packaged-ca` を既定表示し、証明書検証ステータスを組み込み。 | Packaging Step3-4（packaged-ca統合 / 信頼ストア登録）の成果を Wizard メッセージへ反映。 |
+| 01/06〜01/17 | Firewall Automation ログUI、エクスポート、統合テストの追加。 | Packaging Step5-7（インストーラー/署名）と並行で `reports/` に UI テストログを追加。 |
+
+> タイムラインは `docs/planning/PHASE3_PACKAGING_PLAN.md#スケジュール（2025-11-25 更新）` と同期。TLS/証明書機能のリリース週に Wizard の案内文を更新できるよう配置している。
+
 ## 4. IPC / HTTP フロー
 
 | 操作 | 経路 | 備考 |

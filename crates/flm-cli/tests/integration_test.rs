@@ -142,7 +142,7 @@ async fn test_engine_service_detect_engines() {
         }
     }
 
-    let engine_repo: Box<dyn EngineRepository> =
+    let engine_repo: Box<dyn EngineRepository + Send + Sync> =
         Box::new(ArcEngineRepositoryWrapper(engine_repo_arc));
 
     // Create service

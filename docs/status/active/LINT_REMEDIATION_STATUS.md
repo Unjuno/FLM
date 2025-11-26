@@ -1,10 +1,16 @@
 # Lint Remediation Status
 
-> Status: Complete | Audience: All contributors | Updated: 2025-11-25
+> Status: In Progress | Audience: All contributors | Updated: 2025-11-25
 
 ## Summary
 
-`cargo clippy --all-targets --all-features -- -D warnings` now passes for the entire workspace (see CI job `.github/workflows/ci-cli.yml`). The table below records the items that were fixed in this effort and can be used as a reference if regressions reappear.
+`cargo clippy --workspace -- -D warnings` の実行で、`flm-core` と `flm-proxy` の主要なClippyエラーは修正済み。`flm-cli` には多数の `uninlined_format_args` と未使用変数の警告が残っているが、これらは後続のタスクで修正予定。
+
+## 2025-11-25 更新
+
+- ✅ `flm-core`: すべてのClippyエラーを修正（`uninlined_format_args`, `redundant_closure`, `unnecessary_filter_map`）
+- ✅ `flm-proxy`: 主要なClippyエラーを修正（`uninlined_format_args`, `redundant_pattern_matching`, `manual_range_contains`, `needless_borrows_for_generic_args`）
+- ⏳ `flm-cli`: 多数の `uninlined_format_args` と未使用変数の警告が残っている（後続タスクで修正予定）
 
 ## Previously Tracked Failures (Resolved)
 

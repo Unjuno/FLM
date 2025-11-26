@@ -18,6 +18,27 @@ use tokio::sync::RwLock;
 use tokio::time::timeout;
 use tracing::{error, warn};
 
+/// Rate limit tracking for an API key
+#[derive(Clone, Copy)]
+pub struct RateLimitStateEntry {
+    pub minute_count: u32,
+    pub minute_reset: Instant,
+    pub tokens_available: f64,
+    pub last_refill: Instant,
+}
+
+impl RateLimitStateEntry {
+    fn new(now: Instant, burst_capacity: u32) -> Self {
+        let window_duration = Duration::from_secs(60);
+        Self {
+            minute_count: 0,
+            minute_reset: now + window_duration,
+            tokens_available: burst_capacity as f64,
+            last_refill: now,
+        }
+    }
+}
+
 /// Application state for the proxy server
 #[derive(Clone)]
 pub struct AppState {
@@ -25,8 +46,8 @@ pub struct AppState {
     pub security_repo: Arc<crate::adapters::SqliteSecurityRepository>,
     pub engine_service: Arc<flm_core::services::EngineService>,
     pub engine_repo: Arc<dyn flm_core::ports::EngineRepository + Send + Sync>,
-    /// Rate limit state: API key ID -> (request count, reset time)
-    pub rate_limit_state: Arc<RwLock<std::collections::HashMap<String, (u32, Instant)>>>,
+    /// Rate limit state: API key ID -> token bucket + RPM counters
+    pub rate_limit_state: Arc<RwLock<std::collections::HashMap<String, RateLimitStateEntry>>>,
     /// IP-based rate limit state: IP address -> (request count, reset time)
     pub ip_rate_limit_state: Arc<RwLock<std::collections::HashMap<IpAddr, (u32, Instant)>>>,
     /// Trusted proxy IP addresses (for X-Forwarded-For header validation)
@@ -649,13 +670,15 @@ pub async fn auth_middleware(
 ) -> Response {
     // Skip authentication for /health endpoint and honeypot endpoints
     let path = request.uri().path();
-    if path == "/health"
-        || path == "/admin"
-        || path == "/api/v1/users"
-        || path == "/wp-admin"
-        || path == "/phpmyadmin"
-    {
+    if path == "/health" {
         return next.run(request).await;
+    }
+
+    if matches!(
+        path,
+        "/admin" | "/api/v1/users" | "/wp-admin" | "/phpmyadmin"
+    ) {
+        return create_not_found_response().into_response();
     }
 
     // Extract Authorization header
@@ -961,92 +984,110 @@ fn check_ip_allowed(client_ip: &IpAddr, whitelist_entry: &str) -> bool {
 async fn check_rate_limit_with_info(
     state: &AppState,
     api_key_id: &str,
-    _rpm: u32,
+    rpm: u32,
     burst: u32,
 ) -> (bool, u32, std::time::SystemTime) {
-    let mut rate_limit_state = state.rate_limit_state.write().await;
+    let rpm = rpm.max(1);
+    let burst_capacity = if burst == 0 { rpm } else { burst };
     let now = Instant::now();
     let window_duration = Duration::from_secs(60); // 1 minute window
 
-    // Try to load from database if not in memory cache
-    let (count, reset_time) = if let Some((mem_count, mem_reset)) = rate_limit_state.get(api_key_id)
-    {
-        (*mem_count, *mem_reset)
-    } else {
-        // Load from database
+    let should_load_db = {
+        let state_read = state.rate_limit_state.read().await;
+        !state_read.contains_key(api_key_id)
+    };
+
+    let db_snapshot = if should_load_db {
         if let Ok(Some((db_count, db_reset_at))) =
             state.security_repo.fetch_rate_limit_state(api_key_id).await
         {
-            // Parse reset_at timestamp
             if let Ok(reset_chrono) = chrono::DateTime::parse_from_rfc3339(&db_reset_at) {
                 let reset_utc = reset_chrono.with_timezone(&chrono::Utc);
                 let now_utc = chrono::Utc::now();
-                let reset_duration = reset_utc
-                    .signed_duration_since(now_utc)
-                    .to_std()
-                    .unwrap_or_default();
-
-                // Calculate reset_instant: if reset_at is in the future, use it; otherwise reset
-                if reset_duration > Duration::ZERO {
-                    let reset_instant = now + reset_duration;
-                    (db_count, reset_instant)
+                if let Ok(reset_duration) = reset_utc.signed_duration_since(now_utc).to_std() {
+                    if reset_duration > Duration::ZERO {
+                        Some((db_count.min(rpm), reset_duration))
+                    } else {
+                        None
+                    }
                 } else {
-                    // Expired, reset
-                    (0, now + window_duration)
+                    None
                 }
             } else {
-                // Invalid timestamp, reset
-                (0, now + window_duration)
+                None
             }
         } else {
-            // Not in database, create new entry
-            (0, now + window_duration)
+            None
+        }
+    } else {
+        None
+    };
+
+    let mut rate_limit_state = state.rate_limit_state.write().await;
+    // Load or initialize state (prefer memory, fallback to DB snapshot)
+    let entry = match rate_limit_state.entry(api_key_id.to_string()) {
+        std::collections::hash_map::Entry::Occupied(occupied) => occupied.into_mut(),
+        std::collections::hash_map::Entry::Vacant(vacant) => {
+            let mut entry = RateLimitStateEntry::new(now, burst_capacity);
+            if let Some((count, duration)) = db_snapshot {
+                entry.minute_count = count;
+                entry.minute_reset = now + duration;
+            }
+            vacant.insert(entry)
         }
     };
 
-    // Reset if window has expired
-    let (count, reset_time) = if now > reset_time {
-        (0, now + window_duration)
-    } else {
-        (count, reset_time)
-    };
+    if entry.minute_reset <= now {
+        entry.minute_count = 0;
+        entry.minute_reset = now + window_duration;
+    }
 
-    // Check if limit would be exceeded after incrementing
-    // We check count + 1 > burst to determine if this request should be allowed
-    let new_count = count + 1;
-    let allowed = new_count <= burst;
+    // Refill token bucket based on rpm (tokens per minute)
+    let fill_rate_per_sec = rpm as f64 / window_duration.as_secs() as f64;
+    let elapsed_since_refill = now
+        .checked_duration_since(entry.last_refill)
+        .unwrap_or_default()
+        .as_secs_f64();
+    if elapsed_since_refill > 0.0 {
+        entry.tokens_available = (entry.tokens_available
+            + elapsed_since_refill * fill_rate_per_sec)
+            .min(burst_capacity as f64);
+        entry.last_refill = now;
+    }
 
-    // Calculate remaining requests (after this request is counted, if allowed)
-    let remaining = if allowed {
-        burst.saturating_sub(new_count)
-    } else {
-        0
-    };
+    let minute_limit_reached = entry.minute_count >= rpm;
+    let burst_limit_reached = entry.tokens_available < 1.0;
+    let allowed = !(minute_limit_reached || burst_limit_reached);
 
-    // Always increment count for tracking purposes (even if over limit)
-    rate_limit_state.insert(api_key_id.to_string(), (new_count, reset_time));
+    if allowed {
+        entry.minute_count = entry.minute_count.saturating_add(1);
+        entry.tokens_available = (entry.tokens_available - 1.0).max(0.0);
+    }
+
+    // Remaining requests consider both rpm window and burst capacity
+    let rpm_remaining = rpm.saturating_sub(entry.minute_count);
+    let burst_remaining = entry.tokens_available.floor() as u32;
+    let remaining = rpm_remaining.min(burst_remaining);
 
     // Persist to database asynchronously (don't block the request)
+    let reset_duration = entry.minute_reset.saturating_duration_since(now);
     let security_repo = Arc::clone(&state.security_repo);
     let api_key_id_clone = api_key_id.to_string();
+    let minute_count_snapshot = entry.minute_count;
     let reset_at = chrono::Utc::now()
-        .checked_add_signed(chrono::Duration::seconds(
-            reset_time.saturating_duration_since(now).as_secs() as i64,
-        ))
+        .checked_add_signed(chrono::Duration::seconds(reset_duration.as_secs() as i64))
         .unwrap_or_else(chrono::Utc::now)
         .to_rfc3339();
 
     tokio::spawn(async move {
         if let Err(e) = security_repo
-            .save_rate_limit_state(&api_key_id_clone, new_count, &reset_at)
+            .save_rate_limit_state(&api_key_id_clone, minute_count_snapshot, &reset_at)
             .await
         {
             error!(error_type = "rate_limit_persist_failed", api_key_id = %utils::mask_identifier(&api_key_id_clone), "Failed to persist rate limit state: {}", e);
         }
     });
 
-    // Convert reset_time to SystemTime for header
-    let reset_duration = reset_time.saturating_duration_since(now);
     let reset_system_time = std::time::SystemTime::now() + reset_duration;
 
     (allowed, remaining, reset_system_time)
@@ -1205,6 +1246,20 @@ fn create_rate_limit_response() -> (StatusCode, axum::Json<serde_json::Value>) {
                 "message": "Rate limit exceeded",
                 "type": "rate_limit_error",
                 "code": "rate_limit_exceeded"
+            }
+        })),
+    )
+}
+
+/// Create not found response (404)
+fn create_not_found_response() -> (StatusCode, axum::Json<serde_json::Value>) {
+    (
+        StatusCode::NOT_FOUND,
+        axum::Json(serde_json::json!({
+            "error": {
+                "message": "The requested resource was not found",
+                "type": "invalid_request_error",
+                "code": "not_found"
             }
         })),
     )

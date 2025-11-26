@@ -312,6 +312,7 @@ impl SqliteSecurityRepository {
     /// * `severity` - Severity level ('low', 'medium', 'high', 'critical')
     /// * `ip` - Client IP address
     /// * `details` - Additional details in JSON format
+    #[allow(clippy::too_many_arguments)]
     pub async fn save_audit_log(
         &self,
         request_id: &str,
@@ -538,13 +539,13 @@ impl SqliteSecurityRepository {
             "SELECT id, request_id, api_key_id, endpoint, status, latency_ms, event_type, severity, ip, details, created_at FROM audit_logs WHERE 1=1"
         );
 
-        if let Some(et) = event_type {
+        if let Some(_et) = event_type {
             query.push_str(" AND event_type = ?");
         }
-        if let Some(s) = severity {
+        if let Some(_s) = severity {
             query.push_str(" AND severity = ?");
         }
-        if let Some(ip_addr) = ip {
+        if let Some(_ip_addr) = ip {
             query.push_str(" AND ip = ?");
         }
 
@@ -625,10 +626,10 @@ impl SqliteSecurityRepository {
             "SELECT id, ip, pattern, score, request_path, user_agent, method, created_at FROM intrusion_attempts WHERE 1=1"
         );
 
-        if let Some(ip_addr) = ip {
+        if let Some(_ip_addr) = ip {
             query.push_str(" AND ip = ?");
         }
-        if let Some(ms) = min_score {
+        if let Some(_ms) = min_score {
             query.push_str(" AND score >= ?");
         }
 
@@ -691,10 +692,10 @@ impl SqliteSecurityRepository {
             "SELECT id, ip, anomaly_type, score, details, created_at FROM anomaly_detections WHERE 1=1"
         );
 
-        if let Some(ip_addr) = ip {
+        if let Some(_ip_addr) = ip {
             query.push_str(" AND ip = ?");
         }
-        if let Some(at) = anomaly_type {
+        if let Some(_at) = anomaly_type {
             query.push_str(" AND anomaly_type = ?");
         }
 

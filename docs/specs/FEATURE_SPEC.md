@@ -105,3 +105,16 @@
 
 この機能書は `docs/planning/PLAN.md` と連動して定期的に更新する。
 
+**関連ドキュメント**:
+- `docs/planning/PLAN.md` - プロジェクト計画
+- `docs/specs/CORE_API.md` - コアAPI仕様
+- `docs/specs/CLI_SPEC.md` - CLI仕様
+- `docs/specs/PROXY_SPEC.md` - プロキシ仕様
+- `docs/specs/UI_MINIMAL.md` - UI最小仕様
+
+## Changelog
+
+| バージョン | 日付 | 変更概要 |
+|-----------|------|----------|
+| `1.0.0` | 2025-11-20 | 初版公開。FLM再構築版の最小機能仕様を定義。CLI機能、認証プロキシ、セキュリティ、UI機能、Phase 3パッケージング計画を記載。 |
+

@@ -9,6 +9,8 @@
 ```
 docs/guides/
 ├── README.md (本ファイル)
+├── GLOSSARY.md                        # 用語集
+├── DOCUMENTATION_UPDATE_POLICY.md     # 文書更新ポリシー
 ├── SECURITY_BOTNET_PROTECTION.md    # ボットネット対策ガイド（ユーザー向け）
 ├── SECURITY_FIREWALL_GUIDE.md        # ファイアウォール設定ガイド
 ├── MIGRATION_GUIDE.md                # 移行ガイド
@@ -18,6 +20,39 @@ docs/guides/
 ```
 
 ## ガイド一覧
+
+### GLOSSARY.md - 用語集
+
+**Status**: Reference | **Audience**: All contributors | **Updated**: 2025-11-25
+
+FLMプロジェクトで使用される主要な用語の定義。アルファベット順に整理されている。
+
+- コアAPI用語（Engine、Proxy、Securityなど）
+- ドメインモデル用語
+- サービス層用語
+- エラータイプ用語
+
+**関連ドキュメント**:
+- `docs/specs/CORE_API.md` - コアAPI仕様（用語の詳細定義）
+- `docs/specs/PROXY_SPEC.md` - プロキシ仕様
+- `docs/specs/CLI_SPEC.md` - CLI仕様
+
+### DOCUMENTATION_UPDATE_POLICY.md - 文書更新ポリシー
+
+**Status**: Canonical | **Audience**: All contributors | **Updated**: 2025-11-25
+
+ドキュメント更新ルールとガイドライン。ドキュメントの分類、更新手順、品質基準を定義する。
+
+- ドキュメントの分類（Canonical/Draft/Reference）
+- 更新が必要なタイミング
+- 更新手順とレビュープロセス
+- ドキュメントの品質基準
+- 定期的な見直しと保守
+
+**関連ドキュメント**:
+- `docs/DOCUMENTATION_STRUCTURE.md` - ドキュメント構成ガイド
+- `docs/guides/GLOSSARY.md` - 用語集
+- `docs/templates/ADR_TEMPLATE.md` - Architecture Decision Recordテンプレート
 
 ### SECURITY_BOTNET_PROTECTION.md - ボットネット対策ガイド
 

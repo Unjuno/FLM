@@ -1,0 +1,17 @@
+{
+  "ip_whitelist": [
+    "127.0.0.1",
+    "192.168.0.0/16"
+  ],
+  "cors": {
+    "allowed_origins": [
+      "https://example.com",
+      "https://admin.local"
+    ]
+  },
+  "rate_limit": {
+    "rpm": 120,
+    "burst": 180
+  }
+}
+

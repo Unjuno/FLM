@@ -1,6 +1,14 @@
 # FLM Core API Specification
 > Status: Canonical | Audience: Rust core engineers | Updated: 2025-01-27
 
+> 章別リビジョン:
+>
+> | 節 | バージョン | 最終更新 |
+> | --- | --- | --- |
+> | 2. 公開データモデル | v1.0.0 | 2025-01-27 |
+> | SecurityPolicy スキーマ周辺 | v1.1.0 | 2025-11-25 |
+> | ProxyConfig/サービスAPI | v1.0.0 | 2025-01-27 |
+
 **注意**: 本API仕様は**個人利用・シングルユーザー環境向け**のアプリケーション向けです。マルチユーザー対応やロールベースアクセス制御（RBAC）機能は提供されていません。
 
 ## 1. Rust Workspace Modules
@@ -308,6 +316,8 @@ pub struct SecurityPolicy {
 /// - `cors.allowed_origins`: 空の場合は `*`
 /// - `rate_limit`: 省略時はレート制限無効
 /// UI/CLIはこのキーを基準に「設定済みか」を判定し、Proxyは同じキーを参照して制御する。
+/// JSON Schema は `docs/specs/schemas/security_policy.schema.json` に保存し、
+/// `scripts/validate_schemas.sh` で AJV ベースの検証を実行できる。
 ///
 /// Phase1/2では SecurityPolicy はグローバルに1件のみ運用し、`id = "default"` を固定とする。
 /// CLI/UI/Proxyは暗黙にこのIDを扱い、将来プロファイル分割が必要になった場合にのみ
@@ -842,3 +852,10 @@ for (key, value) in all_configs {
 - `docs/specs/ENGINE_DETECT.md` - エンジン検出仕様
 - `docs/specs/DB_SCHEMA.md` - データベーススキーマ
 - `docs/guides/VERSIONING_POLICY.md` - バージョニングポリシー（v1.0.0凍結）
+
+## Changelog
+
+| バージョン | 日付 | 変更概要 |
+|-----------|------|----------|
+| `1.1.0` | 2025-11-25 | SecurityPolicy スキーマ (IP/CORS/レート制限) と ProxyMode の Phase 2 仕様を反映。 |
+| `1.0.0` | 2025-01-27 | 初版公開。Core サービス API / DTO を定義。 |

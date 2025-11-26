@@ -109,7 +109,7 @@ impl LlmEngine for MockEngine {
     }
 }
 
-/// Wrapper to convert Arc<SqliteEngineRepository> to Box<dyn EngineRepository>
+/// Wrapper to convert Arc<SqliteEngineRepository> to Box<dyn EngineRepository + Send + Sync>
 struct ArcEngineRepositoryWrapper(Arc<SqliteEngineRepository>);
 
 #[async_trait::async_trait]
@@ -137,7 +137,7 @@ async fn test_chat_with_mock_engine() {
     engine_repo_arc.register(mock_engine.clone()).await;
 
     // Create service
-    let engine_repo: Box<dyn EngineRepository> =
+    let engine_repo: Box<dyn EngineRepository + Send + Sync> =
         Box::new(ArcEngineRepositoryWrapper(engine_repo_arc));
     let process_controller = Box::new(flm_cli::adapters::DefaultEngineProcessController::new());
     let http_client = Box::new(flm_cli::adapters::ReqwestHttpClient::new().unwrap());

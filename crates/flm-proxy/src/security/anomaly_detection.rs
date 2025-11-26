@@ -129,7 +129,7 @@ impl AnomalyDetection {
         }
 
         // 6. Check for duplicate request patterns
-        let pattern_key = format!("{}:{}", method, path);
+        let pattern_key = format!("{method}:{path}");
         let count = entry.request_patterns.entry(pattern_key).or_insert(0);
         *count += 1;
         if *count >= 50 {

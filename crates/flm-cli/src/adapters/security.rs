@@ -11,6 +11,7 @@ use std::path::Path;
 /// SQLite-based SecurityRepository implementation
 pub struct SqliteSecurityRepository {
     pool: SqlitePool,
+    read_only: bool,
 }
 
 impl SqliteSecurityRepository {
@@ -41,30 +42,75 @@ impl SqliteSecurityRepository {
                 reason: format!("Failed to connect to security.db: {e}"),
             })?;
 
-        // Run migrations on the pool we just created
-        sqlx::migrate!("../flm-core/migrations")
-            .run(&pool)
-            .await
-            .map_err(|e| RepoError::MigrationFailed {
-                reason: format!("Security DB migration failed: {e}"),
-            })?;
+        // Try to run migrations
+        let migration_result = sqlx::migrate!("../flm-core/migrations").run(&pool).await;
 
-        // Set restrictive file permissions (Unix only: chmod 600 equivalent)
-        // On Windows, file permissions are managed differently and default permissions are usually sufficient
-        #[cfg(unix)]
-        {
-            if let Err(e) = set_db_file_permissions(db_path.as_ref()) {
-                // Log warning but don't fail - database is already created and functional
-                eprintln!("Warning: Failed to set database file permissions: {}", e);
+        let (pool, read_only) = match migration_result {
+            Ok(_) => {
+                // Set restrictive file permissions (Unix only: chmod 600 equivalent)
+                // On Windows, file permissions are managed differently and default permissions are usually sufficient
+                #[cfg(unix)]
+                {
+                    if let Err(e) = set_db_file_permissions(db_path.as_ref()) {
+                        // Log warning but don't fail - database is already created and functional
+                        eprintln!("Warning: Failed to set database file permissions: {}", e);
+                    }
+                }
+                (pool, false)
             }
-        }
+            Err(e) => {
+                // Migration failed - try to connect in read-only mode
+                eprintln!(
+                    "Warning: Migration failed: {}. Attempting read-only mode.",
+                    e
+                );
+                let read_only_options = SqliteConnectOptions::new()
+                    .filename(path_str)
+                    .read_only(true);
 
-        Ok(Self { pool })
+                match SqlitePoolOptions::new()
+                    .max_connections(5)
+                    .connect_with(read_only_options)
+                    .await
+                {
+                    Ok(read_only_pool) => {
+                        eprintln!(
+                            "Connected in read-only mode. Write operations will be disabled."
+                        );
+                        (read_only_pool, true)
+                    }
+                    Err(read_only_err) => {
+                        return Err(RepoError::MigrationFailed {
+                            reason: format!(
+                                "Migration failed and read-only connection also failed: original={}, read_only={}",
+                                e, read_only_err
+                            ),
+                        });
+                    }
+                }
+            }
+        };
+
+        Ok(Self { pool, read_only })
     }
 
     /// Get the connection pool (for migration)
     pub fn pool(&self) -> &SqlitePool {
         &self.pool
+    }
+
+    /// Check if database is in read-only mode and return error if write operation is attempted
+    fn check_write_allowed(&self, operation: &str) -> Result<(), RepoError> {
+        if self.read_only {
+            Err(RepoError::ReadOnlyMode {
+                reason: format!(
+                    "Cannot {}: database is in read-only mode due to migration failure",
+                    operation
+                ),
+            })
+        } else {
+            Ok(())
+        }
     }
 
     /// Get all blocked IPs from database
@@ -333,6 +379,7 @@ impl SqliteSecurityRepository {
 #[async_trait::async_trait]
 impl SecurityRepository for SqliteSecurityRepository {
     async fn save_api_key(&self, key: ApiKeyRecord) -> Result<(), RepoError> {
+        self.check_write_allowed("save API key")?;
         sqlx::query(
             "INSERT OR REPLACE INTO api_keys (id, label, hash, created_at, revoked_at) VALUES (?, ?, ?, ?, ?)",
         )
@@ -418,6 +465,7 @@ impl SecurityRepository for SqliteSecurityRepository {
     }
 
     async fn mark_api_key_revoked(&self, id: &str, revoked_at: &str) -> Result<(), RepoError> {
+        self.check_write_allowed("revoke API key")?;
         sqlx::query("UPDATE api_keys SET revoked_at = ? WHERE id = ?")
             .bind(revoked_at)
             .bind(id)
@@ -431,6 +479,7 @@ impl SecurityRepository for SqliteSecurityRepository {
     }
 
     async fn save_policy(&self, policy: SecurityPolicy) -> Result<(), RepoError> {
+        self.check_write_allowed("save policy")?;
         sqlx::query(
             "INSERT OR REPLACE INTO security_policies (id, policy_json, updated_at) VALUES (?, ?, ?)",
         )

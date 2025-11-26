@@ -8,7 +8,8 @@ use flm_core::domain::models::EngineKind;
 use flm_core::ports::EngineProcessController;
 use reqwest::Url;
 use std::net::TcpStream;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
+use std::process::Command;
 use std::time::Duration;
 
 /// Process controller implementation for engine detection
@@ -27,11 +28,12 @@ impl DefaultEngineProcessController {
     fn detect_ollama_binary(&self) -> Option<EngineBinaryInfo> {
         // First, try to find it in PATH
         if let Ok(path) = which::which("ollama") {
+            let version = extract_ollama_version(path.as_ref());
             return Some(EngineBinaryInfo {
                 engine_id: "ollama-default".to_string(),
                 kind: EngineKind::Ollama,
                 binary_path: path.to_string_lossy().to_string(),
-                version: None, // TODO: Extract version from binary
+                version,
             });
         }
 
@@ -49,11 +51,12 @@ impl DefaultEngineProcessController {
 
         for candidate in candidates {
             if candidate.exists() {
+                let version = extract_ollama_version(&candidate);
                 return Some(EngineBinaryInfo {
                     engine_id: "ollama-default".to_string(),
                     kind: EngineKind::Ollama,
                     binary_path: candidate.to_string_lossy().to_string(),
-                    version: None,
+                    version,
                 });
             }
         }
@@ -155,6 +158,106 @@ impl DefaultEngineProcessController {
             port: Some(port),
         })
     }
+
+    /// Detect llama.cpp binary
+    fn detect_llamacpp_binary(&self) -> Option<EngineBinaryInfo> {
+        // Binary names to search for
+        #[cfg(target_os = "windows")]
+        let binary_names = vec![
+            "llama-server.exe",
+            "server.exe",
+            "llama-cpp-server.exe",
+            "llama-cli.exe",
+            "llama.exe",
+        ];
+        #[cfg(not(target_os = "windows"))]
+        let binary_names = vec![
+            "llama-server",
+            "server",
+            "llama-cpp-server",
+            "llama-cli",
+            "llama",
+        ];
+
+        // First, try to find in PATH
+        for name in &binary_names {
+            if let Ok(path) = which::which(name) {
+                let version = extract_llamacpp_version(path.as_ref());
+                return Some(EngineBinaryInfo {
+                    engine_id: "llamacpp-default".to_string(),
+                    kind: EngineKind::LlamaCpp,
+                    binary_path: path.to_string_lossy().to_string(),
+                    version,
+                });
+            }
+        }
+
+        // Check LLAMA_CPP_PATH environment variable
+        if let Ok(path_str) = std::env::var("LLAMA_CPP_PATH") {
+            let path = PathBuf::from(&path_str);
+            if path.exists() && path.is_file() {
+                let version = extract_llamacpp_version(&path);
+                return Some(EngineBinaryInfo {
+                    engine_id: "llamacpp-default".to_string(),
+                    kind: EngineKind::LlamaCpp,
+                    binary_path: path.to_string_lossy().to_string(),
+                    version,
+                });
+            }
+        }
+
+        // Check common installation paths
+        let mut candidates: Vec<PathBuf> = vec![
+            // Windows common paths
+            #[cfg(target_os = "windows")]
+            PathBuf::from("C:\\Program Files\\llama.cpp\\llama-server.exe"),
+            #[cfg(target_os = "windows")]
+            PathBuf::from("C:\\Program Files (x86)\\llama.cpp\\llama-server.exe"),
+            // Unix common paths
+            #[cfg(not(target_os = "windows"))]
+            PathBuf::from("/usr/local/bin/llama-server"),
+            #[cfg(not(target_os = "windows"))]
+            PathBuf::from("/usr/bin/llama-server"),
+            #[cfg(not(target_os = "windows"))]
+            PathBuf::from("/opt/llama.cpp/bin/llama-server"),
+        ];
+
+        // Add user home directory paths
+        if let Ok(home) = std::env::var("HOME") {
+            #[cfg(target_os = "windows")]
+            {
+                candidates.push(
+                    PathBuf::from(&home)
+                        .join("llama.cpp")
+                        .join("llama-server.exe"),
+                );
+            }
+            #[cfg(not(target_os = "windows"))]
+            {
+                candidates.push(
+                    PathBuf::from(&home)
+                        .join(".local")
+                        .join("bin")
+                        .join("llama-server"),
+                );
+                candidates.push(PathBuf::from(&home).join("llama.cpp").join("llama-server"));
+            }
+        }
+
+        for candidate in candidates {
+            if candidate.exists() && candidate.is_file() {
+                let version = extract_llamacpp_version(&candidate);
+                return Some(EngineBinaryInfo {
+                    engine_id: "llamacpp-default".to_string(),
+                    kind: EngineKind::LlamaCpp,
+                    binary_path: candidate.to_string_lossy().to_string(),
+                    version,
+                });
+            }
+        }
+
+        None
+    }
 }
 
 fn parse_host_port(base_url: &str, default_port: u16) -> Option<(String, u16)> {
@@ -162,6 +265,45 @@ fn parse_host_port(base_url: &str, default_port: u16) -> Option<(String, u16)> {
     let host = url.host_str()?.to_string();
     let port = url.port().unwrap_or(default_port);
     Some((host, port))
+}
+
+fn extract_ollama_version(path: &Path) -> Option<String> {
+    let output = Command::new(path).arg("--version").output().ok()?;
+    if !output.status.success() {
+        return None;
+    }
+
+    let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+    if stdout.is_empty() {
+        None
+    } else {
+        Some(stdout)
+    }
+}
+
+fn extract_llamacpp_version(path: &Path) -> Option<String> {
+    // Try --version first
+    if let Ok(output) = Command::new(path).arg("--version").output() {
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !stdout.is_empty() {
+                return Some(stdout);
+            }
+        }
+    }
+
+    // Try -v as fallback
+    if let Ok(output) = Command::new(path).arg("-v").output() {
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout).trim().to_string();
+            if !stdout.is_empty() {
+                return Some(stdout);
+            }
+        }
+    }
+
+    // Version extraction failed - return None (binary exists but version unknown)
+    None
 }
 
 impl Default for DefaultEngineProcessController {
@@ -179,10 +321,14 @@ impl EngineProcessController for DefaultEngineProcessController {
             results.push(binary);
         }
 
-        // TODO: Add detection for other engine binaries
-        // - vLLM: Usually runs as a service, not a binary we detect
-        // - LM Studio: Windows/Mac app, binary detection may not be applicable
-        // - llama.cpp: Binary detection depends on how it's installed
+        // Detect llama.cpp binary
+        if let Some(binary) = self.detect_llamacpp_binary() {
+            results.push(binary);
+        }
+
+        // Note: vLLM and LM Studio are typically run as services/processes,
+        // not as standalone binaries we can detect. They are detected via
+        // running process detection (HTTP server port checks) instead.
 
         results
     }

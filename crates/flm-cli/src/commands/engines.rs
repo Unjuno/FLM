@@ -13,7 +13,7 @@ use std::sync::Arc;
 
 const ENGINE_CACHE_TTL_SECONDS: u64 = 300;
 
-/// Wrapper to convert Arc<SqliteEngineRepository> to Box<dyn EngineRepository>
+/// Wrapper to convert Arc<SqliteEngineRepository> to Box<dyn EngineRepository + Send + Sync>
 struct ArcEngineRepositoryWrapper(Arc<SqliteEngineRepository>);
 
 #[async_trait::async_trait]
@@ -62,7 +62,7 @@ pub async fn execute_detect(
     let http_client = Box::new(ReqwestHttpClient::new()?);
     // Convert Arc to Box by cloning the Arc and wrapping it
     // Note: This is a workaround - ideally EngineService should accept Arc
-    let engine_repo: Box<dyn flm_core::ports::EngineRepository> =
+    let engine_repo: Box<dyn flm_core::ports::EngineRepository + Send + Sync> =
         Box::new(ArcEngineRepositoryWrapper(engine_repo_arc.clone()));
 
     // Create service

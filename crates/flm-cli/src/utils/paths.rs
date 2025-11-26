@@ -95,3 +95,34 @@ pub fn get_security_db_path() -> PathBuf {
         Err(_) => PathBuf::from("security.db"),
     }
 }
+
+/// Get the runtime directory used for daemon metadata.
+pub fn get_runtime_dir() -> PathBuf {
+    const FALLBACK_DIR: &str = ".flm-runtime";
+
+    let base_dir = match get_app_data_dir() {
+        Ok(dir) => dir,
+        Err(_) => {
+            let cwd = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+            return cwd.join(FALLBACK_DIR);
+        }
+    };
+
+    let runtime_dir = base_dir.join("run");
+    if let Err(e) = std::fs::create_dir_all(&runtime_dir) {
+        eprintln!(
+            "Warning: Failed to create runtime directory {runtime_dir:?}: {e}. Falling back to {FALLBACK_DIR}"
+        );
+        let cwd = env::current_dir().unwrap_or_else(|_| PathBuf::from("."));
+        let fallback = cwd.join(FALLBACK_DIR);
+        let _ = std::fs::create_dir_all(&fallback);
+        return fallback;
+    }
+
+    runtime_dir
+}
+
+/// Location of the proxy daemon state file.
+pub fn get_daemon_state_path() -> PathBuf {
+    get_runtime_dir().join("proxy-daemon.json")
+}

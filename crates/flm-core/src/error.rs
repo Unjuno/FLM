@@ -65,6 +65,9 @@ pub enum RepoError {
 
     #[error("Validation error: {reason}")]
     ValidationError { reason: String },
+
+    #[error("Database is in read-only mode: {reason}")]
+    ReadOnlyMode { reason: String },
 }
 
 /// HTTP-related errors

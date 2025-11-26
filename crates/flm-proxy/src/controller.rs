@@ -2,29 +2,45 @@
 //!
 //! This module implements the ProxyController trait using Axum.
 
-use axum::response::IntoResponse;
+use axum::{http::StatusCode, response::IntoResponse, Router};
 use flm_core::domain::proxy::{
     ProxyConfig, ProxyEgressConfig, ProxyEgressMode, ProxyHandle, ProxyMode,
     DEFAULT_TOR_SOCKS_ENDPOINT,
 };
 use flm_core::error::ProxyError;
 use flm_core::ports::ProxyController;
-#[cfg(feature = "packaged-ca")]
 use flm_core::services::certificate::{
-    generate_server_cert, is_certificate_valid, save_certificate_files,
+    generate_root_ca, generate_server_cert, is_certificate_valid, save_certificate_files,
 };
+use hyper_util::rt::{TokioExecutor, TokioIo};
+use hyper_util::server::conn::auto::Builder as HyperServerBuilder;
+use hyper_util::service::TowerToHyperService;
 use serde_json::json;
-use std::net::SocketAddr;
-#[cfg(feature = "packaged-ca")]
-use std::path::PathBuf;
+use std::env;
+use std::io::Cursor;
+use std::net::{IpAddr, SocketAddr};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
-use tokio::net::TcpStream;
+use tokio::net::{TcpListener as TokioTcpListener, TcpStream};
 use tokio::sync::{oneshot, RwLock};
 use tokio::task::JoinHandle;
 use tokio::time::{timeout, Duration};
+use tokio_rustls::TlsAcceptor;
+use tower::Service;
+use tracing::{error, info, warn};
 #[cfg(feature = "packaged-ca")]
-use tracing::info;
-use tracing::{error, warn};
+const ROOT_CA_CERT_FILENAME: &str = "root_ca.pem";
+#[cfg(feature = "packaged-ca")]
+const ROOT_CA_KEY_FILENAME: &str = "root_ca.key";
+#[cfg(feature = "packaged-ca")]
+const SERVER_CERT_FILENAME: &str = "server.pem";
+#[cfg(feature = "packaged-ca")]
+const SERVER_KEY_FILENAME: &str = "server.key";
+const DEV_CERT_SUBDIR: &str = "dev-selfsigned";
+const DEV_ROOT_CA_CERT_FILENAME: &str = "dev_root_ca.pem";
+const DEV_ROOT_CA_KEY_FILENAME: &str = "dev_root_ca.key";
+const DEV_SERVER_CERT_FILENAME: &str = "dev_server.pem";
+const DEV_SERVER_KEY_FILENAME: &str = "dev_server.key";
 
 use crate::adapters::{AuditLogMetadata, SqliteSecurityRepository};
 use crate::middleware::AppState;
@@ -56,7 +72,11 @@ pub struct AxumProxyController {
 }
 
 struct ServerHandle {
-    join_handle: JoinHandle<Result<(), ProxyError>>,
+    // why: Arc allows cloning the JoinHandle reference for waiting in inline mode.
+    // alt: Keep JoinHandle non-cloneable, but that prevents waiting on it from outside the lock.
+    // evidence: OCDEX Review identified need to keep server alive in inline mode.
+    // assumption: Arc overhead is negligible compared to server task lifetime.
+    join_handle: Arc<JoinHandle<Result<(), ProxyError>>>,
     shutdown_tx: oneshot::Sender<()>,
     handle: ProxyHandle,
 }
@@ -66,6 +86,27 @@ impl AxumProxyController {
     pub fn new() -> Self {
         Self {
             handles: Arc::new(tokio::sync::RwLock::new(std::collections::HashMap::new())),
+        }
+    }
+
+    /// Wait for the server task on the given port to complete
+    /// 
+    /// why: Allow inline mode to keep the server task alive by waiting on its join handle.
+    /// alt: Make handles field public, but that breaks encapsulation.
+    /// evidence: OCDEX Review identified that inline proxy start drops handles immediately.
+    /// assumption: The join handle exists and is valid for the lifetime of the server task.
+    pub async fn wait_for_server(&self, port: u16) {
+        loop {
+            let handles = self.handles.read().await;
+            if handles.contains_key(&port) {
+                drop(handles);
+                // Wait a bit and check again - the handle will be removed when the server task completes
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
+            } else {
+                // Handle not found, server task has completed
+                drop(handles);
+                break;
+            }
         }
     }
 }
@@ -98,9 +139,7 @@ impl ProxyController for AxumProxyController {
         let join_handle = match config.mode {
             ProxyMode::LocalHttp => start_local_http_server(config.clone(), shutdown_rx).await?,
             ProxyMode::DevSelfSigned => {
-                return Err(ProxyError::InvalidConfig {
-                    reason: "dev-selfsigned mode not yet implemented".to_string(),
-                });
+                start_dev_self_signed_server(config.clone(), shutdown_rx).await?
             }
             ProxyMode::HttpsAcme => {
                 return Err(ProxyError::InvalidConfig {
@@ -132,7 +171,7 @@ impl ProxyController for AxumProxyController {
         handles.insert(
             config.port,
             ServerHandle {
-                join_handle,
+                join_handle: Arc::new(join_handle),
                 shutdown_tx,
                 handle: handle.clone(),
             },
@@ -173,18 +212,44 @@ impl ProxyController for AxumProxyController {
 
 /// Start a local HTTP server
 async fn start_local_http_server(
-    mut config: ProxyConfig,
+    config: ProxyConfig,
     shutdown_rx: oneshot::Receiver<()>,
 ) -> Result<JoinHandle<Result<(), ProxyError>>, ProxyError> {
-    use std::path::PathBuf;
     use tokio::net::TcpListener as TokioTcpListener;
 
+    let (config, app) = prepare_proxy_router(config).await?;
+
+    // Bind to the address (default: 127.0.0.1 for security)
+    let listen_addr = config.listen_addr.as_str();
+    let addr = resolve_listen_addr(listen_addr, config.port)?;
+
+    let listener = TokioTcpListener::bind(&addr)
+        .await
+        .map_err(|e| ProxyError::InvalidConfig {
+            reason: format!("Failed to bind to {addr}: {e}"),
+        })?;
+
+    // Spawn the server task
+    let join_handle = tokio::spawn(async move {
+        axum::serve(listener, app)
+            .with_graceful_shutdown(async {
+                shutdown_rx.await.ok();
+            })
+            .await
+            .map_err(|e| ProxyError::InvalidConfig {
+                reason: format!("Server error: {e}"),
+            })
+    });
+
+    Ok(join_handle)
+}
+
+async fn prepare_proxy_router(
+    mut config: ProxyConfig,
+) -> Result<(ProxyConfig, axum::Router), ProxyError> {
+    use std::path::PathBuf;
+
     // Get DB paths from config or use defaults
-    let _config_db_path = config
-        .config_db_path
-        .as_ref()
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("config.db"));
     let security_db_path = config
         .security_db_path
         .as_ref()
@@ -289,46 +354,7 @@ async fn start_local_http_server(
     // Create the router
     let app = create_router(config.clone(), app_state).await?;
 
-    // Bind to the address (default: 127.0.0.1 for security)
-    let listen_addr = config.listen_addr.as_str();
-    let addr: SocketAddr = listen_addr.parse().map_err(|e| ProxyError::InvalidConfig {
-        reason: format!("Invalid listen address '{}': {}", listen_addr, e),
-    })?;
-
-    // Validate that the address includes the port, or add it
-    let addr = if addr.port() == 0 {
-        SocketAddr::new(addr.ip(), config.port)
-    } else if addr.port() != config.port {
-        return Err(ProxyError::InvalidConfig {
-            reason: format!(
-                "Port mismatch: listen_addr port {} does not match config port {}",
-                addr.port(),
-                config.port
-            ),
-        });
-    } else {
-        addr
-    };
-
-    let listener = TokioTcpListener::bind(&addr)
-        .await
-        .map_err(|e| ProxyError::InvalidConfig {
-            reason: format!("Failed to bind to {}: {}", addr, e),
-        })?;
-
-    // Spawn the server task
-    let join_handle = tokio::spawn(async move {
-        axum::serve(listener, app)
-            .with_graceful_shutdown(async {
-                shutdown_rx.await.ok();
-            })
-            .await
-            .map_err(|e| ProxyError::InvalidConfig {
-                reason: format!("Server error: {e}"),
-            })
-    });
-
-    Ok(join_handle)
+    Ok((config, app))
 }
 
 /// Create the Axum router
@@ -337,8 +363,7 @@ async fn create_router(
     app_state: AppState,
 ) -> Result<axum::Router, ProxyError> {
     use axum::middleware as axum_middleware;
-    use axum::routing::get;
-    use axum::routing::post;
+    use axum::routing::{any, get, post};
     use axum::Router;
 
     // Get CORS configuration from security policy
@@ -362,6 +387,16 @@ async fn create_router(
             app_state.clone(),
             crate::middleware::intrusion_detection_middleware,
         ))
+        // Anomaly detection (after intrusion detection)
+        .layer(axum_middleware::from_fn_with_state(
+            app_state.clone(),
+            crate::middleware::anomaly_detection_middleware,
+        ))
+        // Resource protection (before IP block check to short-circuit early)
+        .layer(axum_middleware::from_fn_with_state(
+            app_state.clone(),
+            crate::middleware::resource_protection_middleware,
+        ))
         // IP block check (before authentication)
         .layer(axum_middleware::from_fn_with_state(
             app_state.clone(),
@@ -373,16 +408,27 @@ async fn create_router(
         ))
         .layer(axum_middleware::from_fn_with_state(
             app_state.clone(),
-            crate::middleware::auth_middleware,
+            crate::middleware::policy_middleware,
         ))
         .layer(axum_middleware::from_fn_with_state(
             app_state.clone(),
-            crate::middleware::policy_middleware,
+            crate::middleware::auth_middleware,
         ))
         .with_state(app_state.clone());
 
+    // why: route honeypot paths before layered routers to guarantee trap responses
+    // alt: keep routes within protected router but order against streaming router is fragile
+    // evidence: `test_honeypot_endpoints`
+    // assumption: `handle_honeypot` covers every honeypot path
+    let honeypot_router = Router::new()
+        .route("/admin", any(handle_honeypot))
+        .route("/api/v1/users", any(handle_honeypot))
+        .route("/wp-admin", any(handle_honeypot))
+        .route("/phpmyadmin", any(handle_honeypot))
+        .with_state(app_state.clone());
+
     // Create router for non-streaming endpoints (with timeout)
-    let router = Router::new()
+    let protected_router = Router::new()
         .route("/health", get(handle_health))
         .route("/v1/models", get(handle_models))
         .route("/v1/embeddings", post(handle_embeddings))
@@ -396,6 +442,16 @@ async fn create_router(
         .layer(axum_middleware::from_fn_with_state(
             app_state.clone(),
             crate::middleware::intrusion_detection_middleware,
+        ))
+        // Anomaly detection (after intrusion detection)
+        .layer(axum_middleware::from_fn_with_state(
+            app_state.clone(),
+            crate::middleware::anomaly_detection_middleware,
+        ))
+        // Resource protection (before IP block check)
+        .layer(axum_middleware::from_fn_with_state(
+            app_state.clone(),
+            crate::middleware::resource_protection_middleware,
         ))
         // IP block check (before authentication)
         .layer(axum_middleware::from_fn_with_state(
@@ -416,20 +472,41 @@ async fn create_router(
         .layer(axum::middleware::from_fn(
             crate::middleware::add_security_headers,
         ))
-        // Apply middleware in order: auth -> policy
-        .layer(axum_middleware::from_fn_with_state(
-            app_state.clone(),
-            crate::middleware::auth_middleware,
-        ))
+        // Apply middleware in order: auth -> policy (auth layer added last so it runs first)
         .layer(axum_middleware::from_fn_with_state(
             app_state.clone(),
             crate::middleware::policy_middleware,
         ))
+        .layer(axum_middleware::from_fn_with_state(
+            app_state.clone(),
+            crate::middleware::auth_middleware,
+        ))
         // Merge streaming router
         .merge(streaming_router)
+        .fallback(handle_404)
         .with_state(app_state);
 
-    Ok(router)
+    Ok(honeypot_router.merge(protected_router))
+}
+
+/// Handle 404 Not Found responses
+///
+/// Returns JSON error response for all undefined routes (including honeypot endpoints)
+async fn handle_404() -> (StatusCode, axum::Json<serde_json::Value>) {
+    (
+        StatusCode::NOT_FOUND,
+        axum::Json(serde_json::json!({
+            "error": {
+                "message": "The requested resource was not found",
+                "type": "invalid_request_error",
+                "code": "not_found"
+            }
+        })),
+    )
+}
+
+async fn handle_honeypot() -> (StatusCode, axum::Json<serde_json::Value>) {
+    handle_404().await
 }
 
 /// Create CORS layer based on security policy
@@ -638,7 +715,7 @@ fn validate_stop_sequences(stop: &[String]) -> Result<(), &'static str> {
 /// Validate temperature parameter
 fn validate_temperature(temperature: Option<f64>) -> Result<(), &'static str> {
     if let Some(temp) = temperature {
-        if temp < 0.0 || temp > 2.0 {
+        if !(0.0..=2.0).contains(&temp) {
             return Err("Temperature must be between 0.0 and 2.0");
         }
         if !temp.is_finite() {
@@ -772,7 +849,7 @@ async fn handle_embeddings(
     let model_id = req.model.clone();
 
     // Validate engine_id and model_name
-    if let Err(_) = validate_engine_id(&engine_id) {
+    if validate_engine_id(&engine_id).is_err() {
         return (
             axum::http::StatusCode::BAD_REQUEST,
             axum::Json(serde_json::json!({
@@ -786,7 +863,7 @@ async fn handle_embeddings(
             .into_response();
     }
 
-    if let Err(_) = validate_model_name(&model_name) {
+    if validate_model_name(&model_name).is_err() {
         return (
             axum::http::StatusCode::BAD_REQUEST,
             axum::Json(serde_json::json!({
@@ -801,7 +878,7 @@ async fn handle_embeddings(
     }
 
     // Validate embedding input
-    if let Err(_) = validate_embedding_input(&req.input) {
+    if validate_embedding_input(&req.input).is_err() {
         return (
             axum::http::StatusCode::BAD_REQUEST,
             axum::Json(serde_json::json!({
@@ -1003,7 +1080,7 @@ async fn handle_chat_completions(
     let model_name = model_parts[1].to_string();
 
     // Validate engine_id and model_name
-    if let Err(_) = validate_engine_id(&engine_id) {
+    if validate_engine_id(&engine_id).is_err() {
         return (
             axum::http::StatusCode::BAD_REQUEST,
             axum::Json(serde_json::json!({
@@ -1017,7 +1094,7 @@ async fn handle_chat_completions(
             .into_response();
     }
 
-    if let Err(_) = validate_model_name(&model_name) {
+    if validate_model_name(&model_name).is_err() {
         return (
             axum::http::StatusCode::BAD_REQUEST,
             axum::Json(serde_json::json!({
@@ -1032,7 +1109,7 @@ async fn handle_chat_completions(
     }
 
     // Validate messages before processing
-    if let Err(_) = validate_messages(&req.messages) {
+    if validate_messages(&req.messages).is_err() {
         return (
             axum::http::StatusCode::BAD_REQUEST,
             axum::Json(serde_json::json!({
@@ -1047,7 +1124,7 @@ async fn handle_chat_completions(
     }
 
     // Validate stop sequences
-    if let Err(_) = validate_stop_sequences(&req.stop) {
+    if validate_stop_sequences(&req.stop).is_err() {
         return (
             axum::http::StatusCode::BAD_REQUEST,
             axum::Json(serde_json::json!({
@@ -1062,7 +1139,7 @@ async fn handle_chat_completions(
     }
 
     // Validate temperature
-    if let Err(_) = validate_temperature(req.temperature) {
+    if validate_temperature(req.temperature).is_err() {
         return (
             axum::http::StatusCode::BAD_REQUEST,
             axum::Json(serde_json::json!({
@@ -1077,7 +1154,7 @@ async fn handle_chat_completions(
     }
 
     // Validate max_tokens
-    if let Err(_) = validate_max_tokens(req.max_tokens) {
+    if validate_max_tokens(req.max_tokens).is_err() {
         return (
             axum::http::StatusCode::BAD_REQUEST,
             axum::Json(serde_json::json!({
@@ -1112,7 +1189,7 @@ async fn handle_chat_completions(
 
     // Validate message roles before conversion
     for msg in &req.messages {
-        if let Err(_) = validate_message_role(&msg.role) {
+        if validate_message_role(&msg.role).is_err() {
             return (
                 axum::http::StatusCode::BAD_REQUEST,
                 axum::Json(serde_json::json!({
@@ -1395,231 +1472,101 @@ async fn handle_chat_stream(
 /// the packaged root CA. The certificate is automatically generated if it
 /// doesn't exist or is expired.
 #[cfg(feature = "packaged-ca")]
-#[cfg(feature = "packaged-ca")]
 async fn start_packaged_ca_server(
-    mut config: ProxyConfig,
+    config: ProxyConfig,
     shutdown_rx: oneshot::Receiver<()>,
 ) -> Result<JoinHandle<Result<(), ProxyError>>, ProxyError> {
-    use std::path::PathBuf;
-    use tokio::net::TcpListener as TokioTcpListener;
-    use tokio_rustls::TlsAcceptor;
-
-    // Get DB paths from config or use defaults
-    let _config_db_path = config
-        .config_db_path
-        .as_ref()
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("config.db"));
-    let security_db_path = config
-        .security_db_path
-        .as_ref()
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("security.db"));
+    let (config, app) = prepare_proxy_router(config).await?;
 
     // Determine certificate directory (AppData/flm/certs on Windows, ~/.flm/certs on Unix)
-    let cert_dir = if cfg!(target_os = "windows") {
-        let mut path = PathBuf::from(std::env::var("APPDATA").unwrap_or_else(|_| ".".to_string()));
-        path.push("flm");
-        path.push("certs");
-        path
-    } else {
-        let mut path = PathBuf::from(std::env::var("HOME").unwrap_or_else(|_| ".".to_string()));
-        path.push(".flm");
-        path.push("certs");
-        path
-    };
+    let cert_dir = default_cert_dir(None);
 
     // Check if server certificate exists and is valid
-    let cert_path = cert_dir.join("server.pem");
-    let key_path = cert_dir.join("server.key");
+    let (root_ca_cert_pem, root_ca_key_pem) = ensure_root_ca_artifacts(
+        &cert_dir,
+        ROOT_CA_CERT_FILENAME,
+        ROOT_CA_KEY_FILENAME,
+        "FLM Local Root CA",
+    )
+    .map_err(|e| ProxyError::InvalidConfig { reason: e })?;
+    let (cert_pem, key_pem) = ensure_server_cert_artifacts(
+        &cert_dir,
+        &root_ca_cert_pem,
+        &root_ca_key_pem,
+        &config.listen_addr,
+        SERVER_CERT_FILENAME,
+        SERVER_KEY_FILENAME,
+    )
+    .map_err(|e| ProxyError::InvalidConfig { reason: e })?;
 
-    let (cert_pem, key_pem) = if cert_path.exists() && key_path.exists() {
-        // Try to load existing certificate
-        match (
-            std::fs::read_to_string(&cert_path),
-            std::fs::read_to_string(&key_path),
-        ) {
-            (Ok(cert), Ok(key)) => {
-                if is_certificate_valid(&cert) {
-                    info!("Using existing server certificate from {:?}", cert_path);
-                    (cert, key)
-                } else {
-                    info!("Existing certificate expired, generating new one");
-                    generate_and_save_cert(&cert_dir)?
-                }
-            }
-            _ => {
-                info!("Failed to read existing certificate, generating new one");
-                generate_and_save_cert(&cert_dir)?
-            }
-        }
-    } else {
-        info!("No server certificate found, generating new one");
-        generate_and_save_cert(&cert_dir)?
-    };
-
-    // Load certificate and key for rustls
-    // Note: rustls 0.21 API - using pki_types module
-    let mut cert_reader = std::io::BufReader::new(cert_pem.as_bytes());
-    let cert_chain: Vec<rustls::pki_types::CertificateDer> =
-        rustls_pemfile::certs(&mut cert_reader)
-            .collect::<Result<Vec<_>, _>>()
-            .map_err(|e| ProxyError::InvalidConfig {
-                reason: format!("Failed to parse certificate: {e}"),
-            })?;
-
-    let mut key_reader = std::io::BufReader::new(key_pem.as_bytes());
-    let key_der = rustls_pemfile::pkcs8_private_keys(&mut key_reader)
-        .next()
-        .ok_or_else(|| ProxyError::InvalidConfig {
-            reason: "No private key found in key file".to_string(),
-        })?
-        .map_err(|e| ProxyError::InvalidConfig {
-            reason: format!("Failed to parse private key: {e}"),
-        })?;
-
-    let key = rustls::pki_types::PrivateKeyDer::Pkcs8(key_der);
-
-    // Create TLS config
-    let tls_config = rustls::ServerConfig::builder()
-        .with_no_client_auth()
-        .with_single_cert(cert_chain, key)
-        .map_err(|e| ProxyError::InvalidConfig {
-            reason: format!("Failed to create TLS config: {e}"),
-        })?;
+    let tls_config = build_tls_config(&cert_pem, &key_pem)?;
 
     let tls_acceptor = TlsAcceptor::from(Arc::new(tls_config));
-
-    // Create repositories (same as HTTP server)
-    let security_repo = crate::adapters::SqliteSecurityRepository::new(&security_db_path)
-        .await
-        .map_err(|e| ProxyError::InvalidConfig {
-            reason: format!("Failed to create security repository: {e}"),
-        })?;
-
-    let security_repo_for_state = Arc::new(security_repo.clone());
-
-    let resolved_egress =
-        resolve_egress_runtime(config.egress.clone(), &security_repo_for_state).await?;
-    config.egress = resolved_egress.clone();
-
-    // Create services (same as HTTP server)
-    let security_service = flm_core::services::SecurityService::new(security_repo);
-    let process_controller: Box<dyn flm_core::ports::EngineProcessController + Send + Sync> =
-        Box::new(crate::process_controller::NoopProcessController);
-    let http_client_builder = http_client_builder_for_egress(&config.egress)?;
-    let http_client: Box<dyn flm_core::ports::HttpClient + Send + Sync> = Box::new(
-        crate::http_client::ReqwestHttpClient::from_builder(http_client_builder).map_err(|e| {
-            ProxyError::InvalidConfig {
-                reason: format!("Failed to create HTTP client: {e}"),
-            }
-        })?,
-    );
-
-    // Use simple in-memory engine repository
-    let engine_repo_impl = Arc::new(crate::engine_repo::InMemoryEngineRepository::new());
-    let engine_repo: Box<dyn flm_core::ports::EngineRepository + Send + Sync> =
-        Box::new(EngineRepositoryWrapper(engine_repo_impl.clone()));
-
-    let engine_service =
-        flm_core::services::EngineService::new(process_controller, http_client, engine_repo);
-
-    // Create IP blocklist, intrusion detection, anomaly detection, and resource protection
-    let ip_blocklist = Arc::new(IpBlocklist::new());
-    let intrusion_detection = Arc::new(IntrusionDetection::new());
-    let anomaly_detection = Arc::new(AnomalyDetection::new());
-    let resource_protection = Arc::new(ResourceProtection::new());
-    let ip_blocklist_for_state = ip_blocklist.clone();
-    let ip_blocklist_for_sync = ip_blocklist.clone();
-    let security_repo_for_load = security_repo_for_state.clone();
-    let security_repo_for_sync = security_repo_for_state.clone();
-
-    // Load blocked IPs from database on startup
-    {
-        let ip_blocklist_load = ip_blocklist_for_state.clone();
-        tokio::spawn(async move {
-            if let Ok(entries) = security_repo_for_load.get_blocked_ips().await {
-                ip_blocklist_load.load_from_db(entries).await;
-            }
-        });
-    }
-
-    // Start background task for periodic database sync (every 5 minutes)
-    tokio::spawn(async move {
-        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(300)); // 5 minutes
-        loop {
-            interval.tick().await;
-
-            if ip_blocklist_for_sync.needs_sync().await {
-                if let Err(e) = ip_blocklist_for_sync
-                    .sync_to_db(&security_repo_for_sync)
-                    .await
-                {
-                    error!(error = %e, "Failed to sync IP blocklist to database");
-                } else {
-                    ip_blocklist_for_sync.mark_synced().await;
-                }
-            }
-
-            // Clean up expired blocks
-            if let Err(e) = security_repo_for_sync.cleanup_expired_blocks().await {
-                error!(error = %e, "Failed to cleanup expired blocks");
-            }
-        }
-    });
-
-    // Create app state (same as HTTP server)
-    let app_state = crate::middleware::AppState {
-        security_service: Arc::new(security_service),
-        security_repo: security_repo_for_state.clone(),
-        engine_service: Arc::new(engine_service),
-        engine_repo: engine_repo_impl,
-        rate_limit_state: Arc::new(RwLock::new(std::collections::HashMap::new())),
-        ip_rate_limit_state: Arc::new(RwLock::new(std::collections::HashMap::new())),
-        trusted_proxy_ips: config.trusted_proxy_ips.clone(),
-        ip_blocklist,
-        intrusion_detection,
-        anomaly_detection,
-        resource_protection,
-        egress: config.egress.clone(),
-    };
-
-    // Create the router (same as HTTP server)
-    let app = create_router(config.clone(), app_state).await?;
 
     // Bind to the address (HTTPS port is port + 1)
     let https_port = config.port + 1;
     let listen_addr = config.listen_addr.as_str();
-    let addr: SocketAddr = listen_addr.parse().map_err(|e| ProxyError::InvalidConfig {
-        reason: format!("Invalid listen address '{}': {}", listen_addr, e),
-    })?;
-
-    let addr = if addr.port() == 0 {
-        SocketAddr::new(addr.ip(), https_port)
-    } else {
-        SocketAddr::new(addr.ip(), https_port)
-    };
+    let addr = resolve_listen_addr(listen_addr, https_port)?;
 
     let listener = TokioTcpListener::bind(&addr)
         .await
         .map_err(|e| ProxyError::InvalidConfig {
-            reason: format!("Failed to bind to {}: {}", addr, e),
+            reason: format!("Failed to bind to {addr}: {e}"),
         })?;
 
-    // Spawn the HTTPS server task
-    let join_handle = tokio::spawn(async move {
-        let incoming = tokio_rustls::TlsListener::new(listener, tls_acceptor);
-        axum::serve(incoming, app)
-            .with_graceful_shutdown(async {
-                shutdown_rx.await.ok();
-            })
-            .await
-            .map_err(|e| ProxyError::InvalidConfig {
-                reason: format!("Server error: {e}"),
-            })
-    });
+    let join_handle = spawn_tls_server(listener, tls_acceptor, app, shutdown_rx);
 
     Ok(join_handle)
+}
+
+fn default_cert_dir(subdir: Option<&str>) -> PathBuf {
+    let mut path = if cfg!(target_os = "windows") {
+        let mut base = PathBuf::from(env::var("APPDATA").unwrap_or_else(|_| ".".to_string()));
+        base.push("flm");
+        base
+    } else {
+        let mut base = PathBuf::from(env::var("HOME").unwrap_or_else(|_| ".".to_string()));
+        base.push(".flm");
+        base
+    };
+    path.push("certs");
+    if let Some(dir) = subdir {
+        path.push(dir);
+    }
+    path
+}
+
+fn build_tls_config(cert_pem: &str, key_pem: &str) -> Result<rustls::ServerConfig, ProxyError> {
+    use rustls::{Certificate, PrivateKey, ServerConfig};
+
+    let mut cert_reader = Cursor::new(cert_pem.as_bytes());
+    let cert_chain = rustls_pemfile::certs(&mut cert_reader)
+        .map_err(|e| ProxyError::InvalidConfig {
+            reason: format!("Failed to parse certificate: {e}"),
+        })?
+        .into_iter()
+        .map(Certificate)
+        .collect::<Vec<_>>();
+
+    let mut key_reader = Cursor::new(key_pem.as_bytes());
+    let mut keys = rustls_pemfile::pkcs8_private_keys(&mut key_reader).map_err(|e| {
+        ProxyError::InvalidConfig {
+            reason: format!("Failed to parse private key: {e}"),
+        }
+    })?;
+
+    let key = keys.pop().ok_or_else(|| ProxyError::InvalidConfig {
+        reason: "No private key found in key file".to_string(),
+    })?;
+    let key = PrivateKey(key);
+
+    ServerConfig::builder()
+        .with_safe_defaults()
+        .with_no_client_auth()
+        .with_single_cert(cert_chain, key)
+        .map_err(|e| ProxyError::InvalidConfig {
+            reason: format!("Failed to create TLS config: {e}"),
+        })
 }
 
 #[cfg(not(feature = "packaged-ca"))]
@@ -1632,33 +1579,223 @@ async fn start_packaged_ca_server(
     })
 }
 
-/// Generate and save server certificate
-#[cfg(feature = "packaged-ca")]
-fn generate_and_save_cert(cert_dir: &PathBuf) -> Result<(String, String), ProxyError> {
-    // For Phase 3, we generate a self-signed certificate
-    // TODO: In full implementation, sign with root CA
-    let server_cert = generate_server_cert(
-        "", // root_ca_cert_pem (not used in self-signed mode)
-        "", // root_ca_key_pem (not used in self-signed mode)
-        "FLM Proxy Server",
-        365,  // 1 year validity
-        None, // san_ips
-    )
-    .map_err(|e| ProxyError::InvalidConfig {
-        reason: format!("Failed to generate server certificate: {e}"),
-    })?;
+async fn start_dev_self_signed_server(
+    config: ProxyConfig,
+    shutdown_rx: oneshot::Receiver<()>,
+) -> Result<JoinHandle<Result<(), ProxyError>>, ProxyError> {
+    let (config, app) = prepare_proxy_router(config).await?;
 
-    // Save certificate and key
+    let cert_dir = default_cert_dir(Some(DEV_CERT_SUBDIR));
+    let (root_ca_cert_pem, root_ca_key_pem) = ensure_root_ca_artifacts(
+        &cert_dir,
+        DEV_ROOT_CA_CERT_FILENAME,
+        DEV_ROOT_CA_KEY_FILENAME,
+        "FLM Dev Root CA",
+    )
+    .map_err(|e| ProxyError::InvalidConfig { reason: e })?;
+    let (cert_pem, key_pem) = ensure_server_cert_artifacts(
+        &cert_dir,
+        &root_ca_cert_pem,
+        &root_ca_key_pem,
+        &config.listen_addr,
+        DEV_SERVER_CERT_FILENAME,
+        DEV_SERVER_KEY_FILENAME,
+    )
+    .map_err(|e| ProxyError::InvalidConfig { reason: e })?;
+
+    info!(
+        "Dev self-signed certificate ready at {}",
+        cert_dir.display()
+    );
+
+    let tls_config = build_tls_config(&cert_pem, &key_pem)?;
+    let tls_acceptor = TlsAcceptor::from(Arc::new(tls_config));
+
+    let https_port = config.port + 1;
+    let listen_addr = config.listen_addr.as_str();
+    let addr = resolve_listen_addr(listen_addr, https_port)?;
+
+    let listener = TokioTcpListener::bind(&addr)
+        .await
+        .map_err(|e| ProxyError::InvalidConfig {
+            reason: format!("Failed to bind to {addr}: {e}"),
+        })?;
+
+    let join_handle = spawn_tls_server(listener, tls_acceptor, app, shutdown_rx);
+
+    Ok(join_handle)
+}
+
+fn spawn_tls_server(
+    listener: TokioTcpListener,
+    tls_acceptor: TlsAcceptor,
+    app: Router,
+    mut shutdown_rx: oneshot::Receiver<()>,
+) -> JoinHandle<Result<(), ProxyError>> {
+    tokio::spawn(async move {
+        let make_service = app.into_make_service_with_connect_info::<SocketAddr>();
+
+        loop {
+            tokio::select! {
+                _ = &mut shutdown_rx => {
+                    break;
+                }
+                accept_res = listener.accept() => {
+                    let (socket, addr) = match accept_res {
+                        Ok(pair) => pair,
+                        Err(e) => {
+                            error!(reason = %e, "Failed to accept TLS connection");
+                            continue;
+                        }
+                    };
+
+                    let tls_acceptor = tls_acceptor.clone();
+                    let mut make_service = make_service.clone();
+
+                    tokio::spawn(async move {
+                        match tls_acceptor.accept(socket).await {
+                            Ok(stream) => {
+                                match make_service.call(addr).await {
+                                    Ok(service) => {
+                                        let hyper_service = TowerToHyperService::new(service);
+                                        let builder = HyperServerBuilder::new(TokioExecutor::new());
+                                        if let Err(err) = builder
+                                            .serve_connection(TokioIo::new(stream), hyper_service)
+                                            .await
+                                        {
+                                            error!(reason = %err, "TLS connection error");
+                                        }
+                                    }
+                                    Err(err) => {
+                                        error!(reason = %err, "Failed to build TLS service");
+                                    }
+                                }
+                            }
+                            Err(e) => {
+                                warn!(reason = %e, "TLS handshake failed");
+                            }
+                        }
+                    });
+                }
+            }
+        }
+
+        Ok(())
+    })
+}
+
+fn resolve_listen_addr(listen_addr: &str, port: u16) -> Result<SocketAddr, ProxyError> {
+    if let Ok(addr) = listen_addr.parse::<SocketAddr>() {
+        if addr.port() == 0 {
+            Ok(SocketAddr::new(addr.ip(), port))
+        } else if addr.port() != port {
+            Err(ProxyError::InvalidConfig {
+                reason: format!(
+                    "Port mismatch: listen_addr port {} does not match config port {}",
+                    addr.port(),
+                    port
+                ),
+            })
+        } else {
+            Ok(addr)
+        }
+    } else {
+        let ip = listen_addr
+            .parse::<IpAddr>()
+            .map_err(|e| ProxyError::InvalidConfig {
+                reason: format!("Invalid listen address '{listen_addr}': {e}"),
+            })?;
+        Ok(SocketAddr::new(ip, port))
+    }
+}
+
+fn ensure_root_ca_artifacts(
+    cert_dir: &Path,
+    cert_filename: &str,
+    key_filename: &str,
+    common_name: &str,
+) -> Result<(String, String), String> {
+    let cert_path = cert_dir.join(cert_filename);
+    let key_path = cert_dir.join(key_filename);
+
+    if cert_path.exists() && key_path.exists() {
+        if let (Ok(cert_pem), Ok(key_pem)) = (
+            std::fs::read_to_string(&cert_path),
+            std::fs::read_to_string(&key_path),
+        ) {
+            if is_certificate_valid(&cert_pem) {
+                return Ok((cert_pem, key_pem));
+            }
+        }
+    }
+
+    info!("Generating new root CA at {:?}", cert_dir);
+    let root_ca = generate_root_ca(common_name, 3650).map_err(|e| format!("{e:?}"))?;
+
+    save_certificate_files(
+        cert_dir,
+        &root_ca.certificate_pem,
+        &root_ca.private_key_pem,
+        cert_filename,
+        key_filename,
+    )
+    .map_err(|e| format!("Failed to save root CA: {e}"))?;
+
+    Ok((root_ca.certificate_pem, root_ca.private_key_pem))
+}
+
+fn ensure_server_cert_artifacts(
+    cert_dir: &Path,
+    root_ca_cert_pem: &str,
+    root_ca_key_pem: &str,
+    listen_addr: &str,
+    cert_filename: &str,
+    key_filename: &str,
+) -> Result<(String, String), String> {
+    use std::fs;
+    use std::net::IpAddr;
+
+    let cert_path = cert_dir.join(cert_filename);
+    let key_path = cert_dir.join(key_filename);
+
+    if cert_path.exists() && key_path.exists() {
+        if let (Ok(cert_pem), Ok(key_pem)) = (
+            fs::read_to_string(&cert_path),
+            fs::read_to_string(&key_path),
+        ) {
+            if is_certificate_valid(&cert_pem) {
+                info!("Using existing server certificate at {:?}", cert_path);
+                return Ok((cert_pem, key_pem));
+            }
+        }
+    }
+
+    let mut additional_sans = Vec::new();
+    if let Ok(ip) = listen_addr.parse::<IpAddr>() {
+        if !ip.is_unspecified() {
+            additional_sans.push(ip.to_string());
+        }
+    } else {
+        additional_sans.push(listen_addr.to_string());
+    }
+
+    let server_cert = generate_server_cert(
+        root_ca_cert_pem,
+        root_ca_key_pem,
+        "FLM Proxy Server",
+        365,
+        Some(additional_sans),
+    )
+    .map_err(|e| format!("Failed to generate server certificate: {e}"))?;
+
     save_certificate_files(
         cert_dir,
         &server_cert.certificate_pem,
         &server_cert.private_key_pem,
-        "server.pem",
-        "server.key",
+        cert_filename,
+        key_filename,
     )
-    .map_err(|e| ProxyError::InvalidConfig {
-        reason: format!("Failed to save certificate: {e}"),
-    })?;
+    .map_err(|e| format!("Failed to persist server certificate: {e}"))?;
 
     Ok((server_cert.certificate_pem, server_cert.private_key_pem))
 }
@@ -1790,7 +1927,7 @@ fn http_client_builder_for_egress(
                     .ok_or_else(|| ProxyError::InvalidConfig {
                         reason: "socks5 endpoint missing for proxy egress".to_string(),
                     })?;
-            let proxy = reqwest::Proxy::all(&format!("socks5h://{endpoint}")).map_err(|e| {
+            let proxy = reqwest::Proxy::all(format!("socks5h://{endpoint}")).map_err(|e| {
                 ProxyError::InvalidConfig {
                     reason: format!("Failed to configure SOCKS proxy: {e}"),
                 }

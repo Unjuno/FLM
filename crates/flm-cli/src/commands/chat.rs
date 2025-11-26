@@ -11,7 +11,7 @@ use serde_json::json;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-/// Wrapper to convert Arc<SqliteEngineRepository> to Box<dyn EngineRepository>
+/// Wrapper to convert Arc<SqliteEngineRepository> to Box<dyn EngineRepository + Send + Sync>
 struct ArcEngineRepositoryWrapper(Arc<SqliteEngineRepository>);
 
 #[async_trait::async_trait]
@@ -63,7 +63,7 @@ pub async fn execute(
     let process_controller = Box::new(DefaultEngineProcessController::new());
     let http_client = Box::new(ReqwestHttpClient::new()?);
     let engine_repo_arc = SqliteEngineRepository::new(&db_path).await?;
-    let engine_repo: Box<dyn EngineRepository> =
+    let engine_repo: Box<dyn EngineRepository + Send + Sync> =
         Box::new(ArcEngineRepositoryWrapper(engine_repo_arc));
 
     // Create service

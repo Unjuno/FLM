@@ -35,18 +35,18 @@ pub type ChatStream = Pin<Box<dyn Stream<Item = Result<ChatStreamChunk, EngineEr
 ///
 /// This service coordinates engine detection, model listing, and chat operations.
 pub struct EngineService {
-    process_controller: Box<dyn EngineProcessController>,
-    http_client: Box<dyn HttpClient>,
-    engine_repo: Box<dyn EngineRepository>,
+    process_controller: Box<dyn EngineProcessController + Send + Sync>,
+    http_client: Box<dyn HttpClient + Send + Sync>,
+    engine_repo: Box<dyn EngineRepository + Send + Sync>,
 }
 
 impl EngineService {
     /// Create a new EngineService
     #[allow(clippy::new_without_default)]
     pub fn new(
-        process_controller: Box<dyn EngineProcessController>,
-        http_client: Box<dyn HttpClient>,
-        engine_repo: Box<dyn EngineRepository>,
+        process_controller: Box<dyn EngineProcessController + Send + Sync>,
+        http_client: Box<dyn HttpClient + Send + Sync>,
+        engine_repo: Box<dyn EngineRepository + Send + Sync>,
     ) -> Self {
         Self {
             process_controller,
@@ -400,22 +400,37 @@ mod tests {
     }
 
     struct MockEngineRepository {
-        engines: Vec<Arc<dyn LlmEngine>>,
+        engines: std::sync::Mutex<Vec<Arc<dyn LlmEngine>>>,
+    }
+
+    impl MockEngineRepository {
+        fn new(engines: Vec<Arc<dyn LlmEngine>>) -> Self {
+            Self {
+                engines: std::sync::Mutex::new(engines),
+            }
+        }
     }
 
     #[async_trait::async_trait]
     impl EngineRepository for MockEngineRepository {
         async fn list_registered(&self) -> Vec<Arc<dyn LlmEngine>> {
-            self.engines.clone()
+            self.engines
+                .lock()
+                .expect("mock engine repo poisoned")
+                .clone()
         }
 
-        async fn register(&self, _engine: Arc<dyn LlmEngine>) {
-            unimplemented!()
+        async fn register(&self, engine: Arc<dyn LlmEngine>) {
+            self.engines
+                .lock()
+                .expect("mock engine repo poisoned")
+                .push(engine);
         }
     }
 
     fn make_service(engines: Vec<Arc<dyn LlmEngine>>) -> EngineService {
-        let repo: Box<dyn EngineRepository> = Box::new(MockEngineRepository { engines });
+        let repo: Box<dyn EngineRepository + Send + Sync> =
+            Box::new(MockEngineRepository::new(engines));
         EngineService::new(
             Box::new(NoopProcessController),
             Box::new(NoopHttpClient),

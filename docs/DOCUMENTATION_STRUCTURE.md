@@ -33,6 +33,8 @@ docs/
 │
 ├── guides/                      # ガイド・マニュアル
 │   ├── README.md                # guides/ディレクトリの説明
+│   ├── GLOSSARY.md               # 用語集
+│   ├── DOCUMENTATION_UPDATE_POLICY.md  # 文書更新ポリシー
 │   ├── SECURITY_BOTNET_PROTECTION.md    # ボットネット対策ガイド（ユーザー向け）
 │   ├── SECURITY_FIREWALL_GUIDE.md       # ファイアウォール設定ガイド
 │   ├── MIGRATION_GUIDE.md                # 移行ガイド（Draft）

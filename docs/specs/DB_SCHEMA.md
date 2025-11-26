@@ -69,3 +69,16 @@ Phase3 以降に実装する UI Extensions に備えて、以下のテーブル�
 - バージョニング: `model_profiles.version`, `api_prompts.version` を設け、今後の schema 変更時に後方互換を確保。
 - CLI コマンド (`flm model-profiles`, `flm api prompts …`) と同時に導入し、Phase3 ブランチでマイグレーションファイルを追加する。追加前に `docs/specs/CLI_SPEC.md` を更新して利用方法を定義すること。
 
+---
+
+**関連ドキュメント**:
+- `docs/specs/CORE_API.md` - コアAPI仕様
+- `docs/specs/CLI_SPEC.md` - CLI仕様
+- `docs/guides/MIGRATION_GUIDE.md` - 移行ガイド
+
+## Changelog
+
+| バージョン | 日付 | 変更概要 |
+|-----------|------|----------|
+| `1.0.0` | 2025-11-20 | 初版公開。`config.db` と `security.db` のスキーマ定義、マイグレーション戦略、データ保護方針を定義。 |
+

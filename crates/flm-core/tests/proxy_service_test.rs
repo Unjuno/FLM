@@ -119,19 +119,19 @@ async fn test_proxy_service_start_local_http() {
 
     let config = ProxyConfig {
         mode: ProxyMode::LocalHttp,
-        port: 8080,
+        port: 28080, // Use a high port to avoid conflicts
         ..Default::default()
     };
 
     let handle = service.start(config).await.unwrap();
-    assert_eq!(handle.port, 8080);
+    assert_eq!(handle.port, 28080);
     assert_eq!(handle.mode, ProxyMode::LocalHttp);
     assert!(handle.running);
 
     // Verify profile was saved
     let profiles = repository.list_profiles().await.unwrap();
     assert_eq!(profiles.len(), 1);
-    assert_eq!(profiles[0].config.port, 8080);
+    assert_eq!(profiles[0].config.port, 28080);
 }
 
 #[tokio::test]
@@ -164,7 +164,7 @@ async fn test_proxy_service_start_https_acme_missing_email() {
 
     let config = ProxyConfig {
         mode: ProxyMode::HttpsAcme,
-        port: 8080,
+        port: 28082,      // Use a high port to avoid conflicts
         acme_email: None, // Missing email
         acme_domain: Some("example.com".to_string()),
         acme_challenge: Some(AcmeChallengeKind::Http01),
@@ -189,7 +189,7 @@ async fn test_proxy_service_start_https_acme_missing_domain() {
 
     let config = ProxyConfig {
         mode: ProxyMode::HttpsAcme,
-        port: 8080,
+        port: 28083, // Use a high port to avoid conflicts
         acme_email: Some("test@example.com".to_string()),
         acme_domain: None, // Missing domain
         acme_challenge: Some(AcmeChallengeKind::Http01),
@@ -214,7 +214,7 @@ async fn test_proxy_service_start_https_acme_valid() {
 
     let config = ProxyConfig {
         mode: ProxyMode::HttpsAcme,
-        port: 8080,
+        port: 28084, // Use a high port to avoid conflicts
         acme_email: Some("test@example.com".to_string()),
         acme_domain: Some("example.com".to_string()),
         acme_challenge: Some(AcmeChallengeKind::Http01),
@@ -222,10 +222,34 @@ async fn test_proxy_service_start_https_acme_valid() {
     };
 
     let handle = service.start(config).await.unwrap();
-    assert_eq!(handle.port, 8080);
+    assert_eq!(handle.port, 28084);
     assert_eq!(handle.mode, ProxyMode::HttpsAcme);
-    assert_eq!(handle.https_port, Some(8081));
+    assert_eq!(handle.https_port, Some(28085));
     assert!(handle.running);
+}
+
+#[tokio::test]
+async fn test_proxy_service_start_rejects_https_port_overflow() {
+    let controller = Arc::new(MockProxyController::new());
+    let repository = Arc::new(MockProxyRepository::new());
+    let service = ProxyService::new(controller, repository);
+
+    let config = ProxyConfig {
+        mode: ProxyMode::DevSelfSigned,
+        port: u16::MAX,
+        ..Default::default()
+    };
+
+    let result = service.start(config).await;
+    match result {
+        Err(ProxyError::InvalidConfig { reason }) => {
+            assert!(
+                reason.contains("HTTPS port"),
+                "expected overflow message, got {reason}"
+            );
+        }
+        other => panic!("Expected InvalidConfig error, got {other:?}"),
+    }
 }
 
 #[tokio::test]
@@ -237,7 +261,7 @@ async fn test_proxy_service_stop() {
     // Start a proxy
     let config = ProxyConfig {
         mode: ProxyMode::LocalHttp,
-        port: 8080,
+        port: 28081, // Use a high port to avoid conflicts
         ..Default::default()
     };
 
@@ -260,4 +284,73 @@ async fn test_proxy_service_status() {
     // Status should return empty vector (repository returns empty)
     let handles = service.status().await.unwrap();
     assert_eq!(handles.len(), 0);
+}
+
+#[tokio::test]
+async fn test_proxy_service_start_port_in_use() {
+    use std::net::TcpListener;
+
+    let controller = Arc::new(MockProxyController::new());
+    let repository = Arc::new(MockProxyRepository::new());
+    let service = ProxyService::new(controller, repository);
+
+    // Find an available port and bind to it to simulate it being in use
+    let test_port = (28082..29000)
+        .find(|&port| TcpListener::bind(format!("127.0.0.1:{}", port)).is_ok())
+        .expect("Failed to find available port for test");
+    let _listener =
+        TcpListener::bind(format!("127.0.0.1:{}", test_port)).expect("Failed to bind test port");
+
+    let config = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: test_port,
+        listen_addr: "127.0.0.1".to_string(),
+        ..Default::default()
+    };
+
+    let result = service.start(config).await;
+    assert!(result.is_err());
+    match result.unwrap_err() {
+        ProxyError::PortInUse { port } => {
+            assert_eq!(port, test_port);
+        }
+        _ => panic!("Expected PortInUse error"),
+    }
+}
+
+#[tokio::test]
+async fn test_proxy_service_start_https_port_in_use() {
+    use std::net::TcpListener;
+
+    let controller = Arc::new(MockProxyController::new());
+    let repository = Arc::new(MockProxyRepository::new());
+    let service = ProxyService::new(controller, repository);
+
+    // Find an available port pair (HTTP and HTTPS ports)
+    let test_port = (29001..30000)
+        .step_by(2)
+        .find(|&port| {
+            TcpListener::bind(format!("127.0.0.1:{}", port)).is_ok()
+                && TcpListener::bind(format!("127.0.0.1:{}", port + 1)).is_ok()
+        })
+        .expect("Failed to find available port pair for test");
+    let https_port = test_port + 1;
+    let _listener = TcpListener::bind(format!("127.0.0.1:{}", https_port))
+        .expect("Failed to bind test HTTPS port");
+
+    let config = ProxyConfig {
+        mode: ProxyMode::DevSelfSigned,
+        port: test_port,
+        listen_addr: "127.0.0.1".to_string(),
+        ..Default::default()
+    };
+
+    let result = service.start(config).await;
+    assert!(result.is_err());
+    match result.unwrap_err() {
+        ProxyError::PortInUse { port } => {
+            assert_eq!(port, https_port);
+        }
+        _ => panic!("Expected PortInUse error for HTTPS port"),
+    }
 }

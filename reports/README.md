@@ -17,6 +17,7 @@
 | 詳細レポート | `FULL_TEST_EXECUTION_REPORT.md` | 直近の統合テスト実行ログ（すべてのスイートを網羅） |
 | 要約 | `FULL_TEST_EXECUTION_SUMMARY.md` | 上記レポートのエグゼクティブサマリー |
 | 追加レポート | `ALL_TESTS_EXECUTION_REPORT.md`, `COMPLETE_TEST_EXECUTION_REPORT.md`, `COMPREHENSIVE_TEST_REPORT.md`, `FINAL_TEST_REPORT.md`, `TEST_REPORT.md` | フェーズやユースケース別の補足レポート |
+| ビルドログ | `BUILD_LOG_20251125.md` | `cargo check` 実行結果（EngineService Sync 問題の解消確認） |
 | テキストログ | `*-results*.txt`, `rust-tests-complete.txt`, `ts-test-results-complete.txt` | CLI / Rust / TS 各スイートの生ログ |
 
 ## 運用手順

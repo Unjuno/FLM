@@ -1,6 +1,6 @@
 # FLM Monorepo (Next Generation)
 
-> Status: WIP | Audience: All contributors | Updated: 2025-11-20
+> Status: WIP | Audience: All contributors | Updated: 2025-11-25
 
 **注意**: 本アプリケーションは**個人利用・シングルユーザー環境向け**です。マルチユーザー対応やロールベースアクセス制御（RBAC）機能は提供されていません。
 
@@ -227,7 +227,13 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 
 ## スクリプトと自動化
 
-- ルート直下の `scripts/` ディレクトリは廃止し、Cargoコマンド／Makefile／`just` など既存ツールを直接呼び出す運用に統一しています。
+- `scripts/` ディレクトリにはCI/CDスクリプトが含まれています：
+  - `ci-cli.sh` / `ci-cli.ps1` - CLI統合テスト（フォーマットチェック、Clippy、ユニットテスト、統合スモークテスト）
+  - `ci-proxy-load.sh` / `ci-proxy-load.ps1` - プロキシ負荷テスト（k6/wrk2を使用）
+  - `ci-acme-smoke.sh` / `ci-acme-smoke.ps1` - ACME証明書発行のスモークテスト
+  - `align_versions.rs` - バージョン整合性チェックツール
+  - `tag_core_api.sh` - Core APIバージョンタグ作成スクリプト
+  - `validate_schemas.sh` - スキーマ検証スクリプト
 - 旧プロトタイプ向けユーティリティは `archive/prototype/scripts/` に保管済みです。参照・再利用時はアーカイブ外へコピーしてから実行してください。
 - 一括実行結果や検証レポートは `reports/` へ配置し、必要に応じて本 README からリンクします。
 

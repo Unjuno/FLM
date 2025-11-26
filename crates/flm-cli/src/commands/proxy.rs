@@ -1,8 +1,11 @@
 //! Proxy command implementation
 
+mod daemon;
+
 use crate::adapters::{SqliteProxyRepository, SqliteSecurityRepository};
 use crate::cli::proxy::ProxySubcommand;
 use crate::utils::{get_config_db_path, get_security_db_path};
+use daemon::{ensure_daemon_client, load_existing_client};
 use flm_core::domain::proxy::{
     AcmeChallengeKind, ProxyConfig, ProxyEgressConfig, ProxyEgressMode, ProxyHandle, ProxyMode,
 };
@@ -12,6 +15,7 @@ use local_ip_address::local_ip;
 use serde_json::json;
 use std::path::PathBuf;
 use std::sync::Arc;
+use tracing::{error, info};
 
 /// Execute proxy command
 pub async fn execute(
@@ -30,7 +34,7 @@ pub async fn execute(
             bind,
             acme_email,
             acme_domain,
-            no_daemon: _,
+            no_daemon,
         } => {
             execute_start(
                 port,
@@ -43,6 +47,7 @@ pub async fn execute(
                 acme_domain,
                 db_path_config,
                 db_path_security,
+                no_daemon,
             )
             .await
         }
@@ -65,6 +70,7 @@ async fn execute_start(
     acme_domain: Option<String>,
     db_path_config: Option<String>,
     db_path_security: Option<String>,
+    no_daemon: bool,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let config_db_path = db_path_config
         .map(PathBuf::from)
@@ -110,41 +116,77 @@ async fn execute_start(
         security_db_path: Some(security_db_path.to_str().unwrap().to_string()),
     };
 
-    // Initialize repositories
-    let proxy_repo = SqliteProxyRepository::new(&config_db_path).await?;
-    let _security_repo = SqliteSecurityRepository::new(&security_db_path).await?;
-
-    // Create controller and service
-    let controller = Arc::new(AxumProxyController::new());
-    let repository = Arc::new(proxy_repo);
-    let service = ProxyService::new(controller, repository);
-
-    // Start proxy
     let listen_addr = config.listen_addr.clone();
-    let handle = service.start(config).await?;
+    let use_inline = no_daemon || std::env::var("FLM_PROXY_FORCE_INLINE").is_ok();
 
-    // Output result in JSON format (CLI_SPEC.md format)
-    let endpoints = build_endpoint_map(&handle);
+    if use_inline {
+        let (handle, controller) = start_inline(config, config_db_path.clone(), security_db_path.clone()).await?;
+        
+        // Output result in JSON format (CLI_SPEC.md format)
+        let endpoints = build_endpoint_map(&handle);
 
-    let output = json!({
-        "version": "1.0",
-        "data": {
-            "status": "running",
-            "mode": mode_str,
-            "listen_addr": listen_addr,
-            "endpoints": endpoints,
-            "pid": handle.pid,
-            "id": handle.id,
-            "port": handle.port,
-            "https_port": handle.https_port,
-            "acme_domain": handle.acme_domain,
-            "egress": handle.egress
+        let output = json!({
+            "version": "1.0",
+            "data": {
+                "status": "running",
+                "mode": mode_str,
+                "listen_addr": listen_addr,
+                "endpoints": endpoints,
+                "pid": handle.pid,
+                "id": handle.id,
+                "port": handle.port,
+                "https_port": handle.https_port,
+                "acme_domain": handle.acme_domain,
+                "egress": handle.egress
+            }
+        });
+
+        println!("{}", serde_json::to_string_pretty(&output)?);
+
+        // why: OCDEX Review identified that inline proxy start drops ProxyService/AxumProxyController
+        //      as soon as start_inline returns, causing the server to terminate immediately.
+        // alt: Disable inline mode until this is fixed, but that breaks --no-daemon functionality.
+        // evidence: OCDEX Review run_id: "ocdex-review-20251125-01"
+        // assumption: Users expect --no-daemon to keep the server running until interrupted.
+        // Keep controller and service alive for the process lifetime
+        let port = handle.port;
+        tokio::select! {
+            _ = tokio::signal::ctrl_c() => {
+                println!("Received shutdown signal, stopping proxy...");
+            }
+            _ = controller.wait_for_server(port) => {
+                eprintln!("Proxy server task ended unexpectedly");
+            }
         }
-    });
 
-    println!("{}", serde_json::to_string_pretty(&output)?);
+        Ok(())
+    } else {
+        let client = ensure_daemon_client(&config_db_path, &security_db_path).await?;
+        let handle = client.start_proxy(&config).await?;
 
-    Ok(())
+        // Output result in JSON format (CLI_SPEC.md format)
+        let endpoints = build_endpoint_map(&handle);
+
+        let output = json!({
+            "version": "1.0",
+            "data": {
+                "status": "running",
+                "mode": mode_str,
+                "listen_addr": listen_addr,
+                "endpoints": endpoints,
+                "pid": handle.pid,
+                "id": handle.id,
+                "port": handle.port,
+                "https_port": handle.https_port,
+                "acme_domain": handle.acme_domain,
+                "egress": handle.egress
+            }
+        });
+
+        println!("{}", serde_json::to_string_pretty(&output)?);
+
+        Ok(())
+    }
 }
 
 fn build_endpoint_map(handle: &ProxyHandle) -> serde_json::Value {
@@ -211,6 +253,10 @@ async fn execute_stop(
     db_path_config: Option<String>,
     db_path_security: Option<String>,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    if port.is_none() && handle_id.is_none() {
+        return Err("Either --port or --handle-id must be specified to stop a proxy".into());
+    }
+
     let config_db_path = db_path_config
         .map(PathBuf::from)
         .unwrap_or_else(get_config_db_path);
@@ -218,38 +264,16 @@ async fn execute_stop(
         .map(PathBuf::from)
         .unwrap_or_else(get_security_db_path);
 
-    // Initialize repositories
-    let proxy_repo = SqliteProxyRepository::new(&config_db_path).await?;
+    if let Some(client) = load_existing_client().await? {
+        client
+            .stop_proxy(port, handle_id.clone())
+            .await
+            .map_err(|e| format!("Failed to stop proxy via daemon: {e}"))?;
+        println!("Proxy stop requested");
+        return Ok(());
+    }
 
-    // Create controller and service
-    let controller = Arc::new(AxumProxyController::new());
-    let repository = Arc::new(proxy_repo);
-    let service = ProxyService::new(controller, repository);
-
-    // Get handle to stop
-    let handle = if let Some(port) = port {
-        // Find handle by port
-        let handles = service.status().await?;
-        handles
-            .into_iter()
-            .find(|h| h.port == port)
-            .ok_or_else(|| format!("No proxy running on port {port}. Use 'flm proxy status' to see running proxies"))?
-    } else if let Some(id) = handle_id {
-        // Find handle by ID
-        let handles = service.status().await?;
-        handles.into_iter().find(|h| h.id == id).ok_or_else(|| {
-            format!("No proxy with ID '{id}'. Use 'flm proxy status' to see running proxies")
-        })?
-    } else {
-        return Err("Either --port or --handle-id must be specified to stop a proxy".into());
-    };
-
-    // Stop proxy
-    service.stop(handle.clone()).await?;
-
-    println!("Proxy stopped: {}", handle.id);
-
-    Ok(())
+    stop_inline(port, handle_id, config_db_path).await
 }
 
 /// Execute proxy status command
@@ -265,53 +289,127 @@ async fn execute_status(
         .map(PathBuf::from)
         .unwrap_or_else(get_security_db_path);
 
-    // Initialize repositories
-    let proxy_repo = SqliteProxyRepository::new(&config_db_path).await?;
+    if let Some(client) = load_existing_client().await? {
+        let handles = client
+            .status()
+            .await
+            .map_err(|e| format!("Failed to fetch status via daemon: {e}"))?;
+        return render_status(handles, format);
+    }
 
-    // Create controller and service
+    let handles = status_inline(config_db_path).await?;
+    render_status(handles, format)
+}
+
+async fn start_inline(
+    config: ProxyConfig,
+    config_db_path: PathBuf,
+    security_db_path: PathBuf,
+) -> Result<(ProxyHandle, Arc<AxumProxyController>), Box<dyn std::error::Error>> {
+    let proxy_repo = SqliteProxyRepository::new(&config_db_path).await?;
+    let _security_repo = SqliteSecurityRepository::new(&security_db_path).await?;
+    let controller = Arc::new(AxumProxyController::new());
+    let repository = Arc::new(proxy_repo);
+    let service = ProxyService::new(controller.clone(), repository);
+    let handle = service.start(config).await?;
+    
+    // why: Keep controller and service alive for the process lifetime in inline mode.
+    //      The join_handle is stored in the controller's handles map, so we need to
+    //      keep the controller alive and wait for the server task to complete.
+    // alt: Disable inline mode, but that breaks --no-daemon functionality.
+    // evidence: OCDEX Review identified that handles are dropped immediately after start_inline returns.
+    // assumption: The server task will run until shutdown signal or error.
+    Ok((handle, controller))
+}
+
+async fn stop_inline(
+    port: Option<u16>,
+    handle_id: Option<String>,
+    config_db_path: PathBuf,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let proxy_repo = SqliteProxyRepository::new(&config_db_path).await?;
     let controller = Arc::new(AxumProxyController::new());
     let repository = Arc::new(proxy_repo);
     let service = ProxyService::new(controller, repository);
 
-    // Get status
     let handles = service.status().await?;
+    let target = if let Some(port) = port {
+        handles
+            .iter()
+            .find(|h| h.port == port)
+            .cloned()
+            .ok_or_else(|| {
+                format!("No proxy running on port {port}. Use 'flm proxy status' to see running proxies")
+            })?
+    } else if let Some(id) = handle_id {
+        handles
+            .iter()
+            .find(|h| h.id == id)
+            .cloned()
+            .ok_or_else(|| {
+                format!("No proxy with ID '{id}'. Use 'flm proxy status' to see running proxies")
+            })?
+    } else {
+        return Err("Either --port or --handle-id must be specified to stop a proxy".into());
+    };
 
+    service.stop(target.clone()).await?;
+    println!("Proxy stopped: {}", target.id);
+
+    Ok(())
+}
+
+async fn status_inline(
+    config_db_path: PathBuf,
+) -> Result<Vec<ProxyHandle>, Box<dyn std::error::Error>> {
+    let proxy_repo = SqliteProxyRepository::new(&config_db_path).await?;
+    let controller = Arc::new(AxumProxyController::new());
+    let repository = Arc::new(proxy_repo);
+    let service = ProxyService::new(controller, repository);
+    let handles = service.status().await?;
+    Ok(handles)
+}
+
+fn render_status(
+    handles: Vec<ProxyHandle>,
+    format: String,
+) -> Result<(), Box<dyn std::error::Error>> {
     if format == "json" {
         let output = serde_json::json!({
             "version": "1.0",
             "data": handles
         });
         println!("{}", serde_json::to_string_pretty(&output)?);
+        return Ok(());
+    }
+
+    if handles.is_empty() {
+        println!("No running proxies");
     } else {
-        // Text format
-        if handles.is_empty() {
-            println!("No running proxies");
-        } else {
-            println!("Running proxies:");
-            for handle in handles {
-                println!("  ID: {}", handle.id);
-                println!("    Port: {}", handle.port);
-                println!("    Mode: {:?}", handle.mode);
-                println!("    Listen: {}", handle.listen_addr);
-                if let Some(https_port) = handle.https_port {
-                    println!("    HTTPS Port: {https_port}");
-                }
-                if let Some(domain) = handle.acme_domain {
-                    println!("    ACME Domain: {domain}");
-                }
-                println!("    Running: {}", handle.running);
-                if let Some(error) = handle.last_error {
-                    println!("    Last Error: {error}");
-                }
-                println!("    Egress Mode: {:?}", handle.egress.mode);
-                if let Some(endpoint) = handle.egress.display_endpoint() {
-                    println!("    Egress Endpoint: {endpoint}");
-                }
-                if handle.egress.fail_open {
-                    println!("    Egress Fail-Open: enabled");
-                }
-                println!();
+        println!("Running proxies:");
+        for handle in handles {
+            println!("  ID: {}", handle.id);
+            println!("    Port: {}", handle.port);
+            println!("    Mode: {:?}", handle.mode);
+            println!("    Listen: {}", handle.listen_addr);
+            if let Some(https_port) = handle.https_port {
+                println!("    HTTPS Port: {https_port}");
             }
+            if let Some(domain) = handle.acme_domain {
+                println!("    ACME Domain: {domain}");
+            }
+            println!("    Running: {}", handle.running);
+            if let Some(error) = handle.last_error {
+                println!("    Last Error: {error}");
+            }
+            println!("    Egress Mode: {:?}", handle.egress.mode);
+            if let Some(endpoint) = handle.egress.display_endpoint() {
+                println!("    Egress Endpoint: {endpoint}");
+            }
+            if handle.egress.fail_open {
+                println!("    Egress Fail-Open: enabled");
+            }
+            println!();
         }
     }
 

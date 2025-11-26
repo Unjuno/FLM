@@ -3,7 +3,7 @@
 //! See `docs/CORE_API.md` section 5 for the complete specification.
 
 use crate::domain::proxy::{
-    ProxyConfig, ProxyEgressConfig, ProxyEgressMode, ProxyHandle, ProxyProfile,
+    ProxyConfig, ProxyEgressConfig, ProxyEgressMode, ProxyHandle, ProxyMode, ProxyProfile,
     DEFAULT_TOR_SOCKS_ENDPOINT,
 };
 use crate::error::ProxyError;
@@ -55,9 +55,26 @@ where
         // Validate and normalize configuration
         let config = Self::normalize_config(config)?;
 
-        // Check if port is already in use
-        // Note: This is a basic check. The actual port binding will happen in ProxyController
-        // TODO: Add port availability check if needed
+        // why: docs/status/active/UNIMPLEMENTED_REPORT.md §1.3 calls out missing deterministic
+        //      port conflict errors before spawning proxy processes.
+        // alt: Rely on ProxyController to surface OS errors, but that obscures which port failed.
+        // evidence: docs/status/active/UNIMPLEMENTED_ANALYSIS.md §1.3 enumerates the gap.
+        // assumption: OS binding semantics remain stable between the preflight check and actual startup.
+        Self::ensure_port_available(&config.listen_addr, config.port)?;
+
+        if config.mode != ProxyMode::LocalHttp {
+            let https_port =
+                config
+                    .port
+                    .checked_add(1)
+                    .ok_or_else(|| ProxyError::InvalidConfig {
+                        reason: format!(
+                            "HTTPS port calculation overflowed for base port {}",
+                            config.port
+                        ),
+                    })?;
+            Self::ensure_port_available(&config.listen_addr, https_port)?;
+        }
 
         // Start the proxy via controller
         let handle = self.controller.start(config.clone()).await?;
@@ -194,6 +211,27 @@ where
         config.egress = normalize_egress(config.egress)?;
 
         Ok(config)
+    }
+
+    fn ensure_port_available(listen_addr: &str, port: u16) -> Result<(), ProxyError> {
+        use std::io::ErrorKind;
+        use std::net::TcpListener;
+
+        match TcpListener::bind((listen_addr, port)) {
+            Ok(listener) => {
+                drop(listener);
+                Ok(())
+            }
+            Err(err) => {
+                if err.kind() == ErrorKind::AddrInUse {
+                    Err(ProxyError::PortInUse { port })
+                } else {
+                    Err(ProxyError::InvalidConfig {
+                        reason: format!("Failed to bind {listen_addr}:{port}: {err}"),
+                    })
+                }
+            }
+        }
     }
 }
 

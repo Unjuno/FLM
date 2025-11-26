@@ -6,14 +6,17 @@ use async_trait::async_trait;
 use flm_core::domain::models::EngineKind;
 use flm_core::ports::{EngineProcessController, EngineRepository, LlmEngine};
 use flm_core::services::EngineService;
+use flm_engine_llamacpp::LlamaCppEngine;
+use flm_engine_lmstudio::LmStudioEngine;
 use flm_engine_ollama::OllamaEngine;
+use flm_engine_vllm::VllmEngine;
 use serde_json::json;
 use std::collections::HashMap;
 use std::env;
 use std::path::PathBuf;
 use std::sync::Arc;
 
-/// Wrapper to convert Arc<SqliteEngineRepository> to Box<dyn EngineRepository>
+/// Wrapper to convert Arc<SqliteEngineRepository> to Box<dyn EngineRepository + Send + Sync>
 struct ArcEngineRepositoryWrapper(Arc<SqliteEngineRepository>);
 
 #[async_trait]
@@ -43,17 +46,45 @@ async fn register_detected_engines(
 
     // Register engines based on detected states
     for state in states {
-        if state.kind == EngineKind::Ollama {
-            let base_url = runtime_urls
-                .get(&state.id)
-                .cloned()
-                .or_else(|| env::var("OLLAMA_BASE_URL").ok())
-                .unwrap_or_else(|| "http://localhost:11434".to_string());
+        match state.kind {
+            EngineKind::Ollama => {
+                let base_url = runtime_urls
+                    .get(&state.id)
+                    .cloned()
+                    .or_else(|| env::var("OLLAMA_BASE_URL").ok())
+                    .unwrap_or_else(|| "http://localhost:11434".to_string());
 
-            let engine = Arc::new(OllamaEngine::new(state.id.clone(), base_url)?);
-            engine_repo.register(engine).await;
+                let engine = Arc::new(OllamaEngine::new(state.id.clone(), base_url)?);
+                engine_repo.register(engine).await;
+            }
+            EngineKind::Vllm => {
+                let base_url = runtime_urls
+                    .get(&state.id)
+                    .cloned()
+                    .unwrap_or_else(|| "http://localhost:8000".to_string());
+
+                let engine = Arc::new(VllmEngine::new(state.id.clone(), base_url)?);
+                engine_repo.register(engine).await;
+            }
+            EngineKind::LmStudio => {
+                let base_url = runtime_urls
+                    .get(&state.id)
+                    .cloned()
+                    .unwrap_or_else(|| "http://localhost:1234".to_string());
+
+                let engine = Arc::new(LmStudioEngine::new(state.id.clone(), base_url)?);
+                engine_repo.register(engine).await;
+            }
+            EngineKind::LlamaCpp => {
+                let base_url = runtime_urls
+                    .get(&state.id)
+                    .cloned()
+                    .unwrap_or_else(|| "http://localhost:8080".to_string());
+
+                let engine = Arc::new(LlamaCppEngine::new(state.id.clone(), base_url)?);
+                engine_repo.register(engine).await;
+            }
         }
-        // TODO: Add other engine types as adapters are implemented
     }
 
     if engine_repo.list_registered().await.is_empty() {
@@ -86,7 +117,7 @@ pub async fn execute_list(
     let process_controller = Box::new(process_controller_impl);
     let http_client = Box::new(ReqwestHttpClient::new()?);
     let engine_repo_arc = SqliteEngineRepository::new(&db_path).await?;
-    let engine_repo: Box<dyn flm_core::ports::EngineRepository> =
+    let engine_repo: Box<dyn flm_core::ports::EngineRepository + Send + Sync> =
         Box::new(ArcEngineRepositoryWrapper(engine_repo_arc.clone()));
 
     // Create service

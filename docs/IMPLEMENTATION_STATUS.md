@@ -147,11 +147,17 @@
   - 重大度（low, medium, high, critical）
   - IPアドレス、詳細情報（JSON形式）の記録
 
-**Phase 2: 未実装 ❌**:
-- ❌ 異常検知システム（大量リクエスト検出、異常パターン検出）
-- ❌ リソース保護（CPU/メモリ監視、自動スロットリング）
+**Phase 2: 完了 ✅** (`docs/status/completed/security/SECURITY_PHASE2_COMPLETE.md`):
+- ✅ **異常検知システム** – リクエストレートと異常パターンを監視し、自動ブロックを実施
+- ✅ **リソース保護** – CPU/メモリ使用量を監視し、しきい値超過時にスロットリング
+- ✅ **IPベースレート制限** – APIキーごとの `rpm`/`burst` を適用し、`SecurityPolicy` の設定値と同期
 
-**詳細**: `docs/planning/BOTNET_PROTECTION_IMPLEMENTATION_PLAN.md` を参照
+**Phase 3: 完了 ✅** (`docs/status/completed/security/SECURITY_PHASE3_COMPLETE.md`):
+- ✅ **ハニーポットエンドポイント** – ボット動作を検出し、侵入スコアに反映
+- ✅ **イベント連携** – ハニーポット検知を監査ログ/ブロックリストへ反映
+- ✅ **UI/レポート連携** – Phase3で追加したセキュリティイベントを `reports/` と `docs/status/completed/security/` に集約
+
+**詳細**: 導入経緯と運用は `docs/planning/BOTNET_PROTECTION_IMPLEMENTATION_PLAN.md` を参照
 
 #### テスト
 

@@ -51,7 +51,7 @@
 ```
 
 ## 8. Tooling
-- `scripts/tag_core_api.sh` (TBD) でタグ作成と `docs/specs/CORE_API.md` の `Updated:` を同期
+- `scripts/tag_core_api.sh <version>` で `docs/specs/CORE_API.md` の `Updated:` と `## Changelog` を更新し、`core-api-v<version>` タグを（既定は署名付きで）作成。`--dry-run` / `--no-sign` / `--skip-docs` / `--skip-tag` オプションでプレビューや挙動切替が可能。
 - `cargo release` は `flm-core` / `flm-cli` / `flm-proxy` を同時に publish しない（社内配布のため）。タグのみで管理。
 - `scripts/align_versions.rs` (TBD) で Core API 1.x 系と CLI/Proxy 1.x 系の突合せレポートを出力。
 

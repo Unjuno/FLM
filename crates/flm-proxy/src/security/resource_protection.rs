@@ -5,6 +5,7 @@
 
 use std::sync::Arc;
 use std::time::{Duration, Instant};
+use sysinfo::System;
 use tokio::sync::RwLock;
 use tracing::warn;
 
@@ -28,6 +29,8 @@ pub struct ResourceProtection {
     last_memory_usage: Arc<RwLock<f64>>,
     /// Whether resource protection is currently active (throttling new connections)
     protection_active: Arc<RwLock<bool>>,
+    /// Shared sysinfo system handle
+    system: Arc<RwLock<System>>,
 }
 
 impl ResourceProtection {
@@ -42,7 +45,17 @@ impl ResourceProtection {
             last_cpu_usage: Arc::new(RwLock::new(0.0)),
             last_memory_usage: Arc::new(RwLock::new(0.0)),
             protection_active: Arc::new(RwLock::new(false)),
+            system: Arc::new(RwLock::new(System::new())),
         }
+    }
+
+    /// Create a new resource protection system with custom thresholds (for testing)
+    /// Create a new resource protection system with custom thresholds (for testing)
+    #[cfg(any(test, feature = "test-utils"))]
+    pub fn with_thresholds(mut self, cpu_threshold: f64, memory_threshold: f64) -> Self {
+        self.cpu_threshold = cpu_threshold;
+        self.memory_threshold = memory_threshold;
+        self
     }
 
     /// Check if new connections should be throttled
@@ -93,11 +106,17 @@ impl ResourceProtection {
         // Update check time
         *last_check = now;
 
-        // Get CPU usage (simplified implementation)
-        // Note: In a production system, you would use sysinfo or similar crate
-        // For now, we'll use a placeholder that returns 0.0
-        // TODO: Integrate with sysinfo crate for actual CPU monitoring
-        let cpu_usage = 0.0; // Placeholder
+        // Refresh CPU metrics
+        let mut system = self.system.write().await;
+        system.refresh_cpu();
+
+        let cpu_usage = if system.cpus().is_empty() {
+            0.0
+        } else {
+            let total: f64 = system.cpus().iter().map(|cpu| cpu.cpu_usage() as f64).sum();
+            let avg = total / system.cpus().len() as f64;
+            (avg / 100.0).clamp(0.0, 1.0)
+        };
 
         // Update cached value
         *self.last_cpu_usage.write().await = cpu_usage;
@@ -120,11 +139,17 @@ impl ResourceProtection {
         // Update check time
         *last_check = now;
 
-        // Get memory usage (simplified implementation)
-        // Note: In a production system, you would use sysinfo or similar crate
-        // For now, we'll use a placeholder that returns 0.0
-        // TODO: Integrate with sysinfo crate for actual memory monitoring
-        let memory_usage = 0.0; // Placeholder
+        // Refresh memory metrics
+        let mut system = self.system.write().await;
+        system.refresh_memory();
+
+        let total_memory = system.total_memory();
+        let used_memory = system.used_memory();
+        let memory_usage = if total_memory == 0 {
+            0.0
+        } else {
+            (used_memory as f64 / total_memory as f64).clamp(0.0, 1.0)
+        };
 
         // Update cached value
         *self.last_memory_usage.write().await = memory_usage;
@@ -160,10 +185,7 @@ mod tests {
 
     #[tokio::test]
     async fn test_resource_protection_should_throttle() {
-        let protection = ResourceProtection::new();
-
-        // With placeholder implementation, should_throttle should return false
-        // (since CPU and memory usage are always 0.0)
+        let protection = ResourceProtection::new().with_thresholds(1.5, 1.5);
         let should_throttle = protection.should_throttle().await;
         assert!(
             !should_throttle,
