@@ -174,7 +174,9 @@ mod tests {
 
     #[test]
     fn test_repo_error_display() {
-        let error = RepoError::NotFound { key: "test-key".to_string() };
+        let error = RepoError::NotFound {
+            key: "test-key".to_string(),
+        };
         let msg = format!("{}", error);
         assert!(msg.contains("test-key"));
         assert!(msg.contains("not found"));

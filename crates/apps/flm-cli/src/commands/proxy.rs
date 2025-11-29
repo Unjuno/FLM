@@ -77,7 +77,17 @@ pub async fn execute(
             port,
             handle_id,
             all,
-        } => execute_reload(port, handle_id, all, db_path_config, db_path_security, format).await,
+        } => {
+            execute_reload(
+                port,
+                handle_id,
+                all,
+                db_path_config,
+                db_path_security,
+                format,
+            )
+            .await
+        }
     }
 }
 
@@ -175,8 +185,7 @@ async fn execute_start(options: StartCommandOptions) -> Result<(), Box<dyn std::
         "direct" => ProxyEgressMode::Direct,
         "tor" => ProxyEgressMode::Tor,
         "socks5" => ProxyEgressMode::CustomSocks5 {
-            endpoint: socks5_endpoint
-                .unwrap_or_else(|| DEFAULT_TOR_SOCKS_ENDPOINT.to_string()),
+            endpoint: socks5_endpoint.unwrap_or_else(|| DEFAULT_TOR_SOCKS_ENDPOINT.to_string()),
         },
         _ => {
             return Err(format!(
@@ -209,7 +218,9 @@ async fn execute_start(options: StartCommandOptions) -> Result<(), Box<dyn std::
             return Err("Wildcard domain (*.example.com) requires DNS-01 feature which is currently disabled".into());
         }
         if acme_dns_profile.is_none() {
-            return Err("Wildcard domain requires --dns-profile to be set for DNS-01 challenge".into());
+            return Err(
+                "Wildcard domain requires --dns-profile to be set for DNS-01 challenge".into(),
+            );
         }
         AcmeChallengeKind::Dns01
     } else {
@@ -232,26 +243,25 @@ async fn execute_start(options: StartCommandOptions) -> Result<(), Box<dyn std::
     };
 
     // Resolve DNS credential if DNS-01 is used
-    let resolved_dns_credential: Option<ResolvedDnsCredential> = if acme_challenge_kind
-        == AcmeChallengeKind::Dns01
-    {
-        if let Some(profile_id) = &acme_dns_profile {
-            match load_dns_token(profile_id, &security_db_path).await {
-                Ok(credential) => Some(credential),
-                Err(e) => {
-                    return Err(format!(
-                        "Failed to load DNS credential for profile {}: {}",
-                        profile_id, e
-                    )
-                    .into());
+    let resolved_dns_credential: Option<ResolvedDnsCredential> =
+        if acme_challenge_kind == AcmeChallengeKind::Dns01 {
+            if let Some(profile_id) = &acme_dns_profile {
+                match load_dns_token(profile_id, &security_db_path).await {
+                    Ok(credential) => Some(credential),
+                    Err(e) => {
+                        return Err(format!(
+                            "Failed to load DNS credential for profile {}: {}",
+                            profile_id, e
+                        )
+                        .into());
+                    }
                 }
+            } else {
+                return Err("DNS-01 challenge requires --dns-profile to be set".into());
             }
         } else {
-            return Err("DNS-01 challenge requires --dns-profile to be set".into());
-        }
-    } else {
-        None
-    };
+            None
+        };
 
     // Build proxy config
     let mut config = ProxyConfig {
@@ -334,8 +344,7 @@ async fn execute_start(options: StartCommandOptions) -> Result<(), Box<dyn std::
                             {
                                 let expires_at_utc = expires_at.with_timezone(&chrono::Utc);
                                 let now = chrono::Utc::now();
-                                let days_until_expiry =
-                                    (expires_at_utc - now).num_days();
+                                let days_until_expiry = (expires_at_utc - now).num_days();
 
                                 if days_until_expiry > 0 {
                                     // Certificate is still valid
@@ -379,7 +388,9 @@ async fn execute_start(options: StartCommandOptions) -> Result<(), Box<dyn std::
                                     }
                                 } else {
                                     // Certificate has expired
-                                    eprintln!("Warning: ACME certificate issuance failed: {reason}");
+                                    eprintln!(
+                                        "Warning: ACME certificate issuance failed: {reason}"
+                                    );
                                     if let Some(ref expires_at_str) = expires_at_str {
                                         eprintln!(
                                             "Certificate in database has expired (expired: {}).",
@@ -420,7 +431,11 @@ async fn execute_start(options: StartCommandOptions) -> Result<(), Box<dyn std::
         }
 
         // Wait for the server task to complete (inline mode)
-        runtime.service.controller.wait_for_server(handle.port).await;
+        runtime
+            .service
+            .controller
+            .wait_for_server(handle.port)
+            .await;
         cleanup_inline_runtime_if_idle(
             inline_runtime_key(&config_db_path, &security_db_path),
             runtime,
@@ -738,7 +753,10 @@ async fn execute_reload(
                     });
                     println!("{}", serde_json::to_string_pretty(&output)?);
                 } else {
-                    println!("Configuration reloaded for proxy {} (port {})", handle.id, handle.port);
+                    println!(
+                        "Configuration reloaded for proxy {} (port {})",
+                        handle.id, handle.port
+                    );
                 }
                 Ok(())
             }

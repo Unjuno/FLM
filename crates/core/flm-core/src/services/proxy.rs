@@ -150,12 +150,11 @@ where
     pub async fn reload_config(&self, handle_id: &str) -> Result<(), ProxyError> {
         // Verify that the handle exists
         let handles = self.status().await?;
-        let handle = handles
-            .iter()
-            .find(|h| h.id == handle_id)
-            .ok_or_else(|| ProxyError::HandleNotFound {
+        let handle = handles.iter().find(|h| h.id == handle_id).ok_or_else(|| {
+            ProxyError::HandleNotFound {
                 handle_id: handle_id.to_string(),
-            })?;
+            }
+        })?;
 
         // Verify that the proxy is running
         if !handle.running {

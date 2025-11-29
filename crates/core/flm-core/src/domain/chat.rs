@@ -299,10 +299,7 @@ mod tests {
 
     #[test]
     fn test_chat_message_with_attachments() {
-        let attachment = MultimodalAttachment::image(
-            vec![1, 2, 3, 4],
-            "image/png".to_string(),
-        );
+        let attachment = MultimodalAttachment::image(vec![1, 2, 3, 4], "image/png".to_string());
         let message = ChatMessage {
             role: ChatRole::User,
             content: "Look at this image".to_string(),

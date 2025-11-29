@@ -322,7 +322,10 @@ mod tests {
             socks5_endpoint: Some("127.0.0.1:9050".to_string()),
             fail_open: false,
         };
-        assert_eq!(tor.display_endpoint(), Some("tor://127.0.0.1:9050".to_string()));
+        assert_eq!(
+            tor.display_endpoint(),
+            Some("tor://127.0.0.1:9050".to_string())
+        );
 
         let custom = ProxyEgressConfig {
             mode: ProxyEgressMode::CustomSocks5,

@@ -131,7 +131,10 @@ pub fn load_packaged_root_ca(
         let env_path = PathBuf::from(env_path);
         if env_path.exists() {
             if let Ok(cert_pem) = fs::read_to_string(&env_path) {
-                info!("Loaded packaged root CA from environment path: {:?}", env_path);
+                info!(
+                    "Loaded packaged root CA from environment path: {:?}",
+                    env_path
+                );
                 // For packaged CA, we don't have the private key, so we need to generate a new one
                 // or use a pre-shared key. For now, we'll generate a new root CA if key doesn't exist.
                 let key_path = cert_dir.join(key_filename);
