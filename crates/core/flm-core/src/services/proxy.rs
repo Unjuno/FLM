@@ -159,7 +159,7 @@ where
         // Verify that the proxy is running
         if !handle.running {
             return Err(ProxyError::InvalidConfig {
-                reason: format!("Proxy handle {} is not running", handle_id),
+                reason: format!("Proxy handle {handle_id} is not running"),
             });
         }
 

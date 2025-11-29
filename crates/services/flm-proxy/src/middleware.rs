@@ -108,7 +108,7 @@ pub async fn policy_check_middleware(
     match state.security_service.get_policy("default").await {
         Ok(Some(policy)) => {
             // Validate policy JSON format (but allow empty policy)
-            if let Err(_) = serde_json::from_str::<serde_json::Value>(&policy.policy_json) {
+            if serde_json::from_str::<serde_json::Value>(&policy.policy_json).is_err() {
                 // Invalid JSON - treat as not configured
                 debug!(
                     middleware = "policy_check_middleware",
@@ -303,7 +303,7 @@ pub async fn policy_middleware(
             // Note: This is a simplified persistence - in production, you might want
             // a dedicated table for IP rate limit state
             if let Err(e) = security_repo
-                .save_rate_limit_state(&format!("ip:{}", ip_str), count, &reset_at)
+                .save_rate_limit_state(&format!("ip:{ip_str}"), count, &reset_at)
                 .await
             {
                 error!(
@@ -1331,7 +1331,7 @@ pub(crate) async fn check_ip_rate_limit_with_info(
         (*mem_count, *mem_reset)
     } else {
         // New IP, try to load from database
-        let ip_key = format!("ip:{}", ip);
+        let ip_key = format!("ip:{ip}");
         if let Ok(Some((db_count, db_reset_at))) =
             state.security_repo.fetch_rate_limit_state(&ip_key).await
         {

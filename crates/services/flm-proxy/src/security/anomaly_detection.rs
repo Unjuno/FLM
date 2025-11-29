@@ -84,6 +84,7 @@ impl AnomalyDetection {
     /// Record a request and check for anomalies (with additional context)
     ///
     /// Returns the score increment for this request.
+    #[allow(clippy::too_many_arguments)]
     pub async fn check_request_with_headers(
         &self,
         ip: &IpAddr,
@@ -173,11 +174,7 @@ impl AnomalyDetection {
                     .body_sizes
                     .iter()
                     .map(|&s| {
-                        let diff = if s > avg_size {
-                            s - avg_size
-                        } else {
-                            avg_size - s
-                        };
+                        let diff = s.abs_diff(avg_size);
                         diff * diff
                     })
                     .sum::<usize>()

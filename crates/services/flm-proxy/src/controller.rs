@@ -122,6 +122,7 @@ struct ServerHandle {
     shutdown_tx: oneshot::Sender<()>,
     handle: ProxyHandle,
     // AppState reference for hot reloading configuration
+    #[allow(dead_code)]
     app_state: Option<Arc<crate::middleware::AppState>>,
 }
 
@@ -211,7 +212,7 @@ impl ProxyController for AxumProxyController {
         // Prepare router to get AppState for hot reloading
         // Note: This creates the router but we don't use it here since each server function
         // creates its own router. We'll store the security_db_path for reload_config.
-        let security_db_path = config.security_db_path.clone();
+        let _security_db_path = config.security_db_path.clone();
 
         // Store the handle
         let mut handles = self.handles.write().await;
@@ -277,7 +278,7 @@ impl ProxyController for AxumProxyController {
 
         if !server_handle.handle.running {
             return Err(ProxyError::InvalidConfig {
-                reason: format!("Proxy handle {} is not running", handle_id),
+                reason: format!("Proxy handle {handle_id} is not running"),
             });
         }
 
@@ -799,7 +800,7 @@ async fn redirect_http_to_https(
         .map(|auth| auth.host().to_string())
         .unwrap_or(authority);
 
-    let mut location = format!("https://{}", hostname);
+    let mut location = format!("https://{hostname}");
     if let Some(port) = state.https_redirect_port {
         if port != 443 {
             location.push(':');
@@ -3594,7 +3595,7 @@ fn cached_cert_file_name(domains: &[String], directory_url: &str) -> String {
     let mut hasher = Sha256::new();
     for domain in domains {
         hasher.update(domain.as_bytes());
-        hasher.update(&[0u8]);
+        hasher.update([0u8]);
     }
     hasher.update(directory_url.as_bytes());
     let hash = general_purpose::URL_SAFE_NO_PAD.encode(hasher.finalize());
@@ -3693,6 +3694,7 @@ fn spawn_tls_server(
     })
 }
 
+#[allow(dead_code)]
 fn spawn_reloadable_tls_server(
     listener: TokioTcpListener,
     tls_store: Arc<ArcSwap<rustls::ServerConfig>>,
@@ -4035,7 +4037,7 @@ async fn handle_audio_transcriptions(
             Some("temperature") => {
                 if let Ok(text) = field.text().await {
                     if let Ok(temp) = text.parse::<f64>() {
-                        if temp >= 0.0 && temp <= 1.0 {
+                        if (0.0..=1.0).contains(&temp) {
                             temperature = Some(temp);
                         }
                     }
@@ -4217,12 +4219,12 @@ async fn handle_audio_transcriptions(
                 flm_core::error::EngineError::UnsupportedOperation { .. } => (
                     StatusCode::UNPROCESSABLE_ENTITY,
                     "unsupported_modalities",
-                    format!("Audio transcription not supported: {}", e),
+                    format!("Audio transcription not supported: {e}"),
                 ),
                 flm_core::error::EngineError::NetworkError { reason } => (
                     StatusCode::BAD_GATEWAY,
                     "network_error",
-                    format!("Network error: {}", reason),
+                    format!("Network error: {reason}"),
                 ),
                 flm_core::error::EngineError::ApiError {
                     reason,
@@ -4230,12 +4232,12 @@ async fn handle_audio_transcriptions(
                 } => (
                     StatusCode::BAD_GATEWAY,
                     "api_error",
-                    format!("API error: {}", reason),
+                    format!("API error: {reason}"),
                 ),
                 _ => (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "internal_error",
-                    format!("Transcription failed: {}", e),
+                    format!("Transcription failed: {e}"),
                 ),
             };
 
