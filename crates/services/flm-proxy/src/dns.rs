@@ -127,7 +127,9 @@ impl CloudflareDnsHook {
                 .collect::<Vec<_>>()
                 .join("; ")
         };
-        Box::new(io::Error::other(format!("Cloudflare API {action} failed: {detail}")))
+        Box::new(io::Error::other(format!(
+            "Cloudflare API {action} failed: {detail}"
+        )))
     }
 }
 
