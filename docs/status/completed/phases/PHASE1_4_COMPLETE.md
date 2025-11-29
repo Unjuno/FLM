@@ -99,6 +99,19 @@ Phase 1-4 の実装が完了しました。本レポートでは、完了した�
 #### 4.2 実装完了レポートの更新
 - 本レポートを作成し、`docs/status/completed/phases/` に配置
 
+## 最新の更新 (2025-01-28 最終確認)
+
+### リソース保護の修正
+- Windows環境での `sysinfo` の動作を改善
+  - CPU使用率とメモリ使用率の計算で NaN/Infinity チェックを追加
+  - `minute_reset` のチェックを `checked_duration_since` を使用するように修正
+- **結果**: `test_resource_protection_integration` が成功
+
+### レート制限の問題（調査継続中）
+- `minute_reset` のチェックロジックを修正
+- ロジックは正しいが、実際の動作に問題がある可能性
+- デバッグログの追加が必要
+
 ## 現在の状態
 
 ### 成功したテスト (16個)
@@ -120,6 +133,11 @@ Phase 1-4 の実装が完了しました。本レポートでは、完了した�
 - `test_anomaly_detection_pattern_detection`
 
 ### 失敗したテスト (11個)
+- レート制限関連: 6個（調査継続中）
+- リソース保護関連: 1個（`test_resource_protection_with_other_middleware`）
+- 異常検知関連: 2個
+- その他: 2個
+
 詳細は `reports/INTEGRATION_TEST_FIXES_20250128.md` を参照。
 
 ### 既存の問題
@@ -171,4 +189,17 @@ Phase 1-4 の実装が完了しました。本レポートでは、完了した�
 ---
 
 **最終更新**: 2025-01-28
+
+## 作成されたコミット（最終）
+
+1. `7ff715a` - `style: Format code adjustments`
+2. `89e79fe` - `fix: Fix Clippy warnings (format strings, unused variables, etc.)`
+3. `43af22a` - `docs: Update integration test report and create Phase 1-4 completion report`
+4. `dd12865` - `chore: Add lego-runner library and update .gitignore`
+5. `bed2b24` - `chore: Add lego-runner library source files`
+6. `4410302` - `fix: Add comment to rate limit check logic (investigation ongoing)`
+7. `e7850d0` - `docs: Update integration test report with investigation results`
+8. `840aed7` - `style: Format dns.rs`
+9. `1ed37b1` - `fix: Improve resource protection for Windows and fix minute_reset check`
+10. `c21df3a` - `docs: Update integration test report with resource protection fix status`
 
