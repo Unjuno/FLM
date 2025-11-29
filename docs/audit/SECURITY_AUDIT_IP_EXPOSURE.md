@@ -19,9 +19,9 @@
 
 #### 2.1 ネットワークバインド設定: VPN経由でもIPが公開される
 
-**問題**: `crates/flm-proxy/src/controller.rs:211` で `0.0.0.0` にハードコードされており、すべてのネットワークインターフェース（VPN含む）でリッスンしている。
+**問題**: `crates/services/flm-proxy/src/controller.rs:211` で `0.0.0.0` にハードコードされており、すべてのネットワークインターフェース（VPN含む）でリッスンしている。
 
-```211:211:crates/flm-proxy/src/controller.rs
+```211:211:crates/services/flm-proxy/src/controller.rs
     let addr = SocketAddr::from(([0, 0, 0, 0], config.port));
 ```
 
@@ -37,14 +37,14 @@
 4. CLIオプション `--bind <address>` を追加
 
 **関連ファイル**:
-- `crates/flm-proxy/src/controller.rs:99, 211`
-- `crates/flm-core/src/domain/proxy.rs:42-61`
+- `crates/services/flm-proxy/src/controller.rs:99, 211`
+- `crates/core/flm-core/src/domain/proxy.rs:42-61`
 
 #### 2.2 X-Forwarded-For ヘッダーの信頼性問題
 
-**問題**: `crates/flm-proxy/src/middleware.rs:238-246` で、検証なしに `X-Forwarded-For` ヘッダーを信頼している。
+**問題**: `crates/services/flm-proxy/src/middleware.rs:238-246` で、検証なしに `X-Forwarded-For` ヘッダーを信頼している。
 
-```238:246:crates/flm-proxy/src/middleware.rs
+```238:246:crates/services/flm-proxy/src/middleware.rs
     if let Some(forwarded_for) = headers.get("x-forwarded-for") {
         if let Ok(forwarded_str) = forwarded_for.to_str() {
             // X-Forwarded-For can contain multiple IPs, take the first one
@@ -69,13 +69,13 @@
 4. `X-Real-IP` も同様に検証
 
 **関連ファイル**:
-- `crates/flm-proxy/src/middleware.rs:236-270`
+- `crates/services/flm-proxy/src/middleware.rs:236-270`
 
 #### 2.3 セキュリティポリシーのデフォルト動作: Fail Open
 
-**問題**: `crates/flm-proxy/src/middleware.rs:44-51` で、ポリシー未設定時やエラー時に「fail open」（すべて許可）となっている。
+**問題**: `crates/services/flm-proxy/src/middleware.rs:44-51` で、ポリシー未設定時やエラー時に「fail open」（すべて許可）となっている。
 
-```44:51:crates/flm-proxy/src/middleware.rs
+```44:51:crates/services/flm-proxy/src/middleware.rs
         Ok(None) => {
             // No policy configured, allow all
             return next.run(request).await;
@@ -98,16 +98,16 @@
 4. デフォルトポリシーの初期化時に警告を表示
 
 **関連ファイル**:
-- `crates/flm-proxy/src/middleware.rs:42-61`
-- `crates/flm-core/migrations/20250101000003_init_security_policy.sql:8`
+- `crates/services/flm-proxy/src/middleware.rs:42-61`
+- `crates/core/flm-core/migrations/20250101000003_init_security_policy.sql:8`
 
 ### 🟡 中優先度（短期対応推奨）
 
 #### 2.4 APIキー検証のタイミング攻撃リスク
 
-**問題**: `crates/flm-core/src/services/security.rs:253-266` で、複数のAPIキーを順次チェックしており、有効なキーが見つかった時点で早期リターンしている。
+**問題**: `crates/core/flm-core/src/services/security.rs:253-266` で、複数のAPIキーを順次チェックしており、有効なキーが見つかった時点で早期リターンしている。
 
-```253:266:crates/flm-core/src/services/security.rs
+```253:266:crates/core/flm-core/src/services/security.rs
     pub async fn verify_api_key(&self, plain_key: &str) -> Result<Option<ApiKeyRecord>, RepoError> {
         // Get only active (non-revoked) API keys for better performance
         let records = self.repo.list_active_api_keys().await?;
@@ -135,13 +135,13 @@
 3. キー数が多い場合は、ハッシュインデックスを使用して直接検索
 
 **関連ファイル**:
-- `crates/flm-core/src/services/security.rs:253-266`
+- `crates/core/flm-core/src/services/security.rs:253-266`
 
 #### 2.5 レート制限の永続化不足
 
-**問題**: `crates/flm-proxy/src/middleware.rs:298-331` で、レート制限の状態がメモリ内のみに保存されており、サーバー再起動時にリセットされる。また、データベースに`rate_limit_states`テーブルが定義されているのに使用されていない。
+**問題**: `crates/services/flm-proxy/src/middleware.rs:298-331` で、レート制限の状態がメモリ内のみに保存されており、サーバー再起動時にリセットされる。また、データベースに`rate_limit_states`テーブルが定義されているのに使用されていない。
 
-```298:331:crates/flm-proxy/src/middleware.rs
+```298:331:crates/services/flm-proxy/src/middleware.rs
 async fn check_rate_limit_with_info(
     state: &AppState,
     api_key_id: &str,
@@ -172,14 +172,14 @@ async fn check_rate_limit_with_info(
 4. 複数インスタンス対応のため、データベースを信頼できるソースとする
 
 **関連ファイル**:
-- `crates/flm-proxy/src/middleware.rs:290-331`
-- `crates/flm-core/migrations/20250101000002_create_security_db.sql:33-39`
+- `crates/services/flm-proxy/src/middleware.rs:290-331`
+- `crates/core/flm-core/migrations/20250101000002_create_security_db.sql:33-39`
 
 #### 2.6 データベースファイルの権限設定不足
 
-**問題**: `crates/flm-proxy/src/adapters.rs:26-54` で、データベースファイルの権限設定が行われていない。`flm-cli`ではUnix系OSで`chmod 600`が設定されているが、`flm-proxy`では実装されていない。
+**問題**: `crates/services/flm-proxy/src/adapters.rs:26-54` で、データベースファイルの権限設定が行われていない。`flm-cli`ではUnix系OSで`chmod 600`が設定されているが、`flm-proxy`では実装されていない。
 
-```26:54:crates/flm-proxy/src/adapters.rs
+```26:54:crates/services/flm-proxy/src/adapters.rs
     pub async fn new<P: AsRef<Path>>(db_path: P) -> Result<Self, RepoError> {
         let path_str = db_path
             .as_ref()
@@ -214,12 +214,12 @@ async fn check_rate_limit_with_info(
 3. データベースファイル作成直後に権限を設定
 
 **関連ファイル**:
-- `crates/flm-proxy/src/adapters.rs:26-54`
-- `crates/flm-cli/src/adapters/security.rs:229-238`（参考実装）
+- `crates/services/flm-proxy/src/adapters.rs:26-54`
+- `crates/apps/flm-cli/src/adapters/security.rs:229-238`（参考実装）
 
 #### 2.7 監査ログの未実装
 
-**問題**: `crates/flm-core/migrations/20250101000002_create_security_db.sql:21-31` で`audit_logs`テーブルが定義されているが、実際にログを記録する機能が実装されていない。
+**問題**: `crates/core/flm-core/migrations/20250101000002_create_security_db.sql:21-31` で`audit_logs`テーブルが定義されているが、実際にログを記録する機能が実装されていない。
 
 **影響**:
 - セキュリティインシデントの追跡が困難
@@ -233,14 +233,14 @@ async fn check_rate_limit_with_info(
 4. IPアドレスはハッシュ化して記録（プライバシー保護）
 
 **関連ファイル**:
-- `crates/flm-core/migrations/20250101000002_create_security_db.sql:21-31`
-- `crates/flm-proxy/src/middleware.rs`（新規実装が必要）
+- `crates/core/flm-core/migrations/20250101000002_create_security_db.sql:21-31`
+- `crates/services/flm-proxy/src/middleware.rs`（新規実装が必要）
 
 #### 2.8 エラーメッセージへの内部情報漏洩
 
 **問題**: エラーメッセージに `engine_id` などの内部情報が含まれている。
 
-```474:478:crates/flm-proxy/src/controller.rs
+```474:478:crates/services/flm-proxy/src/controller.rs
                 axum::Json(serde_json::json!({
                     "error": {
                         "message": format!("Engine not found: {}", engine_id),
@@ -261,8 +261,8 @@ async fn check_rate_limit_with_info(
 3. ログには詳細情報を記録し、レスポンスには含めない
 
 **関連ファイル**:
-- `crates/flm-proxy/src/controller.rs:474, 650`
-- `crates/flm-proxy/src/controller.rs:475, 651`
+- `crates/services/flm-proxy/src/controller.rs:474, 650`
+- `crates/services/flm-proxy/src/controller.rs:475, 651`
 
 #### 2.5 ログ出力の不足
 
@@ -280,14 +280,14 @@ async fn check_rate_limit_with_info(
 4. IPアドレスはハッシュ化して記録（プライバシー保護）
 
 **関連ファイル**:
-- `crates/flm-proxy/src/main.rs:18`
-- `crates/flm-proxy/src/controller.rs`（全般）
+- `crates/services/flm-proxy/src/main.rs:18`
+- `crates/services/flm-proxy/src/controller.rs`（全般）
 
 ### 🟢 低優先度（監視継続）
 
 #### 2.6 CORS設定のデフォルト動作
 
-**問題**: `crates/flm-proxy/src/controller.rs:274-276` で、ポリシー未設定時はすべてのOriginを許可している。
+**問題**: `crates/services/flm-proxy/src/controller.rs:274-276` で、ポリシー未設定時はすべてのOriginを許可している。
 
 **影響**:
 - 設定ミス時のCORS脆弱性
@@ -298,7 +298,7 @@ async fn check_rate_limit_with_info(
 2. 明示的な設定が必要な場合のみ許可
 
 **関連ファイル**:
-- `crates/flm-proxy/src/controller.rs:265-325`
+- `crates/services/flm-proxy/src/controller.rs:265-325`
 
 ## 3. セキュリティ評価
 
@@ -363,56 +363,56 @@ async fn check_rate_limit_with_info(
 ### Phase 1: 緊急修正（最優先）
 
 1. **バインドアドレスの設定可能化**
-   - ファイル: `crates/flm-core/src/domain/proxy.rs`
-   - ファイル: `crates/flm-proxy/src/controller.rs`
-   - ファイル: `crates/flm-cli/src/cli/proxy.rs`
+   - ファイル: `crates/core/flm-core/src/domain/proxy.rs`
+   - ファイル: `crates/services/flm-proxy/src/controller.rs`
+   - ファイル: `crates/apps/flm-cli/src/cli/proxy.rs`
    - 推定工数: 2-3時間
 
 2. **X-Forwarded-For の検証**
-   - ファイル: `crates/flm-proxy/src/middleware.rs`
-   - ファイル: `crates/flm-core/src/domain/proxy.rs` (設定追加)
+   - ファイル: `crates/services/flm-proxy/src/middleware.rs`
+   - ファイル: `crates/core/flm-core/src/domain/proxy.rs` (設定追加)
    - 推定工数: 2-3時間
 
 3. **セキュリティポリシーのデフォルト動作**
-   - ファイル: `crates/flm-proxy/src/middleware.rs`
-   - ファイル: `crates/flm-core/migrations/20250101000003_init_security_policy.sql`
+   - ファイル: `crates/services/flm-proxy/src/middleware.rs`
+   - ファイル: `crates/core/flm-core/migrations/20250101000003_init_security_policy.sql`
    - 推定工数: 1-2時間
 
 ### Phase 2: 短期修正
 
 4. **APIキー検証のタイミング攻撃対策**
-   - ファイル: `crates/flm-core/src/services/security.rs`
+   - ファイル: `crates/core/flm-core/src/services/security.rs`
    - 推定工数: 2-3時間
 
 5. **レート制限の永続化**
-   - ファイル: `crates/flm-proxy/src/middleware.rs`
-   - ファイル: `crates/flm-core/src/ports/security.rs` (必要に応じて)
+   - ファイル: `crates/services/flm-proxy/src/middleware.rs`
+   - ファイル: `crates/core/flm-core/src/ports/security.rs` (必要に応じて)
    - 推定工数: 4-6時間
 
 6. **データベースファイルの権限設定**
-   - ファイル: `crates/flm-proxy/src/adapters.rs`
+   - ファイル: `crates/services/flm-proxy/src/adapters.rs`
    - 推定工数: 1-2時間
 
 7. **監査ログの実装**
-   - ファイル: `crates/flm-proxy/src/` (新規)
+   - ファイル: `crates/services/flm-proxy/src/` (新規)
    - 推定工数: 6-8時間
 
 8. **エラーメッセージの一般化**
-   - ファイル: `crates/flm-proxy/src/controller.rs`
+   - ファイル: `crates/services/flm-proxy/src/controller.rs`
    - 推定工数: 1-2時間
 
 9. **ログ出力の実装**
-   - ファイル: `crates/flm-proxy/src/` (全般)
+   - ファイル: `crates/services/flm-proxy/src/` (全般)
    - 推定工数: 4-6時間
 
 ### Phase 3: 長期的改善
 
 6. **監査ログ機能の実装**
-   - ファイル: `crates/flm-proxy/src/` (新規)
+   - ファイル: `crates/services/flm-proxy/src/` (新規)
    - 推定工数: 8-12時間
 
 7. **セキュリティヘッダーの追加**
-   - ファイル: `crates/flm-proxy/src/middleware.rs`
+   - ファイル: `crates/services/flm-proxy/src/middleware.rs`
    - 推定工数: 2-3時間
 
 ## 6. 次のステップ

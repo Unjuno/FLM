@@ -80,22 +80,22 @@ pub trait ProxyController: Send + Sync {
 
 ### 新規作成ファイル
 
-- `crates/flm-core/tests/security_service_test.rs`
-- `crates/flm-proxy/tests/integration_test.rs`
-- `crates/flm-cli/tests/proxy_cli_test.rs`
-- `crates/flm-cli/src/cli/proxy.rs`
-- `crates/flm-proxy/src/middleware.rs`
+- `crates/core/flm-core/tests/security_service_test.rs`
+- `crates/services/flm-proxy/tests/integration_test.rs`
+- `crates/apps/flm-cli/tests/proxy_cli_test.rs`
+- `crates/apps/flm-cli/src/cli/proxy.rs`
+- `crates/services/flm-proxy/src/middleware.rs`
 
 ### 修正ファイル
 
-- `crates/flm-core/src/services/security.rs` - `verify_api_key()`追加
-- `crates/flm-core/src/ports/proxy.rs` - `status()`メソッド追加
-- `crates/flm-core/src/services/proxy.rs` - `status()`改善
-- `crates/flm-proxy/src/controller.rs` - `status()`実装、`ServerHandle`拡張
-- `crates/flm-cli/src/commands/proxy.rs` - CLIコマンド実装
-- `crates/flm-cli/src/cli/mod.rs` - Proxyコマンド追加
-- `crates/flm-cli/src/commands/mod.rs` - proxyモジュール追加
-- `crates/flm-cli/src/main.rs` - Proxyコマンドハンドラー追加
+- `crates/core/flm-core/src/services/security.rs` - `verify_api_key()`追加
+- `crates/core/flm-core/src/ports/proxy.rs` - `status()`メソッド追加
+- `crates/core/flm-core/src/services/proxy.rs` - `status()`改善
+- `crates/services/flm-proxy/src/controller.rs` - `status()`実装、`ServerHandle`拡張
+- `crates/apps/flm-cli/src/commands/proxy.rs` - CLIコマンド実装
+- `crates/apps/flm-cli/src/cli/mod.rs` - Proxyコマンド追加
+- `crates/apps/flm-cli/src/commands/mod.rs` - proxyモジュール追加
+- `crates/apps/flm-cli/src/main.rs` - Proxyコマンドハンドラー追加
 
 ## 次のステップ
 

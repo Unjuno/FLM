@@ -34,6 +34,12 @@
 - [x] エンジン登録管理（メモリ内）
 - [ ] TTLチェック実装（キャッシュ有効期限）
 
+### 🔄 Phase 3 パッケージング準備
+- [x] Step 1: `rcgen` 0.13 へ更新し、`core::certificate` の自己署名ロジックを刷新（`cargo test -p flm-core certificate::tests` パス確認）
+- [x] Step 2（前半）: `flm-proxy` に `certificate` モジュールを新設し、packaged-ca ルート／サーバー証明書のキャッシュ生成を分離
+- [ ] Step 2（後半）: 再起動テスト結果を `reports/` に追加し、証明書キャッシュの有効期限ローテーションを計測
+- [ ] Step 5-6: インストーラー PoC・コード署名ポリシーを `.github/workflows/build.yml` 実装へ反映（`docs/specs/CODE_SIGNING_POLICY.md` を参照）
+
 ## 次のステップ
 
 1. **flm-engine-ollama実装**（LlmEngineトレイト）

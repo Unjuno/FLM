@@ -63,11 +63,17 @@ FLMプロキシサーバーの外部公開時に、ボットネット化を防�
    - 監査ログ機能の実装
    - 侵入検知システムの実装
 
+## QAオートメーション状況 (2025-11-26)
+
+- `archive/prototype/tests/unit/security-botnet-ui.test.tsx` を追加し、IPブロックリスト操作・侵入検知フィルタ・監査ログUIの回帰を自動化
+- 実行ログ: `reports/security-ui-tests-20251126.log`（Botnet保護UI/セキュリティログE2E相当を記録）
+- Phase 1 セキュリティUIの手動確認ステップを最小化し、テスト戦略（docs/guides/TEST_STRATEGY.md）と同期済み
+
 ## 関連ドキュメント
 
 - `docs/planning/BOTNET_PROTECTION_IMPLEMENTATION_PLAN.md` - 詳細実装計画
 - `docs/guides/SECURITY_BOTNET_PROTECTION.md` - ユーザーガイド
-- `crates/flm-core/migrations/20250127000001_add_botnet_protection.sql` - マイグレーションファイル
+- `crates/core/flm-core/migrations/20250127000001_add_botnet_protection.sql` - マイグレーションファイル
 
 ---
 

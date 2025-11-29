@@ -58,44 +58,44 @@
 ### 3. エラーハンドリング強化
 
 #### `unwrap()`の削除
-- ✅ `crates/flm-proxy/src/controller.rs`の`unwrap()`を適切なエラーハンドリングに置き換え
+- ✅ `crates/services/flm-proxy/src/controller.rs`の`unwrap()`を適切なエラーハンドリングに置き換え
   - `handle_embeddings`: モデルID解析時の`unwrap()`削除
   - `handle_chat_completions`: モデルID解析時の`unwrap()`削除
-- ✅ `crates/flm-proxy/src/middleware.rs`の`unwrap()`を適切なエラーハンドリングに置き換え
+- ✅ `crates/services/flm-proxy/src/middleware.rs`の`unwrap()`を適切なエラーハンドリングに置き換え
   - `auth_middleware`: Bearerトークン抽出時の`unwrap()`削除
   - `extract_client_ip`: IPアドレス解析時の`unwrap()`を`expect()`に変更（デフォルト値として`127.0.0.1`は常に有効）
 
 ### 4. 機能改善
 
 #### TTLチェック
-- ✅ 既存実装を確認（`crates/flm-cli/src/adapters/engine.rs`の`get_cached_engine_state`）
+- ✅ 既存実装を確認（`crates/apps/flm-cli/src/adapters/engine.rs`の`get_cached_engine_state`）
 - ✅ SQLiteの`datetime()`関数を使用したTTLチェックが実装済み
 
 #### ドメイン名検証
-- ✅ `crates/flm-core/src/services/security.rs`に`validate_domain_name`関数を追加
+- ✅ `crates/core/flm-core/src/services/security.rs`に`validate_domain_name`関数を追加
   - CORS `allowed_origins`の検証に使用
   - プロトコル、パス、ポートの除去
   - RFC 1035準拠の検証（ラベル長、文字種、ハイフン位置など）
-- ✅ `crates/flm-core/src/services/proxy.rs`に`validate_domain_name`関数を追加
+- ✅ `crates/core/flm-core/src/services/proxy.rs`に`validate_domain_name`関数を追加
   - ACMEドメイン名の検証に使用
   - `ProxyService::validate_config`で`HttpsAcme`モード時に検証
 
 ## 技術的詳細
 
 ### 依存関係追加
-- `crates/flm-proxy/Cargo.toml`: `ipnet = "2.9"`, `chrono = { version = "0.4", features = ["serde"] }`
-- `crates/flm-engine-lmstudio/Cargo.toml`: `wiremock = "0.5"` (dev-dependencies)
-- `crates/flm-engine-llamacpp/Cargo.toml`: `wiremock = "0.5"` (dev-dependencies)
+- `crates/services/flm-proxy/Cargo.toml`: `ipnet = "2.9"`, `chrono = { version = "0.4", features = ["serde"] }`
+- `crates/engines/flm-engine-lmstudio/Cargo.toml`: `wiremock = "0.5"` (dev-dependencies)
+- `crates/engines/flm-engine-llamacpp/Cargo.toml`: `wiremock = "0.5"` (dev-dependencies)
 
 ### ファイル変更
-- `crates/flm-engine-lmstudio/src/lib.rs`: 実装完了（既存）
-- `crates/flm-engine-lmstudio/tests/integration_test.rs`: 新規作成
-- `crates/flm-engine-llamacpp/src/lib.rs`: 実装完了（既存）
-- `crates/flm-engine-llamacpp/tests/integration_test.rs`: 新規作成
-- `crates/flm-proxy/src/middleware.rs`: SecurityPolicy適用、エラーハンドリング強化
-- `crates/flm-proxy/src/controller.rs`: エラーハンドリング強化、CORS設定
-- `crates/flm-core/src/services/security.rs`: ドメイン名検証追加
-- `crates/flm-core/src/services/proxy.rs`: ドメイン名検証追加
+- `crates/engines/flm-engine-lmstudio/src/lib.rs`: 実装完了（既存）
+- `crates/engines/flm-engine-lmstudio/tests/integration_test.rs`: 新規作成
+- `crates/engines/flm-engine-llamacpp/src/lib.rs`: 実装完了（既存）
+- `crates/engines/flm-engine-llamacpp/tests/integration_test.rs`: 新規作成
+- `crates/services/flm-proxy/src/middleware.rs`: SecurityPolicy適用、エラーハンドリング強化
+- `crates/services/flm-proxy/src/controller.rs`: エラーハンドリング強化、CORS設定
+- `crates/core/flm-core/src/services/security.rs`: ドメイン名検証追加
+- `crates/core/flm-core/src/services/proxy.rs`: ドメイン名検証追加
 
 ## テスト状況
 

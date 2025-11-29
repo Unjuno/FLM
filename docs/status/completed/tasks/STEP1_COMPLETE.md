@@ -6,7 +6,7 @@
 
 ### 1. `EngineProcessController`トレイトに`Send + Sync`バウンドを追加
 
-**ファイル**: `crates/flm-core/src/ports/engine.rs`
+**ファイル**: `crates/core/flm-core/src/ports/engine.rs`
 
 ```rust
 // 修正前
@@ -24,21 +24,21 @@ pub trait EngineProcessController: Send + Sync {
 
 ### 2. `AppState`に`engine_service`を復元
 
-**ファイル**: `crates/flm-proxy/src/middleware.rs`
+**ファイル**: `crates/services/flm-proxy/src/middleware.rs`
 
 - `engine_service`フィールドを復元
 - `Arc<EngineService>`として保持
 
 ### 3. 認証ミドルウェアを復元
 
-**ファイル**: `crates/flm-proxy/src/controller.rs`
+**ファイル**: `crates/services/flm-proxy/src/controller.rs`
 
 - `auth_middleware`をルーターに追加
 - `from_fn_with_state`を使用
 
 ### 4. エンドポイントを復元
 
-**ファイル**: `crates/flm-proxy/src/controller.rs`
+**ファイル**: `crates/services/flm-proxy/src/controller.rs`
 
 - `/v1/models`エンドポイントを復元
 - `/v1/chat/completions`エンドポイントを復元
@@ -46,14 +46,14 @@ pub trait EngineProcessController: Send + Sync {
 
 ### 5. `flm-proxy`に`lib.rs`を作成
 
-**ファイル**: `crates/flm-proxy/src/lib.rs`
+**ファイル**: `crates/services/flm-proxy/src/lib.rs`
 
 - `AxumProxyController`をエクスポート
 - `flm-cli`から`flm_proxy`をインポート可能に
 
 ### 6. `axum`に`macros`フィーチャーを追加
 
-**ファイル**: `crates/flm-proxy/Cargo.toml`
+**ファイル**: `crates/services/flm-proxy/Cargo.toml`
 
 - `axum = { workspace = true, features = ["macros"] }`
 - `#[axum::debug_handler]`を使用可能に
@@ -61,9 +61,9 @@ pub trait EngineProcessController: Send + Sync {
 ### 7. テストの`ProxyConfig`を修正
 
 **ファイル**: 
-- `crates/flm-core/tests/proxy_service_test.rs`
-- `crates/flm-core/tests/common/mod.rs`
-- `crates/flm-core/tests/integration_test.rs`
+- `crates/core/flm-core/tests/proxy_service_test.rs`
+- `crates/core/flm-core/tests/common/mod.rs`
+- `crates/core/flm-core/tests/integration_test.rs`
 
 - `config_db_path`と`security_db_path`フィールドを追加
 

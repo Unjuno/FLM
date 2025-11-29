@@ -153,6 +153,10 @@ const SecurityAnomaly = lazyLoad(
   () => import('./pages/SecurityAnomaly'),
   'SecurityAnomaly'
 );
+const SecurityDashboard = lazyLoad(
+  () => import('./pages/SecurityDashboard'),
+  'SecurityDashboard'
+);
 
 /**
  * アプリケーションのルート定義
@@ -301,6 +305,10 @@ export const routes: RouteObject[] = [
   {
     path: '/api/prompts',
     element: <ApiPrompts />,
+  },
+  {
+    path: '/security',
+    element: <SecurityDashboard />,
   },
   {
     path: '/security/ip-blocklist',

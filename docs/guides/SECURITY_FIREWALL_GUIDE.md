@@ -131,9 +131,28 @@ sudo cp flm-ca.crt /usr/local/share/ca-certificates/flm-ca.crt
 sudo update-ca-certificates
 ```
 
-### 8.2 証明書の手動削除（アンインストール時）
+### 8.2 証明書の削除（アンインストール時）
 
-アンインストール時に証明書を削除する場合は、以下の手順を実行してください。
+アンインストール時に証明書を削除する場合は、以下のいずれかの方法を使用できます。
+
+#### 方法1: アンインストールスクリプトを使用（推奨）
+
+**Windows (PowerShell)**:
+```powershell
+# アンインストールスクリプトを実行
+.\resources\scripts\uninstall-ca.ps1
+
+# 確認なしで削除
+.\resources\scripts\uninstall-ca.ps1 -Force
+```
+
+**macOS/Linux**:
+```bash
+# アンインストールスクリプトを実行
+./resources/scripts/uninstall-ca.sh
+```
+
+#### 方法2: 手動削除
 
 **Windows**:
 ```powershell

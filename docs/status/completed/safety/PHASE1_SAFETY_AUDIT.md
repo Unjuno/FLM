@@ -20,7 +20,7 @@
 
 ### 2. 実施した修正
 
-#### RwLock::unwrap()の修正 (`crates/flm-cli/src/adapters/engine.rs`)
+#### RwLock::unwrap()の修正 (`crates/apps/flm-cli/src/adapters/engine.rs`)
 
 **問題**: 
 - `RwLock::read().unwrap()` と `RwLock::write().unwrap()` を使用していた
@@ -62,9 +62,9 @@ let mut engines = self
 - ユーザー入力を直接SQLクエリに埋め込まない
 
 **確認箇所**:
-- `crates/flm-cli/src/adapters/config.rs`: すべてのクエリでパラメータ化
-- `crates/flm-cli/src/adapters/security.rs`: すべてのクエリでパラメータ化
-- `crates/flm-cli/src/adapters/engine.rs`: すべてのクエリでパラメータ化
+- `crates/apps/flm-cli/src/adapters/config.rs`: すべてのクエリでパラメータ化
+- `crates/apps/flm-cli/src/adapters/security.rs`: すべてのクエリでパラメータ化
+- `crates/apps/flm-cli/src/adapters/engine.rs`: すべてのクエリでパラメータ化
 
 **例**:
 ```rust
@@ -82,7 +82,7 @@ sqlx::query("SELECT value FROM settings WHERE key = ?")
 - ハッシュは返却されない（`ApiKeyMetadata`のみ返却）
 
 **確認箇所**:
-- `crates/flm-core/src/services/security.rs`: Argon2ハッシュ化実装
+- `crates/core/flm-core/src/services/security.rs`: Argon2ハッシュ化実装
 - `SecurityService::create_api_key()`: 平文キーは作成時のみ返却
 - `SecurityService::list_api_keys()`: ハッシュを返さない設計
 

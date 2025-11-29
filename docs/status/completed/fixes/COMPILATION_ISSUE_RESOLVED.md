@@ -42,9 +42,9 @@ help: the trait `Sync` is not implemented for `(dyn EngineProcessController + 's
 
 ### 関連ファイル
 
-- `crates/flm-core/src/services/engine.rs` - EngineServiceの修正
-- `crates/flm-cli/src/commands/*.rs` - 各コマンドでのEngineService使用箇所の修正
-- `crates/flm-proxy/src/controller.rs` - AppStateでのEngineService使用箇所の修正
+- `crates/core/flm-core/src/services/engine.rs` - EngineServiceの修正
+- `crates/apps/flm-cli/src/commands/*.rs` - 各コマンドでのEngineService使用箇所の修正
+- `crates/services/flm-proxy/src/controller.rs` - AppStateでのEngineService使用箇所の修正
 - `reports/BUILD_LOG_20251125.md` - ビルドログ
 
 ## 調査履歴
@@ -74,5 +74,5 @@ axum 0.7では、`State`エクストラクタを使うハンドラー関数の�
 
 **関連ドキュメント**:
 - `reports/BUILD_LOG_20251125.md` - ビルドログ
-- `docs/status/active/PROXY_SERVICE_PHASE2_PROGRESS.md` - Proxy Phase 2進捗
+- `docs/status/completed/proxy/PROXY_SERVICE_PHASE2_COMPLETE.md` - Proxy Phase 2完了レポート
 

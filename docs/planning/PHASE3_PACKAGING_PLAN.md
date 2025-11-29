@@ -13,11 +13,33 @@ Phase 3では、FLMをパッケージ版として配布するための準備を�
 
 ## 実装タスク
 
+### Acceptance Criteria（2025-11-26 Draft）
+
+1. **Step 1: ルートCA証明書生成**
+   - `rcgen` 0.13系へ更新し、新API（`CertificateParams::self_signed()`）で `crates/core/flm-core/src/services/certificate.rs` を再実装。
+   - ルートCA生成ユニットテスト（SAN検証を含む）が `cargo test -p flm-core certificate::tests` でパスする。
+   - 生成したルートCAメタデータ（PEM / fingerprint / 失効日時）が`RootCaInfo`で一貫して保持され、`SERVER_CERT_FILENAME` 等の再利用時に破損しない。
+
+2. **Step 2: サーバー証明書自動生成**
+   - `crates/services/flm-proxy/src/certificate.rs` を新設し、`ensure_root_ca_artifacts()` / `ensure_server_cert_artifacts()` をモジュール化。
+   - `packaged-ca` ルートCAを読み込み→検証→サーバー証明書生成までを 3 回以上の再起動でもキャッシュ再利用できること（`is_certificate_valid()` で確認）。
+   - SANには `localhost` / `127.0.0.1` / `::1` / RFC1918 / CLI指定 `listen_addr` が必ず含まれ、証明書ファイルは `%APPDATA%/flm/certs` or `~/.flm/certs` 以下に保存される。
+
+3. **Step 5: インストーラー PoC**
+   - `archive/prototype/src-tauri/tauri.conf.json` に Windows/macOS/Linux 共通の `bundle.resources` へ packaged-ca 資産（`resources/scripts/install-ca.*`）と `flm-ca.crt` プレースホルダーの取り込み設定を追加。
+   - Windows NSIS設定で per-machine 既定、macOS 署名ID／Provider を空文字で明示し、Linux 依存関係のドキュメント反映を行う。
+   - インストーラー向け README 参照先をこのプランへ追記（後述）。
+
+4. **Step 6: コード署名ポリシー**
+   - `docs/specs/CODE_SIGNING_POLICY.md` を追加し、Windows（Tauri signing key）、macOS（Apple Developer ID）、Linux（GPG署名）の手順と秘密鍵保護方針（HSM/Key Vault）を記述。
+   - GitHub Actions で参照する Secrets 名称（`TAURI_SIGNING_PRIVATE_KEY` など）を明文化し、失効／ローテーション手順を含める。
+   - `docs/status/active/PHASE1_PROGRESS.md` にパッケージング進捗サマリを連動させる。
+
 ### 1. packaged-caモードの実装
 
 #### 1.1 ルートCA証明書の生成と同梱
 
-**実装場所**: `crates/flm-core/src/services/certificate.rs` (新規作成)
+**実装場所**: `crates/core/flm-core/src/services/certificate.rs` (新規作成)
 
 **機能**:
 - ビルド時に自己署名ルートCA証明書を生成
@@ -36,7 +58,7 @@ Phase 3では、FLMをパッケージ版として配布するための準備を�
 
 #### 1.2 サーバー証明書の自動生成
 
-**実装場所**: `crates/flm-proxy/src/certificate.rs` (新規作成)
+**実装場所**: `crates/services/flm-proxy/src/certificate.rs` (新規作成)
 
 **機能**:
 - `packaged-ca`モードで起動時、サーバー証明書を自動生成
@@ -56,7 +78,7 @@ Phase 3では、FLMをパッケージ版として配布するための準備を�
 
 #### 1.3 OS信頼ストアへの自動登録
 
-**実装場所**: `crates/flm-core/src/services/certificate.rs`
+**実装場所**: `crates/core/flm-core/src/services/certificate.rs`
 
 **機能**:
 - Windows: `Cert:\LocalMachine\Root` に登録（UAC確認）
@@ -70,11 +92,14 @@ Phase 3では、FLMをパッケージ版として配布するための準備を�
 
 #### 1.4 アンインストール時の削除
 
-**実装場所**: インストーラスクリプト（Tauri）
+**実装場所**: アンインストールスクリプト（`resources/scripts/uninstall-ca.ps1`, `uninstall-ca.sh`）
 
 **機能**:
-- アンインストーラで証明書を削除するオプションを提供
-- 手動削除手順もドキュメントに記載
+- ✅ アンインストールスクリプト実装済み（Windows/macOS/Linux対応）
+- ✅ 証明書の検索と削除機能
+- ✅ 確認ダイアログ（オプションで`-Force`フラグでスキップ可能）
+- ⏳ Tauriインストーラーからの自動呼び出し（将来実装予定）
+- ✅ 手動削除手順は`docs/guides/SECURITY_FIREWALL_GUIDE.md`に記載済み
 
 ### 2. インストーラー作成
 
@@ -150,11 +175,10 @@ Phase 3では、FLMをパッケージ版として配布するための準備を�
 
 ## 実装順序
 
-1. **Step 1**: ルートCA証明書生成機能の実装 ⏳ 進行中（rcgen APIの修正が必要）
-   - `CertificateParams::new()`は引数不要に修正済み
-   - `Certificate::from_params()`が存在しないため、正しいAPIに置き換えが必要
-   - `rcgen` 0.13のAPIを確認し、`Certificate::generate()`または適切なAPIを使用
-2. **Step 2**: サーバー証明書自動生成機能の実装
+1. **Step 1**: ルートCA証明書生成機能の実装 ✅ 完了（2025-11-26）
+   - `rcgen` 0.13 APIへ移行し、`certificate.rs` のself-signed生成処理を更新
+   - SANユニットテストとCIログで互換性確認済み
+2. **Step 2**: サーバー証明書自動生成機能の実装 ⏳ 進行中（モジュール抽出完了、証明書キャッシュ検証残）
 3. **Step 3**: `packaged-ca`モードの統合
 4. **Step 4**: OS信頼ストアへの自動登録機能の実装
 5. **Step 5**: インストーラー設定の更新
@@ -166,7 +190,7 @@ Phase 3では、FLMをパッケージ版として配布するための準備を�
 | 期間 | マイルストーン | 依存 / アウトプット |
 | ---- | -------------- | -------------------- |
 | 11/25〜12/06 | Step 1完了：`rcgen` API更新 & `certificate.rs` 雛形作成 | `rcgen` 0.13ドキュメントレビュー、`docs/specs/UI_MINIMAL.md` で必要となる証明書抽象化を共有 |
-| 12/09〜12/13 | Step 2完了：サーバー証明書自動生成 + キャッシュ実装 | 新規 `crates/flm-proxy/src/certificate.rs`、再起動テストログを `reports/` へ追加 |
+| 12/09〜12/13 | Step 2完了：サーバー証明書自動生成 + キャッシュ実装 | 新規 `crates/services/flm-proxy/src/certificate.rs`、再起動テストログを `reports/` へ追加 |
 | 12/16〜12/20 | Step 3-4：`packaged-ca` モード統合と OS 信頼ストア登録（Windows/macOS優先） | Proxy/E2Eテストを `reports/FULL_TEST_EXECUTION_REPORT.md` に追記、UI Wizard（`UI_MINIMAL`）へ TLS ステータス提供 |
 | 01/06〜01/17 | Step 5-7：インストーラー PoC、コード署名、ハッシュ公開 | `.github/workflows/build.yml` 改訂、`docs/specs/UI_MINIMAL.md#phase-2-残タスク--スケジュール` と連動して外部公開ウィザードのメッセージ更新 |
 
@@ -183,6 +207,7 @@ Phase 3では、FLMをパッケージ版として配布するための準備を�
 - `docs/specs/PROXY_SPEC.md` セクション10 - 証明書管理（packaged-ca モード）
 - `docs/guides/SECURITY_FIREWALL_GUIDE.md` - セキュリティガイド
 - `docs/planning/HACKER_NEWS_PREP.md` - Hacker News投稿準備ガイド
+- `docs/specs/CODE_SIGNING_POLICY.md` - コード署名ポリシー（Phase 3 Draft）
 
 ## 注意事項
 

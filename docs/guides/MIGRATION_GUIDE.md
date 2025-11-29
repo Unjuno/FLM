@@ -29,34 +29,28 @@ crates/
 ```
 
 ## 3. 実行手順
-1. **バックアップ作成**  
+現行実装では以下の 3 サブコマンドを提供しています（`README.md` 参照）。
+
+1. **ドライラン（plan）**  
    ```
-   flm migrate legacy backup --output /tmp/flm-migrate-<ts>
-   ```
-   - 旧 SQLite/JSON を `tar.gz` に固めて保存
-   - ログ: `logs/migrations/<ts>-backup.log`
-2. **ドライラン**  
-   ```
-   flm migrate legacy plan --source /path/to/archive/config.json
+   flm migrate legacy plan --source /path/to/archive --tmp /tmp/flm-plan
    ```
    - コンソールに差分サマリを表示
-   - `/tmp/flm-migrate-<ts>/plan.md` に詳細レポートを出力
-3. **適用**  
+   - `/tmp/flm-plan/migration-plan.json` に詳細レポートを出力
+2. **変換（convert）**  
+   ```
+   flm migrate legacy convert --source /path/to/archive --tmp /tmp/flm-convert
+   ```
+   - `settings.json`, `proxy_profiles.json`, `api_keys.json` を生成
+   - ログ: `logs/migrations/<ts>.log`
+3. **適用（apply）**  
    ```
    flm migrate legacy apply --source /path/to/archive --confirm
    ```
-   - 新しい `config.db` / `security.db` を生成
-   - 既存 DB は `.bak.<ts>` として 3 世代保持
-4. **検証**  
-   ```
-   flm migrate legacy verify --db ./data
-   ```
-   - APIキー件数、ProxyProfile ポート、SecurityPolicy JSON を比較
-5. **ロールバック（必要時）**  
-   ```
-   flm migrate legacy rollback --backup data/security.db.bak.20251120
-   ```
-   - `.bak` を復元し、`logs/migrations/<ts>-rollback.log` に記録
+   - 変換結果を本番 `config.db` / `security.db` に適用
+   - `config.db.bak.<ts>`, `security.db.bak.<ts>` を自動生成してから書き込み
+
+> **今後の拡張**: `backup`, `verify`, `rollback` サブコマンドは仕様ドラフト段階です。導入時は本ガイドと CLI SPEC を同時更新します。
 
 ## 4. マッピング仕様
 | 旧データ | 新データ | 備考 |

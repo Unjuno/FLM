@@ -15,14 +15,14 @@
 **実装内容**:
 - `ProxyConfig` に `listen_addr: String` フィールドを追加（デフォルト: `"127.0.0.1"`）
 - CLIオプション `--bind <address>` を追加（デフォルト: `127.0.0.1`）
-- `crates/flm-proxy/src/controller.rs` でバインドアドレスを設定可能に変更
+- `crates/services/flm-proxy/src/controller.rs` でバインドアドレスを設定可能に変更
 - デフォルトを `127.0.0.1`（localhostのみ）に変更し、VPN経由での意図しない公開を防止
 
 **変更ファイル**:
-- `crates/flm-core/src/domain/proxy.rs` - `ProxyConfig` に `listen_addr` フィールド追加
-- `crates/flm-proxy/src/controller.rs` - バインドアドレスの設定を動的に変更
-- `crates/flm-cli/src/cli/proxy.rs` - `--bind` オプション追加
-- `crates/flm-cli/src/commands/proxy.rs` - `bind` パラメータの処理
+- `crates/core/flm-core/src/domain/proxy.rs` - `ProxyConfig` に `listen_addr` フィールド追加
+- `crates/services/flm-proxy/src/controller.rs` - バインドアドレスの設定を動的に変更
+- `crates/apps/flm-cli/src/cli/proxy.rs` - `--bind` オプション追加
+- `crates/apps/flm-cli/src/commands/proxy.rs` - `bind` パラメータの処理
 
 **セキュリティ改善**:
 - VPN使用時でも、デフォルトではlocalhostのみでリッスン
@@ -38,10 +38,10 @@
 - CIDR記法とプレーンIPアドレスの両方をサポート
 
 **変更ファイル**:
-- `crates/flm-core/src/domain/proxy.rs` - `trusted_proxy_ips` フィールド追加
-- `crates/flm-proxy/src/middleware.rs` - `extract_client_ip` 関数を修正
-- `crates/flm-proxy/src/middleware.rs` - `AppState` に `trusted_proxy_ips` 追加
-- `crates/flm-proxy/src/controller.rs` - `AppState` の初期化時に `trusted_proxy_ips` を設定
+- `crates/core/flm-core/src/domain/proxy.rs` - `trusted_proxy_ips` フィールド追加
+- `crates/services/flm-proxy/src/middleware.rs` - `extract_client_ip` 関数を修正
+- `crates/services/flm-proxy/src/middleware.rs` - `AppState` に `trusted_proxy_ips` 追加
+- `crates/services/flm-proxy/src/controller.rs` - `AppState` の初期化時に `trusted_proxy_ips` を設定
 
 **セキュリティ改善**:
 - IPスプーフィング攻撃を防止
@@ -56,8 +56,8 @@
 - CORS設定も同様に「fail closed」に変更
 
 **変更ファイル**:
-- `crates/flm-proxy/src/middleware.rs` - `policy_middleware` を修正
-- `crates/flm-proxy/src/controller.rs` - `create_cors_layer` を修正
+- `crates/services/flm-proxy/src/middleware.rs` - `policy_middleware` を修正
+- `crates/services/flm-proxy/src/controller.rs` - `create_cors_layer` を修正
 
 **セキュリティ改善**:
 - 設定ミス時のセキュリティホールを防止
@@ -69,12 +69,12 @@
 #### 4. ✅ データベースファイルの権限設定
 
 **実装内容**:
-- `crates/flm-proxy/src/adapters.rs` にデータベースファイルの権限設定を追加
+- `crates/services/flm-proxy/src/adapters.rs` にデータベースファイルの権限設定を追加
 - Unix系OSで `chmod 600` を設定（所有者のみ読み書き可能）
 - Windowsでは適切なACLがデフォルトで設定されるため、追加の処理は不要
 
 **変更ファイル**:
-- `crates/flm-proxy/src/adapters.rs` - `set_db_file_permissions` 関数を追加
+- `crates/services/flm-proxy/src/adapters.rs` - `set_db_file_permissions` 関数を追加
 
 **セキュリティ改善**:
 - データベースファイルが不適切な権限で作成される問題を解決
@@ -88,7 +88,7 @@
 - 一般化されたエラーメッセージに変更（例: "Engine not found"）
 
 **変更ファイル**:
-- `crates/flm-proxy/src/controller.rs` - エラーメッセージを一般化
+- `crates/services/flm-proxy/src/controller.rs` - エラーメッセージを一般化
 
 **セキュリティ改善**:
 - システム内部構造の情報漏洩を防止

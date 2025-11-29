@@ -6,7 +6,7 @@
 
 ### 1. SecurityService APIキー検証テスト
 
-**テストファイル**: `crates/flm-core/tests/security_service_test.rs`
+**テストファイル**: `crates/core/flm-core/tests/security_service_test.rs`
 
 #### テストケース
 
@@ -24,7 +24,7 @@
 
 ### 2. AxumProxyController 統合テスト
 
-**テストファイル**: `crates/flm-proxy/tests/integration_test.rs`
+**テストファイル**: `crates/services/flm-proxy/tests/integration_test.rs`
 
 #### テストケース
 
@@ -38,7 +38,7 @@
 
 ### 3. Proxy CLIコマンドテスト
 
-**テストファイル**: `crates/flm-cli/tests/proxy_cli_test.rs`
+**テストファイル**: `crates/apps/flm-cli/tests/proxy_cli_test.rs`
 
 #### テストケース
 

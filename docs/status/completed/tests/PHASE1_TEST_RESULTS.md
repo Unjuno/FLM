@@ -19,7 +19,7 @@
 ### 1. HttpClient のランタイム再入問題修正
 
 **問題**: 
-- `crates/flm-cli/src/adapters/http.rs` で `handle.block_on()` を直接呼び出していた
+- `crates/apps/flm-cli/src/adapters/http.rs` で `handle.block_on()` を直接呼び出していた
 - 既にTokioランタイムが実行されている状態で新しいランタイムを起動しようとしてエラー
 
 **修正**: 
@@ -48,7 +48,7 @@ Runtime::new()?.block_on(fut)
 ### 2. OllamaEngine のランタイム再入問題修正
 
 **問題**: 
-- `crates/flm-engine-ollama/src/lib.rs` で同様の問題が発生
+- `crates/engines/flm-engine-ollama/src/lib.rs` で同様の問題が発生
 
 **修正**: 
 - HttpClientと同様に `task::block_in_place` を使用

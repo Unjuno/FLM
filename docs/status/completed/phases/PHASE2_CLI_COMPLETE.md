@@ -7,7 +7,7 @@
 ### 1. CLIコマンド実装
 
 #### `flm proxy start`
-- **実装ファイル**: `crates/flm-cli/src/commands/proxy.rs`
+- **実装ファイル**: `crates/apps/flm-cli/src/commands/proxy.rs`
 - **機能**:
   - プロキシサーバーの起動
   - モード選択（local-http, dev-selfsigned, https-acme, packaged-ca）
@@ -16,14 +16,14 @@
 - **出力形式**: CLI_SPEC.mdに準拠したJSON形式
 
 #### `flm proxy stop`
-- **実装ファイル**: `crates/flm-cli/src/commands/proxy.rs`
+- **実装ファイル**: `crates/apps/flm-cli/src/commands/proxy.rs`
 - **機能**:
   - プロキシサーバーの停止
   - ポートまたはハンドルIDで指定
   - グレースフルシャットダウン
 
 #### `flm proxy status`
-- **実装ファイル**: `crates/flm-cli/src/commands/proxy.rs`
+- **実装ファイル**: `crates/apps/flm-cli/src/commands/proxy.rs`
 - **機能**:
   - 実行中のプロキシインスタンス一覧取得
   - JSON/テキスト形式での出力
@@ -31,9 +31,9 @@
 ### 2. ProxyController拡張
 
 #### `ProxyController::status()`メソッド追加
-- **実装ファイル**: `crates/flm-core/src/ports/proxy.rs`
+- **実装ファイル**: `crates/core/flm-core/src/ports/proxy.rs`
 - **機能**: アクティブなプロキシハンドル一覧を取得
-- **実装**: `crates/flm-proxy/src/controller.rs`
+- **実装**: `crates/services/flm-proxy/src/controller.rs`
 
 ### 3. ProxyService改善
 

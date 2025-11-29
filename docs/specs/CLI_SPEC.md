@@ -57,7 +57,7 @@ Rust製セキュアプロキシを起動し、Forward先を検出済みエンジ
 - `local-http` (デフォルト): ローカルネットワーク限定。TLS 無し
 - `dev-selfsigned`: 自己署名証明書で HTTPS を提供。LAN / 開発用途専用（Wizard/CLI がルート証明書の配布・削除手順を案内。手動インストールが必要）
 - `packaged-ca`: パッケージに同梱されたルートCA証明書を使用。インストール時にOS信頼ストアへ自動登録されるため、ブラウザ警告なしでHTTPS利用可能。大衆向け配布に最適。Phase 3 で実装予定
-- `https-acme`: ACME(Let's Encrypt等)で証明書を取得してHTTPS提供。インターネット公開時の既定モード（ドメイン所有者だけでなく、DNS-01/HTTP-01 を補助して一般ユーザーも利用可能）
+- `https-acme`: ACME(Let's Encrypt等)で証明書を取得してHTTPS提供。インターネット公開時の既定モード。Phase 2 では HTTP-01 のみ提供し、DNS-01 自動化は `docs/planning/PLAN.md` の DNS Automation epic が復帰するまで無効化。
 
 その他仕様（詳細は `docs/specs/PROXY_SPEC.md`）:
 - Forward 先ホストは検出済みエンジンに固定し任意URLへの転送を禁止
@@ -66,14 +66,18 @@ Rust製セキュアプロキシを起動し、Forward先を検出済みエンジ
 オプション:
 - `--port <number>` (HTTP待受ポート・デフォルト 8080、HTTPSは+1)
 - `--bind <address>` (バインドするIPアドレス・デフォルト "127.0.0.1"。外部アクセスが必要な場合のみ "0.0.0.0" を使用)
-- `--engine-base-url <url>` (デフォルトは検出結果)
 - `--acme-email`, `--acme-domain`（https-acmeモード必須）
+- `--challenge http-01`（固定値。`dns-01` は CLI レベルで拒否される）
+- `--dns-profile <id>`（**Reserved**: DNS-01 再開時まで非公開フラグの背後で無効化）
+- `--lego-path <path>` / `--dns-propagation-wait <seconds>`（**Reserved**: DNS-01 再開時まで無効化）
 - `--egress-mode <direct|tor|socks5>`（既定: `direct`。`tor` は `127.0.0.1:9050` を暗黙指定、`socks5` は任意エンドポイントを CLI から渡す）
 - `--socks5-endpoint <host:port>`（`--egress-mode tor` の場合はオプション、`--egress-mode socks5` の場合は必須）
 - `--egress-fail-open`（指定時のみ `ProxyConfig.egress.fail_open = true`。未指定は fail closed）
 - `--no-daemon` (フォアグラウンド実行)
 - デーモンモード（既定）: CLI が `flm-proxy --daemon` を起動し、127.0.0.1 上のランダムポートで管理 API を公開する。`%APPDATA%/flm/run/proxy-daemon.json`（macOS: `~/Library/Application Support/flm/run/`, Linux: `~/.local/share/flm/run/`）に `{ "port": <u16>, "token": "<bearer>", "pid": <u32> }` を保存し、Stop/Status 時はこのファイルを参照する。
 - フォアグラウンドモード: `--no-daemon` 指定時のみ、旧来の「CLI プロセス内で Axum を起動する」手法を使用する。テスト用フラグであり、本番運用ではデーモンモードを必須とする。
+
+ACMEエンドポイントは既定でLet's Encrypt **staging** を使用し、`FLM_ACME_USE_PROD=true` または `FLM_ACME_DIRECTORY=<url>` で切り替え可能。Phase 2 では `http-01` のみ `rustls-acme` ベースで提供し、`dns-01` を指定した場合は CLI がエラーを返す。DNS-01 自動化を再度提供する際は `docs/planning/PLAN.md` の DNS Automation epic で定義した新しい ACME クライアント方針に従う。
 
 成功時出力:
 ```json
@@ -181,16 +185,34 @@ flm security policy set --json ./policy.json
 すべての操作はジャーナルログに `request_id` を残し、ファイルパスは標準エラーに出力してユーザーが暗号化済みバックアップを管理できるようにする。
 
 ### 3.10 `flm chat`
-`POST /v1/chat/completions` を通じて CLI から応答を確認（任意）。
+`POST /v1/chat/completions` / `/v1/responses` を通じて CLI から応答を確認（任意）。マルチモーダル入力を CLI から直接添付できる。
 
 要件:
 - `--model` には `flm://{engine_id}/{model_name}` 形式を指定（`flm models list` の出力をそのまま利用）
 - 互換性のため `--engine` + `--raw-model` を指定した場合は内部で `flm://` に変換（将来拡張）
+- Vision/Audio 添付は `EngineCapabilities` を参照する。未対応モデルに `--image` / `--audio` を渡すと CLI 側で即座に `unsupported_modalities` を返す。
+
+オプション:
+- `--prompt "<text>"`: 既定本文。複数行は `--prompt-file`.
+- `--prompt-file path`: ファイルから System/User メッセージを読み込む。
+- `--image path` (複数指定可): 画像ファイルを Base64 化し、`content[].type = "input_image"` として添付。`--image-url` と混在可。
+- `--image-url https://...`: Proxy がフェッチする HTTP(S) URL を添付。
+- `--audio path`: 音声ファイルを `input_audio` として添付。WAV/MP3/FLAC/OGG/M4A, ≤25MB。
+- `--json`: レスポンスを OpenAI 互換 JSON でそのまま `stdout` に出力（既定は抽出済みテキストのみ）。
+- `--responses`: `/v1/responses` を強制使用。`--modalities text,audio` と併用し音声出力を要求できる。
+- `--modalities text[,audio]`: Responses API の `modalities` を指定。`audio` 要求時は `--responses` が暗黙で有効化される。
+- `--save-audio path`: `--modalities` に `audio` を含めた場合、Base64 で返る音声をファイルに保存。
 
 例:
 ```bash
-flm chat --model flm://ollama/llama3:8b --prompt "Hello"
-flm chat --model flm://ollama/llama3:8b --prompt "Hello" --stream
+# Vision入力を1枚添付
+flm chat --model flm://lmstudio/llava --image ./tests/assets/cat.png --prompt "Describe the image"
+
+# 複数画像 + 生SSE
+flm chat --model flm://ollama/gemma3-vision --image foo.png --image bar.jpg --stream
+
+# Responses API 経由で音声出力
+flm chat --model flm://vllm/gpt-4o-mini --responses --modalities text,audio --prompt "Summarize"
 ```
 
 ### 3.11 `flm model-profiles` （Phase3予定）
@@ -210,17 +232,19 @@ flm chat --model flm://ollama/llama3:8b --prompt "Hello" --stream
 - `flm api prompts list`
 - `flm api prompts show --api-id <id>`
 - `flm api prompts set --api-id <id> --file ./prompt.txt`
+- `flm api prompts delete --api-id <id>`
 
-テンプレは `config.db` の `api_prompts` テーブルに保存し、`EngineService::chat` 呼び出し前に適用される。CLI は `version` と `updated_at` を保存し、後方互換のため JSON schema を `docs/specs/CORE_API.md` と同期させる。
+テンプレは `config.db` の `api_prompts` テーブルに保存し、`EngineService::chat` 呼び出し前に適用される。CLI は `version` と `updated_at` を保存し、後方互換のため JSON schema を `docs/specs/CORE_API.md` と同期させる。`delete` サブコマンドは `api_id` に一致するテンプレートを削除し、存在しない場合はユーザーエラーを返す。
 
 ### 3.13 `flm migrate legacy`
 > Status: Draft（Phase 3対象）。実装の優先度と完了条件は `docs/planning/PLAN.md` の Phase 3 ロードマップに従う。
 アーカイブ済みプロトタイプ（`archive/prototype/`）からデータを新スキーマへ移行するユーティリティ。`docs/planning/PLAN.md` / `docs/specs/DB_SCHEMA.md` のデータ移行戦略と同じ手順を実行する。
 
-- `flm migrate legacy --source <path> --tmp <dir>`: 旧 SQLite / JSON をパースし、`config.db` / `security.db` へ取り込むための `.sql` + `.json` を `<tmp>` に生成。デフォルトは `./tmp/flm-migrate-<timestamp>`。
-- `flm migrate legacy --source <path> --apply`: 変換に加えて自動バックアップ（`flm security backup create` と同じロケーション）を取得し、検証後に本番 DB を置き換える。整合性チェックに失敗した場合は自動ロールバックして終了コード 1 を返す。
+- `flm migrate legacy plan --source <path> [--tmp <dir>]`: 旧 SQLite / JSON を解析し、移行計画 (`migration-plan.json`) を `<tmp>`（省略時は `./tmp/flm-migrate-<timestamp>`）へ出力。
+- `flm migrate legacy convert --source <path> [--tmp <dir>]`: 設定・APIキー・プロキシプロファイルを JSON 化し、`config.db` / `security.db` に取り込むための成果物を生成。
+- `flm migrate legacy apply --source <path> [--tmp <dir>] --confirm`: `convert` に加えて自動バックアップ（`config.db.bak.<timestamp>` / `security.db.bak.<timestamp>`）を取得し、検証後に本番 DB を置き換える。`--confirm` が無い場合は実行を中止する。
 
-すべての実行は `logs/migrations/<timestamp>.log` に記録し、`--dry-run` オプションで差分のみ出力する。適用時にはユーザーに「アプリが停止しているか」を確認し、失敗時の復旧コマンドを案内する。
+すべての実行は `logs/migrations/<timestamp>.log` に記録する。`plan` は差分のみ出力し、`apply` は成功/失敗を CLI とログの両方に書き込む。適用時にはアプリを停止した状態で行う旨をユーザーへ案内する。
 
 ### 3.14 `flm check`
 データベースの整合性を検証し、APIキー件数/ラベル、SecurityPolicy の JSON、ProxyProfile のポート値などが期待通りであることを確認する。移行後や復旧後に実行してデータの整合性を保証する。

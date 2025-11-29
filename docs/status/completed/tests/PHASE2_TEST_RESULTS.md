@@ -13,7 +13,7 @@
 
 ### 2. SecurityService APIキー検証テスト
 
-**テストファイル**: `crates/flm-core/tests/security_service_test.rs`
+**テストファイル**: `crates/core/flm-core/tests/security_service_test.rs`
 
 - ✅ `test_verify_api_key_valid` - 有効なAPIキーの検証
 - ✅ `test_verify_api_key_invalid` - 無効なAPIキーの検証
@@ -23,7 +23,7 @@
 
 ### 3. ProxyService テスト
 
-**テストファイル**: `crates/flm-core/tests/proxy_service_test.rs`
+**テストファイル**: `crates/core/flm-core/tests/proxy_service_test.rs`
 
 - ✅ `test_proxy_service_start_local_http` - LocalHttpモードでの起動
 - ✅ `test_proxy_service_start_dev_selfsigned` - DevSelfSignedモードでの起動（未実装エラー確認）
@@ -37,7 +37,7 @@
 
 ### 4. ProxyRepository テスト
 
-**テストファイル**: `crates/flm-cli/tests/proxy_repository_test.rs`
+**テストファイル**: `crates/apps/flm-cli/tests/proxy_repository_test.rs`
 
 - ✅ `test_proxy_repository_save_and_load_profile` - プロファイルの保存と読み込み
 - ✅ `test_proxy_repository_list_profiles` - プロファイル一覧取得
@@ -50,7 +50,7 @@
 
 ### 5. AxumProxyController 統合テスト
 
-**テストファイル**: `crates/flm-proxy/tests/integration_test.rs`
+**テストファイル**: `crates/services/flm-proxy/tests/integration_test.rs`
 
 - ✅ `test_proxy_start_and_stop` - プロキシサーバーの起動と停止
 - ✅ `test_proxy_health_endpoint` - `/health`エンドポイントの動作確認
@@ -61,7 +61,7 @@
 
 ### 6. Proxy CLIコマンドテスト
 
-**テストファイル**: `crates/flm-cli/tests/proxy_cli_test.rs`
+**テストファイル**: `crates/apps/flm-cli/tests/proxy_cli_test.rs`
 
 - ✅ `test_proxy_start_local_http` - `flm proxy start`コマンドの動作確認
 - ✅ `test_proxy_status_empty` - プロキシ未起動時のステータス確認

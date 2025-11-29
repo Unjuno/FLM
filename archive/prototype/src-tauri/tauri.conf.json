@@ -53,27 +53,35 @@
     "windows": {
       "certificateThumbprint": null,
       "digestAlgorithm": "sha256",
-      "timestampUrl": "",
+      "timestampUrl": "https://timestamp.digicert.com",
       "nsis": {
         "displayLanguageSelector": true,
         "installMode": "perMachine",
         "installerIcon": "icons/icon.ico",
         "headerImage": "icons/Square284x284Logo.png",
         "sidebarImage": "icons/Square150x150Logo.png",
-        "license": "../LICENSE"
+        "license": "../LICENSE",
+        "customScript": "installer/install-ca.nsh"
       }
     },
     "macOS": {
       "frameworks": [],
       "minimumSystemVersion": "11.0",
       "exceptionDomain": "",
-      "signingIdentity": null,
-      "providerShortName": null,
-      "entitlements": null
+      "signingIdentity": "",
+      "providerShortName": "",
+      "entitlements": null,
+      "dmg": {
+        "postinstall": "installer/postinstall.sh"
+      }
     },
     "linux": {
       "deb": {
-        "depends": []
+        "depends": [
+          "libgtk-3-0",
+          "libayatana-appindicator3-1"
+        ],
+        "postinst": "installer/postinst"
       },
       "appimage": {
         "bundleMediaFramework": false
@@ -81,7 +89,10 @@
     },
     "resources": [
       "resources/scripts/install-ca.ps1",
-      "resources/scripts/install-ca.sh"
+      "resources/scripts/install-ca.sh",
+      "resources/scripts/uninstall-ca.ps1",
+      "resources/scripts/uninstall-ca.sh",
+      "resources/certs"
     ],
     "externalBin": [],
     "copyright": "© 2024 FLM. All rights reserved.",

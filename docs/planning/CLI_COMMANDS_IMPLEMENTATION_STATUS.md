@@ -8,39 +8,39 @@
 
 ### ✅ Step 1: `flm security policy` 実装 - 完了
 
-- [x] `crates/flm-cli/src/cli/mod.rs`: `Security` コマンドを `Commands` enumに追加
-- [x] `crates/flm-cli/src/cli/security.rs`: `SecuritySubcommand` enumを定義
-- [x] `crates/flm-cli/src/cli/security.rs`: `PolicySubcommand` enumを定義
-- [x] `crates/flm-cli/src/commands/security.rs`: `execute_policy_show()` と `execute_policy_set()` を実装
-- [x] `crates/flm-cli/src/commands/mod.rs`: `security` モジュールを追加
-- [x] `crates/flm-cli/src/main.rs`: `Security` コマンドのハンドリングを追加
-- [x] テスト: `crates/flm-cli/tests/security_test.rs` に統合テストを追加
+- [x] `crates/apps/flm-cli/src/cli/mod.rs`: `Security` コマンドを `Commands` enumに追加
+- [x] `crates/apps/flm-cli/src/cli/security.rs`: `SecuritySubcommand` enumを定義
+- [x] `crates/apps/flm-cli/src/cli/security.rs`: `PolicySubcommand` enumを定義
+- [x] `crates/apps/flm-cli/src/commands/security.rs`: `execute_policy_show()` と `execute_policy_set()` を実装
+- [x] `crates/apps/flm-cli/src/commands/mod.rs`: `security` モジュールを追加
+- [x] `crates/apps/flm-cli/src/main.rs`: `Security` コマンドのハンドリングを追加
+- [x] テスト: `crates/apps/flm-cli/tests/security_test.rs` に統合テストを追加
 
 ### ✅ Step 2: `flm check` 実装 - 完了
 
-- [x] `crates/flm-cli/src/cli/mod.rs`: `Check` コマンドを `Commands` enumに追加（`--verbose` オプション付き）
-- [x] `crates/flm-cli/src/commands/check.rs`: データベース整合性チェック機能を実装
-- [x] `crates/flm-cli/src/commands/mod.rs`: `check` モジュールを追加
-- [x] `crates/flm-cli/src/main.rs`: `Check` コマンドのハンドリングを追加
-- [x] テスト: `crates/flm-cli/tests/check_test.rs` に統合テストを追加
+- [x] `crates/apps/flm-cli/src/cli/mod.rs`: `Check` コマンドを `Commands` enumに追加（`--verbose` オプション付き）
+- [x] `crates/apps/flm-cli/src/commands/check.rs`: データベース整合性チェック機能を実装
+- [x] `crates/apps/flm-cli/src/commands/mod.rs`: `check` モジュールを追加
+- [x] `crates/apps/flm-cli/src/main.rs`: `Check` コマンドのハンドリングを追加
+- [x] テスト: `crates/apps/flm-cli/tests/check_test.rs` に統合テストを追加
 
 ### ✅ Step 3: `flm chat` 実装 - 完了
 
-- [x] `crates/flm-cli/src/cli/mod.rs`: `Chat` コマンドを `Commands` enumに追加
-- [x] `crates/flm-cli/src/cli/chat.rs`: `Chat` コマンド定義
-- [x] `crates/flm-cli/src/commands/chat.rs`: 実装完了
-- [x] `crates/flm-cli/src/commands/mod.rs`: `chat` モジュールを追加
-- [x] `crates/flm-cli/src/main.rs`: `Chat` コマンドのハンドリングを追加
-- [x] テスト: `crates/flm-cli/tests/chat_test.rs` に統合テストを追加（モックエンジン使用）
+- [x] `crates/apps/flm-cli/src/cli/mod.rs`: `Chat` コマンドを `Commands` enumに追加
+- [x] `crates/apps/flm-cli/src/cli/chat.rs`: `Chat` コマンド定義
+- [x] `crates/apps/flm-cli/src/commands/chat.rs`: 実装完了
+- [x] `crates/apps/flm-cli/src/commands/mod.rs`: `chat` モジュールを追加
+- [x] `crates/apps/flm-cli/src/main.rs`: `Chat` コマンドのハンドリングを追加
+- [x] テスト: `crates/apps/flm-cli/tests/chat_test.rs` に統合テストを追加（モックエンジン使用）
 
 ### ✅ Step 4: `flm security backup` 実装 - 完了
 
-- [x] `crates/flm-cli/src/cli/security.rs`: `BackupSubcommand` enumを追加
-- [x] `crates/flm-cli/src/commands/security.rs`: `execute_backup_create()` と `execute_backup_restore()` を実装
+- [x] `crates/apps/flm-cli/src/cli/security.rs`: `BackupSubcommand` enumを追加
+- [x] `crates/apps/flm-cli/src/commands/security.rs`: `execute_backup_create()` と `execute_backup_restore()` を実装
 - [x] バックアップファイル命名: `security.db.bak.<UTC timestamp>`
 - [x] バックアップディレクトリ: OS設定ディレクトリ配下の `.../flm/backups/`
 - [x] 3世代管理を実装
-- [x] テスト: `crates/flm-cli/tests/security_backup_test.rs` に統合テストを追加
+- [x] テスト: `crates/apps/flm-cli/tests/security_backup_test.rs` に統合テストを追加
 
 ## 実装結果
 

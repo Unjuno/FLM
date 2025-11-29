@@ -4,7 +4,7 @@
 
 ## 監査概要
 
-本レポートは、FLMプロキシサーバー（`crates/flm-proxy`）に対する厳格なセキュリティ監査の結果です。既存の監査レポートを踏まえ、より深い分析と追加の問題点を特定しました。
+本レポートは、FLMプロキシサーバー（`crates/services/flm-proxy`）に対する厳格なセキュリティ監査の結果です。既存の監査レポートを踏まえ、より深い分析と追加の問題点を特定しました。
 
 ## 監査範囲
 
@@ -24,7 +24,7 @@
 **問題**: APIキー検証で早期リターンによりタイミング情報が漏洩
 
 **発見箇所**: 
-```258:275:crates/flm-core/src/services/security.rs
+```258:275:crates/core/flm-core/src/services/security.rs
 pub async fn verify_api_key(&self, plain_key: &str) -> Result<Option<ApiKeyRecord>, RepoError> {
     let records = self.repo.list_active_api_keys().await?;
     
@@ -73,7 +73,7 @@ pub async fn verify_api_key(&self, plain_key: &str) -> Result<Option<ApiKeyRecor
 - APIキーのハッシュを計算してDBで直接検索
 
 **関連ファイル**:
-- `crates/flm-core/src/services/security.rs:258-275`
+- `crates/core/flm-core/src/services/security.rs:258-275`
 
 **推定工数**: 4-6時間（テスト含む）
 
@@ -84,7 +84,7 @@ pub async fn verify_api_key(&self, plain_key: &str) -> Result<Option<ApiKeyRecor
 **問題**: `eprintln!`で詳細なエラー情報を出力しており、ログファイルから情報が漏洩する可能性
 
 **発見箇所**:
-```1031:1058:crates/flm-proxy/src/controller.rs
+```1031:1058:crates/services/flm-proxy/src/controller.rs
 eprintln!("ERROR: Engine not found: {}", engine_id);
 eprintln!("ERROR: Network error starting stream: {}", reason);
 eprintln!("ERROR: Invalid response starting stream: {}", reason);
@@ -116,10 +116,10 @@ error!(error_type = "engine_not_found", "Engine lookup failed");
 ```
 
 **関連ファイル**:
-- `crates/flm-proxy/src/controller.rs` (17箇所)
-- `crates/flm-proxy/src/middleware.rs` (4箇所)
-- `crates/flm-proxy/src/engine_repo.rs` (2箇所)
-- `crates/flm-proxy/src/adapters.rs` (1箇所)
+- `crates/services/flm-proxy/src/controller.rs` (17箇所)
+- `crates/services/flm-proxy/src/middleware.rs` (4箇所)
+- `crates/services/flm-proxy/src/engine_repo.rs` (2箇所)
+- `crates/services/flm-proxy/src/adapters.rs` (1箇所)
 
 **推定工数**: 8-12時間（ログシステムの導入含む）
 
@@ -130,7 +130,7 @@ error!(error_type = "engine_not_found", "Engine lookup failed");
 **問題**: レート制限の状態がメモリ内のみに保存されており、サーバー再起動時にリセットされる
 
 **発見箇所**:
-```349:389:crates/flm-proxy/src/middleware.rs
+```349:389:crates/services/flm-proxy/src/middleware.rs
 async fn check_rate_limit_with_info(
     state: &AppState,
     api_key_id: &str,
@@ -153,8 +153,8 @@ async fn check_rate_limit_with_info(
 3. メモリキャッシュとDBのハイブリッド方式
 
 **関連ファイル**:
-- `crates/flm-proxy/src/middleware.rs:349-389`
-- `crates/flm-core/migrations/` (rate_limit_statesテーブル定義)
+- `crates/services/flm-proxy/src/middleware.rs:349-389`
+- `crates/core/flm-core/migrations/` (rate_limit_statesテーブル定義)
 
 **推定工数**: 12-16時間（DB統合含む）
 
@@ -165,7 +165,7 @@ async fn check_rate_limit_with_info(
 **問題**: ストリーミングエンドポイント（`/v1/chat/completions`）にタイムアウトが設定されていない
 
 **発見箇所**:
-```268:281:crates/flm-proxy/src/controller.rs
+```268:281:crates/services/flm-proxy/src/controller.rs
 // Create separate router for streaming endpoint (no timeout)
 let streaming_router = Router::new()
     .route("/v1/chat/completions", post(handle_chat_completions))
@@ -185,7 +185,7 @@ let streaming_router = Router::new()
 ```
 
 **関連ファイル**:
-- `crates/flm-proxy/src/controller.rs:268-281`
+- `crates/services/flm-proxy/src/controller.rs:268-281`
 
 **推定工数**: 2-3時間
 
@@ -196,7 +196,7 @@ let streaming_router = Router::new()
 **問題**: `expect()`が使用されており、パニックのリスクがある
 
 **発見箇所**:
-```273:273:crates/flm-proxy/src/middleware.rs
+```273:273:crates/services/flm-proxy/src/middleware.rs
 .expect("127.0.0.1 is a valid IP address")
 ```
 
@@ -226,7 +226,7 @@ let streaming_router = Router::new()
 ```
 
 **関連ファイル**:
-- `crates/flm-proxy/src/middleware.rs:273`
+- `crates/services/flm-proxy/src/middleware.rs:273`
 
 **推定工数**: 1時間
 
@@ -239,7 +239,7 @@ let streaming_router = Router::new()
 **問題**: ポリシーが存在しない場合、デフォルトで`permissive()`が使用される
 
 **発見箇所**:
-```315:383:crates/flm-proxy/src/controller.rs
+```315:383:crates/services/flm-proxy/src/controller.rs
 // Default: allow all
 TowerCorsLayer::permissive()
 ```
@@ -253,7 +253,7 @@ TowerCorsLayer::permissive()
 - 明示的な設定が必要な場合のみ許可
 
 **関連ファイル**:
-- `crates/flm-proxy/src/controller.rs:315-383`
+- `crates/services/flm-proxy/src/controller.rs:315-383`
 
 **推定工数**: 1-2時間
 
@@ -264,7 +264,7 @@ TowerCorsLayer::permissive()
 **問題**: 一部の入力検証が不十分
 
 **発見箇所**:
-```451:502:crates/flm-proxy/src/controller.rs
+```451:502:crates/services/flm-proxy/src/controller.rs
 fn validate_engine_id(engine_id: &str) -> Result<(), &'static str> {
     // 基本的な検証のみ
 }
@@ -293,7 +293,7 @@ if let Some(max) = req.max_tokens {
 ```
 
 **関連ファイル**:
-- `crates/flm-proxy/src/controller.rs:435-502`
+- `crates/services/flm-proxy/src/controller.rs:435-502`
 
 **推定工数**: 2-3時間
 
@@ -304,7 +304,7 @@ if let Some(max) = req.max_tokens {
 **問題**: ストリーミング中のエラーが適切にクライアントに通知されない可能性
 
 **発見箇所**:
-```1120:1142:crates/flm-proxy/src/controller.rs
+```1120:1142:crates/services/flm-proxy/src/controller.rs
 Err(e) => {
     // エラーをログに出力するが、クライアントへの通知が不十分
     Err(axum::Error::new(std::io::Error::other(error_msg)))
@@ -320,7 +320,7 @@ Err(e) => {
 - クライアントに適切なエラーメッセージを送信
 
 **関連ファイル**:
-- `crates/flm-proxy/src/controller.rs:1120-1142`
+- `crates/services/flm-proxy/src/controller.rs:1120-1142`
 
 **推定工数**: 3-4時間
 
@@ -331,7 +331,7 @@ Err(e) => {
 **問題**: 接続プールサイズが5に固定されており、高負荷時にボトルネックになる可能性
 
 **発見箇所**:
-```40:42:crates/flm-proxy/src/adapters.rs
+```40:42:crates/services/flm-proxy/src/adapters.rs
 let pool = SqlitePoolOptions::new()
     .max_connections(5)  // 固定値
 ```
@@ -341,7 +341,7 @@ let pool = SqlitePoolOptions::new()
 - デフォルト値を適切に設定（例: 10-20）
 
 **関連ファイル**:
-- `crates/flm-proxy/src/adapters.rs:40-42`
+- `crates/services/flm-proxy/src/adapters.rs:40-42`
 
 **推定工数**: 1-2時間
 

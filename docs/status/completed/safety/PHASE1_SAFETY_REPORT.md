@@ -23,10 +23,10 @@
 ### 3. テスト確認
 
 - ✅ 統合テストの確認
-  - `crates/flm-cli/tests/integration_test.rs`
+  - `crates/apps/flm-cli/tests/integration_test.rs`
   - ConfigService / SecurityService の統合テスト
 - ✅ CLIコマンドテストの確認
-  - `crates/flm-cli/tests/cli_test.rs`
+  - `crates/apps/flm-cli/tests/cli_test.rs`
   - config / api-keys コマンドのE2Eテスト
 
 ### 4. コード品質チェック
@@ -92,7 +92,7 @@ let lock = rwlock.read().expect("Failed to acquire read lock: <context>");
 
 ### ✅ APIキーのハッシュ化
 - **実装**: Argon2を使用したハッシュ化
-- **場所**: `crates/flm-core/src/services/security.rs`
+- **場所**: `crates/core/flm-core/src/services/security.rs`
 - **状態**: 適切に実装済み
 
 ### ✅ 平文キーの即時破棄
@@ -112,15 +112,15 @@ let lock = rwlock.read().expect("Failed to acquire read lock: <context>");
 
 ### ✅ エラーハンドリング
 - **実装**: 適切なエラータイプとエラーハンドリング
-- **場所**: `crates/flm-core/src/error.rs`
+- **場所**: `crates/core/flm-core/src/error.rs`
 - **状態**: 適切に実装済み
 
 ### ✅ テストカバレッジ
 - **実装**: 統合テストとCLIテストが実装済み
 - **場所**: 
-  - `crates/flm-cli/tests/integration_test.rs`
-  - `crates/flm-cli/tests/cli_test.rs`
-  - `crates/flm-core/tests/config_service_test.rs`
+  - `crates/apps/flm-cli/tests/integration_test.rs`
+  - `crates/apps/flm-cli/tests/cli_test.rs`
+  - `crates/core/flm-core/tests/config_service_test.rs`
 - **状態**: 適切に実装済み
 
 ## 改善推奨事項（Phase 1完了後）

@@ -1,0 +1,29 @@
+[package]
+name = "flm-engine-ollama"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[lib]
+name = "flm_engine_ollama"
+path = "src/lib.rs"
+
+[dependencies]
+flm-core = { path = "../../core/flm-core" }
+serde.workspace = true
+serde_json.workspace = true
+tokio.workspace = true
+anyhow.workspace = true
+reqwest = { version = "0.11", features = ["json", "stream"] }
+futures = "0.3"
+async-stream = "0.3"
+tokio-stream = "0.1"
+async-trait.workspace = true
+base64 = "0.21"
+
+[dev-dependencies]
+tokio-test = "0.4"
+wiremock = "0.5"
+

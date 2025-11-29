@@ -9,8 +9,8 @@ Phase 3のセキュリティ機能（ハニーポットエンドポイント）�
 ### 1. ハニーポットエンドポイント ✅
 
 #### 実装ファイル
-- `crates/flm-proxy/src/controller.rs` - ハニーポットエンドポイントハンドラー
-- `crates/flm-proxy/src/security/intrusion_detection.rs` - スコア追加メソッド
+- `crates/services/flm-proxy/src/controller.rs` - ハニーポットエンドポイントハンドラー
+- `crates/services/flm-proxy/src/security/intrusion_detection.rs` - スコア追加メソッド
 
 #### 実装内容
 
@@ -61,10 +61,10 @@ test result: ok. 1 passed; 0 failed; 0 ignored; 0 measured; 8 filtered out
 ## 実装ファイル一覧
 
 ### 更新
-- `crates/flm-proxy/src/controller.rs` - ハニーポットエンドポイント追加
-- `crates/flm-proxy/src/security/intrusion_detection.rs` - `add_score()`メソッド追加
-- `crates/flm-proxy/src/middleware.rs` - `extract_client_ip()`を`pub`に変更、認証スキップ追加
-- `crates/flm-proxy/tests/integration_test.rs` - ハニーポットテスト追加
+- `crates/services/flm-proxy/src/controller.rs` - ハニーポットエンドポイント追加
+- `crates/services/flm-proxy/src/security/intrusion_detection.rs` - `add_score()`メソッド追加
+- `crates/services/flm-proxy/src/middleware.rs` - `extract_client_ip()`を`pub`に変更、認証スキップ追加
+- `crates/services/flm-proxy/tests/integration_test.rs` - ハニーポットテスト追加
 
 ## 次のステップ
 

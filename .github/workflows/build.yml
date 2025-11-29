@@ -230,14 +230,49 @@ jobs:
       - name: Build Tauri (Linux)
         run: npm run tauri build
       
+      - name: Setup GPG for signing
+        if: startsWith(github.ref, 'refs/tags/v') && secrets.LINUX_GPG_KEY != ''
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gnupg2
+          echo "${{ secrets.LINUX_GPG_KEY }}" | gpg --batch --import
+          gpg --list-secret-keys --keyid-format LONG
+        continue-on-error: true
+      
+      - name: Sign Linux artifacts with GPG
+        if: startsWith(github.ref, 'refs/tags/v') && secrets.LINUX_GPG_KEY != '' && secrets.LINUX_GPG_KEY_PASS != ''
+        run: |
+          cd src-tauri/target/release
+          for file in *.AppImage; do
+            if [ -f "$file" ]; then
+              echo "${{ secrets.LINUX_GPG_KEY_PASS }}" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 --default-key "${{ secrets.LINUX_GPG_KEY_ID }}" --armor --output "${file}.sig" --detach-sign "$file" || true
+            fi
+          done
+          cd bundle/deb
+          for file in *.deb; do
+            if [ -f "$file" ]; then
+              echo "${{ secrets.LINUX_GPG_KEY_PASS }}" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 --default-key "${{ secrets.LINUX_GPG_KEY_ID }}" --armor --output "${file}.sig" --detach-sign "$file" || true
+            fi
+          done
+          cd ../appimage
+          for file in *.AppImage; do
+            if [ -f "$file" ]; then
+              echo "${{ secrets.LINUX_GPG_KEY_PASS }}" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 --default-key "${{ secrets.LINUX_GPG_KEY_ID }}" --armor --output "${file}.sig" --detach-sign "$file" || true
+            fi
+          done
+        continue-on-error: true
+      
       - name: Upload Linux artifacts
         uses: actions/upload-artifact@v4
         with:
           name: linux-build
           path: |
             src-tauri/target/release/*.AppImage
+            src-tauri/target/release/*.AppImage.sig
             src-tauri/target/release/bundle/deb/*.deb
+            src-tauri/target/release/bundle/deb/*.deb.sig
             src-tauri/target/release/bundle/appimage/*.AppImage
+            src-tauri/target/release/bundle/appimage/*.AppImage.sig
           retention-days: 30
           if-no-files-found: warn
 
@@ -277,6 +312,21 @@ jobs:
           path: ./artifacts/linux
           continue-on-error: true
       
+      - name: Generate checksums
+        run: |
+          cd artifacts
+          find . -type f \( -name "*.exe" -o -name "*.msi" -o -name "*.dmg" -o -name "*.app" -o -name "*.AppImage" -o -name "*.deb" \) -exec sha256sum {} \; > checksums.txt
+          cat checksums.txt
+      
+      - name: Sign checksums with GPG
+        if: secrets.LINUX_GPG_KEY != '' && secrets.LINUX_GPG_KEY_PASS != ''
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gnupg2
+          echo "${{ secrets.LINUX_GPG_KEY }}" | gpg --batch --import
+          echo "${{ secrets.LINUX_GPG_KEY_PASS }}" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 --default-key "${{ secrets.LINUX_GPG_KEY_ID }}" --armor --output artifacts/checksums.txt.sig --detach-sign artifacts/checksums.txt || true
+        continue-on-error: true
+      
       - name: Generate release notes
         id: release_notes
         run: |
@@ -297,6 +347,26 @@ jobs:
           echo "- Linux用AppImage (.AppImage)" >> release_notes.md
           echo "- Debian/Ubuntu用パッケージ (.deb)" >> release_notes.md
           echo "" >> release_notes.md
+          echo "### 検証" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "#### ハッシュ値の検証" >> release_notes.md
+          echo "\`\`\`bash" >> release_notes.md
+          echo "sha256sum -c checksums.txt" >> release_notes.md
+          echo "\`\`\`" >> release_notes.md
+          echo "" >> release_notes.md
+          echo "#### GPG署名の検証（Linux）" >> release_notes.md
+          if [ -f "artifacts/checksums.txt.sig" ]; then
+            echo "GPG公開鍵のインポート:" >> release_notes.md
+            echo "\`\`\`bash" >> release_notes.md
+            echo "gpg --import <(curl -s https://raw.githubusercontent.com/unjuno/FLM/main/.github/gpg-public-key.asc)" >> release_notes.md
+            echo "\`\`\`" >> release_notes.md
+            echo "" >> release_notes.md
+            echo "署名の検証:" >> release_notes.md
+            echo "\`\`\`bash" >> release_notes.md
+            echo "gpg --verify checksums.txt.sig checksums.txt" >> release_notes.md
+            echo "\`\`\`" >> release_notes.md
+          fi
+          echo "" >> release_notes.md
           echo "### インストール方法" >> release_notes.md
           echo "" >> release_notes.md
           echo "詳細は公式サイトのダウンロードページをご覧ください: https://unjuno.github.io/FLM/download.html" >> release_notes.md
@@ -308,6 +378,8 @@ jobs:
             artifacts/windows/**
             artifacts/macos/**
             artifacts/linux/**
+            artifacts/checksums.txt
+            artifacts/checksums.txt.sig
           body_path: release_notes.md
           draft: false
           prerelease: false

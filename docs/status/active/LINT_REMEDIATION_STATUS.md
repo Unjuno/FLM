@@ -12,11 +12,19 @@
 - ✅ `flm-proxy`: 主要なClippyエラーを修正（`uninlined_format_args`, `redundant_pattern_matching`, `manual_range_contains`, `needless_borrows_for_generic_args`）
 - ⏳ `flm-cli`: 多数の `uninlined_format_args` と未使用変数の警告が残っている（後続タスクで修正予定）
 
+## 2025-11-26 更新
+
+- ✅ `flm-core`: `ResponseModality` に `Default` を導入し、`rcgen 0.13` への互換修正（`KeyPair::generate_for`, SAN 生成, `CertificateParams::*` API）を実施。
+- ✅ `flm-proxy`: `handle_embeddings` のエラーパス修正と `packaged-ca` ルート/サーバ証明書生成を bin でも参照できるよう `certificate` モジュールを公開。
+- ✅ エンジン各 crate: `EngineCapabilities` 初期化から不要な struct update を排除（`clippy::needless-update` 解消）。
+- ✅ `cargo fmt --check` / `cargo clippy -- -D warnings` をワークスペースで実行し、ゼロエラーを確認。
+- 🔁 残タスクなし。CI では `cargo clippy --workspace -- -D warnings` を継続実行。
+
 ## Previously Tracked Failures (Resolved)
 
 | Crate / Target | Location | Lint / Error | Notes |
 | --- | --- | --- | --- |
-| `flm-core` (tests) | `crates/flm-core/tests/proxy_service_test.rs` | `E0046` – `MockProxyRepository` missing `save_active_handle`, `remove_active_handle` | Add no-op implementations so trait matches production API. |
+| `flm-core` (tests) | `crates/core/flm-core/tests/proxy_service_test.rs` | `E0046` – `MockProxyRepository` missing `save_active_handle`, `remove_active_handle` | Add no-op implementations so trait matches production API. |
 | `flm-proxy` | `src/middleware.rs:47` | `unused_mut` | Drop `mut` from `request` argument. |
 | `flm-proxy` | `src/adapters.rs:43` | `clippy::manual_clamp` | Replace chained `max/min` with `.clamp(1, 100)`. |
 | `flm-proxy` | `src/adapters.rs:302` | `clippy::too_many_arguments` | Consider grouping audit log metadata into a struct or builder to drop parameter count below 8. |

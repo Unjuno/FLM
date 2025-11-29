@@ -45,21 +45,21 @@
 
 ### 修正したファイル
 
-1. **`crates/flm-proxy/src/middleware.rs`**
+1. **`crates/services/flm-proxy/src/middleware.rs`**
    - `extract_cors_headers`関数を追加
    - `policy_middleware`でCORSヘッダーをレスポンスに追加
    - IPホワイトリストチェック（既存）
    - レート制限チェック（既存）
 
-2. **`crates/flm-core/src/services/security.rs`**
+2. **`crates/core/flm-core/src/services/security.rs`**
    - `validate_domain`メソッドを追加
 
 ### テスト追加
 
-1. **`crates/flm-core/tests/security_service_test.rs`**
+1. **`crates/core/flm-core/tests/security_service_test.rs`**
    - `test_validate_domain`テストを追加（有効/無効なドメイン名の検証）
 
-2. **`crates/flm-proxy/tests/integration_test.rs`**
+2. **`crates/services/flm-proxy/tests/integration_test.rs`**
    - `test_proxy_cors_headers`テストを追加（CORSポリシーの設定と取得の検証）
 
 ## テスト結果

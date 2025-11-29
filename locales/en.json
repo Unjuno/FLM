@@ -1,0 +1,246 @@
+{
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "success": "Success",
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "save": "Save",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "retry": "Retry",
+    "ok": "OK",
+    "yes": "Yes",
+    "no": "No"
+  },
+  "confirmDialog": {
+    "title": "Confirm",
+    "deleteApiKey": {
+      "title": "Delete Access Key?",
+      "message": "This action cannot be undone. The deleted access key will no longer be usable.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    },
+    "revokeApiKey": {
+      "title": "Revoke Access Key?",
+      "message": "This action cannot be undone. The revoked access key will no longer be usable.",
+      "confirm": "Revoke",
+      "cancel": "Cancel"
+    },
+    "blockIp": {
+      "title": "Block IP Address?",
+      "message": "This will deny access from this IP address. You can unblock it later.",
+      "confirm": "Block",
+      "cancel": "Cancel"
+    },
+    "unblockIp": {
+      "title": "Unblock IP Address?",
+      "message": "This will allow access from this IP address.",
+      "confirm": "Unblock",
+      "cancel": "Cancel"
+    },
+    "stopServer": {
+      "title": "Stop Server?",
+      "message": "Stopping the server will prevent access to AI services.",
+      "confirm": "Stop",
+      "cancel": "Cancel"
+    },
+    "deleteItem": {
+      "title": "Delete?",
+      "message": "This action cannot be undone.",
+      "confirm": "Delete",
+      "cancel": "Cancel"
+    }
+  },
+  "status": {
+    "loading": "Loading...",
+    "saving": "Saving...",
+    "processing": "Processing...",
+    "success": "Success",
+    "error": "Error",
+    "completed": "Completed",
+    "failed": "Failed",
+    "idle": "Idle",
+    "connecting": "Connecting...",
+    "connected": "Connected",
+    "disconnected": "Disconnected",
+    "starting": "Starting...",
+    "started": "Started",
+    "stopping": "Stopping...",
+    "stopped": "Stopped",
+    "progress": "Progress: {{current}}/{{total}}",
+    "progressPercentage": "Progress: {{percentage}}%"
+  },
+  "setupWizard": {
+    "title": "Setup Wizard",
+    "welcome": {
+      "title": "Welcome",
+      "description": "Let's start setting up FLM. This wizard will guide you through the basic setup.",
+      "next": "Next"
+    },
+    "serverSetup": {
+      "title": "Server Setup",
+      "description": "Configure the server. When you start the server, you can access AI services.",
+      "startServer": "Start Server",
+      "serverStarted": "Server started",
+      "serverStartFailed": "Failed to start server",
+      "next": "Next",
+      "skip": "Skip"
+    },
+    "securitySetup": {
+      "title": "Security Setup",
+      "description": "Configure security settings. You can create access keys, configure allow lists, and set access limits.",
+      "createApiKey": "Create Access Key",
+      "configureWhitelist": "Configure Allow List",
+      "configureRateLimit": "Configure Access Limit",
+      "next": "Next",
+      "skip": "Skip"
+    },
+    "complete": {
+      "title": "Setup Complete",
+      "description": "Setup is complete. You can go to the dashboard and start using AI services.",
+      "goToDashboard": "Go to Dashboard"
+    }
+  },
+  "settings": {
+    "title": "Application Settings",
+    "language": {
+      "title": "Language",
+      "label": "Display Language",
+      "hint": "Application display language",
+      "japanese": "Japanese",
+      "english": "English"
+    }
+  },
+  "terminology": {
+    "endpoint": "Endpoint URL",
+    "deploy": "Publish & Start",
+    "api": "Service",
+    "proxy": "Server",
+    "request": "Send",
+    "response": "Response",
+    "authentication": "Login & Access Permission",
+    "whitelist": "Allow List",
+    "blocklist": "Block List",
+    "rateLimit": "Access Limit",
+    "auditLog": "Access Record",
+    "intrusionDetection": "Unauthorized Access Detection",
+    "anomalyDetection": "Anomaly Detection",
+    "apiKey": "Access Key",
+    "engine": "AI Engine",
+    "model": "AI Model"
+  },
+  "dashboard": {
+    "title": "Dashboard",
+    "engineStatus": "AI Engine Status",
+    "proxyStatus": "Server Status",
+    "securityAlerts": "Security Alerts",
+    "endpointUrl": "Endpoint URL",
+    "apiKeyCount": "Access Key Count",
+    "whitelist": "Allow List",
+    "rateLimit": "Access Limit",
+    "refresh": "Refresh",
+    "startServer": "Start Server",
+    "stopServer": "Stop Server",
+    "help": {
+      "title": "How to Use Dashboard",
+      "description": "The dashboard shows the status of AI engines, server, and security alerts.",
+      "engineStatus": "Shows the status of AI engines. Displays states such as running healthy, degraded, or error.",
+      "proxyStatus": "Shows the server status. Displays states such as running, stopped, or error.",
+      "securityAlerts": "Shows important security information. You can check settings such as access key count, allow list, and access limits."
+    }
+  },
+  "chatTester": {
+    "title": "Chat Tester",
+    "proxyEndpoint": "Server Endpoint URL",
+    "apiKey": "Access Key (Optional)",
+    "model": "AI Model",
+    "send": "Send",
+    "response": "Response",
+    "help": {
+      "title": "How to Use Chat Tester",
+      "description": "Chat Tester allows you to send messages to AI models and check responses.",
+      "proxyEndpoint": "Shows the server endpoint URL. If the server is not running, please start the server from the dashboard.",
+      "apiKey": "Enter an access key to access services that require authentication. This is optional.",
+      "model": "Select the AI model to use.",
+      "send": "Sends the message.",
+      "response": "Shows the response from the AI model."
+    }
+  },
+  "security": {
+    "title": "Security",
+    "auditLogs": "Access Records",
+    "intrusionDetection": "Unauthorized Access Detection",
+    "anomalyDetection": "Anomaly Detection",
+    "ipBlocklist": "IP Block List",
+    "whitelist": "Allow List",
+    "rateLimit": "Access Limit",
+    "help": {
+      "title": "How to Use Security",
+      "description": "Security settings allow you to manage access records, unauthorized access detection, anomaly detection, IP block list, allow list, and access limits.",
+      "auditLogs": "Shows all access records. You can check who accessed when.",
+      "intrusionDetection": "Detects and displays unauthorized access attempts.",
+      "anomalyDetection": "Detects and displays anomalous behavior patterns.",
+      "ipBlocklist": "Manages a list of IP addresses to block access.",
+      "whitelist": "Manages a list of IP addresses to allow access.",
+      "rateLimit": "Limits the number of accesses per minute."
+    }
+  },
+  "help": {
+    "title": "Help",
+    "description": "Frequently Asked Questions",
+    "commonQuestions": {
+      "whatIsEndpoint": {
+        "question": "What is an Endpoint URL?",
+        "answer": "An endpoint URL is the address to access AI services. It is usually in the format \"http://localhost:port number\"."
+      },
+      "whatIsApiKey": {
+        "question": "What is an Access Key?",
+        "answer": "An access key is authentication information to access AI services. For security, do not share your access key with others."
+      },
+      "whatIsProxy": {
+        "question": "What is a Server?",
+        "answer": "A server is a program that relays access to AI services. When you start the server, you can access AI services."
+      }
+    }
+  },
+  "errors": {
+    "engineNotFound": "AI Engine not found",
+    "engineNotFoundSolution": "Please check if the AI engine is installed.",
+    "proxyStartFailed": "Failed to start server",
+    "proxyStartFailedSolution": "The server port may already be in use. Try a different port or close the application using the port.",
+    "proxyNotRunning": "Server is not running. Please start the server from the dashboard.",
+    "proxyNotRunningSolution": "Click the \"Start Server\" button on the dashboard.",
+    "endpointNotFound": "Could not get endpoint URL",
+    "endpointNotFoundSolution": "Please check if the server is running.",
+    "chatRequestFailed": "Failed to send chat message",
+    "chatRequestFailedSolution": "Please check if the server is running and an AI model is selected.",
+    "apiKeyCreationFailed": "Failed to create access key",
+    "apiKeyCreationFailedSolution": "Please try again later. If the problem persists, check the server status.",
+    "apiKeyRevocationFailed": "Failed to revoke access key",
+    "apiKeyRevocationFailedSolution": "Please try again later.",
+    "whitelistUpdateFailed": "Failed to update allow list",
+    "whitelistUpdateFailedSolution": "Please check if the IP address format is correct.",
+    "blocklistUpdateFailed": "Failed to update block list",
+    "blocklistUpdateFailedSolution": "Please check if the IP address format is correct.",
+    "rateLimitUpdateFailed": "Failed to update access limit",
+    "rateLimitUpdateFailedSolution": "Please check if the value is within the correct range.",
+    "auditLogFetchFailed": "Failed to fetch access records",
+    "auditLogFetchFailedSolution": "Please check if the server is running.",
+    "intrusionDetectionFetchFailed": "Failed to fetch unauthorized access detection",
+    "intrusionDetectionFetchFailedSolution": "Please check if the server is running.",
+    "anomalyDetectionFetchFailed": "Failed to fetch anomaly detection",
+    "anomalyDetectionFetchFailedSolution": "Please check if the server is running.",
+    "genericError": "An error occurred. Please try again later.",
+    "genericErrorSolution": "If the problem persists, please restart the application.",
+    "networkError": "A network error occurred. Please check your internet connection.",
+    "networkErrorSolution": "Please check your internet connection and firewall settings.",
+    "timeoutError": "A timeout error occurred. Please try again later.",
+    "timeoutErrorSolution": "The server may not be responding. Please check the server status.",
+    "retry": "Retry",
+    "learnMore": "Learn More",
+    "contactSupport": "Contact Support"
+  }
+}
+

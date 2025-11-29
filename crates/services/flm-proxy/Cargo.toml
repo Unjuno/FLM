@@ -27,7 +27,7 @@ tower.workspace = true
 tower-http.workspace = true
 tower-service = "0.3"
 async-trait.workspace = true
-reqwest = { version = "0.11", features = ["json", "stream"] }
+reqwest = { version = "0.11", features = ["json", "stream", "multipart"] }
 futures = "0.3"
 sqlx = { workspace = true, features = ["runtime-tokio-native-tls", "sqlite", "migrate"] }
 ipnet = "2.9"

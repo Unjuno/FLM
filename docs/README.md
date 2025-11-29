@@ -1,6 +1,6 @@
 # FLM Documentation
 
-> Status: Reference | Audience: All contributors | Updated: 2025-11-25
+> Status: Reference | Audience: All contributors | Updated: 2025-11-27
 
 FLMプロジェクトのドキュメント集約ディレクトリです。
 
@@ -111,10 +111,10 @@ docs/
 - **active/** - 現在進行中のレポートのみを配置
   - `NEXT_STEPS.md` - 唯一の公式タスクリスト
   - `BOTNET_PROTECTION_PLAN.md` - ボットネット対策実装進捗
-  - `PROXY_SERVICE_PHASE2_PROGRESS.md` - ProxyService Phase 2の実装進捗
+  - `UNIMPLEMENTED_REPORT.md` / `UNIMPLEMENTED_ANALYSIS.md` - 未実装領域の棚卸し
 - **completed/** - 完了済みのレポート
   - `phases/` - フェーズ完了レポート
-  - `tasks/` - タスク完了レポート（`FINAL_SUMMARY.md`推奨）
+  - `tasks/` - タスク完了レポート（`FINAL_SUMMARY.md`推奨、`DONE.md`は簡潔な作業ログ）
   - `tests/` - テストレポート
   - `safety/` - 安全性・監査レポート
   - `proxy/` - ProxyServiceレポート

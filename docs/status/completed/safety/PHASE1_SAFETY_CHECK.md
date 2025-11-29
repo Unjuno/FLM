@@ -12,7 +12,7 @@
 
 ### ✅ APIキーのハッシュ化
 - **実装**: Argon2を使用したハッシュ化
-- **場所**: `crates/flm-core/src/services/security.rs`
+- **場所**: `crates/core/flm-core/src/services/security.rs`
 - **状態**: 適切に実装済み
 
 ### ✅ 平文キーの即時破棄
@@ -27,15 +27,15 @@
 
 ### ✅ エラーハンドリング
 - **実装**: 適切なエラータイプとエラーハンドリング
-- **場所**: `crates/flm-core/src/error.rs`
+- **場所**: `crates/core/flm-core/src/error.rs`
 - **状態**: 適切に実装済み
 
 ### ✅ テストカバレッジ
 - **実装**: 統合テストとCLIテストが実装済み
 - **場所**: 
-  - `crates/flm-cli/tests/integration_test.rs`
-  - `crates/flm-cli/tests/cli_test.rs`
-  - `crates/flm-core/tests/config_service_test.rs`
+  - `crates/apps/flm-cli/tests/integration_test.rs`
+  - `crates/apps/flm-cli/tests/cli_test.rs`
+  - `crates/core/flm-core/tests/config_service_test.rs`
 - **状態**: 適切に実装済み
 
 ## 改善推奨事項（Phase 1完了後）
@@ -58,8 +58,8 @@
   - **macOS**: `chmod 600`相当の権限設定
 
 **実装場所**:
-- `crates/flm-cli/src/adapters/config.rs::SqliteConfigRepository::new()`
-- `crates/flm-cli/src/adapters/security.rs::SqliteSecurityRepository::new()`
+- `crates/apps/flm-cli/src/adapters/config.rs::SqliteConfigRepository::new()`
+- `crates/apps/flm-cli/src/adapters/security.rs::SqliteSecurityRepository::new()`
 
 **参考実装**:
 ```rust
@@ -91,9 +91,9 @@ if let Ok(metadata) = std::fs::metadata(&db_path) {
 - ユーザーに警告を表示し、手動修復を促す
 
 **実装場所**:
-- `crates/flm-cli/src/db/migration.rs`
-- `crates/flm-cli/src/adapters/config.rs`
-- `crates/flm-cli/src/adapters/security.rs`
+- `crates/apps/flm-cli/src/db/migration.rs`
+- `crates/apps/flm-cli/src/adapters/config.rs`
+- `crates/apps/flm-cli/src/adapters/security.rs`
 
 **参考実装**:
 ```rust
@@ -138,9 +138,9 @@ let options = if migration_failed {
 - ✅ **コンパイル**: `cargo build` 成功
 
 ### 段階2: テスト実行と検証
-- ✅ **統合テスト**: `crates/flm-cli/tests/integration_test.rs` 確認済み
-- ✅ **CLIテスト**: `crates/flm-cli/tests/cli_test.rs` 確認済み
-- ✅ **単体テスト**: `crates/flm-core/tests/config_service_test.rs` 確認済み
+- ✅ **統合テスト**: `crates/apps/flm-cli/tests/integration_test.rs` 確認済み
+- ✅ **CLIテスト**: `crates/apps/flm-cli/tests/cli_test.rs` 確認済み
+- ✅ **単体テスト**: `crates/core/flm-core/tests/config_service_test.rs` 確認済み
 
 ### 段階3: セキュリティチェック
 - ✅ **APIキー管理**: 良好（Argon2ハッシュ化、平文即時破棄）

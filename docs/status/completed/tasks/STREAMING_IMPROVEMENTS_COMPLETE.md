@@ -6,7 +6,7 @@
 
 ### 1. エラーハンドリングの改善
 
-**ファイル**: `crates/flm-proxy/src/controller.rs`
+**ファイル**: `crates/services/flm-proxy/src/controller.rs`
 
 - `Err(_)`を具体的なエラー型に変更
 - エラーの種類に応じた適切なHTTPステータスコードを返す
@@ -14,21 +14,21 @@
 
 ### 2. `unwrap()`の削除
 
-**ファイル**: `crates/flm-proxy/src/controller.rs`
+**ファイル**: `crates/services/flm-proxy/src/controller.rs`
 
 - `Event::default().json_data(data).unwrap()`を`match`式に変更
 - シリアライゼーションエラーを適切に処理
 
 ### 3. ストリーム終了処理の改善
 
-**ファイル**: `crates/flm-proxy/src/controller.rs`
+**ファイル**: `crates/services/flm-proxy/src/controller.rs`
 
 - `is_done`チェックを早期に実行
 - `[DONE]`マーカーの送信タイミングを改善
 
 ### 4. 使用統計の処理改善
 
-**ファイル**: `crates/flm-proxy/src/controller.rs`
+**ファイル**: `crates/services/flm-proxy/src/controller.rs`
 
 - `chunk.usage`が`Option<UsageStats>`なので、存在する場合のみレスポンスに含める
 - 使用統計の形式をOpenAI互換に統一

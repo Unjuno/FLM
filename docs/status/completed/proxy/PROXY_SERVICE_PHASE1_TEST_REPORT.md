@@ -6,7 +6,7 @@
 
 ### ✅ ProxyRepository テスト（flm-cli）
 
-**テストファイル**: `crates/flm-cli/tests/proxy_repository_test.rs`
+**テストファイル**: `crates/apps/flm-cli/tests/proxy_repository_test.rs`
 
 **実行結果**: ✅ 6 passed, 0 failed
 
@@ -26,7 +26,7 @@
 
 ### ✅ ProxyService テスト（flm-core）
 
-**テストファイル**: `crates/flm-core/tests/proxy_service_test.rs`
+**テストファイル**: `crates/core/flm-core/tests/proxy_service_test.rs`
 
 **実行結果**: ✅ 7 passed, 0 failed
 

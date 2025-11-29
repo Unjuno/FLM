@@ -72,7 +72,7 @@
 
 **参考ドキュメント**:
 - `docs/specs/ENGINE_DETECT.md` - エンジン検出仕様
-- `crates/flm-engine-ollama/src/lib.rs` - 実装例
+- `crates/engines/flm-engine-ollama/src/lib.rs` - 実装例
 
 ### 3. 機能改善（低優先度）
 

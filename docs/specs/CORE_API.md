@@ -213,6 +213,8 @@ pub struct ProxyEgressConfig {
 #[derive(Clone, Debug)]
 pub enum AcmeChallengeKind {
     Http01,
+    /// Phase 2 Deferred: DNS-01 自動化 epic (`docs/planning/PLAN.md`) でのみ使用予定。
+    /// 現行リリースでは CLI/Proxy が拒否し、`ProxyError::InvalidConfig` を返す。
     Dns01,
 }
 
@@ -233,8 +235,14 @@ pub struct ProxyConfig {
     pub acme_email: Option<String>,
     pub acme_domain: Option<String>,
     pub acme_challenge: Option<AcmeChallengeKind>,
-    /// DNS-01 自動化で使用する資格情報プロフィールID（CLIが secrets store に保持）
+    /// DNS-01 自動化で使用する資格情報プロフィールID（**現在は未使用**。DNS Automation epic 復帰時に再度有効化）
     pub acme_dns_profile_id: Option<String>,
+    /// lego/manual DNS ワークフロー用のバイナリパス上書き（**現在は未使用**）
+    #[serde(default)]
+    pub acme_dns_lego_path: Option<String>,
+    /// TXT 公開後の待機秒数（**現在は未使用**）
+    #[serde(default)]
+    pub acme_dns_propagation_secs: Option<u64>,
     /// すべての外向きHTTP(S)通信（エンジン/ACME/アップストリーム）に適用するSOCKS5/Tor設定
     #[serde(default)]
     pub egress: ProxyEgressConfig,
@@ -420,8 +428,8 @@ pub enum HttpError {
 - `trusted_proxy_ips`: X-Forwarded-For ヘッダーの検証に使用する信頼できるプロキシのIPアドレスリスト。空の場合は X-Forwarded-For と X-Real-IP ヘッダーを無視し、直接接続とみなす。信頼できるプロキシからのIPのみがクライアントIP抽出に使用される。
 - `acme_email`: `HttpsAcme` モード時のみ必須。RFC5322 準拠のメールアドレス形式。
 - `acme_domain`: `HttpsAcme` モード時のみ必須。FQDN 形式（例: `example.com`）。ワイルドカードは Phase 3 以降。
-- `acme_challenge`: 省略時は `Http01`。`Dns01` を指定する場合は `acme_dns_profile_id` も必須。
-- `acme_dns_profile_id`: `Dns01` のみ必須。CLI/Tauri が OS のシークレットストアに保持している DNS プロバイダ資格情報のキー。`Http01` の場合は `None`。
+- `acme_challenge`: 省略時は `Http01`。Phase 2 では `Http01` のみサポートし、`Dns01` を指定すると `ProxyError::InvalidConfig` を返す（epic 再開時に再評価）。
+- `acme_dns_profile_id`: `Dns01` 用に予約済み。現在は CLI/Proxy がこのフィールドを設定しない。
 - `PackagedCa` モード時は `acme_email` / `acme_domain` は無視される（証明書はパッケージ同梱）。
 - `ProxyHandle.https_port`: `ProxyConfig.mode` が `LocalHttp` 以外の場合は常に `Some(port + 1)` を返し、`LocalHttp` では `None`。
 - `egress.mode`: 省略時は `Direct`。`Tor` または `CustomSocks5` を指定した場合、Proxy は outbound HTTP(S) を必ず SOCKS5 経由で送信する。

@@ -1,0 +1,17 @@
+
+    Directory: C:\Users\junny\.cargo\registry\src\index.crates.io-1949cf8c6b5b557f
+
+Mode                 LastWriteTime         Length Name
+----                 -------------         ------ ----
+d----          2025/08/26    15:07                adler2-2.0.1
+d----          2025/11/01    21:26                aead-0.5.2
+d----          2025/08/26    15:07                aes-0.8.4
+d----          2025/11/01    21:26                aes-gcm-0.10.3
+d----          2025/11/01    21:26                ahash-0.8.12
+d----          2025/11/01    21:21                aho-corasick-1.1.4
+d----          2025/11/01    21:21                alloc-no-stdlib-2.0.4
+d----          2025/11/01    21:21                alloc-stdlib-0.2.2
+d----          2025/11/21     2:47                allocator-api2-0.2.21
+d----          2025/11/08     2:10                android_system_properties-0.1.
+                                                  5
+

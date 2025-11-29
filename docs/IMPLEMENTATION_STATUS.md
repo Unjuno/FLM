@@ -45,20 +45,20 @@
 
 #### 実装済み
 
-**Domain層** (`crates/flm-core/src/domain/`):
+**Domain層** (`crates/core/flm-core/src/domain/`):
 - ✅ `chat.rs` - チャット関連のドメインモデル
 - ✅ `engine.rs` - エンジン関連のドメインモデル
 - ✅ `models.rs` - モデル関連のドメインモデル
 - ✅ `proxy.rs` - プロキシ関連のドメインモデル
 - ✅ `security.rs` - セキュリティ関連のドメインモデル
 
-**Service層** (`crates/flm-core/src/services/`):
+**Service層** (`crates/core/flm-core/src/services/`):
 - ✅ `engine.rs` - EngineService（エンジン検出、モデル一覧、チャット、埋め込み）
 - ✅ `proxy.rs` - ProxyService（プロキシ起動、停止、状態確認）
 - ✅ `security.rs` - SecurityService（APIキー管理、セキュリティポリシー）
 - ✅ `config.rs` - ConfigService（設定管理）
 
-**Port層** (`crates/flm-core/src/ports/`):
+**Port層** (`crates/core/flm-core/src/ports/`):
 - ✅ `engine.rs` - LlmEngine trait、EngineRepository trait
 - ✅ `proxy.rs` - ProxyController trait
 - ✅ `security.rs` - SecurityRepository trait
@@ -82,14 +82,14 @@
 
 #### 実装済み
 
-**コマンド** (`crates/flm-cli/src/commands/`):
+**コマンド** (`crates/apps/flm-cli/src/commands/`):
 - ✅ `engines.rs` - `flm engines detect` コマンド
 - ✅ `models.rs` - `flm models list` コマンド
 - ✅ `proxy.rs` - `flm proxy start/stop/status` コマンド
 - ✅ `api_keys.rs` - `flm api-keys create/list/revoke/rotate` コマンド
 - ✅ `config.rs` - `flm config get/set/list` コマンド
 
-**アダプター** (`crates/flm-cli/src/adapters/`):
+**アダプター** (`crates/apps/flm-cli/src/adapters/`):
 - ✅ `engine.rs` - EngineRepository実装
 - ✅ `proxy.rs` - ProxyController実装
 - ✅ `security.rs` - SecurityRepository実装
@@ -108,12 +108,12 @@
 
 #### 実装済み
 
-**コントローラー** (`crates/flm-proxy/src/controller.rs`):
+**コントローラー** (`crates/services/flm-proxy/src/controller.rs`):
 - ✅ AxumProxyController - ProxyController traitの実装
 - ✅ プロキシサーバーの起動・停止・状態確認
 - ✅ ルーティング設定（`/v1/models`, `/v1/chat/completions`, `/v1/embeddings`）
 
-**ミドルウェア** (`crates/flm-proxy/src/middleware.rs`):
+**ミドルウェア** (`crates/services/flm-proxy/src/middleware.rs`):
 - ✅ `auth_middleware` - Bearerトークン認証
 - ✅ `policy_middleware` - IPホワイトリスト、CORS、レート制限
 - ✅ `rate_limit_middleware` - APIキーベースのレート制限
@@ -123,7 +123,7 @@
 - ✅ `intrusion_detection_middleware` - 侵入検知ミドルウェア（Phase 1完了）
 - ✅ `ip_blocklist_middleware` - IPブロックリストチェック（Phase 1完了）
 
-**ハンドラー** (`crates/flm-proxy/src/controller.rs`):
+**ハンドラー** (`crates/services/flm-proxy/src/controller.rs`):
 - ✅ `handle_health` - ヘルスチェックエンドポイント
 - ✅ `handle_models` - `/v1/models` エンドポイント
 - ✅ `handle_chat_completions` - `/v1/chat/completions` エンドポイント（同期・ストリーミング）
@@ -131,7 +131,7 @@
 
 #### セキュリティ機能（ボットネット対策）
 
-**Phase 1: 完了 ✅** (`crates/flm-proxy/src/security/`):
+**Phase 1: 完了 ✅** (`crates/services/flm-proxy/src/security/`):
 - ✅ **IPブロックリスト** (`ip_blocklist.rs`)
   - メモリ内キャッシュ + データベース同期（5分ごと）
   - ブロックルール（5回→30分、10回→24時間、20回→永続）
@@ -167,7 +167,7 @@
 
 #### 実装済み
 
-**Ollama** (`crates/flm-engine-ollama/`):
+**Ollama** (`crates/engines/flm-engine-ollama/`):
 - ✅ `LlmEngine` trait実装
 - ✅ `health_check` - ヘルスチェック
 - ✅ `list_models` - モデル一覧取得
@@ -175,7 +175,7 @@
 - ✅ `chat_stream` - チャット（ストリーミング）
 - ✅ `embeddings` - 埋め込み
 
-**vLLM** (`crates/flm-engine-vllm/`):
+**vLLM** (`crates/engines/flm-engine-vllm/`):
 - ✅ `LlmEngine` trait実装
 - ✅ `health_check` - ヘルスチェック
 - ✅ `list_models` - モデル一覧取得
@@ -183,7 +183,7 @@
 - ✅ `chat_stream` - チャット（ストリーミング）
 - ✅ `embeddings` - 埋め込み
 
-**LM Studio** (`crates/flm-engine-lmstudio/`):
+**LM Studio** (`crates/engines/flm-engine-lmstudio/`):
 - ✅ `LlmEngine` trait実装
 - ✅ `health_check` - ヘルスチェック
 - ✅ `list_models` - モデル一覧取得
@@ -191,7 +191,7 @@
 - ✅ `chat_stream` - チャット（ストリーミング）
 - ✅ `embeddings` - 埋め込み
 
-**llama.cpp** (`crates/flm-engine-llamacpp/`):
+**llama.cpp** (`crates/engines/flm-engine-llamacpp/`):
 - ✅ `LlmEngine` trait実装
 - ✅ `health_check` - ヘルスチェック
 - ✅ `list_models` - モデル一覧取得

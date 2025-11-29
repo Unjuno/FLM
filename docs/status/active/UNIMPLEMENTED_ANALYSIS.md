@@ -10,7 +10,7 @@
 
 ### 1.1 HTTPストリーミング実装
 
-**ファイル**: `crates/flm-proxy/src/http_client.rs:85-134`
+**ファイル**: `crates/services/flm-proxy/src/http_client.rs:85-134`
 
 **状態**: ✅ 実装済み  
 **実装内容**: `ReqwestHttpClient::stream()` メソッドで `reqwest::Response::bytes_stream()` を使用してストリーミングを実装。  
@@ -21,7 +21,7 @@
 
 ### 1.2 リソース保護（CPU/メモリ監視）
 
-**ファイル**: `crates/flm-proxy/src/security/resource_protection.rs`
+**ファイル**: `crates/services/flm-proxy/src/security/resource_protection.rs`
 
 **状態**: ✅ 実装済み  
 **実装内容**: `sysinfo` クレートを使用してCPU/メモリ使用率を監視。`get_cpu_usage()` と `get_memory_usage()` で実際のシステムリソースを取得し、閾値を超えた場合に `should_throttle()` が `true` を返す。  
@@ -32,9 +32,9 @@
 
 ### 1.3 ポート可用性チェック
 
-**ファイル**: `crates/flm-core/src/services/proxy.rs`
+**ファイル**: `crates/core/flm-core/src/services/proxy.rs`
 
-```70:101:crates/flm-core/src/services/proxy.rs
+```70:101:crates/core/flm-core/src/services/proxy.rs
         Self::ensure_port_available(&config.listen_addr, config.port)?;
 
         if config.mode != ProxyMode::LocalHttp {
@@ -59,9 +59,9 @@
 
 ### 1.4 テスト用Mock実装
 
-**ファイル**: `crates/flm-core/src/services/engine.rs:413`
+**ファイル**: `crates/core/flm-core/src/services/engine.rs:413`
 
-```412:414:crates/flm-core/src/services/engine.rs
+```412:414:crates/core/flm-core/src/services/engine.rs
         async fn register(&self, _engine: Arc<dyn LlmEngine>) {
             unimplemented!()
         }
@@ -85,9 +85,9 @@
 - ✅ `flm proxy start/stop/status` コマンドの統合テスト（実装済み）
 
 **現在の状態**:
-- ✅ `/v1/models` ハンドラーは実装済み（`crates/flm-proxy/src/controller.rs:579`）
-- ✅ 認証ミドルウェアは実装済み（`crates/flm-proxy/src/middleware.rs:644`）
-- ✅ 統合テストは実装済み（`crates/flm-proxy/tests/integration_test.rs` に14テスト、すべて成功）
+- ✅ `/v1/models` ハンドラーは実装済み（`crates/services/flm-proxy/src/controller.rs:579`）
+- ✅ 認証ミドルウェアは実装済み（`crates/services/flm-proxy/src/middleware.rs:644`）
+- ✅ 統合テストは実装済み（`crates/services/flm-proxy/tests/integration_test.rs` に14テスト、すべて成功）
 
 **実装日**: 2025-11-25
 
@@ -103,7 +103,7 @@
 
 #### Phase 2（高優先度）:
 - [ ] **異常検知システムの完全実装**
-  - 現在: 基本実装あり（`crates/flm-proxy/src/security/anomaly_detection.rs`）
+  - 現在: 基本実装あり（`crates/services/flm-proxy/src/security/anomaly_detection.rs`）
   - 不足: 高度なパターン検出、機械学習ベースの検出
   
 - [ ] **リソース保護の実装**
@@ -141,7 +141,7 @@
 
 **現在の状態**:
 - ✅ `ProxyMode::PackagedCa` は定義済み
-- ✅ 基本的な構造は実装済み（`crates/flm-proxy/src/controller.rs:1422`）
+- ✅ 基本的な構造は実装済み（`crates/services/flm-proxy/src/controller.rs:1422`）
 - ❌ 実際の証明書生成・管理機能は未実装
 - ❌ `rcgen` API不一致で Step1 から停滞
 
@@ -155,16 +155,16 @@
 
 **未実装項目**:
 - [x] `flm-engine-vllm` の完全実装 ✅ 実装済み
-  - 基本実装完了（`crates/flm-engine-vllm/src/lib.rs`）
-  - `crates/flm-cli/src/commands/models.rs` で登録処理も実装済み
+  - 基本実装完了（`crates/engines/flm-engine-vllm/src/lib.rs`）
+  - `crates/apps/flm-cli/src/commands/models.rs` で登録処理も実装済み
   
 - [x] `flm-engine-lmstudio` の完全実装 ✅ 実装済み
-  - 基本実装完了（`crates/flm-engine-lmstudio/src/lib.rs`）
-  - `crates/flm-cli/src/commands/models.rs` で登録処理も実装済み
+  - 基本実装完了（`crates/engines/flm-engine-lmstudio/src/lib.rs`）
+  - `crates/apps/flm-cli/src/commands/models.rs` で登録処理も実装済み
   
 - [x] `flm-engine-llamacpp` の実装 ✅ 実装済み
-  - 基本実装完了（`crates/flm-engine-llamacpp/src/lib.rs`）
-  - `crates/flm-cli/src/commands/models.rs` で登録処理も実装済み
+  - 基本実装完了（`crates/engines/flm-engine-llamacpp/src/lib.rs`）
+  - `crates/apps/flm-cli/src/commands/models.rs` で登録処理も実装済み
   
 - [x] `EngineService::list_models` の統合 ✅ 実装済み
   - 各エンジンアダプターの `list_models` が実装済み
@@ -209,12 +209,13 @@
 
 **参照**: `docs/specs/CLI_SPEC.md`
 
-**未実装項目**:
-- [ ] `flm model-profiles` コマンド
-- [ ] `flm api prompts` コマンド
-- [ ] `flm migrate legacy` コマンド
+**実装状況**:
+- [x] `flm model-profiles` コマンド ✅ 実装完了（2025-01-27）
+- [x] `flm api prompts` コマンド ✅ 実装完了（2025-01-27）
+- [x] `flm migrate legacy` コマンド（基本構造） ✅ 実装済み（CLI定義、コマンド実装、ドライラン機能）
+- [ ] `flm migrate legacy` コマンド（完全な移行ロジック） ⏳ 開発中
 
-**優先度**: 低（Post-MVP）
+**優先度**: 低（Post-MVP、ただし基本構造は実装済み）
 
 ---
 
@@ -230,7 +231,7 @@
 - [ ] 統合テスト（将来拡張）
 
 **実装内容**:
-- `crates/flm-proxy/tests/botnet_security_test.rs` に16個のテストケースを追加
+- `crates/services/flm-proxy/tests/botnet_security_test.rs` に16個のテストケースを追加
 - IPブロック機能: 初期状態、警告のみ、5回/10回/20回失敗時のブロック、解除機能のテスト
 - 侵入検知機能: SQLインジェクション、パストラバーサル、不審なUser-Agent、異常なHTTPメソッド、スコア累積、ブロック判定のテスト
 - すべてのテストが成功（`cargo test -p flm-proxy --test botnet_security_test`）
@@ -300,11 +301,11 @@
 ### 即座に対応すべき項目
 
 1. **リソース保護の実装**
-   - `crates/flm-proxy/src/security/resource_protection.rs` を修正
+   - `crates/services/flm-proxy/src/security/resource_protection.rs` を修正
    - `sysinfo` クレートを追加してCPU/メモリ監視を実装
 
 2. **Proxy統合テスト**
-   - `crates/flm-proxy/tests/` に統合テストを追加
+   - `crates/services/flm-proxy/tests/` に統合テストを追加
    - `/v1/models` と `/v1/chat/completions` のテスト
 
 3. **Botnet機能テスト**

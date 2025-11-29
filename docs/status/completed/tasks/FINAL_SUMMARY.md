@@ -69,13 +69,13 @@
 
 ### 修正したファイル
 
-1. `crates/flm-core/src/ports/engine.rs` - `EngineRepository`と`EngineProcessController`に`Send + Sync`バウンドを追加
-2. `crates/flm-proxy/src/controller.rs` - `/v1/embeddings`エンドポイントとストリーミング改善
-3. `crates/flm-proxy/src/middleware.rs` - `AppState`に`engine_service`を復元
-4. `crates/flm-proxy/src/lib.rs` - 新規作成
-5. `crates/flm-proxy/Cargo.toml` - `lib`ターゲットと`macros`フィーチャーを追加
-6. `crates/flm-engine-ollama/tests/integration_test.rs` - `embeddings`と`chat_stream`テストを追加
-7. `crates/flm-engine-vllm/tests/integration_test.rs` - `embeddings`と`chat_stream`テストを追加
+1. `crates/core/flm-core/src/ports/engine.rs` - `EngineRepository`と`EngineProcessController`に`Send + Sync`バウンドを追加
+2. `crates/services/flm-proxy/src/controller.rs` - `/v1/embeddings`エンドポイントとストリーミング改善
+3. `crates/services/flm-proxy/src/middleware.rs` - `AppState`に`engine_service`を復元
+4. `crates/services/flm-proxy/src/lib.rs` - 新規作成
+5. `crates/services/flm-proxy/Cargo.toml` - `lib`ターゲットと`macros`フィーチャーを追加
+6. `crates/engines/flm-engine-ollama/tests/integration_test.rs` - `embeddings`と`chat_stream`テストを追加
+7. `crates/engines/flm-engine-vllm/tests/integration_test.rs` - `embeddings`と`chat_stream`テストを追加
 
 ### 作成したドキュメント
 
@@ -85,7 +85,7 @@
 4. `docs/status/STEP1_VERIFICATION_COMPLETE.md`
 5. `docs/status/EMBEDDINGS_ENDPOINT_COMPLETE.md`
 6. `docs/status/STREAMING_IMPROVEMENTS_COMPLETE.md`
-7. `docs/status/ALL_TASKS_COMPLETE.md`
+7. `docs/status/ALL_TASKS_COMPLETE.md`（2025-11-26 に本サマリーへ統合済み）
 8. `docs/status/FINAL_SUMMARY.md`
 9. `docs/status/completed/tasks/CLI_COMMANDS_IMPLEMENTATION_COMPLETE.md` (2025-01-27)
 
@@ -93,9 +93,13 @@
 
 すべてのタスクが完了しました。プロジェクトは次のフェーズに進む準備ができています。
 
-## Housekeeping（2025-11-25）
+## Housekeeping（2025-11-26）
 
-- `docs/status/completed/ALL_TASKS_COMPLETE.md` と本ファイル配下の `tasks/ALL_TASKS_COMPLETE.md` が重複していたため、前者を削除し本ディレクトリ配下を正としました。
+- `docs/status/completed/tasks/ALL_TASKS_COMPLETE.md` をアーカイブし、本サマリーのみを正としました。
+
+## Housekeeping（2025-11-27）
+
+- ルート直下の`DONE.md`を`docs/status/completed/tasks/DONE.md`に移動し、簡潔な作業ログとして保持。詳細なサマリーは本ファイルを参照。
 
 ---
 
@@ -106,4 +110,4 @@
 - `docs/audit/CORE_API_AUDIT.md` - Core API監査レポート
 - `docs/specs/CORE_API.md` - Core API仕様
 
-**最終更新**: 2025-01-27
+**最終更新**: 2025-11-26

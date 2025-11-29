@@ -11,11 +11,11 @@ CLI_SPEC.mdに定義されている未実装コマンドを段階的に実装し
 ### Step 1: `flm security policy` ✅
 
 **実装内容**:
-- `crates/flm-cli/src/cli/security.rs`: CLI定義（`PolicySubcommand` enum）
-- `crates/flm-cli/src/commands/security.rs`: `execute_policy_show()` と `execute_policy_set()` を実装
-- `crates/flm-cli/src/cli/mod.rs`: `Security` コマンドを `Commands` enumに追加
-- `crates/flm-cli/src/commands/mod.rs`: `security` モジュールを追加
-- `crates/flm-cli/src/main.rs`: `Security` コマンドのハンドリングを追加
+- `crates/apps/flm-cli/src/cli/security.rs`: CLI定義（`PolicySubcommand` enum）
+- `crates/apps/flm-cli/src/commands/security.rs`: `execute_policy_show()` と `execute_policy_set()` を実装
+- `crates/apps/flm-cli/src/cli/mod.rs`: `Security` コマンドを `Commands` enumに追加
+- `crates/apps/flm-cli/src/commands/mod.rs`: `security` モジュールを追加
+- `crates/apps/flm-cli/src/main.rs`: `Security` コマンドのハンドリングを追加
 
 **機能**:
 - `flm security policy show` - セキュリティポリシー表示（JSON/text形式対応）
@@ -23,7 +23,7 @@ CLI_SPEC.mdに定義されている未実装コマンドを段階的に実装し
 - `flm security policy set --file <file>` - ファイルからポリシー設定
 
 **テスト**:
-- `crates/flm-cli/tests/security_test.rs` - 統合テスト追加
+- `crates/apps/flm-cli/tests/security_test.rs` - 統合テスト追加
   - 空ポリシーの表示
   - ポリシーの設定と取得
   - 無効なJSONの検証
@@ -32,10 +32,10 @@ CLI_SPEC.mdに定義されている未実装コマンドを段階的に実装し
 ### Step 2: `flm check` ✅
 
 **実装内容**:
-- `crates/flm-cli/src/cli/mod.rs`: `Check` コマンドを `Commands` enumに追加（`--verbose` オプション付き）
-- `crates/flm-cli/src/commands/check.rs`: データベース整合性チェック機能を実装
-- `crates/flm-cli/src/commands/mod.rs`: `check` モジュールを追加
-- `crates/flm-cli/src/main.rs`: `Check` コマンドのハンドリングを追加
+- `crates/apps/flm-cli/src/cli/mod.rs`: `Check` コマンドを `Commands` enumに追加（`--verbose` オプション付き）
+- `crates/apps/flm-cli/src/commands/check.rs`: データベース整合性チェック機能を実装
+- `crates/apps/flm-cli/src/commands/mod.rs`: `check` モジュールを追加
+- `crates/apps/flm-cli/src/main.rs`: `Check` コマンドのハンドリングを追加
 
 **機能**:
 - `flm check` - データベース整合性チェック（JSON/text形式対応）
@@ -46,7 +46,7 @@ CLI_SPEC.mdに定義されている未実装コマンドを段階的に実装し
 - `security.db`: テーブル存在確認、APIキーの整合性、SecurityPolicyのJSON妥当性
 
 **テスト**:
-- `crates/flm-cli/tests/check_test.rs` - 統合テスト追加
+- `crates/apps/flm-cli/tests/check_test.rs` - 統合テスト追加
   - 空データベースのチェック
   - データありデータベースのチェック
   - 存在しないデータベースのチェック
@@ -54,14 +54,14 @@ CLI_SPEC.mdに定義されている未実装コマンドを段階的に実装し
 ### Step 3: `flm chat` ✅
 
 **実装内容**:
-- `crates/flm-cli/src/cli/chat.rs`: `Chat` コマンド定義（`--model`, `--prompt`, `--stream` オプション）
-- `crates/flm-cli/src/commands/chat.rs`: 
+- `crates/apps/flm-cli/src/cli/chat.rs`: `Chat` コマンド定義（`--model`, `--prompt`, `--stream` オプション）
+- `crates/apps/flm-cli/src/commands/chat.rs`: 
   - `flm://{engine_id}/{model_name}` 形式のモデルIDをパース
   - `EngineService::chat()` または `EngineService::chat_stream()` を呼び出し
   - ストリーミング時はチャンクを逐次出力
-- `crates/flm-cli/src/cli/mod.rs`: `Chat` コマンドを `Commands` enumに追加
-- `crates/flm-cli/src/commands/mod.rs`: `chat` モジュールを追加
-- `crates/flm-cli/src/main.rs`: `Chat` コマンドのハンドリングを追加
+- `crates/apps/flm-cli/src/cli/mod.rs`: `Chat` コマンドを `Commands` enumに追加
+- `crates/apps/flm-cli/src/commands/mod.rs`: `chat` モジュールを追加
+- `crates/apps/flm-cli/src/main.rs`: `Chat` コマンドのハンドリングを追加
 
 **機能**:
 - `flm chat --model <model_id> --prompt <text>` - 非ストリーミングチャット
@@ -69,15 +69,15 @@ CLI_SPEC.mdに定義されている未実装コマンドを段階的に実装し
 - `--temperature`, `--max_tokens` オプション対応
 
 **テスト**:
-- `crates/flm-cli/tests/chat_test.rs` - 統合テスト追加（モックエンジン使用）
+- `crates/apps/flm-cli/tests/chat_test.rs` - 統合テスト追加（モックエンジン使用）
   - モデルIDのパース（有効/無効）
   - モックエンジンを使用したチャット機能
 
 ### Step 4: `flm security backup` ✅
 
 **実装内容**:
-- `crates/flm-cli/src/cli/security.rs`: `BackupSubcommand` enumを追加（`Create { output: Option<String> }`, `Restore { file: String }`）
-- `crates/flm-cli/src/commands/security.rs`: 
+- `crates/apps/flm-cli/src/cli/security.rs`: `BackupSubcommand` enumを追加（`Create { output: Option<String> }`, `Restore { file: String }`）
+- `crates/apps/flm-cli/src/commands/security.rs`: 
   - `execute_backup_create()`: バックアップ作成（3世代管理）
   - `execute_backup_restore()`: バックアップ復元（マイグレーション再実行）
 
@@ -91,7 +91,7 @@ CLI_SPEC.mdに定義されている未実装コマンドを段階的に実装し
   - マイグレーション再実行
 
 **テスト**:
-- `crates/flm-cli/tests/security_backup_test.rs` - 統合テスト追加
+- `crates/apps/flm-cli/tests/security_backup_test.rs` - 統合テスト追加
   - バックアップ作成
   - バックアップ復元
   - バックアップ世代管理（3世代のみ保持）
@@ -99,25 +99,25 @@ CLI_SPEC.mdに定義されている未実装コマンドを段階的に実装し
 ## 技術的詳細
 
 ### 依存関係追加
-- `crates/flm-cli/Cargo.toml`: `chrono = { version = "0.4", features = ["serde"] }` を追加
+- `crates/apps/flm-cli/Cargo.toml`: `chrono = { version = "0.4", features = ["serde"] }` を追加
 
 ### ファイル変更
 - 新規作成:
-  - `crates/flm-cli/src/cli/security.rs`
-  - `crates/flm-cli/src/cli/chat.rs`
-  - `crates/flm-cli/src/commands/security.rs`
-  - `crates/flm-cli/src/commands/check.rs`
-  - `crates/flm-cli/src/commands/chat.rs`
-  - `crates/flm-cli/tests/security_test.rs`
-  - `crates/flm-cli/tests/check_test.rs`
-  - `crates/flm-cli/tests/chat_test.rs`
-  - `crates/flm-cli/tests/security_backup_test.rs`
+  - `crates/apps/flm-cli/src/cli/security.rs`
+  - `crates/apps/flm-cli/src/cli/chat.rs`
+  - `crates/apps/flm-cli/src/commands/security.rs`
+  - `crates/apps/flm-cli/src/commands/check.rs`
+  - `crates/apps/flm-cli/src/commands/chat.rs`
+  - `crates/apps/flm-cli/tests/security_test.rs`
+  - `crates/apps/flm-cli/tests/check_test.rs`
+  - `crates/apps/flm-cli/tests/chat_test.rs`
+  - `crates/apps/flm-cli/tests/security_backup_test.rs`
 - 変更:
-  - `crates/flm-cli/src/cli/mod.rs`
-  - `crates/flm-cli/src/commands/mod.rs`
-  - `crates/flm-cli/src/main.rs`
-  - `crates/flm-cli/src/utils/mod.rs`
-  - `crates/flm-cli/Cargo.toml`
+  - `crates/apps/flm-cli/src/cli/mod.rs`
+  - `crates/apps/flm-cli/src/commands/mod.rs`
+  - `crates/apps/flm-cli/src/main.rs`
+  - `crates/apps/flm-cli/src/utils/mod.rs`
+  - `crates/apps/flm-cli/Cargo.toml`
 
 ## 実装原則の遵守
 

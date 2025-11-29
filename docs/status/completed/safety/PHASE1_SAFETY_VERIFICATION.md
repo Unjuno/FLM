@@ -18,7 +18,7 @@
   - **状態**: コード自体には問題なし（以前のテストでパス済み）
 
 #### 🟢 低リスク（監視継続）
-- **フォーマット違反**: `crates/flm-cli/tests/cli_test.rs`のtrailing whitespace（20行）
+- **フォーマット違反**: `crates/apps/flm-cli/tests/cli_test.rs`のtrailing whitespace（20行）
   - **状態**: ✅ 修正済み（`cargo fmt`で自動修正）
 
 ### 1.2 実施した緩和策
@@ -34,7 +34,7 @@
 
 #### フォーマット（`cargo fmt`）
 - **状態**: ✅ 実行完了
-- **変更**: `crates/flm-cli/tests/cli_test.rs`のtrailing whitespace 20行を自動修正
+- **変更**: `crates/apps/flm-cli/tests/cli_test.rs`のtrailing whitespace 20行を自動修正
 - **影響**: 軽微（スペース削除のみ）
 
 #### リンター/テスト（`cargo clippy/test`）
@@ -117,7 +117,7 @@
 ## 6. Git状態
 
 ### 変更済みファイル
-- `crates/flm-cli/tests/cli_test.rs` (20行の空白修正)
+- `crates/apps/flm-cli/tests/cli_test.rs` (20行の空白修正)
 
 ### 新規ファイル
 - `docs/status/PHASE1_SAFETY_VERIFICATION.md` (本レポート)

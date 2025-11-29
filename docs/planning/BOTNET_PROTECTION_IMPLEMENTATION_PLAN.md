@@ -63,9 +63,9 @@ struct BlocklistEntry {
 
 #### 実装ファイル
 
-- `crates/flm-proxy/src/middleware.rs` - IPブロックチェック
-- `crates/flm-proxy/src/security/ip_blocklist.rs` - ブロックリスト管理（新規）
-- `crates/flm-core/src/domain/security.rs` - ドメインモデル拡張
+- `crates/services/flm-proxy/src/middleware.rs` - IPブロックチェック
+- `crates/services/flm-proxy/src/security/ip_blocklist.rs` - ブロックリスト管理（新規）
+- `crates/core/flm-core/src/domain/security.rs` - ドメインモデル拡張
 
 #### データベーススキーマ
 
@@ -140,8 +140,8 @@ struct IntrusionScore {
 
 #### 実装ファイル
 
-- `crates/flm-proxy/src/security/intrusion_detection.rs` - 侵入検知ロジック（新規）
-- `crates/flm-proxy/src/middleware.rs` - ミドルウェア統合
+- `crates/services/flm-proxy/src/security/intrusion_detection.rs` - 侵入検知ロジック（新規）
+- `crates/services/flm-proxy/src/middleware.rs` - ミドルウェア統合
 
 #### データベーススキーマ
 
@@ -191,8 +191,8 @@ ON intrusion_attempts(ip, created_at);
 
 #### 実装ファイル
 
-- `crates/flm-proxy/src/security/anomaly_detection.rs` - 異常検知ロジック（新規）
-- `crates/flm-proxy/src/middleware.rs` - ミドルウェア統合
+- `crates/services/flm-proxy/src/security/anomaly_detection.rs` - 異常検知ロジック（新規）
+- `crates/services/flm-proxy/src/middleware.rs` - ミドルウェア統合
 
 #### データベーススキーマ
 
@@ -231,8 +231,8 @@ CPU/メモリの異常使用を検出し、サービス停止を防止
 
 #### 実装ファイル
 
-- `crates/flm-proxy/src/security/resource_protection.rs` - リソース監視（新規）
-- `crates/flm-proxy/src/middleware.rs` - ミドルウェア統合
+- `crates/services/flm-proxy/src/security/resource_protection.rs` - リソース監視（新規）
+- `crates/services/flm-proxy/src/middleware.rs` - ミドルウェア統合
 
 #### データベーススキーマ
 
@@ -284,8 +284,8 @@ ON resource_alerts(created_at);
 
 #### 実装ファイル
 
-- `crates/flm-proxy/src/security/audit_logger.rs` - 監査ログ記録（新規）
-- `crates/flm-core/src/domain/security.rs` - ドメインモデル
+- `crates/services/flm-proxy/src/security/audit_logger.rs` - 監査ログ記録（新規）
+- `crates/core/flm-core/src/domain/security.rs` - ドメインモデル
 
 #### データベーススキーマ
 
@@ -323,7 +323,7 @@ ON audit_logs(severity, created_at);
 
 #### 実装ファイル
 
-- `crates/flm-proxy/src/middleware.rs` - レート制限拡張
+- `crates/services/flm-proxy/src/middleware.rs` - レート制限拡張
 
 ### 2.7 ハニーポットエンドポイント ⚠️ 推奨
 
@@ -344,7 +344,7 @@ ON audit_logs(severity, created_at);
 
 #### 実装ファイル
 
-- `crates/flm-proxy/src/controller.rs` - ハニーポットエンドポイント追加
+- `crates/services/flm-proxy/src/controller.rs` - ハニーポットエンドポイント追加
 
 ## 3. 実装順序と優先順位
 
@@ -398,7 +398,7 @@ ON audit_logs(severity, created_at);
 
 ### 4.1 マイグレーションファイル
 
-`crates/flm-core/migrations/20250127000001_add_botnet_protection.sql`
+`crates/core/flm-core/migrations/20250127000001_add_botnet_protection.sql`
 
 ```sql
 -- IPブロックリスト
@@ -526,7 +526,7 @@ flm security stats                      # セキュリティイベントの統�
 ### 6.1 ディレクトリ構造
 
 ```
-crates/flm-proxy/src/
+crates/services/flm-proxy/src/
 ├── security/
 │   ├── mod.rs
 │   ├── ip_blocklist.rs          # IPブロックリスト管理

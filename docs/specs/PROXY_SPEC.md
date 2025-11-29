@@ -47,20 +47,25 @@ flowchart LR
 | Path                     | ハンドラ概要                                                     |
 |-------------------------|------------------------------------------------------------------|
 | `POST /v1/chat/completions` | OpenAI 互換チャット。リクエストを `ChatRequest` にマッピングして `EngineService::chat/chat_stream` を呼ぶ。未対応パラメータ（例: `logit_bias`）は warning ログのみ。Phase1/2 は `model` に `flm://engine/model` 形式を必須とし、異なる形式や欠落時は 400 `invalid_model` |
+| `POST /v1/responses`    | OpenAI Responses API を `ChatRequest` + `MultimodalPayload` にマッピングし、vision/audio が有効なエンジンへ委譲。 |
+| `POST /v1/images/generations` | Vision モデルへ画像付きプロンプトを送信。`EngineCapabilities::vision_inputs` が `true` のときのみ有効。 |
+| `POST /v1/audio/transcriptions` | Audio モデルへ音声ファイルを送信し、テキスト化 (`Whisper` 等)。`EngineCapabilities::audio_inputs` 必須。 |
 | `GET /v1/models`        | `EngineService::list_models` → モデルIDを `flm://{engine_id}/{model}` 形式に正規化し OpenAI 互換 JSON へ整形 |
 | `POST /v1/embeddings`   | `EngineService::embeddings` を呼び、OpenAI 互換で返却           |
 | `POST /engine/:id/*`    | エンジン固有エンドポイントへのパススルー（ヘッダ制限付き）      |
 
 ### `/v1/chat/completions`
 
-* リクエスト変換: OpenAI JSON → `ChatRequest`
+* リクエスト変換: OpenAI JSON → `ChatRequest` + `MultimodalPayload`
 * Phase1/2 は `model` に `flm://{engine_id}/{model}` 形式を必須とする。欠落または異なる形式の場合は 400 `invalid_model`
 * モデル名が `flm://` 形式の場合のみ internal `ChatRequest.model_id` / `engine_id` に分解
 * ストリーミング: `stream: true` の場合は `EngineService::chat_stream` を呼び、SSEとして返却
+* `messages[].content` は OpenAI v2 形式を採用し、`string` / `[{type:"text","text":"..."}, {"type":"input_image","image_url":{...}}, {"type":"input_audio","audio_url":{...}}]` の両方を許可。画像/音声は Proxy が `MultimodalPayload` に抽出し、残りはテキストに連結する。
 * fallback ルール:
   - 温度指定 (`temperature`) が対象エンジンで未サポート → 設定を無視し warning を `stderr` ログ
   - `n > 1` は vLLM のみサポート。その他では `n=1` に強制
   - `response_format` 等が未知の場合は 400 (unsupported_parameter)
+  - Vision/Audio 未対応エンジンに `input_image` / `input_audio` が含まれる場合は 422 `unsupported_modalities`
 
 ```rust
 async fn chat_stream_handler(...) -> impl IntoResponse {
@@ -75,6 +80,42 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
     Sse::new(sse)
 }
 ```
+
+### `/v1/responses`
+
+- OpenAI Responses API と完全互換の JSON 契約を採用する（`input`, `response_format`, `modalities`, `metadata` など）。
+- `input` 配列は `[{ "role": "user", "content": [...]}, ...]` と `chat.completions` と同じ構造を共有し、Proxy 側では同一の `MultimodalPayload` 正規化ロジックを利用する。
+- `modalities` は `["text"]` または `["text","audio"]` のみ許可。`audio` が含まれる場合は `EngineCapabilities.audio_outputs = true` を満たすエンジンに限定し、未対応なら 422 `unsupported_modalities`。
+- レスポンスは `{"object":"response","id":"resp-...","output":[{"type":"message","message":{...}}, {"type":"output_audio","audio":{"id":"aud-...","format":"wav","data":"base64..."}}]}` の OpenAI 形式。
+
+### `/v1/images/generations`
+
+- 入力: `{"model":"flm://engine/model","prompt":"caption","image":[{"type":"input_image","image_url":{"url":"data:image/png;base64,...","detail":"high"}}],"n":1,"size":"1024x1024"}`。
+- `image` 配列内の要素は `/v1/chat/completions` と同じルール（Base64 データURI または HTTPS URL、最大 8MB）。HTTP/HTTPS URL の場合は Proxy がフェッチし、`MultimodalPayload::VisionInput` に格納する。
+- Vision未対応 (`EngineCapabilities.vision_inputs=false`) の場合は 422 `unsupported_modalities`。
+- 出力: `{"created":<unix>,"data":[{"b64_json":"...","revised_prompt":null}]}`。LM Studio/Ollama がテキスト応答のみ返す場合は `b64_json` に空を入れず、HTTP 501 `not_implemented` を返す。
+
+### `/v1/audio/transcriptions`
+
+- リクエストは `multipart/form-data`。必須フィールド: `file` (音声), `model`。オプション: `language`, `temperature`, `prompt`.
+- Proxy はファイルをメモリにストリーミングし、25MB か 10 分の長さを超えたら 413 `payload_too_large` を返す。対応フォーマット: WAV/MP3/FLAC/OGG/M4A。
+- Audio未対応 (`EngineCapabilities.audio_inputs=false`) の場合は 422 `unsupported_modalities`。成功時は `{"text":"..."}` を返し、追加情報（segments など）はエンジンが提供した場合のみ `json` フィールドに含める。
+
+### `/v1/audio/speech` (予約)
+
+- Phase2 ではルータに登録するが Feature flag で無効化。`EngineCapabilities.audio_outputs=true` のエンジンが登録されるまで 404 `route_disabled` を返す。
+- 仕様は OpenAI の Text-to-Speech に追従し、`input`（テキスト）、`voice`, `format` を受け取る。音声生成が必要になった時点で本節を Canonical 化する。
+
+### 3.1 ペイロード上限
+
+| モーダル | 入力種別 | Proxy 上限 | 理由 |
+|----------|----------|------------|------|
+| Vision   | Base64 画像 (`input_image`) | 8 MB / 枚 | LM Studio API が 4 MB 制限のため、Proxy で 8 MB を上限として早期拒否。 |
+| Vision   | HTTP/HTTPS `image_url` フェッチ | 10 MB / 枚 | 外部フェッチ時の DoS を避ける。 |
+| Audio    | `multipart/form-data` `file` | 25 MB または 10 分 | Whisper / Ollama API の既定制限に合わせ、Proxy 側で検証。 |
+| Responses Audio 出力 | `audio.format` | 5 MB | SSE/JSON に Base64 埋め込み時のサイズ増加を考慮。 |
+
+※ 上限を超えた場合は 413 `payload_too_large`。画像フォーマットは PNG/JPEG/WebP、音声は WAV/MP3/FLAC/OGG/M4A のみ許可。
 
 ### `/engine/:engine_id/*`
 
@@ -134,31 +175,50 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 - `https-acme`: ACME 証明書は `security.db` にパスと更新日時を保存。タイムアウト・リトライ戦略は後述。
 - `packaged-ca`: ルートCA証明書はビルド時に生成し、インストーラに同梱。サーバー証明書は起動時に自動生成（ルートCAで署名）。インストール時にOS信頼ストアへ自動登録。
 
-* 設定は `ProxyConfig` に集約 (`core` 側で管理)
+- 設定は `ProxyConfig` に集約 (`core` 側で管理)
   - `listen_addr`: バインドするIPアドレス（デフォルト: "127.0.0.1"）。外部アクセスが必要な場合のみ "0.0.0.0" を使用
   - `trusted_proxy_ips`: X-Forwarded-For ヘッダーの検証に使用する信頼できるプロキシのIPアドレスリスト。空の場合は直接接続とみなす
+  - `acme_dns_lego_path`: **Phase 2 deferred**。DNS-01 自動化（`docs/planning/PLAN.md` の DNS Automation epic を参照）が復活するまで未使用。
+  - `acme_dns_propagation_secs`: **Phase 2 deferred**。TXT 伝播待機時間フィールド。現在は CLI/Proxy で解釈されない。
 * ACME 証明書は `security.db` にパスと更新日時を保存
 * `packaged-ca` モードのルートCA証明書はビルド時に生成し、インストーラに同梱。サーバー証明書は起動時に自動生成（ルートCAで署名）
 
 ### 6.3 ACME チャレンジ詳細
 
-`ProxyConfig` の `acme_challenge` / `acme_dns_profile_id` フィールドは `docs/specs/CORE_API.md` で定義された通りに解釈する。Proxy 実装では以下の要件を満たす:
+`ProxyConfig` の `acme_challenge` / `acme_dns_profile_id` フィールドは `docs/specs/CORE_API.md` で定義された通りに解釈する。Phase 2 現時点では DNS-01 自動化が延期されているため、実装は `Http01` のみを受け付け、`Dns01` を指定した場合は即座に `ProxyError::InvalidConfig` を返す（DNS epic 再開時に再評価）。
 
 | モード | 必須フィールド | 追加要件 |
 |--------|---------------|----------|
 | `Http01` (既定) | `acme_domain`, `acme_email` | `port` を HTTP、`port+1` を HTTPS に使用し、HTTP 側に `/.well-known/acme-challenge/*` エンドポイントを一時的に追加する。 |
-| `Dns01` | `acme_domain`, `acme_email`, `acme_dns_profile_id` | DNS プロバイダ資格情報は CLI/Tauri Wizard が OS キーチェーンに保存し、ProxyService は CLI 経由でトークンを受け取る。TXT レコード `_acme-challenge.{domain}` を生成し、検証後に削除する。 |
+| `Dns01` (Deferred) | _N/A_ | DNS-01 自動化は Phase 2 時点では無効化されている。CLI/Proxy は `dns-01` を拒否し、`docs/planning/PLAN.md` の DNS Automation epic が完了するまで再利用不可。 |
 
+- 実装メモ: HTTP-01 チャレンジは `rustls-acme` ベースの `start_https_acme_server` で提供し、`FLM_ACME_USE_PROD=true` または `FLM_ACME_DIRECTORY=<URL>` を設定することで staging ↔ production のディレクトリを切り替えられる。
+- DNS-01 連携（lego/manual DNS provider 等）は撤回済み。将来再導入する場合は `docs/planning/PLAN.md` の epic を参照し、新たな ACME クライアント選定/実装方針を適用する。
 - ACME 取得/更新のデフォルトタイムアウトは 90 秒。2 回連続で失敗した場合は `ProxyError::AcmeError` を CLI へ返す。
-- **ACME失敗時のフォールバック**: タイムアウトまたはエラーが発生した場合、CLI/UI は以下の順序でフォールバックを試行する:
-  1. 既存の証明書が有効期限内なら再利用（`security.db` の `certificates` テーブルを確認）
-  2. 再利用不可の場合は `dev-selfsigned` モードへの切り替えを提案（手動証明書インストールが必要）
+- **ACME失敗時のフォールバック**: タイムアウトまたはエラーが発生した場合、CLI/UI は以下の順序でフォールバックを必ず実施する:
+  1. 既存の証明書が有効期限内なら再利用（`security.db` の `certificates` テーブルを確認し、自動で `https-acme` を継続）
+  2. 再利用不可の場合は `dev-selfsigned` モードへの自動切り替えを試行し、必要に応じてユーザーへルート証明書手動インストール手順を提示する
+  3. それでも失敗した場合は `ProxyError::AcmeError` を返却し、GUI/CLI で手動対応を案内する
   3. ユーザーが拒否した場合は `local-http` モードで起動し、HTTPS なしで運用可能にする
 - CLI オプション `--challenge http-01|dns-01` と `--dns-profile <id>` は `ProxyConfig` に直結する。UI Setup Wizard でも同じフィールドを表示する。
 - HTTP-01 の場合、80/tcp が使用できない環境では CLI が自動的にポートフォワード（`netsh interface portproxy` / `iptables`）を設定し、終了時に戻す。DNS-01 はフォワード不要。
 - どちらのチャレンジでも証明書/秘密鍵は `security.db` にメタデータを保存し、実体ファイルは OS ごとの安全なパス（`%ProgramData%\flm\certs` 等）に配置する。
 
-### 6.4 HTTPポートの扱いとセキュリティ
+### 6.4 ワイルドカード証明書対応
+
+**ワイルドカード証明書**:
+- `acme_domain` にワイルドカード形式（`*.example.com`）を指定可能
+- ワイルドカード証明書はDNS-01チャレンジ必須（HTTP-01では発行不可）
+- DNS-01機能が有効な場合のみ利用可能（`dns01-preview` フィーチャーフラグが必要）
+- 証明書のSAN（Subject Alternative Names）に複数サブドメインを追加可能
+- 例: `*.example.com` で `api.example.com`, `app.example.com` などすべてのサブドメインをカバー
+
+**制限事項**:
+- DNS-01自動化が無効な場合、ワイルドカード証明書は利用不可
+- ワイルドカード指定時は `--challenge dns-01` が自動的に選択される
+- `--dns-profile` の指定が必須
+
+### 6.5 HTTPポートの扱いとセキュリティ
 
 **https-acme モード**:
 - HTTPポート（`port`）は、ACME HTTP-01チャレンジ用の `/.well-known/acme-challenge/*` エンドポイントのみを処理
@@ -185,6 +245,10 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 * すべてのリクエストに `request_id` を付与
 * ログ項目: timestamp, request_id, client_ip, api_key_id, endpoint, engine_id, latency_ms, status, error_type
 * SSE ストリーム中のエラーは `data: {"error": ...}` として送出し、最後に `done` イベントで終了
+* 追加エラーコード:
+  - `unsupported_modalities`: リクエストが要求するモーダルをエンジンが公開していない場合。HTTP 422。
+  - `route_disabled`: `/v1/audio/speech` など Feature flag で無効化中。HTTP 404。
+  - `payload_too_large`: Vision / Audio の入力が上限を超えた場合。HTTP 413。
 
 ## 8. Fallback ルール（暫定）
 
@@ -332,10 +396,64 @@ Proxy / UI / CLI は `SecurityPolicy.policy_json` に以下のキーが存在す
 - DNS リーク防止のため、Tor/CustomSocks5 経由の HTTP クライアントは `socks5h` スキーム（ホスト名解決を SOCKS5 サーバー側で実施）を必須とする。
 - 監査ログ (`audit_logs`) には Tor 断絶時に `tor_unreachable`、fail-open フォールバック時に `egress_fail_open_triggered` イベントを記録する。
 
-## 12. 未決事項
+## 12. 設定ホットリロード
+
+### 12.1 概要
+
+Proxy設定ホットリロード機能により、プロキシサーバーを再起動することなく、特定の設定変更を実行中のプロキシに反映できます。
+
+### 12.2 ホットリロード対象設定
+
+以下の設定はホットリロード可能です：
+
+- **SecurityPolicy**: IPホワイトリスト、CORS設定、レート制限設定
+- **証明書**: ACME証明書の更新（自動更新時）
+- **レート制限**: APIキーごとのレート制限設定
+
+以下の設定はホットリロード不可で、再起動が必要です：
+
+- **プロキシモード**: `local-http`, `dev-selfsigned`, `https-acme`, `packaged-ca` の変更
+- **ポート番号**: リスニングポートの変更
+- **バインドアドレス**: リスニングアドレスの変更
+
+### 12.3 実装方式
+
+#### 12.3.1 設定変更検知
+
+- **データベースポーリング**: `security.db` の `security_policies` テーブルを定期的にポーリング（デフォルト: 30秒間隔）
+- **ファイル監視**: 設定ファイルが存在する場合、ファイル変更を監視（将来実装予定）
+
+#### 12.3.2 設定再読み込み
+
+- `ProxyService::reload_config(handle_id)` メソッドを呼び出し
+- 実行中プロキシのミドルウェアを動的に更新
+- エラーハンドリング: 設定変更失敗時はロールバック（前の設定を維持）
+
+### 12.4 CLIコマンド
+
+```bash
+# プロキシ設定の再読み込み
+flm proxy reload --port <port>
+
+# すべての実行中プロキシの設定を再読み込み
+flm proxy reload --all
+```
+
+### 12.5 UI統合
+
+- Dashboard または API Setup ページに「再読み込み」ボタンを追加
+- 設定変更後の自動再読み込み（オプション）
+- 再読み込み状態の表示（成功/失敗）
+
+### 12.6 エラーハンドリング
+
+- 設定変更失敗時: ロールバック（前の設定を維持）、エラーメッセージを表示
+- 設定検証失敗時: 変更を拒否、エラーメッセージを表示
+- プロキシが実行中でない場合: エラーメッセージを表示
+
+## 13. 未決事項
 
 - `/v1/audio/*` 等の将来 API は `EngineCapabilities` を確認して動的にサポート
-- ProxyService でのホットリロード（設定変更を再起動無しで反映するか）
 
 ---
 
@@ -351,5 +469,7 @@ Proxy / UI / CLI は `SecurityPolicy.policy_json` に以下のキーが存在す
 
 | バージョン | 日付 | 変更概要 |
 |-----------|------|----------|
+| `1.3.0` | 2025-02-01 | ワイルドカード証明書対応の仕様を追加（セクション6.4）。DNS-01必須。 |
+| `1.2.0` | 2025-02-01 | 設定ホットリロード機能の仕様を追加（セクション12）。 |
 | `1.1.0` | 2025-11-25 | TLS/`packaged-ca` モードのドラフト要件と ACME フォールバック手順を追加。 |
 | `1.0.0` | 2025-11-20 | 初版公開。ルーティング / ミドルウェア / セキュリティポリシー連携を定義。 |

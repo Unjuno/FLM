@@ -9,8 +9,8 @@ Phase 2のセキュリティ機能（異常検知、リソース保護、IPベ�
 ### 1. 異常検知システム（簡易版） ✅
 
 #### 実装ファイル
-- `crates/flm-proxy/src/security/anomaly_detection.rs` - 異常検知ロジック
-- `crates/flm-proxy/src/middleware.rs` - 異常検知ミドルウェア
+- `crates/services/flm-proxy/src/security/anomaly_detection.rs` - 異常検知ロジック
+- `crates/services/flm-proxy/src/middleware.rs` - 異常検知ミドルウェア
 
 #### 実装内容
 
@@ -58,8 +58,8 @@ Phase 2のセキュリティ機能（異常検知、リソース保護、IPベ�
 ### 2. リソース保護 ✅
 
 #### 実装ファイル
-- `crates/flm-proxy/src/security/resource_protection.rs` - リソース監視
-- `crates/flm-proxy/src/middleware.rs` - リソース保護ミドルウェア
+- `crates/services/flm-proxy/src/security/resource_protection.rs` - リソース監視
+- `crates/services/flm-proxy/src/middleware.rs` - リソース保護ミドルウェア
 
 #### 実装内容
 
@@ -100,7 +100,7 @@ Phase 2のセキュリティ機能（異常検知、リソース保護、IPベ�
 ### 3. IPベースレート制限 ✅
 
 #### 実装ファイル
-- `crates/flm-proxy/src/middleware.rs` - IPベースレート制限ロジック
+- `crates/services/flm-proxy/src/middleware.rs` - IPベースレート制限ロジック
 
 #### 実装内容
 
@@ -145,14 +145,14 @@ test result: ok. 6 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out
 ## 実装ファイル一覧
 
 ### 新規作成
-- `crates/flm-proxy/src/security/anomaly_detection.rs` - 異常検知システム
-- `crates/flm-proxy/src/security/resource_protection.rs` - リソース保護
+- `crates/services/flm-proxy/src/security/anomaly_detection.rs` - 異常検知システム
+- `crates/services/flm-proxy/src/security/resource_protection.rs` - リソース保護
 
 ### 更新
-- `crates/flm-proxy/src/security/mod.rs` - モジュール公開
-- `crates/flm-proxy/src/middleware.rs` - ミドルウェア統合
-- `crates/flm-proxy/src/controller.rs` - AppState更新、ルーター設定
-- `crates/flm-proxy/tests/integration_test.rs` - 統合テスト追加
+- `crates/services/flm-proxy/src/security/mod.rs` - モジュール公開
+- `crates/services/flm-proxy/src/middleware.rs` - ミドルウェア統合
+- `crates/services/flm-proxy/src/controller.rs` - AppState更新、ルーター設定
+- `crates/services/flm-proxy/tests/integration_test.rs` - 統合テスト追加
 
 ## 次のステップ
 

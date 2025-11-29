@@ -1,6 +1,6 @@
 # Status Reports
 
-> Status: Reference | Audience: All contributors | Updated: 2025-11-25
+> Status: Reference | Audience: All contributors | Updated: 2025-11-26
 
 このディレクトリには、プロジェクトの進捗状況と完了レポートが整理されています。
 
@@ -26,11 +26,12 @@ docs/status/
 - **NEXT_STEPS.md** - 次の作業ステップと推奨事項（Ready）
 - **PHASE1_PROGRESS.md** - Phase 1実装進捗レポート（In Progress）
 - **PHASE1_NEXT_STEPS.md** - Phase 1の次のステップ（Ready for Next Implementation）
-- **PROXY_SERVICE_PHASE2_PROGRESS.md** - ProxyService Phase 2の実装進捗（In Progress）
 - **BOTNET_PROTECTION_PLAN.md** - ボットネット対策実装計画の進捗状況（Planning Complete）
-- **COMPILATION_ISSUE.md / LINT_REMEDIATION_STATUS.md** - 調査系レポート（In Progress）
+- **LINT_REMEDIATION_STATUS.md** - Clippy/format差分の対応状況（In Progress）
 - **TEST_ENVIRONMENT_SETUP.md** - テスト環境セットアップガイド（Setup Guide）
 - **TEST_ENVIRONMENT_STATUS.md** - テスト環境の状態（Environment Setup Complete）
+- **UNIMPLEMENTED_REPORT.md** - 未実装事項レポート（Reference）
+- **UNIMPLEMENTED_ANALYSIS.md** - 未実装部分のコード分析（Analysis）
 
 ## 完了済みレポート (`completed/`)
 
@@ -45,7 +46,6 @@ docs/status/
 
 ### `tasks/` - タスク完了レポート
 
-- **ALL_TASKS_COMPLETE.md** - 全タスク完了レポート（詳細は `FINAL_SUMMARY.md` を参照）
 - **FINAL_SUMMARY.md** - 最終サマリー（**推奨: 最新の完了状況を確認する際はこちらを参照**）
 - **EMBEDDINGS_ENDPOINT_COMPLETE.md** - Embeddingsエンドポイント実装完了
 - **STREAMING_IMPROVEMENTS_COMPLETE.md** - ストリーミング改善完了
@@ -79,12 +79,14 @@ docs/status/
 ### `proxy/` - ProxyServiceレポート
 
 - **PROXY_SERVICE_PHASE1_COMPLETE.md** - ProxyService Phase 1完了
+- **PROXY_SERVICE_PHASE2_COMPLETE.md** - ProxyService Phase 2完了（Axum統合と統合テスト）
 - **PROXY_SERVICE_PHASE1_TEST_REPORT.md** - ProxyService Phase 1テストレポート
 - **PROXY_SERVICE_PHASE1_TEST_SUMMARY.md** - ProxyService Phase 1テストサマリー
 - **PROXY_SERVICE_KYK.md** - ProxyService実装KYK（危険予知活動）
 
 ### `fixes/` - バグ修正レポート
 
+- **COMPILATION_ISSUE_RESOLVED.md** - Proxy Axumビルドエラー修正
 - **STATE_EXTRACTOR_FIXED.md** - State Extractor修正
 - **SYNC_ISSUE_FIXED.md** - 同期問題修正
 
@@ -123,9 +125,10 @@ docs/status/
 
 1. `active/NEXT_STEPS.md` を確認して次の作業ステップを把握
 2. `completed/tasks/FINAL_SUMMARY.md` で全体の完了状況を確認（**推奨**）
-3. 特定のフェーズの詳細は `completed/phases/PHASE*_COMPLETE.md` を参照
-4. テスト結果は `completed/tests/` を参照
-5. 安全性・監査情報は `completed/safety/` を参照
+3. `reports/README.md` で最新のテスト／ビルドログの所在を確認
+4. 特定のフェーズの詳細は `completed/phases/PHASE*_COMPLETE.md` を参照
+5. テスト結果は `completed/tests/` を参照
+6. 安全性・監査情報は `completed/safety/` を参照
 
 ## レポートの更新ルール
 
@@ -145,5 +148,5 @@ docs/status/
 
 **注意**: 完了済みレポートは参照用に保持されています。最新の情報は `active/` ディレクトリとリポジトリ直下の `reports/` を確認してください。
 
-**最終更新**: 2025-11-25
+**最終更新**: 2025-11-26
 

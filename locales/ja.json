@@ -1,0 +1,246 @@
+{
+  "common": {
+    "loading": "読み込み中...",
+    "error": "エラー",
+    "success": "成功",
+    "cancel": "キャンセル",
+    "confirm": "確認",
+    "save": "保存",
+    "delete": "削除",
+    "edit": "編集",
+    "close": "閉じる",
+    "retry": "再試行",
+    "ok": "OK",
+    "yes": "はい",
+    "no": "いいえ"
+  },
+  "confirmDialog": {
+    "title": "確認",
+    "deleteApiKey": {
+      "title": "アクセスキーを削除しますか？",
+      "message": "この操作は取り消せません。削除したアクセスキーは使用できなくなります。",
+      "confirm": "削除",
+      "cancel": "キャンセル"
+    },
+    "revokeApiKey": {
+      "title": "アクセスキーを失効させますか？",
+      "message": "この操作は取り消せません。失効したアクセスキーは使用できなくなります。",
+      "confirm": "失効",
+      "cancel": "キャンセル"
+    },
+    "blockIp": {
+      "title": "IPアドレスをブロックしますか？",
+      "message": "このIPアドレスからのアクセスを拒否します。後で解除できます。",
+      "confirm": "ブロック",
+      "cancel": "キャンセル"
+    },
+    "unblockIp": {
+      "title": "IPアドレスのブロックを解除しますか？",
+      "message": "このIPアドレスからのアクセスを許可します。",
+      "confirm": "解除",
+      "cancel": "キャンセル"
+    },
+    "stopServer": {
+      "title": "サーバーを停止しますか？",
+      "message": "サーバーを停止すると、AIサービスにアクセスできなくなります。",
+      "confirm": "停止",
+      "cancel": "キャンセル"
+    },
+    "deleteItem": {
+      "title": "削除しますか？",
+      "message": "この操作は取り消せません。",
+      "confirm": "削除",
+      "cancel": "キャンセル"
+    }
+  },
+  "status": {
+    "loading": "読み込み中...",
+    "saving": "保存中...",
+    "processing": "処理中...",
+    "success": "成功",
+    "error": "エラー",
+    "completed": "完了",
+    "failed": "失敗",
+    "idle": "待機中",
+    "connecting": "接続中...",
+    "connected": "接続済み",
+    "disconnected": "切断済み",
+    "starting": "起動中...",
+    "started": "起動済み",
+    "stopping": "停止中...",
+    "stopped": "停止済み",
+    "progress": "進捗: {{current}}/{{total}}",
+    "progressPercentage": "進捗: {{percentage}}%"
+  },
+  "setupWizard": {
+    "title": "セットアップウィザード",
+    "welcome": {
+      "title": "ようこそ",
+      "description": "FLMのセットアップを開始します。このウィザードでは、基本的な設定を行います。",
+      "next": "次へ"
+    },
+    "serverSetup": {
+      "title": "サーバー設定",
+      "description": "サーバーの設定を行います。サーバーを起動すると、AIサービスにアクセスできるようになります。",
+      "startServer": "サーバーを起動",
+      "serverStarted": "サーバーが起動しました",
+      "serverStartFailed": "サーバーの起動に失敗しました",
+      "next": "次へ",
+      "skip": "スキップ"
+    },
+    "securitySetup": {
+      "title": "セキュリティ設定",
+      "description": "セキュリティ設定を行います。アクセスキーの作成、許可リスト、アクセス制限を設定できます。",
+      "createApiKey": "アクセスキーを作成",
+      "configureWhitelist": "許可リストを設定",
+      "configureRateLimit": "アクセス制限を設定",
+      "next": "次へ",
+      "skip": "スキップ"
+    },
+    "complete": {
+      "title": "セットアップ完了",
+      "description": "セットアップが完了しました。ダッシュボードに移動して、AIサービスを使用できます。",
+      "goToDashboard": "ダッシュボードに移動"
+    }
+  },
+  "settings": {
+    "title": "アプリケーション設定",
+    "language": {
+      "title": "言語",
+      "label": "表示言語",
+      "hint": "アプリケーションの表示言語",
+      "japanese": "日本語",
+      "english": "English"
+    }
+  },
+  "terminology": {
+    "endpoint": "接続先URL",
+    "deploy": "公開・起動",
+    "api": "サービス",
+    "proxy": "サーバー",
+    "request": "送信",
+    "response": "応答",
+    "authentication": "ログイン・アクセス許可",
+    "whitelist": "許可リスト",
+    "blocklist": "拒否リスト",
+    "rateLimit": "アクセス制限",
+    "auditLog": "アクセス記録",
+    "intrusionDetection": "不正アクセス検出",
+    "anomalyDetection": "異常な動作の検出",
+    "apiKey": "アクセスキー",
+    "engine": "AIエンジン",
+    "model": "AIモデル"
+  },
+  "dashboard": {
+    "title": "ダッシュボード",
+    "engineStatus": "AIエンジン状態",
+    "proxyStatus": "サーバー状態",
+    "securityAlerts": "セキュリティアラート",
+    "endpointUrl": "接続先URL",
+    "apiKeyCount": "アクセスキー数",
+    "whitelist": "許可リスト",
+    "rateLimit": "アクセス制限",
+    "refresh": "更新",
+    "startServer": "サーバーを起動",
+    "stopServer": "サーバーを停止",
+    "help": {
+      "title": "ダッシュボードの使い方",
+      "description": "ダッシュボードでは、AIエンジンの状態、サーバーの状態、セキュリティアラートを確認できます。",
+      "engineStatus": "AIエンジンの状態を表示します。正常稼働、性能低下、エラーなどの状態が表示されます。",
+      "proxyStatus": "サーバーの状態を表示します。起動中、停止中、エラーなどの状態が表示されます。",
+      "securityAlerts": "セキュリティに関する重要な情報を表示します。アクセスキー数、許可リスト、アクセス制限などの設定を確認できます。"
+    }
+  },
+  "chatTester": {
+    "title": "チャットテスト",
+    "proxyEndpoint": "サーバー接続先URL",
+    "apiKey": "アクセスキー（オプション）",
+    "model": "AIモデル",
+    "send": "送信",
+    "response": "応答",
+    "help": {
+      "title": "チャットテストの使い方",
+      "description": "チャットテストでは、AIモデルにメッセージを送信して応答を確認できます。",
+      "proxyEndpoint": "サーバーの接続先URLを表示します。サーバーが起動していない場合は、ダッシュボードでサーバーを起動してください。",
+      "apiKey": "アクセスキーを入力すると、認証が必要なサービスにアクセスできます。オプションです。",
+      "model": "使用するAIモデルを選択します。",
+      "send": "メッセージを送信します。",
+      "response": "AIモデルからの応答が表示されます。"
+    }
+  },
+  "security": {
+    "title": "セキュリティ",
+    "auditLogs": "アクセス記録",
+    "intrusionDetection": "不正アクセス検出",
+    "anomalyDetection": "異常な動作の検出",
+    "ipBlocklist": "IP拒否リスト",
+    "whitelist": "許可リスト",
+    "rateLimit": "アクセス制限",
+    "help": {
+      "title": "セキュリティの使い方",
+      "description": "セキュリティ設定では、アクセス記録、不正アクセス検出、異常な動作の検出、IP拒否リスト、許可リスト、アクセス制限を管理できます。",
+      "auditLogs": "すべてのアクセス記録を表示します。誰がいつアクセスしたかを確認できます。",
+      "intrusionDetection": "不正アクセスの試みを検出して表示します。",
+      "anomalyDetection": "異常な動作パターンを検出して表示します。",
+      "ipBlocklist": "アクセスを拒否するIPアドレスのリストを管理します。",
+      "whitelist": "アクセスを許可するIPアドレスのリストを管理します。",
+      "rateLimit": "1分あたりのアクセス数を制限します。"
+    }
+  },
+  "help": {
+    "title": "ヘルプ",
+    "description": "よくある質問と回答",
+    "commonQuestions": {
+      "whatIsEndpoint": {
+        "question": "接続先URLとは何ですか？",
+        "answer": "接続先URLは、AIサービスにアクセスするためのアドレスです。通常は「http://localhost:ポート番号」の形式です。"
+      },
+      "whatIsApiKey": {
+        "question": "アクセスキーとは何ですか？",
+        "answer": "アクセスキーは、AIサービスにアクセスするための認証情報です。セキュリティのために、アクセスキーは他人に共有しないでください。"
+      },
+      "whatIsProxy": {
+        "question": "サーバーとは何ですか？",
+        "answer": "サーバーは、AIサービスへのアクセスを中継するプログラムです。サーバーを起動すると、AIサービスにアクセスできるようになります。"
+      }
+    }
+  },
+  "errors": {
+    "engineNotFound": "AIエンジンが見つかりません",
+    "engineNotFoundSolution": "AIエンジンがインストールされているか確認してください。",
+    "proxyStartFailed": "サーバーの起動に失敗しました",
+    "proxyStartFailedSolution": "サーバーのポートが既に使用されている可能性があります。別のポートを試すか、使用中のアプリケーションを終了してください。",
+    "proxyNotRunning": "サーバーが実行されていません。ダッシュボードでサーバーを起動してください。",
+    "proxyNotRunningSolution": "ダッシュボードの「サーバーを起動」ボタンをクリックしてください。",
+    "endpointNotFound": "接続先URLが取得できません",
+    "endpointNotFoundSolution": "サーバーが起動しているか確認してください。",
+    "chatRequestFailed": "チャットの送信に失敗しました",
+    "chatRequestFailedSolution": "サーバーが起動しているか、AIモデルが選択されているか確認してください。",
+    "apiKeyCreationFailed": "アクセスキーの作成に失敗しました",
+    "apiKeyCreationFailedSolution": "しばらくしてから再度お試しください。問題が続く場合は、サーバーの状態を確認してください。",
+    "apiKeyRevocationFailed": "アクセスキーの失効に失敗しました",
+    "apiKeyRevocationFailedSolution": "しばらくしてから再度お試しください。",
+    "whitelistUpdateFailed": "許可リストの更新に失敗しました",
+    "whitelistUpdateFailedSolution": "入力されたIPアドレスの形式が正しいか確認してください。",
+    "blocklistUpdateFailed": "拒否リストの更新に失敗しました",
+    "blocklistUpdateFailedSolution": "入力されたIPアドレスの形式が正しいか確認してください。",
+    "rateLimitUpdateFailed": "アクセス制限の更新に失敗しました",
+    "rateLimitUpdateFailedSolution": "数値が正しい範囲内か確認してください。",
+    "auditLogFetchFailed": "アクセス記録の取得に失敗しました",
+    "auditLogFetchFailedSolution": "サーバーが起動しているか確認してください。",
+    "intrusionDetectionFetchFailed": "不正アクセス検出の取得に失敗しました",
+    "intrusionDetectionFetchFailedSolution": "サーバーが起動しているか確認してください。",
+    "anomalyDetectionFetchFailed": "異常な動作の検出の取得に失敗しました",
+    "anomalyDetectionFetchFailedSolution": "サーバーが起動しているか確認してください。",
+    "genericError": "エラーが発生しました。しばらくしてから再度お試しください。",
+    "genericErrorSolution": "問題が続く場合は、アプリケーションを再起動してください。",
+    "networkError": "ネットワークエラーが発生しました。インターネット接続を確認してください。",
+    "networkErrorSolution": "インターネット接続を確認し、ファイアウォールの設定を確認してください。",
+    "timeoutError": "タイムアウトエラーが発生しました。しばらくしてから再度お試しください。",
+    "timeoutErrorSolution": "サーバーが応答していない可能性があります。サーバーの状態を確認してください。",
+    "retry": "再試行",
+    "learnMore": "詳細を見る",
+    "contactSupport": "サポートに問い合わせる"
+  }
+}
+

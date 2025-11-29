@@ -6,7 +6,7 @@
 
 ### 1. `EngineProcessController`トレイトに`Send + Sync`バウンドを追加
 
-**ファイル**: `crates/flm-core/src/ports/engine.rs`
+**ファイル**: `crates/core/flm-core/src/ports/engine.rs`
 
 ```rust
 // 修正前
@@ -24,14 +24,14 @@ pub trait EngineProcessController: Send + Sync {
 
 ### 2. `AppState`に`engine_service`を復元
 
-**ファイル**: `crates/flm-proxy/src/middleware.rs`
+**ファイル**: `crates/services/flm-proxy/src/middleware.rs`
 
 - `engine_service`フィールドを復元
 - `Arc<EngineService>`として保持
 
 ### 3. 認証ミドルウェアを復元
 
-**ファイル**: `crates/flm-proxy/src/controller.rs`
+**ファイル**: `crates/services/flm-proxy/src/controller.rs`
 
 - `auth_middleware`をルーターに追加
 - `from_fn_with_state`を使用

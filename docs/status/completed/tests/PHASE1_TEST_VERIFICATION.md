@@ -6,7 +6,7 @@
 
 ### ✅ 実装済みテスト
 
-#### 1. 統合テスト (`crates/flm-cli/tests/integration_test.rs`)
+#### 1. 統合テスト (`crates/apps/flm-cli/tests/integration_test.rs`)
 - ✅ `test_config_service_integration`: ConfigServiceの基本操作（set/get/list）
 - ✅ `test_security_service_integration`: SecurityServiceの基本操作（create/list/revoke）
 - ✅ `test_security_service_rotate`: APIキーローテーション機能
@@ -16,7 +16,7 @@
 - 一時的なSQLiteデータベースを使用
 - `tokio::test(flavor = "multi_thread")` で非同期テストを実行
 
-#### 2. CLIコマンドテスト (`crates/flm-cli/tests/cli_test.rs`)
+#### 2. CLIコマンドテスト (`crates/apps/flm-cli/tests/cli_test.rs`)
 - ✅ `test_config_commands`: Configコマンドの動作確認
   - `test_config_set_and_get`: set/getコマンドの動作確認
   - `test_config_list`: listコマンドの動作確認
@@ -31,7 +31,7 @@
 - 一時的なデータベースを使用
 - モックサーバーを使用（Ollama検出テスト）
 
-#### 3. 単体テスト (`crates/flm-core/tests/config_service_test.rs`)
+#### 3. 単体テスト (`crates/core/flm-core/tests/config_service_test.rs`)
 - ✅ `test_config_service_get_nonexistent`: 存在しないキーの取得
 - ✅ `test_config_service_set_and_get`: set/get操作
 - ✅ `test_config_service_list`: list操作

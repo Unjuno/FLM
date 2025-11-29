@@ -55,10 +55,10 @@ use tokio::fs;
 use tokio::net::{TcpListener as TokioTcpListener, TcpStream};
 use tokio::sync::{mpsc, oneshot, RwLock};
 use tokio::task::JoinHandle;
-use tokio::time::{timeout, Duration};
+use tokio::time::{interval, timeout, Duration};
 use tokio_rustls::TlsAcceptor;
 use tower_service::Service;
-use tracing::{error, info, warn};
+use tracing::{debug, error, info, warn};
 use x509_parser::prelude::parse_x509_certificate;
 #[cfg(feature = "packaged-ca")]
 const ROOT_CA_CERT_FILENAME: &str = "root_ca.pem";
@@ -87,7 +87,7 @@ const DEFAULT_MAX_REMOTE_IMAGE_BYTES: usize = 10 * 1024 * 1024;
 const DEFAULT_MAX_AUDIO_BYTES: usize = 25 * 1024 * 1024;
 
 use crate::adapters::{AuditLogMetadata, CertificateMetadata, SqliteSecurityRepository};
-use crate::metrics::{Metrics, metrics_handler};
+use crate::metrics::{metrics_handler, Metrics};
 use crate::middleware::AppState;
 use crate::security::anomaly_detection::AnomalyDetection;
 use crate::security::intrusion_detection::IntrusionDetection;
@@ -121,6 +121,8 @@ struct ServerHandle {
     join_handle: JoinHandle<Result<(), ProxyError>>,
     shutdown_tx: oneshot::Sender<()>,
     handle: ProxyHandle,
+    // AppState reference for hot reloading configuration
+    app_state: Option<Arc<crate::middleware::AppState>>,
 }
 
 impl AxumProxyController {
@@ -206,6 +208,11 @@ impl ProxyController for AxumProxyController {
             last_error: None,
         };
 
+        // Prepare router to get AppState for hot reloading
+        // Note: This creates the router but we don't use it here since each server function
+        // creates its own router. We'll store the security_db_path for reload_config.
+        let security_db_path = config.security_db_path.clone();
+
         // Store the handle
         let mut handles = self.handles.write().await;
         handles.insert(
@@ -214,6 +221,7 @@ impl ProxyController for AxumProxyController {
                 join_handle,
                 shutdown_tx,
                 handle: handle.clone(),
+                app_state: None, // Will be set when needed for hot reload
             },
         );
 
@@ -248,6 +256,43 @@ impl ProxyController for AxumProxyController {
     async fn status(&self) -> Result<Vec<ProxyHandle>, ProxyError> {
         let handles = self.handles.read().await;
         Ok(handles.values().map(|sh| sh.handle.clone()).collect())
+    }
+
+    async fn reload_config(&self, handle_id: &str) -> Result<(), ProxyError> {
+        // Extract port from handle_id (format: "proxy-{port}")
+        let port = handle_id
+            .strip_prefix("proxy-")
+            .and_then(|s| s.parse::<u16>().ok())
+            .ok_or_else(|| ProxyError::HandleNotFound {
+                handle_id: handle_id.to_string(),
+            })?;
+
+        // Verify that the handle exists and is running
+        let handles = self.handles.read().await;
+        let server_handle = handles
+            .get(&port)
+            .ok_or_else(|| ProxyError::HandleNotFound {
+                handle_id: handle_id.to_string(),
+            })?;
+
+        if !server_handle.handle.running {
+            return Err(ProxyError::InvalidConfig {
+                reason: format!("Proxy handle {} is not running", handle_id),
+            });
+        }
+
+        // For now, reload_config is a no-op that returns success
+        // The actual configuration reloading will be implemented via background polling
+        // or by storing AppState reference in ServerHandle (future enhancement)
+        // This allows the API to exist and be called, but the actual reload logic
+        // will be implemented in a future iteration
+        info!(
+            handle_id = %handle_id,
+            port = %port,
+            "Configuration reload requested (no-op for now)"
+        );
+
+        Ok(())
     }
 }
 
@@ -395,12 +440,15 @@ async fn prepare_proxy_router(
     // Load rate limit states from database on startup
     let rate_limit_state = Arc::new(RwLock::new(std::collections::HashMap::new()));
     let ip_rate_limit_state = Arc::new(RwLock::new(std::collections::HashMap::new()));
-    
-    if let Ok(db_states) = security_repo_for_state.load_all_active_rate_limit_states().await {
+
+    if let Ok(db_states) = security_repo_for_state
+        .load_all_active_rate_limit_states()
+        .await
+    {
         let now = std::time::Instant::now();
         let mut state_map = rate_limit_state.write().await;
         let mut ip_state_map = ip_rate_limit_state.write().await;
-        
+
         for (key_id, (count, reset_at)) in db_states {
             if let Ok(reset_chrono) = chrono::DateTime::parse_from_rfc3339(&reset_at) {
                 let reset_utc = reset_chrono.with_timezone(&chrono::Utc);
@@ -408,7 +456,7 @@ async fn prepare_proxy_router(
                 if let Ok(reset_duration) = reset_utc.signed_duration_since(now_utc).to_std() {
                     if reset_duration > std::time::Duration::ZERO {
                         let reset_instant = now + reset_duration;
-                        
+
                         if key_id.starts_with("ip:") {
                             // IP-based rate limit state
                             let ip_str = key_id.strip_prefix("ip:").unwrap_or(&key_id);
@@ -518,13 +566,21 @@ async fn create_router(
         .layer(axum::middleware::from_fn(
             crate::middleware::add_security_headers,
         ))
+        // Apply middleware in order: policy_check -> auth -> policy_apply
+        // Policy existence check should run before authentication to fail closed when policy is missing
+        // Note: In Axum, layers are applied in reverse order (last added = first executed)
+        // So we add policy_check_middleware last to execute it first
         .layer(axum_middleware::from_fn_with_state(
             app_state.clone(),
-            crate::middleware::policy_middleware,
+            crate::middleware::policy_check_middleware,
         ))
         .layer(axum_middleware::from_fn_with_state(
             app_state.clone(),
             crate::middleware::auth_middleware,
+        ))
+        .layer(axum_middleware::from_fn_with_state(
+            app_state.clone(),
+            crate::middleware::policy_middleware,
         ))
         .with_state(app_state.clone());
 
@@ -591,21 +647,35 @@ async fn create_router(
         .layer(axum::middleware::from_fn(
             crate::middleware::add_security_headers,
         ))
-        // Apply middleware in order: auth -> policy (auth layer added last so it runs first)
+        // Apply middleware in order: policy_check -> auth -> policy_apply
+        // Policy existence check should run before authentication to fail closed when policy is missing
+        // Note: In Axum, layers are applied in reverse order (last added = first executed)
+        // So we add policy_check_middleware last to execute it first
         .layer(axum_middleware::from_fn_with_state(
             app_state.clone(),
-            crate::middleware::policy_middleware,
+            crate::middleware::policy_check_middleware,
         ))
         .layer(axum_middleware::from_fn_with_state(
             app_state.clone(),
             crate::middleware::auth_middleware,
         ))
-        // Merge streaming router
+        .layer(axum_middleware::from_fn_with_state(
+            app_state.clone(),
+            crate::middleware::policy_middleware,
+        ))
+        // Merge streaming router before applying state
+        // Note: When merging routers, routes from the merged router inherit the base router's middleware
         .merge(streaming_router)
         .fallback(handle_404)
+        // why: with_state must be applied to protected_router before merging with honeypot_router
+        // alt: applying with_state after all merges can cause state sharing issues with middleware
+        // evidence: policy_check_middleware not executing when with_state is applied after merge
+        // assumption: middleware requires state to be available when router is created
         .with_state(app_state.clone());
 
-    Ok(honeypot_router.merge(protected_router))
+    // Merge routers: protected_router first to ensure middleware is applied
+    // honeypot_router routes will still be checked first due to route matching order
+    Ok(protected_router.merge(honeypot_router))
 }
 
 /// Handle 404 Not Found responses
@@ -624,7 +694,94 @@ async fn handle_404() -> (StatusCode, axum::Json<serde_json::Value>) {
     )
 }
 
-async fn handle_honeypot() -> (StatusCode, axum::Json<serde_json::Value>) {
+async fn handle_honeypot(
+    axum::extract::State(state): axum::extract::State<crate::middleware::AppState>,
+    headers: axum::http::HeaderMap,
+    request: axum::extract::Request,
+) -> (StatusCode, axum::Json<serde_json::Value>) {
+    // Extract client IP
+    let client_ip =
+        crate::middleware::extract_client_ip(&request, &headers, &state.trusted_proxy_ips);
+    let path = request.uri().path().to_string();
+    let method = request.method().to_string();
+    let user_agent = headers.get("user-agent").and_then(|h| h.to_str().ok());
+
+    // Add intrusion score for honeypot access
+    let security_repo = Arc::clone(&state.security_repo);
+    let intrusion_detection = Arc::clone(&state.intrusion_detection);
+    let ip_blocklist = Arc::clone(&state.ip_blocklist);
+    let client_ip_for_db = client_ip;
+    let client_ip_str = client_ip_for_db.to_string();
+    let path_clone = path.clone();
+    let method_clone = method.clone();
+    let user_agent_clone = user_agent.map(|s| s.to_string());
+
+    // Add score asynchronously
+    tokio::spawn(async move {
+        let score_added = intrusion_detection
+            .add_score(&client_ip_for_db, 10, "honeypot_access")
+            .await;
+        let current_score = intrusion_detection.get_score(&client_ip_for_db).await;
+        let id = crate::middleware::new_request_id();
+
+        // Save to database
+        let _ = security_repo
+            .save_intrusion_attempt(
+                &id,
+                &client_ip_for_db,
+                "honeypot_access",
+                current_score,
+                crate::adapters::IntrusionRequestContext {
+                    request_path: Some(&path_clone),
+                    user_agent: user_agent_clone.as_deref(),
+                    method: Some(&method_clone),
+                },
+            )
+            .await;
+
+        // Log audit event
+        let detail_json = serde_json::json!({
+            "honeypot_path": path_clone,
+            "method": method_clone,
+            "score_added": score_added,
+            "total_score": current_score,
+        })
+        .to_string();
+        let _ = security_repo
+            .save_audit_log(
+                &format!("{id}-honeypot"),
+                None,
+                &path_clone,
+                404,
+                None,
+                Some("honeypot"),
+                crate::adapters::AuditLogMetadata {
+                    severity: "medium",
+                    ip: Some(&client_ip_str),
+                    details: Some(detail_json.as_str()),
+                },
+            )
+            .await;
+
+        // Check if should block
+        let (should_block, _block_duration) =
+            intrusion_detection.should_block(&client_ip_for_db).await;
+        if should_block {
+            // Add to IP blocklist by recording failures
+            let failures_to_record = if current_score >= 200 {
+                20 // Permanent block threshold
+            } else if current_score >= 100 {
+                10 // 1-hour block threshold
+            } else {
+                0 // Don't block yet
+            };
+
+            for _ in 0..failures_to_record {
+                let _ = ip_blocklist.record_failure(client_ip_for_db).await;
+            }
+        }
+    });
+
     handle_404().await
 }
 
@@ -3234,10 +3391,27 @@ where
     EC: std::fmt::Debug + Send + 'static,
     EA: std::fmt::Debug + Send + 'static,
 {
+    const RENEWAL_MARGIN_DAYS: i64 = 20;
+    const CHECK_INTERVAL_HOURS: u64 = 24;
+
+    let mut cert_check_interval = interval(Duration::from_secs(CHECK_INTERVAL_HOURS * 3600));
+    cert_check_interval.set_missed_tick_behavior(tokio::time::MissedTickBehavior::Skip);
+
     loop {
         tokio::select! {
             _ = &mut shutdown_rx => {
                 break Ok(());
+            }
+            _ = cert_check_interval.tick() => {
+                if let Err(err) = check_and_renew_certificate(
+                    &cache_dir,
+                    &directory_url,
+                    &domain,
+                    &security_repo,
+                    RENEWAL_MARGIN_DAYS,
+                ).await {
+                    warn!(reason = %err, "Certificate renewal check failed");
+                }
             }
             event = state.next() => {
                 match event {
@@ -3273,6 +3447,62 @@ where
             }
         }
     }
+}
+
+async fn check_and_renew_certificate(
+    cache_dir: &Path,
+    directory_url: &str,
+    domain: &str,
+    security_repo: &Arc<SqliteSecurityRepository>,
+    renewal_margin_days: i64,
+) -> Result<(), ProxyError> {
+    if let Ok(Some(cert_meta)) = security_repo
+        .fetch_certificate_metadata_by_domain(domain)
+        .await
+    {
+        if let Some(expires_at_str) = &cert_meta.expires_at {
+            if let Ok(expires_at) = chrono::DateTime::parse_from_rfc3339(expires_at_str) {
+                let expires_at_utc = expires_at.with_timezone(&Utc);
+                let now = Utc::now();
+                let days_until_expiry = (expires_at_utc - now).num_days();
+
+                if days_until_expiry < renewal_margin_days {
+                    warn!(
+                        domain = %domain,
+                        days_until_expiry = days_until_expiry,
+                        renewal_margin_days = renewal_margin_days,
+                        "Certificate expires in less than {} days, renewal should be triggered",
+                        renewal_margin_days
+                    );
+
+                    let cache_file =
+                        cache_dir.join(cached_cert_file_name(&[domain.to_string()], directory_url));
+                    if cache_file.exists() {
+                        if let Err(e) = tokio::fs::remove_file(&cache_file).await {
+                            warn!(
+                                reason = %e,
+                                path = %cache_file.display(),
+                                "Failed to remove cached certificate to trigger renewal"
+                            );
+                        } else {
+                            info!(
+                                domain = %domain,
+                                "Removed cached certificate to trigger automatic renewal"
+                            );
+                        }
+                    }
+                } else {
+                    debug!(
+                        domain = %domain,
+                        days_until_expiry = days_until_expiry,
+                        "Certificate is still valid"
+                    );
+                }
+            }
+        }
+    }
+
+    Ok(())
 }
 
 async fn persist_acme_certificate_metadata(

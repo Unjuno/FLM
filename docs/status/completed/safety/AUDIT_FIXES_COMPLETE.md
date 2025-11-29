@@ -8,11 +8,11 @@
 ### ✅ 1. Domain層のドキュメントコメント追加
 
 **対象ファイル:**
-- `crates/flm-core/src/domain/engine.rs`
-- `crates/flm-core/src/domain/chat.rs`
-- `crates/flm-core/src/domain/proxy.rs`
-- `crates/flm-core/src/domain/security.rs`
-- `crates/flm-core/src/domain/models.rs`
+- `crates/core/flm-core/src/domain/engine.rs`
+- `crates/core/flm-core/src/domain/chat.rs`
+- `crates/core/flm-core/src/domain/proxy.rs`
+- `crates/core/flm-core/src/domain/security.rs`
+- `crates/core/flm-core/src/domain/models.rs`
 
 **修正内容:**
 - 主要なドメインモデルにドキュメントコメントを追加
@@ -26,10 +26,10 @@
 ### ✅ 2. APIキー検証のパフォーマンス改善
 
 **対象ファイル:**
-- `crates/flm-core/src/ports/security.rs`
-- `crates/flm-core/src/services/security.rs`
-- `crates/flm-cli/src/adapters/security.rs`
-- `crates/flm-core/tests/security_service_test.rs`
+- `crates/core/flm-core/src/ports/security.rs`
+- `crates/core/flm-core/src/services/security.rs`
+- `crates/apps/flm-cli/src/adapters/security.rs`
+- `crates/core/flm-core/tests/security_service_test.rs`
 
 **修正内容:**
 - `SecurityRepository`トレイトに`list_active_api_keys()`メソッドを追加（デフォルト実装あり）
@@ -44,8 +44,8 @@
 ### ✅ 3. データベースファイルの権限設定
 
 **対象ファイル:**
-- `crates/flm-cli/src/adapters/security.rs`
-- `crates/flm-cli/src/adapters/config.rs`
+- `crates/apps/flm-cli/src/adapters/security.rs`
+- `crates/apps/flm-cli/src/adapters/config.rs`
 
 **修正内容:**
 - Unix系OSでデータベースファイル作成後に`chmod 600`相当の権限を設定
@@ -59,8 +59,8 @@
 ### ✅ 4. IPホワイトリストの検証実装
 
 **対象ファイル:**
-- `crates/flm-core/src/error.rs`
-- `crates/flm-core/src/services/security.rs`
+- `crates/core/flm-core/src/error.rs`
+- `crates/core/flm-core/src/services/security.rs`
 
 **修正内容:**
 - `RepoError`に`ValidationError`バリアントを追加
@@ -80,7 +80,7 @@
 ### ✅ 5. EngineServiceのテスト追加
 
 **対象ファイル:**
-- `crates/flm-core/src/services/engine.rs`
+- `crates/core/flm-core/src/services/engine.rs`
 
 **追加テスト:**
 - `chat_returns_error_when_engine_not_found()` - 存在しないエンジンでのチャットリクエスト

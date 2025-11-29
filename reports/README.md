@@ -1,6 +1,6 @@
 # Test & Audit Reports
 
-> Status: Reference | Audience: All contributors | Updated: 2025-11-25
+> Status: Reference | Audience: All contributors | Updated: 2025-11-26
 
 ## 目的
 テスト／監査実行ログをリポジトリ直下に集約し、`docs/status` から常に最新結果へリンクできるようにします。  
@@ -20,9 +20,15 @@
 | ビルドログ | `BUILD_LOG_20251125.md` | `cargo check` 実行結果（EngineService Sync 問題の解消確認） |
 | テキストログ | `*-results*.txt`, `rust-tests-complete.txt`, `ts-test-results-complete.txt` | CLI / Rust / TS 各スイートの生ログ |
 
+**クロスリンク**
+
+- `docs/status/active/NEXT_STEPS.md` - 進行中タスクと最新ログの参照先
+- `docs/status/completed/tasks/FINAL_SUMMARY.md` - 完了済みタスクとレポートの正
+- `docs/status/completed/proxy/PROXY_SERVICE_PHASE2_COMPLETE.md` - Proxy Phase 2 でのログ反映ポイント
+
 ## 運用手順
 1. **配置**: 新しいレポートまたはログはこのディレクトリに保存し、ルート直下に置かない。
-2. **リンク更新**: `README.md`（ルート）、`docs/README.md`、`docs/status/active/NEXT_STEPS.md` など、該当ドキュメントから最新レポートへのリンクを張り替える。
+2. **リンク更新**: `README.md`（ルート）、`docs/README.md`、`docs/status/active/NEXT_STEPS.md`、`docs/status/completed/tasks/FINAL_SUMMARY.md` など、該当ドキュメントから最新レポートへのリンクを張り替える。
 3. **ステータス更新**: 実行完了後に `docs/status/active` の関連レポートを `completed/` へ移動し、今回のファイル名を明記する。
 4. **アーカイブ**: 古いログを圧縮／移動する場合は `reports/archive/` を作成して収納し、本 README にアーカイブ日を記録する。
 

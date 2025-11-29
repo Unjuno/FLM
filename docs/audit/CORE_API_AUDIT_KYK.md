@@ -5,22 +5,22 @@
 ## 1. 監査範囲の確認
 
 ### 監査対象
-- **Domain層**: `crates/flm-core/src/domain/`
+- **Domain層**: `crates/core/flm-core/src/domain/`
   - `engine.rs` - エンジン関連ドメインモデル
   - `chat.rs` - チャット関連ドメインモデル
   - `proxy.rs` - プロキシ関連ドメインモデル
   - `models.rs` - モデル関連ドメインモデル
-- **Service層**: `crates/flm-core/src/services/`
+- **Service層**: `crates/core/flm-core/src/services/`
   - `engine.rs` - EngineService
   - `proxy.rs` - ProxyService
   - `security.rs` - SecurityService
   - `config.rs` - ConfigService
-- **Port層**: `crates/flm-core/src/ports/`
+- **Port層**: `crates/core/flm-core/src/ports/`
   - `engine.rs` - LlmEngine, EngineRepository, EngineProcessController
   - `proxy.rs` - ProxyController, ProxyRepository
   - `security.rs` - SecurityRepository
   - `config.rs` - ConfigRepository
-- **Error型**: `crates/flm-core/src/error.rs`
+- **Error型**: `crates/core/flm-core/src/error.rs`
 
 ### 参照ドキュメント
 - `docs/specs/CORE_API.md` - Core API仕様

@@ -31,6 +31,18 @@
 | **llama.cpp** | HTTP サーバモードの場合 `LLAMA_CPP_PORT` を確認       | `/v1/models`（llama.cpp の OpenAI互換拡張）    | 200 + JSON                                      | `llama.cpp HTTP server が起動していません`       |
 | **その他（HTTP型）** | 設定されたホスト/ポートへの TCP 接続             | `/v1/models` or `/health`                     | HTTP 200 + JSON                                 | `エンジンAPIに接続できません`                   |
 
+### 2.1 Engine capabilities matrix
+
+| Engine      | chat / stream | embeddings | tools | moderation | **vision** | **audio** | 備考 |
+|-------------|---------------|------------|-------|------------|------------|-----------|------|
+| Ollama      | ✅ / ✅        | ✅         | ⚠️ (`function_call` 非互換) | ❌         | ✅（Gemma3, LLaVA, Llama3.2 Vision など `images` フィールドを持つモデル） | ✅（Whisper / Gemma3 Audio など API `audio` セクション対応モデル） | `EngineCapabilities::vision_inputs` / `audio_inputs` にファイル上限を格納 |
+| vLLM        | ✅ / ✅        | ✅         | ✅     | ❌         | ⛔ モデル依存（OpenAI 互換レスポンスのみ `vision_passthrough=true` で許可） | ⛔ モデル依存（`audio_passthrough=true` 時のみ Binary IF を開く） | vLLM 側で OpenAI 互換形式を返すモデルに限定。未サポート時は `UnsupportedModalities` |
+| LM Studio   | ✅ / ✅        | ⛔         | ❌     | ❌         | ✅（Vision モデルのみ。画像は Base64 で `/v1/chat/completions` へ添付） | ❌（2025-11 時点で音声APIなし） | Vision 入力サイズは 4MB まで（LM Studio API 制約）。 |
+
+- `vision` は「画像入力を `ChatRequest.multimodal` 経由で渡せるか」を意味する。画像生成専用エンドポイントは別タスク。
+- `audio` は「音声入力（transcriptions）または音声付きレスポンスを `MultimodalPayload::Audio` で扱えるか」を意味する。
+- Capability 値は `EngineRegistry` 経由で CLI/UI に伝搬し、Proxy ルータが `/v1/images/generations` / `/v1/audio/*` を有効化する際の判定に使用する。
+
 - プロセス検出できても API ping が失敗した場合は `EngineStatus::InstalledOnly` or `ErrorNetwork`
 - API ping 成功でもレスポンス形式が不正なら `EngineStatus::RunningDegraded` or `ErrorApi`
 

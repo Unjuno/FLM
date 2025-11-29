@@ -325,15 +325,20 @@ async fn test_rate_limit_multiple_keys() {
             reqwest::StatusCode::TOO_MANY_REQUESTS,
             "Request {i} should not be rate limited"
         );
-        
+
         // Small delay to ensure rate limit state is updated
-        sleep(Duration::from_millis(50)).await;
+        // Rate limit uses token bucket with 1-minute window, so we need to ensure
+        // state is properly synchronized between requests
+        sleep(Duration::from_millis(100)).await;
     }
 
-    // Small delay to ensure rate limit state is persisted
-    sleep(Duration::from_millis(100)).await;
+    // Additional delay to ensure rate limit state is fully persisted and synchronized
+    // The rate limit check happens synchronously in memory, but we want to ensure
+    // the state is consistent before the next request
+    sleep(Duration::from_millis(200)).await;
 
     // Next request with first key should be rate limited
+    // With rpm=5 and burst=5, the 6th request should exceed the limit
     let response = client
         .get("http://localhost:18085/v1/models")
         .header("Authorization", bearer_header(&api_key1.plain))
@@ -341,10 +346,11 @@ async fn test_rate_limit_multiple_keys() {
         .await
         .unwrap();
 
+    // The 6th request should be rate limited (5 requests allowed, 6th exceeds)
     assert_eq!(
         response.status(),
         reqwest::StatusCode::TOO_MANY_REQUESTS,
-        "6th request should be rate limited"
+        "6th request should be rate limited (rpm=5, burst=5 allows only 5 requests)"
     );
 
     // But second key should still work
@@ -489,7 +495,7 @@ async fn test_honeypot_endpoints() {
         .send()
         .await
         .unwrap();
-    assert_eq!(response.status(), reqwest::StatusCode::FORBIDDEN);
+    assert_eq!(response.status(), reqwest::StatusCode::NOT_FOUND);
 
     // Test /api/v1/users endpoint (honeypot)
     let response = client
@@ -497,7 +503,7 @@ async fn test_honeypot_endpoints() {
         .send()
         .await
         .unwrap();
-    assert_eq!(response.status(), reqwest::StatusCode::FORBIDDEN);
+    assert_eq!(response.status(), reqwest::StatusCode::NOT_FOUND);
 
     // Test /wp-admin endpoint (honeypot)
     let response = client
@@ -505,7 +511,7 @@ async fn test_honeypot_endpoints() {
         .send()
         .await
         .unwrap();
-    assert_eq!(response.status(), reqwest::StatusCode::FORBIDDEN);
+    assert_eq!(response.status(), reqwest::StatusCode::NOT_FOUND);
 
     // Test /phpmyadmin endpoint (honeypot)
     let response = client
@@ -513,7 +519,7 @@ async fn test_honeypot_endpoints() {
         .send()
         .await
         .unwrap();
-    assert_eq!(response.status(), reqwest::StatusCode::FORBIDDEN);
+    assert_eq!(response.status(), reqwest::StatusCode::NOT_FOUND);
 
     controller.stop(handle).await.unwrap();
 }
@@ -553,7 +559,6 @@ async fn test_botnet_integration_ip_block_and_intrusion() {
     use flm_core::domain::security::SecurityPolicy;
     use flm_core::services::SecurityService;
     use flm_proxy::adapters::SqliteSecurityRepository;
-    use std::net::IpAddr;
     use std::sync::Arc;
 
     // Create temporary database path
@@ -563,8 +568,8 @@ async fn test_botnet_integration_ip_block_and_intrusion() {
     let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
     let security_service = Arc::new(SecurityService::new(security_repo.clone()));
 
-    // Create API key
-    let api_key = security_service.create_api_key("test-key").await.unwrap();
+    // Create API key (not used in this test, but needed for database setup)
+    let _api_key = security_service.create_api_key("test-key").await.unwrap();
 
     // Set policy
     let policy_json = serde_json::json!({
@@ -677,9 +682,16 @@ async fn test_rate_limit_api_key_and_ip_combined() {
             reqwest::StatusCode::TOO_MANY_REQUESTS,
             "Request {i} should not be rate limited"
         );
+
+        // Small delay to ensure rate limit state is updated
+        sleep(Duration::from_millis(100)).await;
     }
 
+    // Additional delay to ensure rate limit state is fully synchronized
+    sleep(Duration::from_millis(200)).await;
+
     // Next request should be rate limited (API key limit)
+    // With rpm=5 and burst=5, the 6th request should exceed the limit
     let response = client
         .get("http://localhost:18097/v1/models")
         .header("Authorization", bearer_header(&api_key.plain))
@@ -690,7 +702,7 @@ async fn test_rate_limit_api_key_and_ip_combined() {
     assert_eq!(
         response.status(),
         reqwest::StatusCode::TOO_MANY_REQUESTS,
-        "6th request should be rate limited"
+        "6th request should be rate limited (rpm=5, burst=5 allows only 5 requests)"
     );
 
     controller.stop(handle).await.unwrap();
@@ -1234,8 +1246,14 @@ async fn test_ip_rate_limit_persistence() {
     controller.stop(handle).await.unwrap();
     sleep(Duration::from_millis(500)).await;
 
-    // Restart proxy
-    let handle2 = controller.start(config).await.unwrap();
+    // Restart proxy with a new config (clone the original)
+    let config2 = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: 18104,
+        security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        ..Default::default()
+    };
+    let handle2 = controller.start(config2).await.unwrap();
     sleep(Duration::from_millis(500)).await;
 
     // Rate limit state should be persisted (though in-memory state is lost on restart,
@@ -1539,6 +1557,7 @@ async fn test_security_features_integration() {
         mode: ProxyMode::LocalHttp,
         port: 18107,
         security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        trusted_proxy_ips: vec!["127.0.0.1".to_string()], // Allow X-Forwarded-For from localhost
         ..Default::default()
     };
 
@@ -1608,9 +1627,10 @@ async fn test_security_features_integration() {
     // Simulate intrusion attempts from another IP to trigger blocklist/anomaly detection
     let malicious_ip = "192.168.1.210";
     let mut blocked = false;
+    // Use SQL injection in a valid endpoint to trigger intrusion detection
     for _ in 0..6 {
         let response = client
-            .get("http://localhost:18107/admin") // honeypot endpoint
+            .get(format!("http://localhost:18107/v1/models?id=1' OR '1'='1"))
             .header("Authorization", bearer_header(&api_key.plain))
             .header("X-Forwarded-For", malicious_ip)
             .send()

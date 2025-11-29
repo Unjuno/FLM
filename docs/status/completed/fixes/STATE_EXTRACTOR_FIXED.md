@@ -16,7 +16,7 @@
 
 `EngineService`の`Sync`問題が解決されたため、`AppState`に`engine_service`を復元し、エンドポイントも復元しました。
 
-**ファイル**: `crates/flm-proxy/src/controller.rs`
+**ファイル**: `crates/services/flm-proxy/src/controller.rs`
 
 ```rust
 let router = Router::new()

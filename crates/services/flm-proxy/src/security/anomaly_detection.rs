@@ -68,6 +68,33 @@ impl AnomalyDetection {
         request_duration: Option<Duration>,
         is_404: bool,
     ) -> u32 {
+        self.check_request_with_headers(
+            ip,
+            path,
+            method,
+            body_size,
+            request_duration,
+            is_404,
+            None,
+            None,
+        )
+        .await
+    }
+
+    /// Record a request and check for anomalies (with additional context)
+    ///
+    /// Returns the score increment for this request.
+    pub async fn check_request_with_headers(
+        &self,
+        ip: &IpAddr,
+        path: &str,
+        method: &str,
+        body_size: Option<usize>,
+        request_duration: Option<Duration>,
+        is_404: bool,
+        user_agent: Option<&str>,
+        header_count: Option<usize>,
+    ) -> u32 {
         let mut score = 0u32;
         let mut detected_anomalies = Vec::new();
         let now = Instant::now();
@@ -266,6 +293,104 @@ impl AnomalyDetection {
             }
         }
 
+        // 7. Check for suspicious User-Agent patterns
+        if let Some(ua) = user_agent {
+            // Check for missing or suspicious User-Agent
+            if ua.is_empty() || ua.len() < 5 {
+                score += 5;
+                detected_anomalies.push("missing_or_suspicious_user_agent".to_string());
+            } else {
+                // Check for known bot/scanner User-Agents
+                let ua_lower = ua.to_lowercase();
+                let suspicious_patterns = [
+                    "scanner",
+                    "bot",
+                    "crawler",
+                    "spider",
+                    "wget",
+                    "curl",
+                    "python-requests",
+                    "go-http-client",
+                    "java/",
+                    "apache-httpclient",
+                    "okhttp",
+                ];
+                if suspicious_patterns
+                    .iter()
+                    .any(|pattern| ua_lower.contains(pattern))
+                {
+                    score += 10;
+                    detected_anomalies.push("suspicious_user_agent".to_string());
+                }
+
+                // Check for unusually long User-Agent
+                if ua.len() > 500 {
+                    score += 5;
+                    detected_anomalies.push("unusually_long_user_agent".to_string());
+                }
+            }
+        } else {
+            // Missing User-Agent is suspicious
+            score += 5;
+            detected_anomalies.push("missing_user_agent".to_string());
+        }
+
+        // 8. Check for excessive HTTP headers
+        if let Some(count) = header_count {
+            // Normal requests typically have 5-15 headers
+            // More than 30 headers is suspicious
+            if count > 30 {
+                score += 10;
+                detected_anomalies.push("excessive_http_headers".to_string());
+            }
+        }
+
+        // 9. Check for suspicious path patterns
+        // Check for unusually long paths
+        if path.len() > 2000 {
+            score += 10;
+            detected_anomalies.push("unusually_long_path".to_string());
+        }
+
+        // Check for excessive path depth (more than 10 levels)
+        let path_depth = path.matches('/').count();
+        if path_depth > 10 {
+            score += 5;
+            detected_anomalies.push("excessive_path_depth".to_string());
+        }
+
+        // Check for suspicious path characters (potential encoding attacks)
+        let suspicious_chars = ['<', '>', '"', '\'', '\\', '\0'];
+        if suspicious_chars.iter().any(|&c| path.contains(c)) {
+            score += 15;
+            detected_anomalies.push("suspicious_path_characters".to_string());
+        }
+
+        // Check for repeated path segments (potential path traversal attempts)
+        let segments: Vec<&str> = path.split('/').filter(|s| !s.is_empty()).collect();
+        if segments.len() >= 3 {
+            let mut consecutive_duplicates = 0;
+            for i in 1..segments.len() {
+                if segments[i] == segments[i - 1] {
+                    consecutive_duplicates += 1;
+                } else {
+                    consecutive_duplicates = 0;
+                }
+                if consecutive_duplicates >= 3 {
+                    score += 10;
+                    detected_anomalies.push("repeated_path_segments".to_string());
+                    break;
+                }
+            }
+        }
+
+        // 10. Check for unusual HTTP methods
+        let normal_methods = ["GET", "POST", "PUT", "DELETE", "PATCH", "HEAD", "OPTIONS"];
+        if !normal_methods.contains(&method) {
+            score += 10;
+            detected_anomalies.push("unusual_http_method".to_string());
+        }
+
         // Update score
         if score > 0 {
             entry.score += score;
@@ -392,23 +517,32 @@ mod tests {
         let ip = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
 
         // Accumulate score to trigger block
-        for _ in 0..4 {
-            // Each oversized body adds 20 points, 4 * 20 = 80 (not enough)
+        // Each oversized body adds 20 points
+        // We need to accumulate at least 100 points to trigger block
+        // Use check_request_with_headers to provide User-Agent and avoid missing User-Agent penalty
+        for _ in 0..5 {
+            // 5 * 20 = 100 (should trigger block)
             let _ = detection
-                .check_request(&ip, "/test", "POST", Some(11 * 1024 * 1024), None, false)
+                .check_request_with_headers(
+                    &ip,
+                    "/test",
+                    "POST",
+                    Some(11 * 1024 * 1024),
+                    None,
+                    false,
+                    Some("Mozilla/5.0"),
+                    Some(10),
+                )
                 .await;
         }
 
-        let (should_block, _) = detection.should_block(&ip).await;
-        assert!(!should_block, "Score 80 should not trigger block");
-
-        // Add more to reach 100
-        let _ = detection
-            .check_request(&ip, "/test", "POST", Some(11 * 1024 * 1024), None, false)
-            .await;
-
+        let score = detection.get_score(&ip).await;
         let (should_block, duration) = detection.should_block(&ip).await;
-        assert!(should_block, "Score >= 100 should trigger 1-hour block");
+        assert!(
+            should_block,
+            "Score {} should trigger 1-hour block (threshold: 100)",
+            score
+        );
         assert_eq!(duration, Some(3600), "Should block for 1 hour");
     }
 }

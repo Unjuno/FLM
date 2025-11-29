@@ -9,9 +9,9 @@ Phase 1のセキュリティ機能（ボットネット対策）が実装完了�
 ### 1. 自動IPブロック機能 ✅
 
 #### 実装ファイル
-- `crates/flm-proxy/src/security/ip_blocklist.rs` - IPブロックリスト管理
-- `crates/flm-proxy/src/middleware.rs` - IPブロックチェックミドルウェア
-- `crates/flm-proxy/src/adapters.rs` - データベース同期
+- `crates/services/flm-proxy/src/security/ip_blocklist.rs` - IPブロックリスト管理
+- `crates/services/flm-proxy/src/middleware.rs` - IPブロックチェックミドルウェア
+- `crates/services/flm-proxy/src/adapters.rs` - データベース同期
 
 #### 実装内容
 
@@ -42,8 +42,8 @@ Phase 1のセキュリティ機能（ボットネット対策）が実装完了�
 ### 2. 侵入検知システム（簡易版） ✅
 
 #### 実装ファイル
-- `crates/flm-proxy/src/security/intrusion_detection.rs` - 侵入検知ロジック
-- `crates/flm-proxy/src/middleware.rs` - 侵入検知ミドルウェア
+- `crates/services/flm-proxy/src/security/intrusion_detection.rs` - 侵入検知ロジック
+- `crates/services/flm-proxy/src/middleware.rs` - 侵入検知ミドルウェア
 
 #### 実装内容
 
@@ -82,8 +82,8 @@ Phase 1のセキュリティ機能（ボットネット対策）が実装完了�
 ### 3. 監査ログの拡張 ✅
 
 #### 実装ファイル
-- `crates/flm-proxy/src/middleware.rs` - 監査ログミドルウェア
-- `crates/flm-proxy/src/adapters.rs` - データベース保存
+- `crates/services/flm-proxy/src/middleware.rs` - 監査ログミドルウェア
+- `crates/services/flm-proxy/src/adapters.rs` - データベース保存
 
 #### 実装内容
 

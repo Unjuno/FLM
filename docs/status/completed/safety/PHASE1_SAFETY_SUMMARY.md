@@ -20,7 +20,7 @@
 
 ### 2. 実施した修正
 
-#### RwLock::unwrap()の修正 (`crates/flm-cli/src/adapters/engine.rs`)
+#### RwLock::unwrap()の修正 (`crates/apps/flm-cli/src/adapters/engine.rs`)
 
 **問題**: 
 - `RwLock::read().unwrap()` と `RwLock::write().unwrap()` を使用していた

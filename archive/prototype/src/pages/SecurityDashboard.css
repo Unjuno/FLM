@@ -1,0 +1,186 @@
+.security-dashboard {
+  padding: 20px;
+}
+
+.security-dashboard .page-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.security-dashboard .page-header h1 {
+  margin: 0;
+}
+
+.security-dashboard .security-summary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  margin-bottom: 30px;
+}
+
+.security-dashboard .summary-card {
+  background: #f5f5f5;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+}
+
+.security-dashboard .summary-card h3 {
+  margin: 0 0 10px 0;
+  font-size: 14px;
+  color: #666;
+}
+
+.security-dashboard .summary-value {
+  font-size: 32px;
+  font-weight: bold;
+  margin: 10px 0;
+  color: #333;
+}
+
+.security-dashboard .security-details {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.security-dashboard .detail-section {
+  background: #fff;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.security-dashboard .detail-section h2 {
+  margin: 0 0 15px 0;
+  font-size: 18px;
+}
+
+.security-dashboard .audit-logs-list,
+.security-dashboard .intrusion-list,
+.security-dashboard .anomaly-list {
+  margin-bottom: 15px;
+}
+
+.security-dashboard .audit-log-item,
+.security-dashboard .intrusion-item,
+.security-dashboard .anomaly-item {
+  border-bottom: 1px solid #eee;
+  padding: 10px 0;
+}
+
+.security-dashboard .audit-log-item:last-child,
+.security-dashboard .intrusion-item:last-child,
+.security-dashboard .anomaly-item:last-child {
+  border-bottom: none;
+}
+
+.security-dashboard .log-header,
+.security-dashboard .intrusion-header,
+.security-dashboard .anomaly-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 5px;
+}
+
+.security-dashboard .log-content,
+.security-dashboard .intrusion-content,
+.security-dashboard .anomaly-content {
+  font-size: 14px;
+  color: #666;
+}
+
+.security-dashboard .log-event,
+.security-dashboard .intrusion-pattern,
+.security-dashboard .anomaly-type {
+  font-weight: bold;
+  margin-bottom: 3px;
+}
+
+.security-dashboard .log-endpoint,
+.security-dashboard .log-ip,
+.security-dashboard .intrusion-ip,
+.security-dashboard .anomaly-ip {
+  font-size: 12px;
+  color: #999;
+}
+
+.security-dashboard .log-time,
+.security-dashboard .intrusion-time,
+.security-dashboard .anomaly-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.security-dashboard .severity-badge,
+.security-dashboard .score-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+.security-dashboard .severity-critical,
+.security-dashboard .score-critical {
+  background: #f44336;
+  color: white;
+}
+
+.security-dashboard .severity-high,
+.security-dashboard .score-high {
+  background: #ff9800;
+  color: white;
+}
+
+.security-dashboard .severity-medium,
+.security-dashboard .score-medium {
+  background: #ffc107;
+  color: #333;
+}
+
+.security-dashboard .severity-low,
+.security-dashboard .score-low {
+  background: #4caf50;
+  color: white;
+}
+
+.security-dashboard .empty-state {
+  text-align: center;
+  padding: 20px;
+  color: #999;
+}
+
+.security-dashboard .button-primary,
+.security-dashboard .button-secondary {
+  padding: 8px 16px;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 14px;
+}
+
+.security-dashboard .button-primary {
+  background: #2196f3;
+  color: white;
+}
+
+.security-dashboard .button-secondary {
+  background: #f5f5f5;
+  color: #333;
+}
+
+.security-dashboard .button-small {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.security-dashboard .loading {
+  text-align: center;
+  padding: 40px;
+  color: #999;
+}
+

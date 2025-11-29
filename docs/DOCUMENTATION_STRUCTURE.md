@@ -1,6 +1,6 @@
 # ドキュメント構成ガイド
 
-> Status: Reference | Audience: All contributors | Updated: 2025-11-25
+> Status: Reference | Audience: All contributors | Updated: 2025-11-27
 
 このドキュメントは、FLMプロジェクトのドキュメント構成と整理方針を説明します。
 
@@ -55,13 +55,14 @@ docs/
 │   ├── active/                 # 現在進行中のレポート
 │   │   ├── NEXT_STEPS.md       # 次の作業ステップ
 │   │   ├── BOTNET_PROTECTION_PLAN.md # ボットネット対策実装計画の進捗
-│   │   └── ...
+│   │   ├── UNIMPLEMENTED_REPORT.md   # 未実装事項の棚卸し
+│   │   └── UNIMPLEMENTED_ANALYSIS.md # 未実装部分の分析
 │   └── completed/              # 完了済みのレポート
 │       ├── phases/              # フェーズ完了レポート
-│       ├── tasks/               # タスク完了レポート
+│       ├── tasks/               # タスク完了レポート（`FINAL_SUMMARY.md` が正、`DONE.md` は簡潔な作業ログ）
 │       ├── tests/               # テストレポート
 │       ├── safety/              # 安全性・監査レポート
-│       ├── proxy/               # ProxyServiceレポート
+│       ├── proxy/               # ProxyServiceレポート（Phase 1/2 完了サマリー）
 │       └── fixes/               # バグ修正レポート
 │
 ├── changelog/                   # 変更履歴
@@ -164,24 +165,27 @@ docs/
 
 **対象読者**: プロジェクトリーダー、ステークホルダー
 
-**主要ドキュメント**:
-- `active/NEXT_STEPS.md` - 次の作業ステップ（推奨: 最新の進捗確認）
-- `active/BOTNET_PROTECTION_PLAN.md` - ボットネット対策実装計画の進捗
-- `completed/tasks/FINAL_SUMMARY.md` - 最終サマリー（推奨: 全体の完了状況確認）
-- `completed/phases/` - フェーズ完了レポート
-- `completed/tasks/` - タスク完了レポート
-- `completed/tests/` - テストレポート
-- `completed/safety/` - 安全性・監査レポート
+- **主要ドキュメント**:
+  - `active/NEXT_STEPS.md` - 次の作業ステップ（推奨: 最新の進捗確認）
+  - `active/BOTNET_PROTECTION_PLAN.md` - ボットネット対策実装計画の進捗
+  - `active/UNIMPLEMENTED_REPORT.md` / `active/UNIMPLEMENTED_ANALYSIS.md` - 未実装領域の棚卸し
+  - `completed/tasks/FINAL_SUMMARY.md` - 最終サマリー（推奨: 全体の完了状況確認）
+  - `completed/proxy/PROXY_SERVICE_PHASE2_COMPLETE.md` - ProxyService Phase 2完了レポート
+  - `completed/phases/` - フェーズ完了レポート
+  - `completed/tasks/` - タスク完了レポート
+  - `completed/tests/` - テストレポート
+  - `completed/safety/` - 安全性・監査レポート
 
 **特徴**:
 - 現在の進捗状況は `active/` 配下に集約し、ステータスラベルも `Status: Active` に統一
 - 完了したタスクは `completed/` 配下へ移動し、`Status: Completed` に更新
-- `reports/` ディレクトリが生成するテスト／監査レポートと連携し、最新結果を `active/NEXT_STEPS.md` から参照
+- `reports/README.md` を経由して `reports/` 配下の最新ログと紐付ける
 - レポートはフェーズ/タスク/テスト/安全性/プロキシ/修正などの粒度でサブディレクトリに整理
 
 #### Active/Completed 運用ルール
 - 作業が完了したら、該当ドキュメントを `active/` から対応する `completed/*` サブディレクトリへ物理移動し、ヘッダーの `Status` を更新する。
 - `active/NEXT_STEPS.md` は「唯一の進行中タスクリスト」とし、他ファイルから重複情報を排除する。
+- `completed/tasks/FINAL_SUMMARY.md` をタスク完了の正とし、旧 `ALL_TASKS_COMPLETE.md` は削除済み。
 - 旧プロトタイプや参照専用資料には「Reference only / Frozen」と明記し、進行中にカウントしない。
 
 ## ドキュメント間の関係性
@@ -289,6 +293,14 @@ guides/SECURITY_BOTNET_PROTECTION.md (ユーザーガイド)
 
 ---
 
-**最終更新**: 2025-11-25  
+**最終更新**: 2025-11-27  
 **質問や提案**: Issueまたはドキュメントコメントでお知らせください。
+
+## ドキュメント統合（2025-11-27）
+
+ルート直下にあった以下のドキュメントを`docs/`配下に統合しました：
+- `PROGRESS_CHECK_ISSUES.md` → `docs/status/active/UNIMPLEMENTED_REPORT.md`に統合（証明書・レート制限表示機能の実装状況を確認・記録）
+- `DONE.md` → `docs/status/completed/tasks/DONE.md`に移動（簡潔な作業ログとして保持）
+- `TASK.md` → 削除（内容が少なく、`DONE.md`に記録済み）
+- `PLAN.md` → 削除（`docs/planning/PLAN.md`が存在するため）
 

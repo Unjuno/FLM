@@ -64,6 +64,36 @@ Phase 1/2 でコア機能と最小UIを完成させた後に追加する機能�
 - Phase 2 後半で `docs/tests/ui-scenarios.md` を作成し、主要操作の手動テスト手順を定義
 - 拡張時には Playwright/Cypress などで e2e に近いテストを追加
 
+## 6. マルチモーダル UI 仕様
+
+### 6.1 Vision タブ
+
+- `Chat` 画面に `Text` / `Vision` / `Audio` のタブを追加。`Vision` を選択すると以下のコンポーネントを表示:
+  - 画像アップローダー（ドラッグ&ドロップ + クリップボード貼り付け対応）: 最大 5 枚、PNG/JPEG/WebP、合計 20 MB。プレビューごとに削除ボタンを用意。
+  - `detail` 切り替え (`low` / `high`)。LM Studio 向けに 4MB 超過時は即時警告。
+  - 送信先モデルフィルタ: `EngineCapabilities.vision_inputs=true` のモデルのみを `Select` に表示。
+- 送信時は画像を Base64 にエンコードし、`MultimodalPayload` JSON を CLI と同じフォーマットで `config.db` の `multimodal_settings` (新設) にキャッシュ。
+
+### 6.2 Audio タブ
+
+- 録音ボタン + ファイル選択を提供。録音は MediaRecorder を使用し、WAV に変換して保存。最大 5 分。録音停止後に波形プレビューと `language` 選択。
+- `mode` 切り替え:
+  - `Transcription`: `/v1/audio/transcriptions` に直送。
+  - `Audio in Chat`: `input_audio` としてチャットメッセージに添付。
+- `EngineCapabilities.audio_inputs=true` のモデルのみ選択肢に表示。未対応エンジンを選ぼうとした場合は UI がエラーを表示。
+
+### 6.3 フォーム永続化
+
+- `config.db` の `multimodal_settings` テーブル（新規）に以下を保存: `{ id TEXT PRIMARY KEY DEFAULT 'default', enable_vision BOOLEAN, enable_audio BOOLEAN, max_image_size_mb INTEGER, max_audio_size_mb INTEGER, default_modalities TEXT }`
+- UI／CLI は同じ DTO (`MultimodalSettings`) を共有し、`docs/specs/CORE_API.md` で定義する。未設定時は `enable_vision=false`, `enable_audio=false`。
+- `model_profiles`, `api_prompts` には `modalities TEXT` 列と `vision_prompt`, `audio_prompt` を追加し、UI フォームから編集できるようにする。
+
+### 6.4 バリデーションとUX
+
+- 画像/音声を添付した状態で Vision/Audio 対応モデルから別のテキスト専用モデルへ切り替えた場合、UI は確認ダイアログを表示して添付を削除する。
+- 添付済みファイルは `IndexedDB` にガベージされ、フロントエンド再起動後も `config.db` 側の履歴から再送信はしない（プライバシー対策）。
+- `config.db` に保存される設定と UI フォームの値が一致しない場合はバージョン番号を比較し、古いスキーマなら CLI によるマイグレーションを案内。
+
 ## 6. 優先順位（例）
 1. モデル詳細設定（最も要望が高い想定）
 2. マスタープロンプト管理

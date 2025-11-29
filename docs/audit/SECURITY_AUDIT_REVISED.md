@@ -13,10 +13,10 @@
 #### 1. unwrap()の使用によるパニックリスク（詳細）
 
 **発見箇所**:
-- `crates/flm-proxy/src/controller.rs:654` - `strip_prefix("flm://").unwrap()`
+- `crates/services/flm-proxy/src/controller.rs:654` - `strip_prefix("flm://").unwrap()`
   - `starts_with("flm://")`でチェックしているが、その後の`unwrap()`は危険
   - 理論的には発生しないが、並行処理やバグで発生する可能性がある
-- `crates/flm-proxy/src/engine_repo.rs:33,37` - RwLockのロック
+- `crates/services/flm-proxy/src/engine_repo.rs:33,37` - RwLockのロック
   - `read().unwrap()`と`write().unwrap()`を使用
   - デッドロックやポイズン（panic）が発生した場合、サーバーがクラッシュする可能性
 
@@ -63,7 +63,7 @@
 
 **問題**:
 - ストリーミングエンドポイントでエンジンエラーの詳細が漏洩する可能性
-- `crates/flm-proxy/src/controller.rs:884-888`でエラー理由をそのまま返している
+- `crates/services/flm-proxy/src/controller.rs:884-888`でエラー理由をそのまま返している
 
 **影響**: システム内部情報の漏洩
 

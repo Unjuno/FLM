@@ -17,9 +17,9 @@ use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
 use tokio::time::timeout;
-use tracing::{error, warn};
+use tracing::{debug, error, warn};
 
-fn new_request_id() -> String {
+pub(crate) fn new_request_id() -> String {
     let timestamp = chrono::Utc::now().timestamp_millis();
     let random = rand::random::<u64>();
     format!("{timestamp}-{random}")
@@ -77,6 +77,136 @@ pub struct AppState {
     pub metrics: Arc<Metrics>,
 }
 
+/// Policy existence check middleware
+///
+/// This middleware checks if a security policy exists and is valid.
+/// Should run before authentication to fail closed when policy is missing.
+pub async fn policy_check_middleware(
+    axum::extract::State(state): axum::extract::State<AppState>,
+    request: Request,
+    next: Next,
+) -> Response {
+    let path = request.uri().path().to_string();
+
+    debug!(
+        middleware = "policy_check_middleware",
+        path = %path,
+        "policy_check_middleware: Starting policy check"
+    );
+
+    // Skip policy check for /health endpoint
+    if path == "/health" {
+        debug!(
+            middleware = "policy_check_middleware",
+            path = %path,
+            "policy_check_middleware: Skipping policy check for /health endpoint"
+        );
+        return next.run(request).await;
+    }
+
+    // Get security policy
+    match state.security_service.get_policy("default").await {
+        Ok(Some(policy)) => {
+            // Check if policy is effectively empty (no meaningful configuration)
+            // An empty policy JSON like "{}" is considered as "not configured"
+            let policy_json: serde_json::Value = match serde_json::from_str(&policy.policy_json) {
+                Ok(json) => json,
+                Err(_) => {
+                    // Invalid JSON - treat as not configured
+                    debug!(
+                        middleware = "policy_check_middleware",
+                        path = %path,
+                        "policy_check_middleware: Policy JSON is invalid, denying access"
+                    );
+                    warn!(
+                        error_type = "invalid_policy_json",
+                        path = %request.uri().path(),
+                        "Invalid security policy JSON. Denying access for security."
+                    );
+                    return create_forbidden_response("Invalid security policy. Access denied.")
+                        .into_response();
+                }
+            };
+
+            // Check if policy is effectively empty (only empty objects/arrays)
+            // Recursively check if all values are empty
+            fn is_value_empty(v: &serde_json::Value) -> bool {
+                match v {
+                    serde_json::Value::Object(o) => o.is_empty() || o.values().all(is_value_empty),
+                    serde_json::Value::Array(a) => a.is_empty() || a.iter().all(is_value_empty),
+                    serde_json::Value::Null => true,
+                    _ => false,
+                }
+            }
+
+            let is_empty = policy_json
+                .as_object()
+                .map(|obj| obj.is_empty() || obj.values().all(is_value_empty))
+                .unwrap_or(false);
+
+            if is_empty {
+                // Policy exists but is empty - treat as not configured
+                debug!(
+                    middleware = "policy_check_middleware",
+                    path = %path,
+                    "policy_check_middleware: Policy is empty, denying access"
+                );
+                warn!(
+                    error_type = "empty_policy",
+                    path = %request.uri().path(),
+                    "Security policy is empty. Denying access for security."
+                );
+                return create_forbidden_response(
+                    "Security policy is not configured. Access denied.",
+                )
+                .into_response();
+            }
+
+            // Policy exists and has meaningful configuration, continue
+            debug!(
+                middleware = "policy_check_middleware",
+                path = %path,
+                policy_id = %policy.id,
+                "policy_check_middleware: Policy found with configuration, allowing request"
+            );
+            next.run(request).await
+        }
+        Ok(None) => {
+            // No policy configured - fail closed for security
+            // Log warning and deny access
+            debug!(
+                middleware = "policy_check_middleware",
+                path = %path,
+                "policy_check_middleware: No policy configured, denying access"
+            );
+            warn!(
+                error_type = "no_policy",
+                path = %request.uri().path(),
+                "No security policy configured. Denying access for security."
+            );
+            create_forbidden_response("No security policy configured. Access denied.")
+                .into_response()
+        }
+        Err(e) => {
+            // Error fetching policy - fail closed for security
+            // Log error and deny access (don't expose error details)
+            debug!(
+                middleware = "policy_check_middleware",
+                path = %path,
+                error = %e,
+                "policy_check_middleware: Error fetching policy, denying access"
+            );
+            error!(
+                error_type = "policy_fetch_error",
+                path = %request.uri().path(),
+                error = %e,
+                "Failed to fetch security policy. Denying access for security."
+            );
+            create_forbidden_response("Security policy error. Access denied.").into_response()
+        }
+    }
+}
+
 /// Policy middleware
 ///
 /// This middleware applies SecurityPolicy rules:
@@ -94,25 +224,15 @@ pub async fn policy_middleware(
     // Get client IP from request
     let client_ip = extract_client_ip(&request, &headers, &state.trusted_proxy_ips);
 
-    // Get security policy
+    // Get security policy (we know it exists because policy_check_middleware already checked)
     let policy = match state.security_service.get_policy("default").await {
         Ok(Some(policy)) => policy,
-        Ok(None) => {
-            // No policy configured - fail closed for security
-            // Log warning and deny access
-            warn!(
-                error_type = "no_policy",
-                "No security policy configured. Denying access for security."
-            );
-            return create_forbidden_response("No security policy configured. Access denied.")
-                .into_response();
-        }
-        Err(_) => {
-            // Error fetching policy - fail closed for security
-            // Log error and deny access (don't expose error details)
+        Ok(None) | Err(_) => {
+            // This should not happen if policy_check_middleware is working correctly
+            // But fail closed anyway for safety
             error!(
-                error_type = "policy_fetch_error",
-                "Failed to fetch security policy. Denying access for security."
+                error_type = "policy_missing_in_policy_middleware",
+                "Policy missing in policy_middleware (should have been caught by policy_check_middleware)"
             );
             return create_forbidden_response("Security policy error. Access denied.")
                 .into_response();
@@ -481,15 +601,19 @@ pub async fn anomaly_detection_middleware(
     let is_404 = response.status() == StatusCode::NOT_FOUND;
 
     // Check for anomalies
+    let user_agent = headers.get("user-agent").and_then(|h| h.to_str().ok());
+    let header_count = Some(headers.len());
     let score = state
         .anomaly_detection
-        .check_request(
+        .check_request_with_headers(
             &client_ip,
             &path,
             &method,
             body_size,
             Some(request_duration),
             is_404,
+            user_agent,
+            header_count,
         )
         .await;
 
@@ -1017,6 +1141,50 @@ pub(crate) fn check_ip_allowed(client_ip: &IpAddr, whitelist_entry: &str) -> boo
     }
 }
 
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::net::{IpAddr, Ipv4Addr, Ipv6Addr};
+
+    #[test]
+    fn test_check_ip_allowed_exact_match_ipv4() {
+        let ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100));
+        assert!(check_ip_allowed(&ip, "192.168.1.100"));
+        assert!(!check_ip_allowed(&ip, "192.168.1.101"));
+    }
+
+    #[test]
+    fn test_check_ip_allowed_cidr_ipv4() {
+        let ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100));
+        assert!(check_ip_allowed(&ip, "192.168.1.0/24"));
+        assert!(check_ip_allowed(&ip, "192.168.0.0/16"));
+        assert!(!check_ip_allowed(&ip, "10.0.0.0/8"));
+    }
+
+    #[test]
+    fn test_check_ip_allowed_exact_match_ipv6() {
+        let ip = IpAddr::V6(Ipv6Addr::new(
+            0x2001, 0x0db8, 0x85a3, 0x0000, 0x0000, 0x8a2e, 0x0370, 0x7334,
+        ));
+        assert!(check_ip_allowed(&ip, "2001:db8:85a3::8a2e:370:7334"));
+    }
+
+    #[test]
+    fn test_check_ip_allowed_cidr_ipv6() {
+        let ip = IpAddr::V6(Ipv6Addr::new(
+            0x2001, 0x0db8, 0x85a3, 0x0000, 0x0000, 0x8a2e, 0x0370, 0x7334,
+        ));
+        assert!(check_ip_allowed(&ip, "2001:db8:85a3::/64"));
+    }
+
+    #[test]
+    fn test_check_ip_allowed_invalid_entry() {
+        let ip = IpAddr::V4(Ipv4Addr::new(192, 168, 1, 100));
+        assert!(!check_ip_allowed(&ip, "invalid"));
+        assert!(!check_ip_allowed(&ip, "192.168.1.0/999"));
+    }
+}
+
 /// Check rate limit for an API key
 /// Returns (allowed, remaining, reset_time)
 /// Uses hybrid approach: memory cache + database persistence
@@ -1196,9 +1364,29 @@ pub(crate) async fn check_ip_rate_limit_with_info(
         (*mem_count, *mem_reset)
     } else {
         // New IP, try to load from database
-        // Note: In a full implementation, you would load from a dedicated IP rate limit table
-        // For now, we'll just create a new entry
-        (0, now + window_duration)
+        let ip_key = format!("ip:{}", ip);
+        if let Ok(Some((db_count, db_reset_at))) =
+            state.security_repo.fetch_rate_limit_state(&ip_key).await
+        {
+            if let Ok(reset_chrono) = chrono::DateTime::parse_from_rfc3339(&db_reset_at) {
+                let reset_utc = reset_chrono.with_timezone(&chrono::Utc);
+                let now_utc = chrono::Utc::now();
+                if let Ok(reset_duration) = reset_utc.signed_duration_since(now_utc).to_std() {
+                    if reset_duration > Duration::ZERO {
+                        let reset_instant = now + reset_duration;
+                        (db_count.min(burst), reset_instant)
+                    } else {
+                        (0, now + window_duration)
+                    }
+                } else {
+                    (0, now + window_duration)
+                }
+            } else {
+                (0, now + window_duration)
+            }
+        } else {
+            (0, now + window_duration)
+        }
     };
 
     // Reset if window has expired

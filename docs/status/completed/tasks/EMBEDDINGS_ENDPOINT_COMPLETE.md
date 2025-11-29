@@ -6,7 +6,7 @@
 
 ### 1. `/v1/embeddings`エンドポイントの実装
 
-**ファイル**: `crates/flm-proxy/src/controller.rs`
+**ファイル**: `crates/services/flm-proxy/src/controller.rs`
 
 - `OpenAiEmbeddingRequest`構造体を追加
 - `handle_embeddings`ハンドラー関数を実装
@@ -14,7 +14,7 @@
 
 ### 2. `EngineRepository`トレイトに`Send + Sync`バウンドを追加
 
-**ファイル**: `crates/flm-core/src/ports/engine.rs`
+**ファイル**: `crates/core/flm-core/src/ports/engine.rs`
 
 ```rust
 // 修正前
@@ -32,7 +32,7 @@ pub trait EngineRepository: Send + Sync {
 
 ### 3. 重複インポートの修正
 
-**ファイル**: `crates/flm-proxy/src/controller.rs`
+**ファイル**: `crates/services/flm-proxy/src/controller.rs`
 
 - `use axum::routing::post;`の重複を削除
 

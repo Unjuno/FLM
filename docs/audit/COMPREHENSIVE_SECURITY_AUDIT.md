@@ -57,7 +57,7 @@
 - 情報漏洩のリスク
 
 **現状**:
-- `crates/flm-proxy/src/controller.rs` ではCORSヘッダーのみ設定
+- `crates/services/flm-proxy/src/controller.rs` ではCORSヘッダーのみ設定
 - その他のセキュリティヘッダー（X-Content-Type-Options, X-Frame-Options, CSP等）が未設定
 
 **推奨修正**:
@@ -83,8 +83,8 @@ fn add_security_headers(
 ```
 
 **関連ファイル**:
-- `crates/flm-proxy/src/controller.rs`
-- `crates/flm-proxy/src/middleware.rs`
+- `crates/services/flm-proxy/src/controller.rs`
+- `crates/services/flm-proxy/src/middleware.rs`
 
 **推定工数**: 2-3時間
 
@@ -97,7 +97,7 @@ fn add_security_headers(
 - リソース枯渇攻撃
 
 **現状**:
-- `crates/flm-proxy/src/controller.rs` でリクエストボディサイズ制限が設定されていない
+- `crates/services/flm-proxy/src/controller.rs` でリクエストボディサイズ制限が設定されていない
 - Axumのデフォルトでは制限なし
 
 **推奨修正**:
@@ -107,7 +107,7 @@ fn add_security_headers(
 ```
 
 **関連ファイル**:
-- `crates/flm-proxy/src/controller.rs`
+- `crates/services/flm-proxy/src/controller.rs`
 
 **推定工数**: 30分
 
@@ -120,19 +120,19 @@ fn add_security_headers(
 - サービス停止
 
 **発見箇所**:
-- `crates/flm-proxy/src/middleware.rs:176` - `reset_time.duration_since(std::time::UNIX_EPOCH).unwrap()`
-- `crates/flm-proxy/src/middleware.rs:263` - IPアドレスのパース
-- `crates/flm-proxy/src/controller.rs:654` - ストリーム処理
-- `crates/flm-proxy/src/engine_repo.rs:33,37` - RwLockのロック
+- `crates/services/flm-proxy/src/middleware.rs:176` - `reset_time.duration_since(std::time::UNIX_EPOCH).unwrap()`
+- `crates/services/flm-proxy/src/middleware.rs:263` - IPアドレスのパース
+- `crates/services/flm-proxy/src/controller.rs:654` - ストリーム処理
+- `crates/services/flm-proxy/src/engine_repo.rs:33,37` - RwLockのロック
 
 **推奨修正**:
 - `unwrap()`を適切なエラーハンドリングに置き換える
 - パニックが発生する可能性がある箇所を特定し、エラーを返すように修正
 
 **関連ファイル**:
-- `crates/flm-proxy/src/middleware.rs`
-- `crates/flm-proxy/src/controller.rs`
-- `crates/flm-proxy/src/engine_repo.rs`
+- `crates/services/flm-proxy/src/middleware.rs`
+- `crates/services/flm-proxy/src/controller.rs`
+- `crates/services/flm-proxy/src/engine_repo.rs`
 
 **推定工数**: 2-3時間
 
@@ -147,7 +147,7 @@ fn add_security_headers(
 - サーバーの過負荷
 
 **現状**:
-- データベース接続プールは5に制限されている（`crates/flm-proxy/src/adapters.rs:41`）
+- データベース接続プールは5に制限されている（`crates/services/flm-proxy/src/adapters.rs:41`）
 - HTTP接続の制限は設定されていない
 
 **推奨修正**:
@@ -155,7 +155,7 @@ fn add_security_headers(
 - デフォルト値: 100接続
 
 **関連ファイル**:
-- `crates/flm-proxy/src/controller.rs`
+- `crates/services/flm-proxy/src/controller.rs`
 
 **推定工数**: 1-2時間
 
@@ -168,7 +168,7 @@ fn add_security_headers(
 - クライアントが切断してもリクエストが継続する可能性
 
 **現状**:
-- HTTPクライアントには30秒のタイムアウトが設定されている（`crates/flm-cli/src/adapters/http.rs:20`）
+- HTTPクライアントには30秒のタイムアウトが設定されている（`crates/apps/flm-cli/src/adapters/http.rs:20`）
 - プロキシサーバー側のリクエストタイムアウトは設定されていない
 
 **推奨修正**:
@@ -176,7 +176,7 @@ fn add_security_headers(
 - デフォルト値: 60秒
 
 **関連ファイル**:
-- `crates/flm-proxy/src/controller.rs`
+- `crates/services/flm-proxy/src/controller.rs`
 
 **推定工数**: 1-2時間
 
@@ -189,7 +189,7 @@ fn add_security_headers(
 - 意図しないファイルアクセス
 
 **現状**:
-- データベースパスの検証は実装されている（`crates/flm-cli/src/utils/paths.rs`）
+- データベースパスの検証は実装されている（`crates/apps/flm-cli/src/utils/paths.rs`）
 - その他のファイルパス操作での検証は未確認
 
 **推奨修正**:
@@ -221,7 +221,7 @@ fn add_security_headers(
 - IPアドレスはハッシュ化して記録（プライバシー保護）
 
 **関連ファイル**:
-- `crates/flm-proxy/src/` (全般)
+- `crates/services/flm-proxy/src/` (全般)
 
 **推定工数**: 4-6時間
 
@@ -234,7 +234,7 @@ fn add_security_headers(
 - コンプライアンス要件を満たせない
 
 **現状**:
-- `crates/flm-core/migrations/20250101000002_create_security_db.sql` でテーブル定義済み
+- `crates/core/flm-core/migrations/20250101000002_create_security_db.sql` でテーブル定義済み
 - 実際の記録機能は未実装
 
 **推奨修正**:
@@ -243,7 +243,7 @@ fn add_security_headers(
 - リクエストログ（エンドポイント、ステータス、レイテンシ）を記録
 
 **関連ファイル**:
-- `crates/flm-proxy/src/` (新規)
+- `crates/services/flm-proxy/src/` (新規)
 
 **推定工数**: 8-12時間
 

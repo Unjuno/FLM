@@ -65,6 +65,7 @@
   - Setup Wizard で ACME (http-01/dns-01) を実行し、証明書発行ログを確認
   - Firewall script preview/apply/rollback
   - APIキー発行→Proxy経由でチャット送信→ログ確認
+- Botnet保護/監査ログUIは `archive/prototype/tests/unit/security-botnet-ui.test.tsx` で自動化（IPブロック/侵入検知/監査ログフィルタ）。手動はバックエンド新規データセット検証時のみ実施。
 
 ## 5. Regression Gates
 | Gate | 条件 | 対応 |

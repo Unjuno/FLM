@@ -12,21 +12,21 @@
 - ✅ SQLiteマイグレーション対応
 - ✅ `async-trait`を使用した非同期実装
 
-**ファイル**: `crates/flm-cli/src/adapters/proxy.rs`
+**ファイル**: `crates/apps/flm-cli/src/adapters/proxy.rs`
 
 #### 2. ProxyController traitの非同期化（flm-core）
 - ✅ `ProxyController`を`async-trait`に変更
 - ✅ `start()`, `stop()`メソッドを非同期化
 - ✅ `Send + Sync`境界を追加
 
-**ファイル**: `crates/flm-core/src/ports/proxy.rs`
+**ファイル**: `crates/core/flm-core/src/ports/proxy.rs`
 
 #### 3. ProxyRepository traitの非同期化（flm-core）
 - ✅ `ProxyRepository`を`async-trait`に変更
 - ✅ すべてのメソッドを非同期化
 - ✅ `Send + Sync`境界を追加
 
-**ファイル**: `crates/flm-core/src/ports/proxy.rs`
+**ファイル**: `crates/core/flm-core/src/ports/proxy.rs`
 
 #### 4. ProxyService基本実装（flm-core）
 - ✅ `ProxyService`構造体の実装
@@ -35,7 +35,7 @@
 - ✅ `validate_config()`メソッドの実装
 - ✅ 設定バリデーション（ポート、モード別要件）
 
-**ファイル**: `crates/flm-core/src/services/proxy.rs`
+**ファイル**: `crates/core/flm-core/src/services/proxy.rs`
 
 ## コンパイル状況
 
