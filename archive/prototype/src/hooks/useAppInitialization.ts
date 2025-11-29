@@ -44,6 +44,51 @@ export function useAppInitialization(): UseAppInitializationReturn {
 
     const initializeApp = async () => {
       try {
+        // 初回起動時の言語自動検出
+        try {
+          const hasInitialized = sessionStorage.getItem('flm-initialized');
+          if (!hasInitialized) {
+            // 初回起動時のみOSの言語設定を検出
+            const osLanguage = navigator.language || navigator.languages?.[0] || 'ja';
+            const detectedLanguage = osLanguage.startsWith('ja')
+              ? 'ja'
+              : osLanguage.startsWith('en')
+              ? 'en'
+              : 'ja'; // 日本語または英語以外の場合は日本語をデフォルト
+
+            // 設定を取得して、言語が設定されていない場合のみ自動設定
+            try {
+              const settings = await safeInvoke<{ language?: string }>(
+                'get_app_settings'
+              );
+              if (!settings?.language) {
+                // 言語が設定されていない場合のみ自動設定
+                await safeInvoke('update_app_settings', {
+                  language: detectedLanguage,
+                });
+                logger.info(
+                  `初回起動: OSの言語設定を検出して設定しました (${detectedLanguage})`,
+                  'App'
+                );
+              }
+            } catch (settingsError) {
+              // 設定の取得・更新に失敗してもアプリは起動を続ける
+              logger.warn(
+                '初回起動時の言語自動検出に失敗しましたが、アプリを起動します',
+                extractErrorMessage(settingsError),
+                'App'
+              );
+            }
+          }
+        } catch (langError) {
+          // 言語検出エラーは記録するが、アプリは起動を続ける
+          logger.warn(
+            '言語自動検出でエラーが発生しましたが、アプリを起動します',
+            extractErrorMessage(langError),
+            'App'
+          );
+        }
+
         // データベース接続確認（オプション）
         // エラーが発生してもアプリは起動できるようにする
         try {

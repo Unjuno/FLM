@@ -2215,8 +2215,8 @@ async fn start_packaged_ca_server(
     // Determine certificate directory (AppData/flm/certs on Windows, ~/.flm/certs on Unix)
     let cert_dir = default_cert_dir(None);
 
-    // Check if server certificate exists and is valid
-    let (root_ca_cert_pem, root_ca_key_pem) = ensure_root_ca_artifacts(
+    // Load packaged root CA certificate (or generate if not found)
+    let (root_ca_cert_pem, root_ca_key_pem) = crate::certificate::load_packaged_root_ca(
         &cert_dir,
         ROOT_CA_CERT_FILENAME,
         ROOT_CA_KEY_FILENAME,
