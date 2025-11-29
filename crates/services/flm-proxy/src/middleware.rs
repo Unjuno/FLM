@@ -1230,6 +1230,8 @@ async fn check_rate_limit_with_info(
     }
 
     // Check limits BEFORE incrementing
+    // For minute limit: if minute_count is already at or above rpm, deny
+    // For burst limit: if tokens_available is less than 1.0, deny
     let minute_limit_reached = entry.minute_count >= rpm;
     let burst_limit_reached = entry.tokens_available < 1.0;
     let allowed = !(minute_limit_reached || burst_limit_reached);
