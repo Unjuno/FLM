@@ -1,0 +1,22 @@
+[package]
+name = "lego-runner"
+version.workspace = true
+edition.workspace = true
+authors.workspace = true
+license.workspace = true
+repository.workspace = true
+
+[dependencies]
+tokio.workspace = true
+async-trait.workspace = true
+thiserror.workspace = true
+tracing = "0.1"
+regex = "1.10"
+once_cell.workspace = true
+
+[build-dependencies]
+ureq = { version = "2.9", features = ["tls", "gzip"] }
+sha2 = "0.10"
+flate2 = "1.0"
+tar = "0.4"
+zip = { version = "0.6", default-features = false, features = ["deflate"] }
