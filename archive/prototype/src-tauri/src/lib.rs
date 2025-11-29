@@ -191,6 +191,8 @@ pub fn run() {
             system::diagnose_environment,
             system::diagnose_filesystem,
             system::run_comprehensive_diagnostics,
+            system::system_firewall_preview,
+            system::system_firewall_apply,
             
             // === 提案機能 ===
             suggestions::suggest_api_name,

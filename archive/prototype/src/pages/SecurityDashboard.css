@@ -184,3 +184,179 @@
   color: #999;
 }
 
+/* Audit Log Timeline Styles */
+.audit-log-timeline {
+  margin-top: 20px;
+}
+
+.timeline-filters {
+  display: flex;
+  gap: 15px;
+  margin-bottom: 20px;
+  padding: 15px;
+  background: #f9f9f9;
+  border-radius: 4px;
+}
+
+.filter-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-group label {
+  font-size: 14px;
+  font-weight: 500;
+  color: #333;
+}
+
+.filter-select {
+  padding: 6px 12px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  font-size: 14px;
+  background: white;
+  cursor: pointer;
+}
+
+.timeline-list {
+  position: relative;
+  padding-left: 30px;
+}
+
+.timeline-item {
+  position: relative;
+  padding: 15px 0;
+  border-left: 2px solid #e0e0e0;
+  padding-left: 20px;
+  margin-bottom: 10px;
+}
+
+.timeline-item:last-child {
+  border-left: none;
+}
+
+.timeline-marker {
+  position: absolute;
+  left: -8px;
+  top: 15px;
+}
+
+.timeline-content {
+  background: #fff;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  padding: 12px;
+}
+
+.timeline-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.timeline-event-type {
+  font-weight: 600;
+  color: #333;
+  font-size: 14px;
+}
+
+.timeline-time {
+  font-size: 12px;
+  color: #999;
+}
+
+.timeline-body {
+  font-size: 13px;
+  color: #666;
+}
+
+.timeline-endpoint,
+.timeline-ip,
+.timeline-status {
+  margin: 4px 0;
+  font-size: 12px;
+}
+
+.timeline-details {
+  margin-top: 8px;
+}
+
+.timeline-details summary {
+  cursor: pointer;
+  font-size: 12px;
+  color: #2196f3;
+  user-select: none;
+}
+
+.timeline-details summary:hover {
+  text-decoration: underline;
+}
+
+.details-json {
+  margin-top: 8px;
+  padding: 10px;
+  background: #f5f5f5;
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
+  overflow-x: auto;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+/* IP Blocklist Manager Styles */
+.ip-blocklist-manager {
+  margin-top: 10px;
+}
+
+.ip-blocklist-empty {
+  text-align: center;
+  padding: 10px;
+  color: #999;
+  font-size: 12px;
+}
+
+.blocklist-preview {
+  margin-top: 10px;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.blocklist-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px;
+  border-bottom: 1px solid #eee;
+  font-size: 12px;
+}
+
+.blocklist-item:last-child {
+  border-bottom: none;
+}
+
+.blocklist-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.blocklist-ip {
+  font-weight: 600;
+  color: #333;
+}
+
+.blocklist-reason {
+  font-size: 11px;
+  color: #666;
+}
+
+.blocklist-more {
+  text-align: center;
+  padding: 8px;
+  color: #999;
+  font-size: 11px;
+}
+

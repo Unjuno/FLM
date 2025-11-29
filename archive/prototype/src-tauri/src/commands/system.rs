@@ -1281,6 +1281,172 @@ pub async fn run_comprehensive_diagnostics() -> Result<ComprehensiveDiagnostics,
     })
 }
 
+/// Firewall preview request
+#[derive(Debug, serde::Deserialize)]
+pub struct FirewallPreviewRequest {
+    pub os: String,
+    pub ports: Vec<u16>,
+    pub ip_whitelist: Vec<String>,
+}
+
+/// Firewall preview response
+#[derive(Debug, serde::Serialize)]
+pub struct FirewallPreviewResponse {
+    pub script: String,
+    pub display_name: String,
+    pub shell: String,
+}
+
+/// Firewall apply request
+#[derive(Debug, serde::Deserialize)]
+pub struct FirewallApplyRequest {
+    pub script: String,
+    pub shell: String,
+}
+
+/// Firewall apply response
+#[derive(Debug, serde::Serialize)]
+pub struct FirewallApplyResponse {
+    pub stdout: String,
+    pub stderr: String,
+    pub exit_code: i32,
+}
+
+/// Generate firewall script preview
+#[tauri::command]
+pub async fn system_firewall_preview(
+    request: FirewallPreviewRequest,
+) -> Result<FirewallPreviewResponse, String> {
+    let os = request.os.to_lowercase();
+    let ports = request.ports;
+    let ip_whitelist = request.ip_whitelist;
+
+    let (script, display_name, shell) = match os.as_str() {
+        "windows" => {
+            let mut script_lines = Vec::new();
+            script_lines.push(format!("$ports = @({})", ports.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(", ")));
+            script_lines.push("foreach ($port in $ports) {".to_string());
+            for cidr in &ip_whitelist {
+                script_lines.push(format!(
+                    "  New-NetFirewallRule -DisplayName \"FLM Proxy $port {}\" -Direction Inbound -Action Allow -Protocol TCP -LocalPort $port -RemoteAddress {}",
+                    cidr, cidr
+                ));
+            }
+            script_lines.push("}".to_string());
+            (script_lines.join("\n"), "Windows / PowerShell".to_string(), "powershell".to_string())
+        }
+        "macos" => {
+            let mut script_lines = Vec::new();
+            script_lines.push("sudo tee /etc/pf.anchors/flm >/dev/null <<'EOF'".to_string());
+            script_lines.push(format!("table <flm_allow> persist {{ {} }}", ip_whitelist.join(", ")));
+            script_lines.push(format!("pass in proto tcp from <flm_allow> to any port {{ {} }} keep state", ports.iter().map(|p| p.to_string()).collect::<Vec<_>>().join(" ")));
+            script_lines.push("EOF".to_string());
+            script_lines.push("sudo pfctl -f /etc/pf.conf && sudo pfctl -e".to_string());
+            (script_lines.join("\n"), "macOS / pfctl".to_string(), "bash".to_string())
+        }
+        "linux" => {
+            // Try to detect if ufw or firewalld is available
+            let mut script_lines = Vec::new();
+            script_lines.push("# UFW (Ubuntu/Debian)".to_string());
+            for cidr in &ip_whitelist {
+                for port in &ports {
+                    script_lines.push(format!(
+                        "sudo ufw allow proto tcp from \"{}\" to any port {} comment 'FLM Proxy'",
+                        cidr, port
+                    ));
+                }
+            }
+            script_lines.push("sudo ufw reload".to_string());
+            script_lines.push("".to_string());
+            script_lines.push("# firewalld (CentOS/RHEL)".to_string());
+            for cidr in &ip_whitelist {
+                let family = if cidr.contains(':') { "ipv6" } else { "ipv4" };
+                for port in &ports {
+                    script_lines.push(format!(
+                        "sudo firewall-cmd --permanent --add-rich-rule=\"rule family='{}' source address='{}' port protocol='tcp' port='{}' accept\"",
+                        family, cidr, port
+                    ));
+                }
+            }
+            script_lines.push("sudo firewall-cmd --reload".to_string());
+            (script_lines.join("\n"), "Linux / UFW/firewalld".to_string(), "bash".to_string())
+        }
+        _ => return Err(format!("Unsupported OS: {}", os)),
+    };
+
+    Ok(FirewallPreviewResponse {
+        script,
+        display_name,
+        shell,
+    })
+}
+
+/// Apply firewall script
+#[tauri::command]
+pub async fn system_firewall_apply(
+    request: FirewallApplyRequest,
+) -> Result<FirewallApplyResponse, String> {
+    use std::process::Command;
+    use std::io::Write;
+    use std::fs;
+
+    // Create log directory
+    let log_dir = crate::database::connection::get_app_data_dir()
+        .map_err(|e| format!("Failed to get app data dir: {}", e))?
+        .join("logs")
+        .join("security");
+    fs::create_dir_all(&log_dir)
+        .map_err(|e| format!("Failed to create log directory: {}", e))?;
+
+    // Create log file
+    let timestamp = chrono::Utc::now().format("%Y%m%d_%H%M%S");
+    let log_file = log_dir.join(format!("firewall-{}.log", timestamp));
+    let mut log_writer = fs::File::create(&log_file)
+        .map_err(|e| format!("Failed to create log file: {}", e))?;
+
+    writeln!(log_writer, "=== Firewall Apply Log ===")
+        .map_err(|e| format!("Failed to write log: {}", e))?;
+    writeln!(log_writer, "Timestamp: {}", chrono::Utc::now().to_rfc3339())
+        .map_err(|e| format!("Failed to write log: {}", e))?;
+    writeln!(log_writer, "Shell: {}", request.shell)
+        .map_err(|e| format!("Failed to write log: {}", e))?;
+    writeln!(log_writer, "Script:\n{}", request.script)
+        .map_err(|e| format!("Failed to write log: {}", e))?;
+
+    let output = if request.shell == "powershell" {
+        Command::new("powershell.exe")
+            .args(&["-ExecutionPolicy", "Bypass", "-Command", &request.script])
+            .output()
+            .map_err(|e| format!("Failed to execute PowerShell: {}", e))?
+    } else {
+        // bash
+        Command::new("sh")
+            .arg("-c")
+            .arg(&request.script)
+            .output()
+            .map_err(|e| format!("Failed to execute shell: {}", e))?
+    };
+
+    let stdout = String::from_utf8_lossy(&output.stdout).to_string();
+    let stderr = String::from_utf8_lossy(&output.stderr).to_string();
+    let exit_code = output.status.code().unwrap_or(-1);
+
+    writeln!(log_writer, "Exit Code: {}", exit_code)
+        .map_err(|e| format!("Failed to write log: {}", e))?;
+    writeln!(log_writer, "Stdout:\n{}", stdout)
+        .map_err(|e| format!("Failed to write log: {}", e))?;
+    if !stderr.is_empty() {
+        writeln!(log_writer, "Stderr:\n{}", stderr)
+            .map_err(|e| format!("Failed to write log: {}", e))?;
+    }
+
+    Ok(FirewallApplyResponse {
+        stdout,
+        stderr,
+        exit_code,
+    })
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

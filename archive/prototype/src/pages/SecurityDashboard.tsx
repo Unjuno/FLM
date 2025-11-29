@@ -13,12 +13,216 @@ import {
   fetchAuditLogs,
   fetchIntrusionAttempts,
   fetchAnomalyDetections,
+  unblockIp,
   BlockedIp,
   AuditLog,
   IntrusionAttempt,
   AnomalyDetection,
 } from '../services/security';
 import './SecurityDashboard.css';
+
+// IP Blocklist Manager Component
+interface IPBlocklistManagerProps {
+  blockedIps: BlockedIp[];
+  onUnblock: () => void;
+}
+
+const IPBlocklistManager: React.FC<IPBlocklistManagerProps> = ({ blockedIps, onUnblock }) => {
+  const [showAddForm, setShowAddForm] = useState<boolean>(false);
+  const [newIp, setNewIp] = useState<string>('');
+  const [unblocking, setUnblocking] = useState<string | null>(null);
+  const { showError, showSuccess } = useNotifications();
+
+  const handleUnblock = async (ip: string) => {
+    setUnblocking(ip);
+    try {
+      await unblockIp(ip);
+      showSuccess(`IP ${ip} のブロックを解除しました`);
+      onUnblock();
+    } catch (err) {
+      showError(
+        err instanceof Error ? err.message : `IP ${ip} のブロック解除に失敗しました`
+      );
+    } finally {
+      setUnblocking(null);
+    }
+  };
+
+  const formatBlockReason = (ip: BlockedIp) => {
+    if (ip.permanentBlock) {
+      return '永続ブロック';
+    }
+    if (ip.blockedUntil) {
+      return `ブロック期限: ${formatDateTime(ip.blockedUntil)}`;
+    }
+    return `認証失敗: ${ip.failureCount}回`;
+  };
+
+  if (blockedIps.length === 0) {
+    return (
+      <div className="ip-blocklist-empty">
+        <p>ブロック済みIPはありません</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="ip-blocklist-manager">
+      <div className="blocklist-preview">
+        {blockedIps.slice(0, 5).map((ip) => (
+          <div key={ip.ip} className="blocklist-item">
+            <div className="blocklist-item-info">
+              <span className="blocklist-ip">{ip.ip}</span>
+              <span className="blocklist-reason">{formatBlockReason(ip)}</span>
+            </div>
+            <button
+              className="button-secondary button-small"
+              onClick={() => void handleUnblock(ip.ip)}
+              disabled={unblocking === ip.ip}
+            >
+              {unblocking === ip.ip ? '解除中...' : '解除'}
+            </button>
+          </div>
+        ))}
+        {blockedIps.length > 5 && (
+          <div className="blocklist-more">
+            他 {blockedIps.length - 5} 件のブロック済みIP
+          </div>
+        )}
+      </div>
+    </div>
+  );
+};
+
+// Audit Log Timeline Component with filtering
+interface AuditLogTimelineProps {
+  logs: AuditLog[];
+}
+
+const AuditLogTimeline: React.FC<AuditLogTimelineProps> = ({ logs }) => {
+  const [filterEventType, setFilterEventType] = useState<string>('all');
+  const [filterSeverity, setFilterSeverity] = useState<string>('all');
+
+  const eventTypes = ['all', 'auth_success', 'auth_failure', 'ip_blocked', 'intrusion', 'anomaly', 'rate_limit'];
+  const severities = ['all', 'low', 'medium', 'high', 'critical'];
+
+  const filteredLogs = useMemo(() => {
+    return logs.filter((log) => {
+      if (filterEventType !== 'all' && log.eventType !== filterEventType) {
+        return false;
+      }
+      if (filterSeverity !== 'all' && log.severity?.toLowerCase() !== filterSeverity) {
+        return false;
+      }
+      return true;
+    });
+  }, [logs, filterEventType, filterSeverity]);
+
+  const getSeverityClass = (severity: string | null) => {
+    if (!severity) return '';
+    switch (severity.toLowerCase()) {
+      case 'critical':
+        return 'severity-critical';
+      case 'high':
+        return 'severity-high';
+      case 'medium':
+        return 'severity-medium';
+      case 'low':
+        return 'severity-low';
+      default:
+        return '';
+    }
+  };
+
+  const parseDetails = (details: string | null) => {
+    if (!details) return null;
+    try {
+      return JSON.parse(details);
+    } catch {
+      return details;
+    }
+  };
+
+  if (logs.length === 0) {
+    return <div className="empty-state">監査ログが見つかりません</div>;
+  }
+
+  return (
+    <div className="audit-log-timeline">
+      <div className="timeline-filters">
+        <div className="filter-group">
+          <label htmlFor="event-type-filter">イベントタイプ:</label>
+          <select
+            id="event-type-filter"
+            value={filterEventType}
+            onChange={(e) => setFilterEventType(e.target.value)}
+            className="filter-select"
+          >
+            {eventTypes.map((type) => (
+              <option key={type} value={type}>
+                {type === 'all' ? 'すべて' : type}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-group">
+          <label htmlFor="severity-filter">重大度:</label>
+          <select
+            id="severity-filter"
+            value={filterSeverity}
+            onChange={(e) => setFilterSeverity(e.target.value)}
+            className="filter-select"
+          >
+            {severities.map((severity) => (
+              <option key={severity} value={severity}>
+                {severity === 'all' ? 'すべて' : severity}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      <div className="timeline-list">
+        {filteredLogs.length === 0 ? (
+          <div className="empty-state">フィルタ条件に一致する監査ログが見つかりません</div>
+        ) : (
+          filteredLogs.map((log) => {
+            const details = parseDetails(log.details);
+            return (
+              <div key={log.id} className="timeline-item">
+                <div className="timeline-marker">
+                  <span className={`severity-badge ${getSeverityClass(log.severity)}`}>
+                    {log.severity || 'N/A'}
+                  </span>
+                </div>
+                <div className="timeline-content">
+                  <div className="timeline-header">
+                    <span className="timeline-event-type">{log.eventType || 'N/A'}</span>
+                    <span className="timeline-time">{formatDateTime(log.createdAt)}</span>
+                  </div>
+                  <div className="timeline-body">
+                    <div className="timeline-endpoint">エンドポイント: {log.endpoint}</div>
+                    {log.ip && <div className="timeline-ip">IP: {log.ip}</div>}
+                    {log.status && (
+                      <div className="timeline-status">ステータス: {log.status}</div>
+                    )}
+                    {details && (
+                      <details className="timeline-details">
+                        <summary>詳細情報</summary>
+                        <pre className="details-json">
+                          {typeof details === 'string' ? details : JSON.stringify(details, null, 2)}
+                        </pre>
+                      </details>
+                    )}
+                  </div>
+                </div>
+              </div>
+            );
+          })
+        )}
+      </div>
+    </div>
+  );
+};
 
 export const SecurityDashboard: React.FC = () => {
   const navigate = useNavigate();
@@ -118,6 +322,7 @@ export const SecurityDashboard: React.FC = () => {
         <div className="summary-card">
           <h3>ブロック済みIP</h3>
           <div className="summary-value">{blockedIps.length}</div>
+          <IPBlocklistManager blockedIps={blockedIps} onUnblock={loadDashboard} />
           <button
             className="button-secondary button-small"
             onClick={() => navigate('/security/ip-blocklist')}
@@ -159,28 +364,8 @@ export const SecurityDashboard: React.FC = () => {
 
       <div className="security-details">
         <div className="detail-section">
-          <h2>最近の監査ログ</h2>
-          {recentAuditLogs.length === 0 ? (
-            <div className="empty-state">監査ログが見つかりません</div>
-          ) : (
-            <div className="audit-logs-list">
-              {recentAuditLogs.slice(0, 5).map((log) => (
-                <div key={log.id} className="audit-log-item">
-                  <div className="log-header">
-                    <span className={`severity-badge ${getSeverityClass(log.severity)}`}>
-                      {log.severity || 'N/A'}
-                    </span>
-                    <span className="log-time">{formatDateTime(log.createdAt)}</span>
-                  </div>
-                  <div className="log-content">
-                    <div className="log-event">{log.eventType || 'N/A'}</div>
-                    <div className="log-endpoint">{log.endpoint}</div>
-                    {log.ip && <div className="log-ip">IP: {log.ip}</div>}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <h2>監査ログタイムライン</h2>
+          <AuditLogTimeline logs={recentAuditLogs} />
           <button
             className="button-secondary"
             onClick={() => navigate('/security/audit-logs')}
