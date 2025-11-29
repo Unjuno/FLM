@@ -127,6 +127,24 @@
 - レート制限ロジックにコメントを追加（調査継続中）
 - 統合テストの修正は大きな作業のため、詳細な調査と修正は次のステップとして計画
 
+### 2025-01-28 リソース保護の修正
+
+- **修正内容**: Windows環境での `sysinfo` の動作を改善
+  - CPU使用率とメモリ使用率の計算で NaN/Infinity チェックを追加
+  - `minute_reset` のチェックを `checked_duration_since` を使用するように修正
+- **結果**: 
+  - `test_resource_protection_integration` が成功
+  - `test_resource_protection_with_other_middleware` はまだ失敗（別の問題の可能性）
+
+### レート制限の問題（調査継続中）
+
+- **問題**: `test_rate_limit_multiple_keys` で6番目のリクエストが200を返している（期待: 429）
+- **調査結果**: 
+  - `minute_count >= rpm` のチェックロジックは正しい
+  - `minute_count` が正しく更新されているか確認が必要
+  - リセットタイミングに問題がある可能性
+- **次のステップ**: デバッグログを追加して実際の値を確認
+
 ## 参考
 
 - テストファイル: `crates/services/flm-proxy/tests/integration_test.rs`
