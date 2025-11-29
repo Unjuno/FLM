@@ -107,68 +107,35 @@ pub async fn policy_check_middleware(
     // Get security policy
     match state.security_service.get_policy("default").await {
         Ok(Some(policy)) => {
-            // Check if policy is effectively empty (no meaningful configuration)
-            // An empty policy JSON like "{}" is considered as "not configured"
-            let policy_json: serde_json::Value = match serde_json::from_str(&policy.policy_json) {
-                Ok(json) => json,
-                Err(_) => {
-                    // Invalid JSON - treat as not configured
-                    debug!(
-                        middleware = "policy_check_middleware",
-                        path = %path,
-                        "policy_check_middleware: Policy JSON is invalid, denying access"
-                    );
-                    warn!(
-                        error_type = "invalid_policy_json",
-                        path = %request.uri().path(),
-                        "Invalid security policy JSON. Denying access for security."
-                    );
-                    return create_forbidden_response("Invalid security policy. Access denied.")
-                        .into_response();
-                }
-            };
-
-            // Check if policy is effectively empty (only empty objects/arrays)
-            // Recursively check if all values are empty
-            fn is_value_empty(v: &serde_json::Value) -> bool {
-                match v {
-                    serde_json::Value::Object(o) => o.is_empty() || o.values().all(is_value_empty),
-                    serde_json::Value::Array(a) => a.is_empty() || a.iter().all(is_value_empty),
-                    serde_json::Value::Null => true,
-                    _ => false,
-                }
-            }
-
-            let is_empty = policy_json
-                .as_object()
-                .map(|obj| obj.is_empty() || obj.values().all(is_value_empty))
-                .unwrap_or(false);
-
-            if is_empty {
-                // Policy exists but is empty - treat as not configured
+            // Validate policy JSON format (but allow empty policy)
+            if let Err(_) = serde_json::from_str::<serde_json::Value>(&policy.policy_json) {
+                // Invalid JSON - treat as not configured
                 debug!(
                     middleware = "policy_check_middleware",
                     path = %path,
-                    "policy_check_middleware: Policy is empty, denying access"
+                    "policy_check_middleware: Policy JSON is invalid, denying access"
                 );
                 warn!(
-                    error_type = "empty_policy",
+                    error_type = "invalid_policy_json",
                     path = %request.uri().path(),
-                    "Security policy is empty. Denying access for security."
+                    "Invalid security policy JSON. Denying access for security."
                 );
-                return create_forbidden_response(
-                    "Security policy is not configured. Access denied.",
-                )
-                .into_response();
+                return create_forbidden_response("Invalid security policy. Access denied.")
+                    .into_response();
             }
 
-            // Policy exists and has meaningful configuration, continue
+            // Policy exists - allow access even if empty (empty policy means "allow all")
+            // Empty policy is different from missing policy:
+            // - Missing policy: fail closed (403)
+            // - Empty policy: allow all (continue)
             debug!(
                 middleware = "policy_check_middleware",
                 path = %path,
                 policy_id = %policy.id,
-                "policy_check_middleware: Policy found with configuration, allowing request"
+                "policy_check_middleware: Policy found, allowing request"
             );
+
+            // Policy exists, continue
             next.run(request).await
         }
         Ok(None) => {

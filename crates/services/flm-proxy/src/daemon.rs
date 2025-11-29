@@ -181,6 +181,10 @@ fn map_proxy_error(err: ProxyError) -> (StatusCode, String) {
         ProxyError::CertGenerationFailed { reason } | ProxyError::AcmeError { reason } => {
             (StatusCode::INTERNAL_SERVER_ERROR, reason)
         }
+        ProxyError::HandleNotFound { handle_id } => (
+            StatusCode::NOT_FOUND,
+            format!("Proxy handle not found: {handle_id}"),
+        ),
     }
 }
 

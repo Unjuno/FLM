@@ -1908,6 +1908,24 @@ async fn test_missing_security_policy_denies_requests() {
     // Create API key
     let api_key = security_service.create_api_key("test-key").await.unwrap();
 
+    // Delete the default policy created by migration to test "missing policy" scenario
+    // We need to connect directly to the database to delete the policy
+    use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+    use std::str::FromStr;
+    let db_path_str = security_db.to_str().unwrap();
+    let options = SqliteConnectOptions::from_str(&format!("sqlite://{}", db_path_str))
+        .unwrap()
+        .create_if_missing(false);
+    let direct_pool = SqlitePoolOptions::new()
+        .max_connections(1)
+        .connect_with(options)
+        .await
+        .unwrap();
+    sqlx::query("DELETE FROM security_policies WHERE id = 'default'")
+        .execute(&direct_pool)
+        .await
+        .unwrap();
+
     // Start proxy without policy (should fail closed)
     let controller = AxumProxyController::new();
     let config = ProxyConfig {
