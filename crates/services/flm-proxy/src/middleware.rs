@@ -1211,7 +1211,10 @@ async fn check_rate_limit_with_info(
         }
     };
 
-    if entry.minute_reset <= now {
+    // Reset minute_count if the reset time has passed
+    // Use checked_duration_since to handle the case where now is before minute_reset
+    if let Some(duration) = now.checked_duration_since(entry.minute_reset) {
+        // Reset time has passed, reset the counter
         entry.minute_count = 0;
         entry.minute_reset = now + window_duration;
     }

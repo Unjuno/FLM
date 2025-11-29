@@ -113,7 +113,14 @@ impl ResourceProtection {
         } else {
             let total: f64 = system.cpus().iter().map(|cpu| cpu.cpu_usage() as f64).sum();
             let avg = total / system.cpus().len() as f64;
-            (avg / 100.0).clamp(0.0, 1.0)
+            let usage = (avg / 100.0).clamp(0.0, 1.0);
+            // On Windows, sysinfo may return invalid values initially
+            // If usage is NaN or infinity, return 0.0
+            if usage.is_nan() || usage.is_infinite() {
+                0.0
+            } else {
+                usage
+            }
         };
 
         // Update cached value
@@ -146,7 +153,14 @@ impl ResourceProtection {
         let memory_usage = if total_memory == 0 {
             0.0
         } else {
-            (used_memory as f64 / total_memory as f64).clamp(0.0, 1.0)
+            let usage = (used_memory as f64 / total_memory as f64).clamp(0.0, 1.0);
+            // On Windows, sysinfo may return invalid values initially
+            // If usage is NaN or infinity, return 0.0
+            if usage.is_nan() || usage.is_infinite() {
+                0.0
+            } else {
+                usage
+            }
         };
 
         // Update cached value
