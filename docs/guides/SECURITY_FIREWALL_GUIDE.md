@@ -146,11 +146,29 @@ sudo update-ca-certificates
 .\resources\scripts\uninstall-ca.ps1 -Force
 ```
 
-**macOS/Linux**:
+**注意**: Windows NSISインストーラーは、アンインストール時に自動的に証明書削除の確認ダイアログを表示します。ユーザーが「はい」を選択すると、`uninstall-ca.ps1`スクリプトが`-Force`フラグ付きで自動実行されます。
+
+**macOS**:
 ```bash
 # アンインストールスクリプトを実行
 ./resources/scripts/uninstall-ca.sh
+
+# 確認なしで削除
+./resources/scripts/uninstall-ca.sh --yes
 ```
+
+**注意**: macOS DMGインストーラーは、アンインストールフックをサポートしていません。そのため、アンインストール時に証明書は自動的に削除されません。アプリケーションを削除した後、手動で証明書を削除する必要があります。
+
+**Linux**:
+```bash
+# アンインストールスクリプトを実行
+./resources/scripts/uninstall-ca.sh
+
+# 確認なしで削除
+./resources/scripts/uninstall-ca.sh --yes
+```
+
+**注意**: Linux DEBパッケージは、アンインストール時に`postrm`スクリプトを実行し、証明書削除の確認を求めます。ユーザーが「y」を選択すると、`uninstall-ca.sh`スクリプトが`--yes`フラグ付きで自動実行されます。
 
 #### 方法2: 手動削除
 
@@ -163,8 +181,42 @@ Get-ChildItem Cert:\LocalMachine\Root |
 
 **macOS**:
 ```bash
+# システムキーチェーンから削除
 sudo security delete-certificate -c "FLM Local CA" /Library/Keychains/System.keychain
+
+# または、ユーザーキーチェーンから削除（システムキーチェーンにない場合）
+security delete-certificate -c "FLM Local CA" ~/Library/Keychains/login.keychain-db
+
+# 証明書の存在確認
+security find-certificate -c "FLM Local CA" -a /Library/Keychains/System.keychain
 ```
+
+**macOSアンインストール手順（完全版）**:
+
+macOSでは、アプリケーションのアンインストールと証明書の削除を別々に行う必要があります：
+
+1. **アプリケーションの削除**:
+   - `/Applications/FLM.app`をゴミ箱に移動
+   - または、`sudo rm -rf /Applications/FLM.app`を実行
+
+2. **証明書の削除**（手動）:
+   ```bash
+   # 証明書の存在確認
+   security find-certificate -c "FLM Local CA" -a /Library/Keychains/System.keychain
+   
+   # 証明書の削除
+   sudo security delete-certificate -c "FLM Local CA" /Library/Keychains/System.keychain
+   
+   # 削除の確認
+   security find-certificate -c "FLM Local CA" -a /Library/Keychains/System.keychain
+   # 何も表示されなければ削除成功
+   ```
+
+3. **設定ファイルの削除**（オプション）:
+   ```bash
+   # アプリケーションデータの削除
+   rm -rf ~/.flm
+   ```
 
 **Linux**:
 ```bash
