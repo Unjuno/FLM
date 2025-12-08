@@ -33,7 +33,7 @@ Phase 3では、FLMをパッケージ版として配布するための準備を�
 4. **Step 6: コード署名ポリシー**
    - `docs/specs/CODE_SIGNING_POLICY.md` を追加し、Windows（Tauri signing key）、macOS（Apple Developer ID）、Linux（GPG署名）の手順と秘密鍵保護方針（HSM/Key Vault）を記述。
    - GitHub Actions で参照する Secrets 名称（`TAURI_SIGNING_PRIVATE_KEY` など）を明文化し、失効／ローテーション手順を含める。
-   - `docs/status/active/PHASE1_PROGRESS.md` にパッケージング進捗サマリを連動させる。
+   - `docs/status/active/NEXT_STEPS.md` にパッケージング進捗サマリを連動させる。
 
 ### 1. packaged-caモードの実装
 
@@ -178,12 +178,37 @@ Phase 3では、FLMをパッケージ版として配布するための準備を�
 1. **Step 1**: ルートCA証明書生成機能の実装 ✅ 完了（2025-11-26）
    - `rcgen` 0.13 APIへ移行し、`certificate.rs` のself-signed生成処理を更新
    - SANユニットテストとCIログで互換性確認済み
-2. **Step 2**: サーバー証明書自動生成機能の実装 ⏳ 進行中（モジュール抽出完了、証明書キャッシュ検証残）
-3. **Step 3**: `packaged-ca`モードの統合
-4. **Step 4**: OS信頼ストアへの自動登録機能の実装
-5. **Step 5**: インストーラー設定の更新
-6. **Step 6**: コード署名の設定
-7. **Step 7**: セキュリティ対策の実装
+2. **Step 2**: サーバー証明書自動生成機能の実装 ✅ 完了（2025-01-28）
+   - モジュール抽出完了（`crates/services/flm-proxy/src/certificate.rs`）
+   - 証明書キャッシュ検証実装済み（`is_certificate_valid`関数を使用）
+3. **Step 3**: `packaged-ca`モードの統合 ✅ 完了（2025-01-28）
+   - `start_packaged_ca_server`関数実装済み
+   - `load_packaged_root_ca`関数実装済み
+4. **Step 4**: OS信頼ストアへの自動登録機能の実装 ✅ 完了（2025-01-28）
+   - `register_root_ca_with_os_trust_store`関数実装済み（Windows/macOS/Linux対応）
+   - `is_certificate_registered_in_trust_store`関数実装済み（証明書登録チェック）
+   - `packaged-ca`モード起動時の自動チェックと警告機能追加
+   - `FLM_AUTO_INSTALL_CA`環境変数による自動登録オプション追加
+5. **Step 5**: インストーラー設定の更新 ✅ 完了（2025-01-28）
+   - Tauri 2.0のNSISフック（`NSIS_HOOK_POSTINSTALL`、`NSIS_HOOK_POSTUNINSTALL`）に対応
+   - Windows NSIS設定でper-machineインストールを明示的に設定（`perMachine: true`）
+   - macOS DMG postinstallスクリプトの設定追加
+   - Linux DEB postinstスクリプトの設定追加
+   - インストールスクリプトの統合完了
+6. **Step 6**: コード署名の設定 ✅ 完了（2025-02-01）
+   - ✅ Windows署名検証ステップの追加（MSI/NSIS）
+   - ✅ macOS署名検証ステップの追加（DMG/App）
+   - ✅ Linux GPG署名検証ステップの追加
+   - ✅ GitHub Secretsのアクセス制限設定をCODE_SIGNING_POLICY.mdに追記
+   - ✅ リリースノートへの署名情報自動追加を改善
+   - ✅ 署名検証結果をビルドログに記録するステップを追加
+7. **Step 7**: セキュリティ対策の実装 ✅ 完了（2025-02-01）
+   - ✅ ハッシュ値の公開（SHA256）実装済み
+   - ✅ `checksums.txt`の自動生成実装済み
+   - ✅ GPG署名による`checksums.txt`の署名実装済み
+   - ✅ GitHub Secretsのアクセス制限設定をドキュメント化
+   - ✅ 署名検証ステップの自動化強化
+   - ✅ ビルドログへの記録機能追加
 
 ## スケジュール（2025-11-25 更新）
 
