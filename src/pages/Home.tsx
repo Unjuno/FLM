@@ -161,7 +161,7 @@ export const Home: React.FC = () => {
     []
   );
 
-  const loadProxyStatus = useCallback(async () => {
+  const loadProxyStatus = useCallback(async (): Promise<ProxyStatus | null> => {
     try {
       const result = await safeInvoke<{ version?: string; data?: Array<{ running: boolean; port?: number; mode?: ProxyMode }> }>(
         'ipc_proxy_status'
@@ -173,6 +173,22 @@ export const Home: React.FC = () => {
         }
         return prevError;
       });
+      // 結果を返す（自動起動の判断に使用）
+      if (isProxyStatusResult(result)) {
+        const handles = result.data;
+        if (handles && handles.length > 0) {
+          const handle = handles[0];
+          return {
+            running: handle.running ?? false,
+            port: handle.port,
+            mode: handle.mode,
+          };
+        }
+      }
+      if (isDirectProxyStatus(result)) {
+        return result;
+      }
+      return { running: false };
     } catch (err) {
       // why: エラーが無視された場合（not found等）、プロキシは停止中とみなす
       // alt: 常にエラーを表示する（UXが悪化する可能性）
@@ -183,6 +199,7 @@ export const Home: React.FC = () => {
       } else {
         setProxyStatus({ running: false });
       }
+      return { running: false };
     }
   }, [handleProxyStatusResult, handleProxyStatusError]);
 
@@ -365,6 +382,45 @@ export const Home: React.FC = () => {
       clearAllTimeouts(timeoutRef);
     };
   }, [loadProxyStatus, loadEngines]);
+
+  // プロキシが起動していない場合、自動的に起動を試みる
+  // why: ユーザーが手動で起動する必要がないようにするため
+  // alt: 常に手動起動を要求する（UXが悪化）
+  // evidence: 多くのアプリケーションで自動起動が標準的な動作
+  useEffect(() => {
+    const autoStartProxy = async () => {
+      // プロキシの状態が確定してから実行（初回ロード完了を待つ）
+      // proxyStatusがnullの場合はまだロード中なので、スキップ
+      if (proxyStatus !== null && !proxyStatus.running) {
+        try {
+          await safeInvoke('ipc_proxy_start', {
+            mode: DEFAULT_PROXY_CONFIG.MODE,
+            port: DEFAULT_PROXY_CONFIG.PORT,
+            no_daemon: true,
+          });
+          // 起動後、ステータスを更新
+          setTimeout(() => {
+            void loadProxyStatus();
+          }, TIMING.STATUS_REFRESH_DELAY_MS);
+        } catch (err) {
+          // 自動起動に失敗した場合、エラーをログに記録するが、ユーザーには表示しない
+          // why: 初回起動時など、プロキシ起動が失敗する可能性があるため
+          // alt: エラーを表示する（UXが悪化）
+          // evidence: 自動起動は「試みる」ものであり、失敗してもアプリは使用可能
+          logger.warn('Failed to auto-start proxy:', err);
+        }
+      }
+    };
+    
+    // 少し遅延させて実行（初回ロードが完了するのを待つ）
+    const timeoutId = setTimeout(() => {
+      void autoStartProxy();
+    }, 1000);
+    
+    return () => {
+      clearTimeout(timeoutId);
+    };
+  }, [proxyStatus, loadProxyStatus]);
 
   const renderEngineStatus = useMemo(() => {
     if (enginesLoading) {
