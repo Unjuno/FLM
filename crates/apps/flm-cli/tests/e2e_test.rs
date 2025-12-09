@@ -170,14 +170,19 @@ async fn test_security_features_e2e() {
             "Request {} should not be rate limited (within limit)",
             i + 1
         );
-        // Minimal delay to ensure rate limit state is updated synchronously
-        // Don't wait too long or token bucket will refill
-        sleep(Duration::from_millis(50)).await;
+        // Small delay to ensure rate limit state is updated
+        // Rate limit uses token bucket with 1-minute window, so we need to ensure
+        // state is properly synchronized between requests
+        sleep(Duration::from_millis(100)).await;
     }
 
+    // Additional delay to ensure rate limit state is fully persisted and synchronized
+    // The rate limit check happens synchronously in memory, but we want to ensure
+    // the state is consistent before the next request
+    sleep(Duration::from_millis(200)).await;
+
     // 6th request should be rate limited (exceeds rpm=5)
-    // After 5 requests: minute_count=5, tokens_available=0
-    // Check: (5+1) > 5 = true OR 0 < 1.0 = true -> should deny
+    // With rpm=5 and burst=5, the 6th request should exceed the limit
     let response = client
         .get("http://localhost:18101/v1/models")
         .header("Authorization", bearer_header(&api_key.plain))
