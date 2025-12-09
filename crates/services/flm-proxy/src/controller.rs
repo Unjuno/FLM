@@ -655,10 +655,11 @@ async fn create_router(
         // Apply middleware in order: policy_check -> auth -> policy_apply
         // Policy existence check should run before authentication to fail closed when policy is missing
         // Note: In Axum, layers are applied in reverse order (last added = first executed)
-        // So we add policy_check_middleware last to execute it first
+        // So we add them in reverse order: policy_middleware (last) -> auth_middleware -> policy_check_middleware (first)
+        // Execution order: policy_check_middleware -> auth_middleware -> policy_middleware
         .layer(axum_middleware::from_fn_with_state(
             app_state.clone(),
-            crate::middleware::policy_check_middleware,
+            crate::middleware::policy_middleware,
         ))
         .layer(axum_middleware::from_fn_with_state(
             app_state.clone(),
@@ -666,7 +667,7 @@ async fn create_router(
         ))
         .layer(axum_middleware::from_fn_with_state(
             app_state.clone(),
-            crate::middleware::policy_middleware,
+            crate::middleware::policy_check_middleware,
         ))
         .with_state(app_state.clone());
 
@@ -736,10 +737,11 @@ async fn create_router(
         // Apply middleware in order: policy_check -> auth -> policy_apply
         // Policy existence check should run before authentication to fail closed when policy is missing
         // Note: In Axum, layers are applied in reverse order (last added = first executed)
-        // So we add policy_check_middleware last to execute it first
+        // So we add them in reverse order: policy_middleware (last) -> auth_middleware -> policy_check_middleware (first)
+        // Execution order: policy_check_middleware -> auth_middleware -> policy_middleware
         .layer(axum_middleware::from_fn_with_state(
             app_state.clone(),
-            crate::middleware::policy_check_middleware,
+            crate::middleware::policy_middleware,
         ))
         .layer(axum_middleware::from_fn_with_state(
             app_state.clone(),
@@ -747,7 +749,7 @@ async fn create_router(
         ))
         .layer(axum_middleware::from_fn_with_state(
             app_state.clone(),
-            crate::middleware::policy_middleware,
+            crate::middleware::policy_check_middleware,
         ))
         // Merge streaming router before applying state
         // Note: When merging routers, routes from the merged router inherit the base router's middleware

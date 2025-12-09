@@ -345,9 +345,44 @@ pub async fn policy_middleware(
                         .and_then(|v| v.as_u64())
                         .unwrap_or(rpm);
 
+                    // Debug: Log rate limit check
+                    let log_path = std::env::temp_dir().join("rate_limit_debug.log");
+                    if let Ok(mut file) = OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open(&log_path)
+                    {
+                        let _ = file.write_all(
+                            format!(
+                                "[POLICY_MIDDLEWARE] Checking rate limit for api_key_id={}, rpm={}, burst={}\n",
+                                utils::mask_identifier(api_key_id),
+                                rpm,
+                                burst
+                            )
+                            .as_bytes(),
+                        );
+                        let _ = file.flush();
+                    }
+
                     let (allowed, remaining, reset_time) =
                         check_rate_limit_with_info(&state, api_key_id, rpm as u32, burst as u32)
                             .await;
+
+                    // Debug: Log rate limit result
+                    if let Ok(mut file) = OpenOptions::new()
+                        .create(true)
+                        .append(true)
+                        .open(&log_path)
+                    {
+                        let _ = file.write_all(
+                            format!(
+                                "[POLICY_MIDDLEWARE] Rate limit result: allowed={}, remaining={}\n",
+                                allowed, remaining
+                            )
+                            .as_bytes(),
+                        );
+                        let _ = file.flush();
+                    }
 
                     if !allowed {
                         return create_rate_limit_response().into_response();
@@ -367,6 +402,19 @@ pub async fn policy_middleware(
         // No API key ID in extensions - this means auth_middleware didn't set it
         // This can happen if the endpoint doesn't require auth (like /health)
         // or if auth failed. In either case, skip rate limiting.
+        // Debug: Log missing API key ID
+        let log_path = std::env::temp_dir().join("rate_limit_debug.log");
+        if let Ok(mut file) = OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(&log_path)
+        {
+            let _ = file.write_all(
+                "[POLICY_MIDDLEWARE] No API key ID in extensions, skipping rate limit\n"
+                    .as_bytes(),
+            );
+            let _ = file.flush();
+        }
         None
     };
 
