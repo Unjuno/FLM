@@ -328,6 +328,7 @@ async fn test_ip_rate_limit_scaling_with_many_ips() {
         mode: ProxyMode::LocalHttp,
         port: 18121,
         security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        trusted_proxy_ips: vec!["127.0.0.1".to_string()],
         ..Default::default()
     };
     let handle = controller.start(config).await.unwrap();
