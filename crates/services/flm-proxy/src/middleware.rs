@@ -192,6 +192,14 @@ pub async fn policy_middleware(
 ) -> Response {
     // Get client IP from request
     let client_ip = extract_client_ip(&request, &headers, &state.trusted_proxy_ips);
+    let path = request.uri().path().to_string();
+    
+    debug!(
+        middleware = "policy_middleware",
+        path = %path,
+        client_ip = %client_ip,
+        "policy_middleware: Starting policy application"
+    );
 
     // Get security policy (we know it exists because policy_check_middleware already checked)
     // However, there might be a race condition or database issue, so we handle it gracefully
@@ -238,6 +246,13 @@ pub async fn policy_middleware(
     if let Some(ip_whitelist) = policy_json.get("ip_whitelist") {
         if let Some(ip_list) = ip_whitelist.as_array() {
             if !ip_list.is_empty() {
+                debug!(
+                    middleware = "policy_middleware",
+                    path = %path,
+                    client_ip = %client_ip,
+                    whitelist_size = ip_list.len(),
+                    "policy_middleware: Checking IP whitelist"
+                );
                 let allowed = ip_list.iter().any(|ip_entry| {
                     if let Some(ip_str) = ip_entry.as_str() {
                         check_ip_allowed(&client_ip, ip_str)
@@ -247,11 +262,35 @@ pub async fn policy_middleware(
                 });
 
                 if !allowed {
+                    debug!(
+                        middleware = "policy_middleware",
+                        path = %path,
+                        client_ip = %client_ip,
+                        "policy_middleware: IP address not in whitelist, denying"
+                    );
                     return create_forbidden_response("IP address not in whitelist")
                         .into_response();
                 }
+                debug!(
+                    middleware = "policy_middleware",
+                    path = %path,
+                    client_ip = %client_ip,
+                    "policy_middleware: IP address in whitelist, allowing"
+                );
+            } else {
+                debug!(
+                    middleware = "policy_middleware",
+                    path = %path,
+                    "policy_middleware: IP whitelist is empty, skipping check"
+                );
             }
         }
+    } else {
+        debug!(
+            middleware = "policy_middleware",
+            path = %path,
+            "policy_middleware: No IP whitelist in policy, skipping check"
+        );
     }
 
     // 2. Extract CORS headers from policy

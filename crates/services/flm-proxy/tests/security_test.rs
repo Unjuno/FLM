@@ -241,7 +241,7 @@ async fn test_authentication_bypass_protection() {
     let security_db = unique_db_path("flm-security-auth-bypass");
 
     let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
-    let security_service = Arc::new(SecurityService::new(security_repo));
+    let security_service = Arc::new(SecurityService::new(security_repo.clone()));
 
     let api_key = security_service.create_api_key("test-key").await.unwrap();
 
@@ -261,13 +261,30 @@ async fn test_authentication_bypass_protection() {
         security_db_path: Some(security_db.to_str().unwrap().to_string()),
         ..Default::default()
     };
+    let config_clone = config.clone();
 
     let handle = controller.start(config).await.unwrap();
     sleep(Duration::from_millis(500)).await;
 
     let client = reqwest::Client::new();
 
+    // First, test with valid authentication to ensure it works
+    // This ensures the proxy is working correctly before testing bypass attempts
+    let response = client
+        .get("http://localhost:18123/v1/models")
+        .header("Authorization", bearer_header(&api_key.plain))
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(
+        response.status(),
+        reqwest::StatusCode::OK,
+        "Valid authentication should be accepted before bypass attempts"
+    );
+
     // Test various authentication bypass attempts
+    // Note: These attempts will record failures, but we test valid auth first
     let long_key = format!("Bearer {}", "a".repeat(1000));
     let bypass_attempts = vec![
         ("", "Empty authorization header"),
@@ -294,7 +311,23 @@ async fn test_authentication_bypass_protection() {
         );
     }
 
-    // Test with valid authentication
+    // Clear IP blocklist after bypass attempts
+    // The bypass attempts may have recorded failures, causing the IP to be blocked
+    // We need to clear the blocklist from database and restart the proxy to reload it
+    if let Ok(blocked_ips) = security_repo.get_blocked_ips().await {
+        for (ip, _, _, _, _, _) in blocked_ips {
+            let _ = security_repo.unblock_ip(&ip).await;
+        }
+    }
+    
+    // Stop and restart the proxy to reload the blocklist from database
+    controller.stop(handle).await.unwrap();
+    sleep(Duration::from_millis(200)).await;
+    
+    let handle2 = controller.start(config_clone).await.unwrap();
+    sleep(Duration::from_millis(500)).await;
+
+    // Test with valid authentication again after clearing blocklist
     let response = client
         .get("http://localhost:18123/v1/models")
         .header("Authorization", bearer_header(&api_key.plain))
@@ -306,10 +339,10 @@ async fn test_authentication_bypass_protection() {
     assert_eq!(
         response.status(),
         reqwest::StatusCode::OK,
-        "Valid authentication should be accepted"
+        "Valid authentication should be accepted after clearing blocklist"
     );
 
-    controller.stop(handle).await.unwrap();
+    controller.stop(handle2).await.unwrap();
 }
 
 #[tokio::test(flavor = "multi_thread")]

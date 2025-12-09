@@ -144,6 +144,7 @@ async fn test_security_features_e2e() {
     assert_eq!(response.status(), reqwest::StatusCode::OK);
 
     // Test 2: Request from non-whitelisted IP should be blocked
+    // Note: This request is blocked by IP whitelist, so it doesn't count towards rate limit
     let response = client
         .get("http://localhost:18101/v1/models")
         .header("Authorization", bearer_header(&api_key.plain))
@@ -154,10 +155,11 @@ async fn test_security_features_e2e() {
     assert_eq!(response.status(), reqwest::StatusCode::FORBIDDEN);
 
     // Test 3: Rate limiting
-    // Send 5 requests (within limit: rpm=5, burst=5)
+    // Send 4 more requests (Test 1 already sent 1, so total will be 5)
     // Note: Rate limit uses both minute_count (RPM) and token bucket (burst)
     // Both limits must be respected: (minute_count + 1) > rpm OR tokens_available < 1.0
-    for i in 0..5 {
+    // Test 1 already sent 1 request, so we send 4 more to reach 5 total
+    for i in 0..4 {
         let response = client
             .get("http://localhost:18101/v1/models")
             .header("Authorization", bearer_header(&api_key.plain))
@@ -167,8 +169,9 @@ async fn test_security_features_e2e() {
         assert_ne!(
             response.status(),
             reqwest::StatusCode::TOO_MANY_REQUESTS,
-            "Request {} should not be rate limited (within limit)",
-            i + 1
+            "Request {} should not be rate limited (within limit, total requests: {})",
+            i + 2,
+            i + 2
         );
         // Small delay to ensure rate limit state is updated
         // Rate limit uses token bucket with 1-minute window, so we need to ensure
@@ -182,7 +185,7 @@ async fn test_security_features_e2e() {
     sleep(Duration::from_millis(200)).await;
 
     // 6th request should be rate limited (exceeds rpm=5)
-    // With rpm=5 and burst=5, the 6th request should exceed the limit
+    // With rpm=5 and burst=5, after 5 requests (Test 1 + 4 in loop), the 6th request should exceed the limit
     let response = client
         .get("http://localhost:18101/v1/models")
         .header("Authorization", bearer_header(&api_key.plain))
