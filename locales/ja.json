@@ -241,6 +241,67 @@
       }
     }
   },
+  "sidebar": {
+    "menu": "メニュー",
+    "home": "ホーム",
+    "chatTester": "Chat Tester",
+    "securityEvents": "セキュリティイベント",
+    "ipBlocklist": "IPブロックリスト",
+    "ipWhitelist": "IPホワイトリスト",
+    "modelProfiles": "モデルプロファイル",
+    "modelComparison": "モデル比較",
+    "settings": "設定",
+    "expand": "展開",
+    "collapse": "折りたたみ"
+  },
+  "security": {
+    "ipWhitelistManagement": "IPホワイトリスト管理",
+    "addIpToWhitelist": "IPをホワイトリストに追加",
+    "ipOrCidrPlaceholder": "例: 192.168.1.0/24 または 10.0.0.1",
+    "ipWhitelistHint": "IPアドレス（IPv4またはIPv6）またはCIDR表記（例: 192.168.1.0/24）を入力してください",
+    "add": "追加",
+    "remove": "削除",
+    "addedAt": "追加日時",
+    "noWhitelistedIps": "ホワイトリストにIPがありません",
+    "totalWhitelisted": "総ホワイトリスト数",
+    "addWhitelistSuccess": "IP {{ip}} をホワイトリストに追加しました",
+    "removeWhitelistSuccess": "IP {{ip}} をホワイトリストから削除しました",
+    "removeWhitelistConfirm": "{{ip}} をホワイトリストから削除しますか？",
+    "addWhitelistError": "ホワイトリストへの追加に失敗しました",
+    "removeWhitelistError": "ホワイトリストからの削除に失敗しました",
+    "ipRequired": "IPアドレスまたはCIDRが必要です",
+    "invalidIpFormat": "無効なIPアドレスまたはCIDR形式です。有効なIPv4/IPv6アドレスまたはCIDR表記（例: 192.168.1.0/24）を入力してください"
+  },
+  "alertSettings": {
+    "title": "アラート設定",
+    "description": "セキュリティイベントのアラートルールを設定します。アラートはUI通知として表示するか、監査ログに記録できます。",
+    "addRule": "ルールを追加",
+    "saveSuccess": "アラート設定を保存しました",
+    "saveError": "アラート設定の保存に失敗しました",
+    "noRules": "アラートルールが設定されていません",
+    "addFirstRule": "最初のルールを追加",
+    "eventType": "イベントタイプ",
+    "severity": "重大度",
+    "threshold": "閾値",
+    "enabled": "有効",
+    "notifyUI": "UI通知を表示",
+    "notifyLog": "監査ログに記録"
+  },
+  "modelProfiles": {
+    "loadingCapabilities": "機能を読み込み中...",
+    "noCapabilities": "このエンジンにパラメータ定義がありません",
+    "engineParameters": "エンジンパラメータ",
+    "parametersDescription": "このモデルプロファイルのエンジン固有パラメータを設定します。",
+    "noParameters": "このエンジンにパラメータが定義されていません",
+    "showAdvanced": "詳細設定を表示",
+    "hideAdvanced": "詳細設定を非表示"
+  },
+  "common": {
+    "adding": "追加中...",
+    "saving": "保存中...",
+    "actions": "操作",
+    "dismiss": "閉じる"
+  },
   "errors": {
     "engineNotFound": "AIエンジンが見つかりません",
     "engineNotFoundSolution": "AIエンジンがインストールされているか確認してください。",

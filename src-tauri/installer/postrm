@@ -1,0 +1,108 @@
+#!/bin/bash
+# DEB postrm script for Linux
+# This script is executed during DEB package removal
+# It prompts the user to remove the root CA certificate
+
+set -euo pipefail
+
+# Log file location
+LOG_FILE="/var/log/flm-uninstall.log"
+
+# Logging function
+log() {
+    echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*" | tee -a "$LOG_FILE" 2>/dev/null || echo "[$(date '+%Y-%m-%d %H:%M:%S')] $*"
+}
+
+# Error handling function
+handle_error() {
+    local exit_code=$?
+    local error_msg="$1"
+    log "ERROR: $error_msg (exit code: $exit_code)"
+    return $exit_code
+}
+
+# Get the installation directory
+INSTALL_DIR="/opt/flm"
+UNINSTALL_SCRIPT="$INSTALL_DIR/resources/scripts/uninstall-ca.sh"
+
+log "Starting FLM certificate removal process"
+
+# Check if uninstall script exists
+if [ ! -f "$UNINSTALL_SCRIPT" ]; then
+    # Script may have been removed already, try to find it in alternative locations
+    log "Uninstall script not found at $UNINSTALL_SCRIPT, checking alternative locations"
+    
+    # Try common alternative locations
+    ALTERNATIVE_LOCATIONS=(
+        "/usr/local/flm/resources/scripts/uninstall-ca.sh"
+        "/usr/share/flm/resources/scripts/uninstall-ca.sh"
+    )
+    
+    FOUND=false
+    for alt_location in "${ALTERNATIVE_LOCATIONS[@]}"; do
+        if [ -f "$alt_location" ]; then
+            UNINSTALL_SCRIPT="$alt_location"
+            log "Found uninstall script at alternative location: $alt_location"
+            FOUND=true
+            break
+        fi
+    done
+    
+    if [ "$FOUND" = false ]; then
+        log "WARNING: Uninstall script not found. Certificate removal will be skipped."
+        log "You can remove the certificate manually by running:"
+        log "  sudo /usr/local/share/ca-certificates/remove-flm-ca.sh"
+        exit 0
+    fi
+fi
+
+# Verify uninstall script is executable
+if [ ! -x "$UNINSTALL_SCRIPT" ]; then
+    log "Making uninstall script executable"
+    chmod +x "$UNINSTALL_SCRIPT" || {
+        log "WARNING: Failed to make uninstall script executable"
+    }
+fi
+
+# Ask user if they want to remove the certificate
+if [ -t 0 ]; then
+    # Interactive mode
+    log "Interactive mode detected, prompting user"
+    read -p "Would you like to remove the FLM Root CA certificate from the system trust store? (y/N): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        log "User chose to remove certificate"
+        if [ -f "$UNINSTALL_SCRIPT" ]; then
+            # Run uninstall script with force flag (non-interactive)
+            if bash "$UNINSTALL_SCRIPT" --yes 2>&1 | tee -a "$LOG_FILE"; then
+                log "Certificate removal completed successfully"
+            else
+                local exit_code=$?
+                log "ERROR: Certificate removal failed with exit code $exit_code"
+                echo "Warning: Failed to remove certificate. You may need to remove it manually." >&2
+                echo "Check the log file at $LOG_FILE for details." >&2
+                echo "You can remove it later by running:" >&2
+                echo "  sudo $UNINSTALL_SCRIPT" >&2
+                exit $exit_code
+            fi
+        else
+            log "ERROR: Uninstall script not found at $UNINSTALL_SCRIPT"
+            echo "Error: Uninstall script not found. Certificate removal skipped." >&2
+            exit 1
+        fi
+    else
+        log "User chose to skip certificate removal"
+        echo "Certificate removal skipped."
+        echo "You can remove it later by running:"
+        echo "  sudo $UNINSTALL_SCRIPT"
+    fi
+else
+    # Non-interactive mode (e.g., during automated removal)
+    log "Non-interactive mode detected, skipping certificate removal"
+    echo "Certificate removal skipped (non-interactive mode)."
+    echo "You can remove it later by running:"
+    echo "  sudo $UNINSTALL_SCRIPT"
+fi
+
+log "FLM certificate removal process completed"
+exit 0

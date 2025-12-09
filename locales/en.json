@@ -241,6 +241,67 @@
       }
     }
   },
+  "sidebar": {
+    "menu": "Menu",
+    "home": "Home",
+    "chatTester": "Chat Tester",
+    "securityEvents": "Security Events",
+    "ipBlocklist": "IP Blocklist",
+    "ipWhitelist": "IP Whitelist",
+    "modelProfiles": "Model Profiles",
+    "modelComparison": "Model Comparison",
+    "settings": "Settings",
+    "expand": "Expand",
+    "collapse": "Collapse"
+  },
+  "security": {
+    "ipWhitelistManagement": "IP Whitelist Management",
+    "addIpToWhitelist": "Add IP to Whitelist",
+    "ipOrCidrPlaceholder": "e.g., 192.168.1.0/24 or 10.0.0.1",
+    "ipWhitelistHint": "Enter an IP address (IPv4 or IPv6) or CIDR notation (e.g., 192.168.1.0/24)",
+    "add": "Add",
+    "remove": "Remove",
+    "addedAt": "Added At",
+    "noWhitelistedIps": "No IPs in whitelist",
+    "totalWhitelisted": "Total Whitelisted",
+    "addWhitelistSuccess": "IP {{ip}} added to whitelist successfully",
+    "removeWhitelistSuccess": "IP {{ip}} removed from whitelist successfully",
+    "removeWhitelistConfirm": "Remove {{ip}} from whitelist?",
+    "addWhitelistError": "Failed to add IP to whitelist",
+    "removeWhitelistError": "Failed to remove IP from whitelist",
+    "ipRequired": "IP address or CIDR is required",
+    "invalidIpFormat": "Invalid IP address or CIDR format. Please enter a valid IPv4/IPv6 address or CIDR notation (e.g., 192.168.1.0/24)"
+  },
+  "alertSettings": {
+    "title": "Alert Settings",
+    "description": "Configure alert rules for security events. Alerts can be displayed as UI notifications or logged to the audit log.",
+    "addRule": "Add Rule",
+    "saveSuccess": "Alert settings saved successfully",
+    "saveError": "Failed to save alert settings",
+    "noRules": "No alert rules configured",
+    "addFirstRule": "Add First Rule",
+    "eventType": "Event Type",
+    "severity": "Severity",
+    "threshold": "Threshold",
+    "enabled": "Enabled",
+    "notifyUI": "Show UI Notification",
+    "notifyLog": "Log to Audit Log"
+  },
+  "modelProfiles": {
+    "loadingCapabilities": "Loading capabilities...",
+    "noCapabilities": "No parameter definitions available for this engine",
+    "engineParameters": "Engine Parameters",
+    "parametersDescription": "Configure engine-specific parameters for this model profile.",
+    "noParameters": "No parameters defined for this engine",
+    "showAdvanced": "Show Advanced Settings",
+    "hideAdvanced": "Hide Advanced Settings"
+  },
+  "common": {
+    "adding": "Adding...",
+    "saving": "Saving...",
+    "actions": "Actions",
+    "dismiss": "Dismiss"
+  },
   "errors": {
     "engineNotFound": "AI Engine not found",
     "engineNotFoundSolution": "Please check if the AI engine is installed.",

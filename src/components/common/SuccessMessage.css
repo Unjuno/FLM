@@ -1,0 +1,57 @@
+.success-message {
+  padding: 12px;
+  background-color: var(--color-success-light);
+  color: var(--color-success);
+  border-radius: 4px;
+  margin-bottom: 20px;
+  border-left: 4px solid var(--color-success);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.success-message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.success-message-header strong {
+  font-weight: 600;
+}
+
+.success-dismiss-button {
+  background: none;
+  border: none;
+  color: var(--color-success);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.success-dismiss-button:hover {
+  background-color: var(--color-success-light);
+}
+
+.success-message-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+

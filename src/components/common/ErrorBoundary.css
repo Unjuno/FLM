@@ -1,0 +1,12 @@
+.error-boundary {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+}
+
+.error-boundary-actions {
+  margin-top: 20px;
+  display: flex;
+  gap: 12px;
+  justify-content: center;
+}

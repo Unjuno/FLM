@@ -1,0 +1,249 @@
+.model-comparison-page {
+  padding: 2rem;
+  max-width: 1400px;
+  margin: 0 auto;
+}
+
+.model-comparison-page h1 {
+  margin-bottom: 0.5rem;
+  color: var(--color-text-primary);
+}
+
+.page-description {
+  color: var(--color-text-secondary);
+  margin-bottom: 2rem;
+}
+
+.model-comparison-content {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.model-comparison-filters {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-end;
+  flex-wrap: wrap;
+  padding: 1rem;
+  background: var(--color-bg-secondary);
+  border-radius: 8px;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 150px;
+}
+
+.filter-group label {
+  font-weight: 500;
+  color: var(--color-text-primary);
+  font-size: 0.9rem;
+}
+
+.filter-group input,
+.filter-group select {
+  padding: 0.5rem;
+  border: 1px solid var(--color-border-medium);
+  border-radius: 4px;
+  background: var(--color-bg-primary);
+  color: var(--color-text-primary);
+  font-size: 1rem;
+}
+
+.filter-group input:focus,
+.filter-group select:focus {
+  outline: none;
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 2px var(--color-primary-light);
+}
+
+.filter-group input:disabled,
+.filter-group select:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  padding: 0.5rem 1rem;
+  border: none;
+  border-radius: 4px;
+  background: var(--color-primary);
+  color: var(--color-text-inverse);
+  font-size: 1rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.btn-primary:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.summary-card {
+  padding: 1.5rem;
+  background: var(--color-bg-secondary);
+  border-radius: 8px;
+  border: 1px solid var(--color-border-light);
+}
+
+.summary-card h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  color: var(--color-text-secondary);
+  font-weight: 500;
+}
+
+.summary-value {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 600;
+  color: var(--color-text-primary);
+}
+
+.status-breakdown {
+  padding: 1.5rem;
+  background: var(--color-bg-secondary);
+  border-radius: 8px;
+}
+
+.status-breakdown h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--color-text-primary);
+}
+
+.status-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.status-card {
+  padding: 1rem;
+  border-radius: 8px;
+  text-align: center;
+}
+
+.status-card h4 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.status-card p {
+  margin: 0;
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.status-card.healthy {
+  background: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.status-card.degraded {
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+}
+
+.status-card.unreachable {
+  background: var(--color-error-light);
+  color: var(--color-error);
+}
+
+.engine-summary,
+.model-summary,
+.recent-logs {
+  padding: 1.5rem;
+  background: var(--color-bg-secondary);
+  border-radius: 8px;
+}
+
+.engine-summary h2,
+.model-summary h2,
+.recent-logs h2 {
+  margin-top: 0;
+  margin-bottom: 1rem;
+  color: var(--color-text-primary);
+}
+
+.summary-table,
+.logs-table {
+  overflow-x: auto;
+}
+
+.summary-table table,
+.logs-table table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.summary-table thead,
+.logs-table thead {
+  background: var(--color-bg-tertiary);
+}
+
+.summary-table th,
+.logs-table th {
+  padding: 0.75rem;
+  text-align: left;
+  font-weight: 600;
+  color: var(--color-text-primary);
+  border-bottom: 2px solid var(--color-border-medium);
+}
+
+.summary-table td,
+.logs-table td {
+  padding: 0.75rem;
+  border-bottom: 1px solid var(--color-border-light);
+  color: var(--color-text-secondary);
+}
+
+.summary-table tbody tr:hover,
+.logs-table tbody tr:hover {
+  background: var(--color-bg-tertiary);
+}
+
+.status-badge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-badge.status-healthy {
+  background: var(--color-success-light);
+  color: var(--color-success);
+}
+
+.status-badge.status-degraded {
+  background: var(--color-warning-light);
+  color: var(--color-warning);
+}
+
+.status-badge.status-unreachable {
+  background: var(--color-error-light);
+  color: var(--color-error);
+}
+
+.empty-message {
+  text-align: center;
+  padding: 2rem;
+  color: var(--color-text-tertiary);
+}
+

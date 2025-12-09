@@ -1,0 +1,37 @@
+/* アプリケーションレイアウトコンポーネントのスタイル */
+
+.app-layout {
+  display: flex;
+  min-height: 100vh;
+  background: var(--color-bg-secondary);
+}
+
+.layout-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.main-content {
+  flex: 1;
+  padding: 1.5rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background-color: var(--color-bg-primary);
+  color: var(--color-text-primary);
+}
+
+.main-content h1,
+.main-content h2,
+.main-content h3,
+.main-content h4,
+.main-content h5,
+.main-content h6 {
+  color: var(--color-text-primary);
+  font-weight: 600;
+}
+
+.main-content p {
+  color: var(--color-text-secondary);
+  line-height: 1.6;
+}

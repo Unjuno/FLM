@@ -1,0 +1,44 @@
+#!/bin/bash
+# DEB postinst script for Linux
+# This script is executed after the DEB package installation completes
+# It prompts the user to install the root CA certificate
+
+set -euo pipefail
+
+# Get the installation directory
+INSTALL_DIR="/opt/flm"
+CERT_PATH="$INSTALL_DIR/resources/certs/flm-ca.crt"
+INSTALL_SCRIPT="$INSTALL_DIR/resources/scripts/install-ca.sh"
+
+# Check if certificate file exists
+if [ ! -f "$CERT_PATH" ]; then
+    echo "Certificate file not found at $CERT_PATH"
+    exit 0
+fi
+
+# Ask user if they want to install the certificate
+if [ -t 0 ]; then
+    # Interactive mode
+    read -p "FLM Root CA certificate found. Would you like to install it to the system trust store? (y/N): " -n 1 -r
+    echo
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        if [ -f "$INSTALL_SCRIPT" ]; then
+            sudo bash "$INSTALL_SCRIPT" "$CERT_PATH"
+        else
+            echo "Install script not found at $INSTALL_SCRIPT"
+            exit 1
+        fi
+    else
+        echo "Certificate installation skipped."
+        echo "You can install it later by running:"
+        echo "  sudo $INSTALL_SCRIPT $CERT_PATH"
+    fi
+else
+    # Non-interactive mode (e.g., during automated installation)
+    echo "Certificate installation skipped (non-interactive mode)."
+    echo "You can install it later by running:"
+    echo "  sudo $INSTALL_SCRIPT $CERT_PATH"
+fi
+
+exit 0
+

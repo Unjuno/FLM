@@ -3,14 +3,15 @@
     "title": "FLM Proxy Dashboard",
     "tags": ["flm", "proxy", "monitoring"],
     "timezone": "browser",
-    "schemaVersion": 16,
-    "version": 2,
+    "schemaVersion": 38,
+    "version": 1,
     "refresh": "30s",
     "panels": [
       {
         "id": 1,
         "title": "Request Rate",
         "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
         "targets": [
           {
             "expr": "rate(flm_proxy_requests_total[5m])",
@@ -18,12 +19,6 @@
             "refId": "A"
           }
         ],
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 0,
-          "y": 0
-        },
         "yaxes": [
           {
             "format": "reqps",
@@ -32,47 +27,36 @@
           {
             "format": "short"
           }
-        ]
+        ],
+        "xaxis": {
+          "mode": "time"
+        }
       },
       {
         "id": 2,
         "title": "Request Status Distribution",
-        "type": "graph",
+        "type": "piechart",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
         "targets": [
           {
-            "expr": "rate(flm_proxy_requests_success[5m])",
-            "legendFormat": "Success (2xx)",
+            "expr": "flm_proxy_requests_success",
+            "legendFormat": "Success",
             "refId": "A"
           },
           {
-            "expr": "rate(flm_proxy_requests_failed[5m])",
-            "legendFormat": "Failed (4xx/5xx)",
+            "expr": "flm_proxy_requests_failed",
+            "legendFormat": "Failed",
             "refId": "B"
           },
           {
-            "expr": "rate(flm_proxy_requests_rate_limited[5m])",
+            "expr": "flm_proxy_requests_rate_limited",
             "legendFormat": "Rate Limited",
             "refId": "C"
           },
           {
-            "expr": "rate(flm_proxy_requests_blocked[5m])",
+            "expr": "flm_proxy_requests_blocked",
             "legendFormat": "Blocked",
             "refId": "D"
-          }
-        ],
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 0
-        },
-        "yaxes": [
-          {
-            "format": "reqps",
-            "label": "Requests/sec"
-          },
-          {
-            "format": "short"
           }
         ]
       },
@@ -80,6 +64,7 @@
         "id": 3,
         "title": "Active Connections",
         "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 8 },
         "targets": [
           {
             "expr": "flm_proxy_connections_active",
@@ -87,12 +72,6 @@
             "refId": "A"
           }
         ],
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 0,
-          "y": 8
-        },
         "yaxes": [
           {
             "format": "short",
@@ -101,44 +80,46 @@
           {
             "format": "short"
           }
-        ]
+        ],
+        "xaxis": {
+          "mode": "time"
+        }
       },
       {
         "id": 4,
         "title": "Authentication Rate",
         "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 12, "y": 8 },
         "targets": [
           {
             "expr": "rate(flm_proxy_auth_success[5m])",
-            "legendFormat": "Success",
+            "legendFormat": "Auth Success",
             "refId": "A"
           },
           {
             "expr": "rate(flm_proxy_auth_failure[5m])",
-            "legendFormat": "Failure",
+            "legendFormat": "Auth Failure",
             "refId": "B"
           }
         ],
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 12,
-          "y": 8
-        },
         "yaxes": [
           {
-            "format": "ops",
+            "format": "short",
             "label": "Auth/sec"
           },
           {
             "format": "short"
           }
-        ]
+        ],
+        "xaxis": {
+          "mode": "time"
+        }
       },
       {
         "id": 5,
         "title": "Security Events Rate",
         "type": "graph",
+        "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
         "targets": [
           {
             "expr": "rate(flm_proxy_intrusions_detected[5m])",
@@ -151,64 +132,41 @@
             "refId": "B"
           }
         ],
-        "gridPos": {
-          "h": 8,
-          "w": 12,
-          "x": 0,
-          "y": 16
-        },
         "yaxes": [
           {
-            "format": "ops",
+            "format": "short",
             "label": "Events/sec"
           },
           {
             "format": "short"
           }
-        ]
+        ],
+        "xaxis": {
+          "mode": "time"
+        }
       },
       {
         "id": 6,
         "title": "Request Success Rate",
-        "type": "stat",
+        "type": "gauge",
+        "gridPos": { "h": 8, "w": 6, "x": 12, "y": 16 },
         "targets": [
           {
-            "expr": "rate(flm_proxy_requests_success[5m]) / rate(flm_proxy_requests_total[5m]) * 100",
+            "expr": "(rate(flm_proxy_requests_success[5m]) / rate(flm_proxy_requests_total[5m])) * 100",
             "legendFormat": "Success Rate",
             "refId": "A"
           }
         ],
-        "gridPos": {
-          "h": 4,
-          "w": 6,
-          "x": 12,
-          "y": 16
-        },
         "options": {
-          "unit": "percent",
-          "decimals": 2
-        },
-        "fieldConfig": {
-          "defaults": {
-            "unit": "percent",
-            "decimals": 2,
-            "thresholds": {
-              "mode": "absolute",
-              "steps": [
-                {
-                  "value": 0,
-                  "color": "red"
-                },
-                {
-                  "value": 95,
-                  "color": "yellow"
-                },
-                {
-                  "value": 99,
-                  "color": "green"
-                }
-              ]
-            }
+          "min": 0,
+          "max": 100,
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              { "value": 0, "color": "red" },
+              { "value": 80, "color": "yellow" },
+              { "value": 95, "color": "green" }
+            ]
           }
         }
       },
@@ -216,6 +174,7 @@
         "id": 7,
         "title": "Total Requests",
         "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 18, "y": 16 },
         "targets": [
           {
             "expr": "flm_proxy_requests_total",
@@ -223,45 +182,62 @@
             "refId": "A"
           }
         ],
-        "gridPos": {
-          "h": 4,
-          "w": 6,
-          "x": 18,
-          "y": 16
-        },
         "options": {
-          "unit": "short"
+          "graphMode": "none",
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 8,
+        "title": "Total Failed Requests",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 18, "y": 20 },
+        "targets": [
+          {
+            "expr": "flm_proxy_requests_failed",
+            "legendFormat": "Failed",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "none",
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 9,
+        "title": "Total Rate Limited",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 12, "y": 24 },
+        "targets": [
+          {
+            "expr": "flm_proxy_requests_rate_limited",
+            "legendFormat": "Rate Limited",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "none",
+          "colorMode": "value"
+        }
+      },
+      {
+        "id": 10,
+        "title": "Total Blocked",
+        "type": "stat",
+        "gridPos": { "h": 4, "w": 6, "x": 18, "y": 24 },
+        "targets": [
+          {
+            "expr": "flm_proxy_requests_blocked",
+            "legendFormat": "Blocked",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "graphMode": "none",
+          "colorMode": "value"
         }
       }
-    ],
-    "time": {
-      "from": "now-1h",
-      "to": "now"
-    },
-    "timepicker": {
-      "refresh_intervals": ["10s", "30s", "1m", "5m", "15m", "30m", "1h", "2h", "1d"]
-    }
-  },
-  "meta": {
-    "type": "db",
-    "canSave": true,
-    "canEdit": true,
-    "canAdmin": true,
-    "canStar": true,
-    "slug": "flm-proxy",
-    "url": "/d/flm-proxy/flm-proxy-dashboard",
-    "expires": "0001-01-01T00:00:00Z",
-    "created": "2025-02-01T00:00:00Z",
-    "updated": "2025-02-01T00:00:00Z",
-    "updatedBy": "admin",
-    "createdBy": "admin",
-    "version": 2,
-    "hasAcl": false,
-    "isFolder": false,
-    "folderId": 0,
-    "folderTitle": "General",
-    "folderUrl": "",
-    "provisioned": false,
-    "provisionedExternalId": ""
+    ]
   }
 }

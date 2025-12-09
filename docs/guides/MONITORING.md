@@ -95,13 +95,26 @@ scrape_configs:
 
 FLM Proxyダッシュボードには以下のパネルが含まれています：
 
-- **Request Rate**: リクエストレート（リクエスト/秒）
-- **Request Status Distribution**: リクエストステータスの分布（成功、失敗、レート制限、ブロック）
-- **Active Connections**: アクティブ接続数
-- **Authentication Rate**: 認証レート（成功/失敗）
-- **Security Events Rate**: セキュリティイベントレート（侵入検知、異常検知）
-- **Request Success Rate**: リクエスト成功率（%）
-- **Total Requests**: 総リクエスト数
+- **Request Rate**: リクエストレート（リクエスト/秒）の時系列グラフ
+- **Request Status Distribution**: リクエストステータスの分布（成功、失敗、レート制限、ブロック）の円グラフ
+- **Active Connections**: アクティブ接続数の時系列グラフ
+- **Authentication Rate**: 認証レート（成功/失敗）の時系列グラフ
+- **Security Events Rate**: セキュリティイベントレート（侵入検知、異常検知）の時系列グラフ
+- **Request Success Rate**: リクエスト成功率（%）のゲージ表示
+- **Total Requests**: 総リクエスト数の統計表示
+- **Total Failed Requests**: 総失敗リクエスト数の統計表示
+- **Total Rate Limited**: 総レート制限リクエスト数の統計表示
+- **Total Blocked**: 総ブロックリクエスト数の統計表示
+
+### ダッシュボードのカスタマイズ
+
+ダッシュボードはGrafanaのUIから直接編集できます。パネルの追加、削除、設定変更などが可能です。
+
+#### よく使うクエリ例
+
+- **リクエストレート（1分間）**: `rate(flm_proxy_requests_total[1m])`
+- **エラー率**: `(rate(flm_proxy_requests_failed[5m]) / rate(flm_proxy_requests_total[5m])) * 100`
+- **認証失敗率**: `(rate(flm_proxy_auth_failure[5m]) / (rate(flm_proxy_auth_success[5m]) + rate(flm_proxy_auth_failure[5m]))) * 100`
 
 ## アラート設定例
 
@@ -186,9 +199,71 @@ curl http://localhost:8080/metrics
 3. ダッシュボードの時間範囲を確認
 4. メトリクス名が正しいか確認（`flm_proxy_` プレフィックス）
 
+## メトリクスの詳細
+
+### メトリクス名の命名規則
+
+すべてのメトリクスは `flm_proxy_` プレフィックスで始まります。これにより、他のアプリケーションのメトリクスと区別できます。
+
+### メトリクスタイプ
+
+- **Counter**: 単調増加する値（リクエスト数、認証数など）
+- **Gauge**: 増減する値（アクティブ接続数など）
+
+### メトリクスの計算例
+
+#### リクエストレート（1秒あたり）
+
+```promql
+rate(flm_proxy_requests_total[5m])
+```
+
+#### エラー率（%）
+
+```promql
+(rate(flm_proxy_requests_failed[5m]) / rate(flm_proxy_requests_total[5m])) * 100
+```
+
+#### 成功率（%）
+
+```promql
+(rate(flm_proxy_requests_success[5m]) / rate(flm_proxy_requests_total[5m])) * 100
+```
+
+#### 認証失敗率（%）
+
+```promql
+(rate(flm_proxy_auth_failure[5m]) / (rate(flm_proxy_auth_success[5m]) + rate(flm_proxy_auth_failure[5m]))) * 100
+```
+
+## 実装状況
+
+### メトリクスエンドポイント
+
+- **パス**: `/metrics`
+- **実装場所**: `crates/services/flm-proxy/src/metrics.rs`
+- **コントローラー統合**: `crates/services/flm-proxy/src/controller.rs`
+- **形式**: Prometheus Text Format (version 0.0.4)
+
+### 利用可能なメトリクス一覧
+
+| メトリクス名 | タイプ | 説明 |
+|------------|--------|------|
+| `flm_proxy_requests_total` | counter | 総リクエスト数 |
+| `flm_proxy_requests_success` | counter | 成功リクエスト数（2xx） |
+| `flm_proxy_requests_failed` | counter | 失敗リクエスト数（4xx, 5xx） |
+| `flm_proxy_requests_rate_limited` | counter | レート制限されたリクエスト数 |
+| `flm_proxy_requests_blocked` | counter | ブロックされたリクエスト数 |
+| `flm_proxy_connections_active` | gauge | 現在のアクティブ接続数 |
+| `flm_proxy_auth_success` | counter | 認証成功数 |
+| `flm_proxy_auth_failure` | counter | 認証失敗数 |
+| `flm_proxy_intrusions_detected` | counter | 侵入検知イベント数 |
+| `flm_proxy_anomalies_detected` | counter | 異常検知イベント数 |
+
 ## 参考資料
 
 - [Prometheus公式ドキュメント](https://prometheus.io/docs/)
 - [Grafana公式ドキュメント](https://grafana.com/docs/)
 - [FLM Proxy仕様書](../specs/PROXY_SPEC.md)
+- [Prometheus Query Language (PromQL)](https://prometheus.io/docs/prometheus/latest/querying/basics/)
 

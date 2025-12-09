@@ -1,0 +1,75 @@
+.error-message {
+  padding: 12px;
+  background-color: var(--color-error-light);
+  color: var(--color-error);
+  border-radius: 4px;
+  margin-bottom: 20px;
+  border-left: 4px solid var(--color-error);
+}
+
+.error-message-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.error-message-header strong {
+  font-weight: 600;
+}
+
+.error-dismiss-button {
+  background: none;
+  border: none;
+  color: var(--color-error);
+  font-size: 20px;
+  cursor: pointer;
+  padding: 0;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background-color 0.2s;
+}
+
+.error-dismiss-button:hover {
+  background-color: var(--color-error-light);
+}
+
+.error-message-content {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.error-details {
+  margin-top: 8px;
+  font-size: 12px;
+}
+
+.error-details summary {
+  cursor: pointer;
+  user-select: none;
+  color: var(--color-warning);
+  font-weight: 500;
+}
+
+.error-details summary:hover {
+  text-decoration: underline;
+}
+
+.error-details-content {
+  margin-top: 8px;
+  padding: 8px;
+  background-color: var(--color-error-light);
+  border-radius: 4px;
+  font-size: 11px;
+  font-family: 'Courier New', monospace;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+  color: var(--color-text-primary);
+}
+
