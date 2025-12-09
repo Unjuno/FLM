@@ -1,0 +1,314 @@
+warning: unused import: `crate::commands::error::CliUserError`
+ --> crates\apps\flm-cli\src\commands\proxy.rs:7:5
+  |
+7 | use crate::commands::error::CliUserError;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `load_existing_client`
+  --> crates\apps\flm-cli\src\commands\proxy.rs:10:36
+   |
+10 | use daemon::{ensure_daemon_client, load_existing_client};
+   |                                    ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `flm_core::error::ProxyError`
+  --> crates\apps\flm-cli\src\commands\proxy.rs:15:5
+   |
+15 | use flm_core::error::ProxyError;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `SecurityService`
+  --> crates\apps\flm-cli\src\commands\proxy.rs:17:40
+   |
+17 | use flm_core::services::{ProxyService, SecurityService};
+   |                                        ^^^^^^^^^^^^^^^
+
+warning: unused import: `local_ip_address::local_ip`
+  --> crates\apps\flm-cli\src\commands\proxy.rs:19:5
+   |
+19 | use local_ip_address::local_ip;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+   --> crates\apps\flm-cli\src\commands\proxy.rs:141:9
+    |
+141 |         mut acme_dns_lego_path,
+    |         ----^^^^^^^^^^^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` on by default
+
+warning: variable does not need to be mutable
+   --> crates\apps\flm-cli\src\commands\proxy.rs:142:9
+    |
+142 |         mut acme_dns_propagation_wait,
+    |         ----^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> crates\apps\flm-cli\src\commands\proxy.rs:282:9
+    |
+282 |     let mut config = ProxyConfig {
+    |         ----^^^^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: methods `stop_proxy` and `status` are never used
+  --> crates\apps\flm-cli\src\commands\proxy\daemon.rs:65:18
+   |
+27 | impl AdminClient {
+   | ---------------- methods in this implementation
+...
+65 |     pub async fn stop_proxy(&self, port: Option<u16>, handle_id: Option<String>) -> DynResult<()> {
+   |                  ^^^^^^^^^^
+...
+77 |     pub async fn status(&self) -> DynResult<Vec<ProxyHandle>> {
+   |                  ^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: struct `StopRequest` is never constructed
+  --> crates\apps\flm-cli\src\commands\proxy\daemon.rs:92:8
+   |
+92 | struct StopRequest {
+   |        ^^^^^^^^^^^
+
+warning: `flm-cli` (lib) generated 10 warnings (run `cargo fix --lib -p flm-cli` to apply 8 suggestions)
+warning: unused variable: `other`
+   --> crates\services\flm-proxy\rustls-acme\src\acme.rs:340:13
+    |
+340 |             other => panic!("unexpected error {other:?}"),
+    |             ^^^^^ help: if this is intentional, prefix it with an underscore: `_other`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: panic message contains an unused formatting placeholder
+   --> crates\services\flm-proxy\rustls-acme\src\acme.rs:340:47
+    |
+340 |             other => panic!("unexpected error {other:?}"),
+    |                                               ^^^^^^^^^
+    |
+    = note: this message is not used as a format string when given without arguments, but will be in Rust 2021
+    = note: `#[warn(non_fmt_panics)]` on by default
+help: add the missing argument
+    |
+340 |             other => panic!("unexpected error {other:?}", ...),
+    |                                                         +++++
+help: or add a "{}" format string to use the message literally
+    |
+340 |             other => panic!("{}", "unexpected error {other:?}"),
+    |                             +++++
+
+warning: `rustls-acme` (lib test) generated 2 warnings (run `cargo fix --lib -p rustls-acme --tests` to apply 1 suggestion)
+warning: use of deprecated method `tempfile::TempDir::into_path`: use TempDir::keep()
+ --> crates\apps\flm-cli\tests\secrets_dns_test.rs:9:9
+  |
+9 |     dir.into_path()
+  |         ^^^^^^^^^
+  |
+  = note: `#[warn(deprecated)]` on by default
+
+warning: `flm-cli` (test "secrets_dns_test") generated 1 warning
+warning: function `load_packaged_root_ca` is never used
+   --> crates\services\flm-proxy\src\certificate.rs:111:8
+    |
+111 | pub fn load_packaged_root_ca(
+    |        ^^^^^^^^^^^^^^^^^^^^^
+    |
+    = note: `#[warn(dead_code)]` on by default
+
+warning: function `create_metrics_router` is never used
+   --> crates\services\flm-proxy\src\metrics.rs:313:8
+    |
+313 | pub fn create_metrics_router(metrics: Arc<Metrics>) -> Router {
+    |        ^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `std::net::SocketAddr`
+ --> crates\services\flm-proxy\tests\tor_mock.rs:6:5
+  |
+6 | use std::net::SocketAddr;
+  |     ^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: variable `shutdown` is assigned to, but never used
+  --> crates\services\flm-proxy\tests\tor_mock.rs:37:21
+   |
+37 |             let mut shutdown = false;
+   |                     ^^^^^^^^
+   |
+   = note: consider using `_shutdown` instead
+   = note: `#[warn(unused_variables)]` on by default
+
+warning: value assigned to `shutdown` is never read
+  --> crates\services\flm-proxy\tests\tor_mock.rs:49:25
+   |
+49 |                         shutdown = true;
+   |                         ^^^^^^^^
+   |
+   = help: maybe it is overwritten before being read?
+   = note: `#[warn(unused_assignments)]` on by default
+
+warning: `flm-cli` (lib test) generated 10 warnings (10 duplicates)
+warning: `flm-proxy` (bin "flm-proxy" test) generated 2 warnings
+warning: `flm-proxy` (bin "flm-proxy") generated 2 warnings (2 duplicates)
+warning: `flm-proxy` (test "tor_mock") generated 3 warnings (run `cargo fix --test "tor_mock"` to apply 1 suggestion)
+warning: `flm-proxy` (test "integration_test") generated 3 warnings (3 duplicates)
+warning: function `create_test_state` is never used
+  --> crates\services\flm-proxy\tests\middleware_test.rs:14:10
+   |
+14 | async fn create_test_state() -> AppState {
+   |          ^^^^^^^^^^^^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: unused variable: `key2`
+   --> crates\core\flm-core\tests\security_service_test.rs:264:9
+    |
+264 |     let key2 = service.create_api_key("key2").await.unwrap();
+    |         ^^^^ help: if this is intentional, prefix it with an underscore: `_key2`
+    |
+    = note: `#[warn(unused_variables)]` on by default
+
+warning: unused variable: `key3`
+   --> crates\core\flm-core\tests\security_service_test.rs:265:9
+    |
+265 |     let key3 = service.create_api_key("key3").await.unwrap();
+    |         ^^^^ help: if this is intentional, prefix it with an underscore: `_key3`
+
+warning: unused variable: `key4`
+   --> crates\core\flm-core\tests\security_service_test.rs:266:9
+    |
+266 |     let key4 = service.create_api_key("key4").await.unwrap();
+    |         ^^^^ help: if this is intentional, prefix it with an underscore: `_key4`
+
+warning: `flm-proxy` (test "middleware_test") generated 1 warning
+warning: `flm-core` (test "security_service_test") generated 3 warnings
+warning: variable does not need to be mutable
+   --> crates\core\flm-core\src\domain\proxy.rs:256:13
+    |
+256 |         let mut config = ProxyConfig {
+    |             ----^^^^^^
+    |             |
+    |             help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` on by default
+
+warning: `flm-core` (lib test) generated 1 warning (run `cargo fix --lib -p flm-core --tests` to apply 1 suggestion)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 2.23s
+     Running unittests src\lib.rs (target\debug\deps\flm_cli-49aac3a792aa128e.exe)
+
+running 3 tests
+test db::migration::tests::set_secure_permissions_noop_non_unix ... ok
+test commands::proxy::daemon::tests::load_existing_client_clears_state_when_unreachable ... ok
+test commands::proxy::daemon::tests::load_existing_client_returns_some_when_health_ok ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.11s
+
+     Running unittests src\main.rs (target\debug\deps\flm-0e10091e29c96cc0.exe)
+
+running 0 tests
+
+test result: ok. 0 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.00s
+
+     Running tests\api_keys_test.rs (target\debug\deps\api_keys_test-67c82785fd6f2e1e.exe)
+
+running 5 tests
+test test_api_keys_rotate_nonexistent ... ok
+test test_api_keys_revoke_nonexistent ... ok
+test test_api_keys_list_empty ... ok
+test test_api_keys_create_and_list ... ok
+test test_api_keys_text_format ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 1.30s
+
+     Running tests\api_prompts_test.rs (target\debug\deps\api_prompts_test-5709db6a3d31a118.exe)
+
+running 7 tests
+test test_api_prompts_delete_missing ... ok
+test test_api_prompts_empty_file ... ok
+test test_api_prompts_delete ... ok
+test test_api_prompts_missing_file ... ok
+test test_api_prompts_show_nonexistent ... ok
+test test_api_prompts_list_after_update ... ok
+test test_api_prompts_set_and_show ... ok
+
+test result: ok. 7 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.60s
+
+     Running tests\chat_test.rs (target\debug\deps\chat_test-d327e77379b2c56a.exe)
+
+running 5 tests
+test test_chat_invalid_model_id ... ok
+test test_chat_with_mock_engine ... ok
+test test_chat_with_image_attachment ... ok
+test test_chat_with_unsupported_modality ... ok
+test test_chat_nonexistent_engine ... ok
+
+test result: ok. 5 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 3.12s
+
+     Running tests\check_test.rs (target\debug\deps\check_test-3ae8b3092f360943.exe)
+
+running 3 tests
+test test_check_nonexistent_databases ... ok
+test test_check_empty_databases ... ok
+test test_check_with_data ... ok
+
+test result: ok. 3 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 0.96s
+
+     Running tests\cli_test.rs (target\debug\deps\cli_test-ccd8251470b2c4cb.exe)
+
+running 10 tests
+test test_engines_detect_invalid_engine ... ok
+test test_config_set_and_get ... ok
+test test_config_list ... ok
+test test_models_list ... ok
+test test_api_keys_create_and_list ... ok
+test test_api_keys_revoke ... ok
+test test_api_keys_rotate ... ok
+test test_engines_detect_text_format ... ok
+test test_engines_detect_specific_engine ... ok
+test test_engines_detect ... ok
+
+test result: ok. 10 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.62s
+
+     Running tests\config_test.rs (target\debug\deps\config_test-eac638ddbec8c36a.exe)
+
+running 8 tests
+test test_config_get_invalid_db_path ... ok
+test test_config_set_invalid_db_path ... ok
+test test_config_set_empty_value ... ok
+test test_config_set_empty_key ... ok
+test test_config_list_empty ... ok
+test test_config_get_nonexistent ... ok
+test test_config_set_and_get ... ok
+test test_config_text_format ... ok
+
+test result: ok. 8 passed; 0 failed; 0 ignored; 0 measured; 0 filtered out; finished in 2.60s
+
+     Running tests\e2e_test.rs (target\debug\deps\e2e_test-9c35bb5cce703850.exe)
+
+running 3 tests
+test test_engine_detection_to_model_list_flow ... ok
+test test_security_features_e2e ... FAILED
+test test_proxy_start_stop_flow ... ok
+
+failures:
+
+---- test_security_features_e2e stdout ----
+
+thread 'test_security_features_e2e' panicked at crates\apps\flm-cli\tests\e2e_test.rs:153:5:
+assertion `left == right` failed
+  left: 200
+ right: 403
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    test_security_features_e2e
+
+test result: FAILED. 2 passed; 1 failed; 0 ignored; 0 measured; 0 filtered out; finished in 4.66s
+
+error: test failed, to rerun pass `-p flm-cli --test e2e_test`

@@ -125,6 +125,7 @@ async fn test_security_features_e2e() {
         mode: ProxyMode::LocalHttp,
         port: 18101,
         security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        trusted_proxy_ips: vec!["127.0.0.1".to_string()], // Allow X-Forwarded-For from localhost
         ..Default::default()
     };
 
@@ -153,24 +154,41 @@ async fn test_security_features_e2e() {
     assert_eq!(response.status(), reqwest::StatusCode::FORBIDDEN);
 
     // Test 3: Rate limiting
-    for _ in 0..5 {
+    // Send 5 requests (within limit: rpm=5, burst=5)
+    // Note: Rate limit uses both minute_count (RPM) and token bucket (burst)
+    // Both limits must be respected: (minute_count + 1) > rpm OR tokens_available < 1.0
+    for i in 0..5 {
         let response = client
             .get("http://localhost:18101/v1/models")
             .header("Authorization", bearer_header(&api_key.plain))
             .send()
             .await
             .unwrap();
-        assert_ne!(response.status(), reqwest::StatusCode::TOO_MANY_REQUESTS);
+        assert_ne!(
+            response.status(),
+            reqwest::StatusCode::TOO_MANY_REQUESTS,
+            "Request {} should not be rate limited (within limit)",
+            i + 1
+        );
+        // Minimal delay to ensure rate limit state is updated synchronously
+        // Don't wait too long or token bucket will refill
+        sleep(Duration::from_millis(50)).await;
     }
 
-    // 6th request should be rate limited
+    // 6th request should be rate limited (exceeds rpm=5)
+    // After 5 requests: minute_count=5, tokens_available=0
+    // Check: (5+1) > 5 = true OR 0 < 1.0 = true -> should deny
     let response = client
         .get("http://localhost:18101/v1/models")
         .header("Authorization", bearer_header(&api_key.plain))
         .send()
         .await
         .unwrap();
-    assert_eq!(response.status(), reqwest::StatusCode::TOO_MANY_REQUESTS);
+    assert_eq!(
+        response.status(),
+        reqwest::StatusCode::TOO_MANY_REQUESTS,
+        "6th request should be rate limited (rpm=5, burst=5 allows only 5 requests)"
+    );
 
     controller.stop(handle).await.unwrap();
 }

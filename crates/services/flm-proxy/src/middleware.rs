@@ -1264,9 +1264,13 @@ async fn check_rate_limit_with_info(
     // alt: Check current count >= rpm, but that would deny when count equals rpm, not when it would exceed
     // evidence: test_rate_limit_multiple_keys fails - 6th request should be denied when rpm=5
     // assumption: After 5 requests, minute_count=5, so (5+1) > 5 is true, should deny 6th request
+    // Note: Both limits must be respected - if EITHER limit would be exceeded, deny the request
     let would_exceed_minute_limit = (entry.minute_count + 1) > rpm;
+    // For burst limit, we need at least 1.0 token to allow the request
+    // If tokens_available is less than 1.0, we cannot allow the request
     let burst_limit_reached = entry.tokens_available < 1.0;
-    let allowed = !(would_exceed_minute_limit || burst_limit_reached);
+    // Deny if EITHER limit would be exceeded
+    let allowed = !would_exceed_minute_limit && !burst_limit_reached;
     
     // Debug output for rate limiting (write to file to bypass cargo test output issues)
     let log_msg = format!(

@@ -1,0 +1,102 @@
+warning: unused import: `crate::commands::error::CliUserError`
+ --> crates\apps\flm-cli\src\commands\proxy.rs:7:5
+  |
+7 | use crate::commands::error::CliUserError;
+  |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  |
+  = note: `#[warn(unused_imports)]` on by default
+
+warning: unused import: `load_existing_client`
+  --> crates\apps\flm-cli\src\commands\proxy.rs:10:36
+   |
+10 | use daemon::{ensure_daemon_client, load_existing_client};
+   |                                    ^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `flm_core::error::ProxyError`
+  --> crates\apps\flm-cli\src\commands\proxy.rs:15:5
+   |
+15 | use flm_core::error::ProxyError;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: unused import: `SecurityService`
+  --> crates\apps\flm-cli\src\commands\proxy.rs:17:40
+   |
+17 | use flm_core::services::{ProxyService, SecurityService};
+   |                                        ^^^^^^^^^^^^^^^
+
+warning: unused import: `local_ip_address::local_ip`
+  --> crates\apps\flm-cli\src\commands\proxy.rs:19:5
+   |
+19 | use local_ip_address::local_ip;
+   |     ^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+warning: variable does not need to be mutable
+   --> crates\apps\flm-cli\src\commands\proxy.rs:141:9
+    |
+141 |         mut acme_dns_lego_path,
+    |         ----^^^^^^^^^^^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+    |
+    = note: `#[warn(unused_mut)]` on by default
+
+warning: variable does not need to be mutable
+   --> crates\apps\flm-cli\src\commands\proxy.rs:142:9
+    |
+142 |         mut acme_dns_propagation_wait,
+    |         ----^^^^^^^^^^^^^^^^^^^^^^^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: variable does not need to be mutable
+   --> crates\apps\flm-cli\src\commands\proxy.rs:282:9
+    |
+282 |     let mut config = ProxyConfig {
+    |         ----^^^^^^
+    |         |
+    |         help: remove this `mut`
+
+warning: methods `stop_proxy` and `status` are never used
+  --> crates\apps\flm-cli\src\commands\proxy\daemon.rs:65:18
+   |
+27 | impl AdminClient {
+   | ---------------- methods in this implementation
+...
+65 |     pub async fn stop_proxy(&self, port: Option<u16>, handle_id: Option<String>) -> DynResult<()> {
+   |                  ^^^^^^^^^^
+...
+77 |     pub async fn status(&self) -> DynResult<Vec<ProxyHandle>> {
+   |                  ^^^^^^
+   |
+   = note: `#[warn(dead_code)]` on by default
+
+warning: struct `StopRequest` is never constructed
+  --> crates\apps\flm-cli\src\commands\proxy\daemon.rs:92:8
+   |
+92 | struct StopRequest {
+   |        ^^^^^^^^^^^
+
+warning: `flm-cli` (lib) generated 10 warnings (run `cargo fix --lib -p flm-cli` to apply 8 suggestions)
+    Finished `test` profile [unoptimized + debuginfo] target(s) in 1.39s
+     Running tests\e2e_test.rs (target\debug\deps\e2e_test-2a21c728432906fe.exe)
+
+running 1 test
+test test_security_features_e2e ... FAILED
+
+failures:
+
+---- test_security_features_e2e stdout ----
+
+thread 'test_security_features_e2e' panicked at crates\apps\flm-cli\tests\e2e_test.rs:174:5:
+assertion `left == right` failed
+  left: 200
+ right: 429
+note: run with `RUST_BACKTRACE=1` environment variable to display a backtrace
+
+
+failures:
+    test_security_features_e2e
+
+test result: FAILED. 0 passed; 1 failed; 0 ignored; 0 measured; 2 filtered out; finished in 5.93s
+
+error: test failed, to rerun pass `-p flm-cli --test e2e_test`
