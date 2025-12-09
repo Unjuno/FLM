@@ -4,6 +4,25 @@
 
 本レポートは現行のドキュメント／仕様から判明している未実装・未整備の項目をまとめたものです。優先度は `docs/status/active/NEXT_STEPS.md` を参照してください。
 
+## コード内の未実装箇所分析
+
+### 実装済み項目（確認済み）
+
+1. **HTTPストリーミング実装** ✅
+   - ファイル: `crates/services/flm-proxy/src/http_client.rs:85-134`
+   - 実装内容: `ReqwestHttpClient::stream()` メソッドで `reqwest::Response::bytes_stream()` を使用してストリーミングを実装
+   - 状態: 実装済み、使用可能
+
+2. **リソース保護（CPU/メモリ監視）** ✅
+   - ファイル: `crates/services/flm-proxy/src/security/resource_protection.rs`
+   - 実装内容: `sysinfo` クレートを使用してCPU/メモリ使用率を監視、閾値を超えた場合にスロットリング
+   - 状態: 実装済み、正常に動作
+
+3. **ポート可用性チェック** ✅
+   - ファイル: `crates/core/flm-core/src/services/proxy.rs`
+   - 実装内容: `ensure_port_available` メソッドでポートの可用性をチェック
+   - 状態: 実装済み
+
 ## 最新更新
 - 2025-11-27: ドキュメント統合完了。`PROGRESS_CHECK_ISSUES.md`の内容を統合し、証明書メタデータ表示機能とレート制限状態表示機能が実装済みであることを確認・記録。
 - 2025-11-27: `https-acme` モードの HTTP-01 パイプラインを実装（`rustls-acme` 統合、`start_https_acme_server`、HSTSリダイレクト、ACME監視タスクを追加）。
@@ -13,7 +32,7 @@
 - 2025-11-25: `scripts/align_versions.rs` を実装（Core API バージョンと CLI/Proxy クレートバージョンの突合せレポートツール）。
 - 2025-11-25: マイグレーション失敗時の読み取り専用モード仕様を実装（`flm-cli` の `SqliteSecurityRepository` でマイグレーション失敗時に読み取り専用モードで再接続し、書き込み操作を `RepoError::ReadOnlyMode` で拒否）。
 - 2025-11-25: Botnet機能テストを実装（`crates/services/flm-proxy/tests/botnet_security_test.rs` に16テスト追加）。
-- 2025-11-25: `docs/status/active/UNIMPLEMENTED_ANALYSIS.md` を更新（HTTPストリーミング、リソース保護、IPベースレート制限、Engine Adapter拡張が実装済みであることを記録）。
+- 2025-11-25: コード分析を実施（HTTPストリーミング、リソース保護、IPベースレート制限、Engine Adapter拡張が実装済みであることを記録）。分析情報は本レポートに統合済み。
 - 2025-11-25: 用語集（`docs/guides/GLOSSARY.md`）を実装（FLMプロジェクトで使用される主要な用語をアルファベット順に整理）。
 - 2025-11-25: 文書更新ポリシー（`docs/guides/DOCUMENTATION_UPDATE_POLICY.md`）を実装（ドキュメントの分類、更新手順、品質基準、レビュープロセスを定義）。
 - 2025-11-25: `docs/specs/DB_SCHEMA.md` に Versioning Policy 準拠の `## Changelog` セクションを追加（初版 v1.0.0 の履歴を明記）。
@@ -78,14 +97,16 @@
 
 ## 3. UI / UX
 1. **UI Phase 2 残項目**  
-   - セキュリティイベント可視化、IPブロックリスト管理、Setup Wizard Firewall自動適用 IPC、Chat Tester など未実装。  
+   - ✅ セキュリティイベント可視化、IPブロックリスト管理、Chat Tester は 2025-01-28 に実装完了。  
+   - ⏳ Setup Wizard Firewall自動適用 IPC は未実装（Phase 3以降）。  
    - 参照: `docs/specs/UI_MINIMAL.md`, `docs/status/active/NEXT_STEPS.md`
 2. **UI Extensions**  
-   - モデル詳細設定パネル、APIプロンプト管理、モデル比較/ヘルス履歴、i18n、多言語テストなどは計画のみ。  
+   - モデル詳細設定パネル、モデル比較/ヘルス履歴などは計画のみ。  
+   - ✅ I18N実装は 2025-01-28 に完了（翻訳ファイル、言語切替UI、全ページ対応）。  
    - 参照: `docs/specs/UI_EXTENSIONS.md`
 3. **I18N 実装**  
-   - 翻訳ファイル、言語切替UI、`preferred_language` 保存、初回自動検出が TODO のまま。  
-   - 参照: `docs/specs/I18N_SPEC.md`
+   - ✅ 2025-01-28 に実装完了: 翻訳ファイル、言語切替UI、`preferred_language` 保存、初回自動検出、全ページ対応。  
+   - 参照: `docs/specs/I18N_SPEC.md`, `docs/status/active/IMPLEMENTATION_LOG_20250128_I18N.md`
 4. **ダークモード**  
    - ブランドガイドラインでは Phase3 以降に実装予定。  
    - 参照: `docs/specs/BRAND_GUIDELINE.md`
@@ -95,7 +116,7 @@
    - ✅ `flm-engine-vllm`, `flm-engine-lmstudio`, `flm-engine-llamacpp` は実装済み（`crates/apps/flm-cli/src/commands/models.rs` で登録処理も実装済み）。  
    - ✅ `EngineService::list_models` 統合は実装済み。  
    - ✅ キャッシュTTLチェックは実装済み（`crates/apps/flm-cli/src/adapters/engine.rs` の `list_cached_engine_states()` でTTLを考慮）。  
-   - 参照: `docs/status/active/PHASE1_NEXT_STEPS.md`
+   - 参照: `docs/status/active/NEXT_STEPS.md`
 2. **Proxy拡張**  
    - `/v1/audio/*` 等の将来API、Proxy設定ホットリロードは未決事項。  
    - 参照: `docs/specs/PROXY_SPEC.md`

@@ -325,5 +325,15 @@ pub async fn metrics_handler(
         .status(200)
         .header("Content-Type", "text/plain; version=0.0.4")
         .body(body.into())
-        .unwrap()
+        .unwrap_or_else(|e| {
+            tracing::error!("Failed to build metrics response: {}", e);
+            // Fallback to a simple error response
+            Response::builder()
+                .status(500)
+                .body(axum::body::Body::from("Internal server error"))
+                .unwrap_or_else(|_| {
+                    // Last resort: return an empty 500 response
+                    Response::new(axum::body::Body::empty())
+                })
+        })
 }

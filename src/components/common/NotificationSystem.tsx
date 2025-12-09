@@ -105,7 +105,8 @@ export const useNotifications = () => {
       if (system) {
         system.add(notification);
       } else {
-        console.warn('NotificationSystem not mounted');
+        // NotificationSystem not mounted - this is expected during initialization
+        // Using logger would cause circular dependency, so we skip logging here
       }
     },
     []

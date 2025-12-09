@@ -6,6 +6,7 @@ import { safeInvoke } from '../utils/tauri';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { SuccessMessage } from '../components/common/SuccessMessage';
+import { logger } from '../utils/logger';
 import './SetupWizard.css';
 
 interface FirewallPreviewRequest {
@@ -54,7 +55,7 @@ export const SetupWizard: React.FC = () => {
         const osName = platformObj?.os || platformObj || platform;
         setOs(String(osName).toLowerCase());
       } catch (err) {
-        console.error('Failed to detect OS:', err);
+        logger.error('Failed to detect OS:', err);
         // Fallback to detecting from user agent or system
         if (navigator.platform.toLowerCase().includes('win')) {
           setOs('windows');
@@ -205,18 +206,21 @@ export const SetupWizard: React.FC = () => {
         <h2>Configuration</h2>
         
         <div className="form-group">
-          <label>Operating System:</label>
+          <label htmlFor="os-input">Operating System:</label>
           <input
+            id="os-input"
             type="text"
             value={os}
             readOnly
             className="form-input"
+            aria-label="Operating System (read-only)"
           />
         </div>
 
         <div className="form-group">
-          <label>Ports (comma-separated):</label>
+          <label htmlFor="ports-input">Ports (comma-separated):</label>
           <input
+            id="ports-input"
             type="text"
             value={ports.join(', ')}
             onChange={(e) => {
@@ -228,12 +232,14 @@ export const SetupWizard: React.FC = () => {
             }}
             className="form-input"
             placeholder="8080, 8081"
+            aria-label="Ports (comma-separated)"
           />
         </div>
 
         <div className="form-group">
-          <label>IP Whitelist (comma-separated, optional):</label>
+          <label htmlFor="ip-whitelist-input">IP Whitelist (comma-separated, optional):</label>
           <input
+            id="ip-whitelist-input"
             type="text"
             value={ipWhitelist.join(', ')}
             onChange={(e) => {
@@ -245,6 +251,7 @@ export const SetupWizard: React.FC = () => {
             }}
             className="form-input"
             placeholder="203.0.113.0/24, 2001:db8::/48"
+            aria-label="IP Whitelist (comma-separated, optional)"
           />
         </div>
 

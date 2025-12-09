@@ -1,6 +1,6 @@
 # Test & Audit Reports
 
-> Status: Reference | Audience: All contributors | Updated: 2025-11-26
+> Status: Reference | Audience: All contributors | Updated: 2025-02-01
 
 ## 目的
 テスト／監査実行ログをリポジトリ直下に集約し、`docs/status` から常に最新結果へリンクできるようにします。  

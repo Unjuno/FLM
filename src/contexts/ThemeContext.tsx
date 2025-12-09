@@ -8,6 +8,7 @@ import React, {
   useCallback,
   ReactNode,
 } from 'react';
+import { logger } from '../utils/logger';
 
 export type Theme = 'light' | 'dark';
 
@@ -48,7 +49,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
           applyTheme(defaultTheme);
         }
       } catch (err) {
-        console.error('Failed to load theme:', err);
+        logger.error('Failed to load theme:', err);
         setThemeState('light');
         applyTheme('light');
       }
@@ -90,7 +91,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
         applyTheme(newTheme);
         localStorage.setItem(THEME_STORAGE_KEY, newTheme);
       } catch (err) {
-        console.error('Failed to save theme:', err);
+        logger.error('Failed to save theme:', err);
         throw err;
       }
     },

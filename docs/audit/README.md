@@ -14,132 +14,39 @@ docs/audit/
 ├── CORE_API_AUDIT.md                    # Core API監査レポート（完了）
 ├── CORE_API_AUDIT_COMPLETE.md           # Core API監査完了サマリー
 ├── CORE_API_AUDIT_KYK.md                # Core API監査KYK（危険予知活動）
-├── CORE_API_AUDIT_PHASE2_SUMMARY.md     # Phase 2サマリー
-├── CORE_API_AUDIT_PHASE3_SUMMARY.md     # Phase 3サマリー
-├── CORE_API_AUDIT_PHASE4_SUMMARY.md     # Phase 4サマリー
-├── CORE_API_AUDIT_PHASE5_SUMMARY.md     # Phase 5サマリー
-├── CORE_API_AUDIT_PHASE6_SUMMARY.md     # Phase 6サマリー
 ├── CLI_AUDIT.md                         # CLIコマンド監査レポート（未実施）
 ├── SECURITY_AUDIT_PHASE1.md             # Phase 1セキュリティ監査（未実施）
-├── SECURITY_AUDIT_IP_EXPOSURE.md        # IP露出セキュリティ監査
-├── SECURITY_AUDIT_REVISED.md            # 改訂セキュリティ監査（完了）
 ├── SECURITY_FIXES_IMPLEMENTED.md       # セキュリティ修正実装（完了）
-├── COMPREHENSIVE_SECURITY_AUDIT.md      # 包括的セキュリティ監査（完了）
-├── STRICT_SECURITY_AUDIT.md             # 厳格セキュリティ監査
+├── COMPREHENSIVE_SECURITY_AUDIT.md      # 包括的セキュリティ監査（完了、再監査版・IP公開問題・厳格監査を統合済み）
 └── templates/                           # 監査テンプレート
     ├── AUDIT_TEMPLATE.md
     └── CHECKLIST_TEMPLATE.md
 ```
 
-## 監査レポート一覧
+## 主要監査レポート
 
 ### Core API監査
-
-#### CORE_API_AUDIT.md - Core API監査レポート
-
-**Status**: ✅ Complete | **Date**: 2025-11-25 | **Phase**: All Phases
-
-Core API（`flm-core`）の包括的な監査レポート。Domain層、Service層、Port層の設計と実装を監査。
-
-- API設計の一貫性
-- エラーハンドリング
-- セキュリティ
-- パフォーマンス
-- テストカバレッジ
-
-**関連ドキュメント**:
-- `docs/specs/CORE_API.md` - Core API仕様
-- `docs/specs/DB_SCHEMA.md` - データベーススキーマ
-- `docs/audit/CORE_API_AUDIT_KYK.md` - KYK実施記録
-
-#### CORE_API_AUDIT_COMPLETE.md - Core API監査完了サマリー
-
-**Status**: ✅ Complete | **Date**: 2025-11-25
-
-Core API監査の完了サマリー。全フェーズの監査結果をまとめたもの。
-
-#### CORE_API_AUDIT_KYK.md - Core API監査KYK
-
-**Status**: KYK Complete | **Date**: 2025-11-25
-
-Core API監査における危険予知活動（KYK）の記録。
-
-#### CORE_API_AUDIT_PHASE2-6_SUMMARY.md - Phase別サマリー
-
-**Status**: Completed | **Date**: 2025-11-25
-
-Core API監査のPhase別サマリー。各フェーズの監査結果を記録。
-
-### CLI監査
-
-#### CLI_AUDIT.md - CLIコマンド監査レポート
-
-**Status**: ⏳ Pending | **Phase**: Phase 1
-
-CLIコマンド（`flm-cli`）の監査レポート。現在は未実施。
-
-**関連ドキュメント**:
-- `docs/specs/CLI_SPEC.md` - CLI仕様
-- `docs/specs/CORE_API.md` - Core API仕様
+- **CORE_API_AUDIT.md** - Core API監査レポート（完了）
+- **CORE_API_AUDIT_COMPLETE.md** - Core API監査完了サマリー（全Phase統合済み）
+- **CORE_API_AUDIT_KYK.md** - Core API監査KYK（危険予知活動）
 
 ### セキュリティ監査
+- **COMPREHENSIVE_SECURITY_AUDIT.md** - 包括的セキュリティ監査（完了、再監査版・IP公開問題・厳格監査を統合済み）
+- **SECURITY_FIXES_IMPLEMENTED.md** - セキュリティ修正実装（完了）
 
-#### SECURITY_AUDIT_PHASE1.md - Phase 1セキュリティ監査
-
-**Status**: ⏳ Pending | **Phase**: Phase 1
-
-Phase 1（CLI Core）のセキュリティ実装の監査レポート。現在は未実施。
-
-**関連ドキュメント**:
-- `docs/specs/CORE_API.md` - Core API仕様
-- `docs/specs/DB_SCHEMA.md` - データベーススキーマ
-- `docs/guides/SECURITY_FIREWALL_GUIDE.md` - セキュリティガイド
-
-#### SECURITY_AUDIT_IP_EXPOSURE.md - IP露出セキュリティ監査
-
-**Status**: ⚠️ Critical Issues Found | **Date**: 2025-01-27
-
-IP露出に関するセキュリティ監査。重要な問題が発見された。
-
-#### SECURITY_AUDIT_REVISED.md - 改訂セキュリティ監査
-
-**Status**: Complete | **Date**: 2025-01-27
-
-改訂版のセキュリティ監査レポート。完了済み。
-
-#### SECURITY_FIXES_IMPLEMENTED.md - セキュリティ修正実装
-
-**Status**: ✅ Phase 1 Complete | **Date**: 2025-01-27
-
-セキュリティ監査で発見された問題の修正実装レポート。Phase 1完了。
-
-#### COMPREHENSIVE_SECURITY_AUDIT.md - 包括的セキュリティ監査
-
-**Status**: ✅ Complete | **Date**: 2025-01-27
-
-包括的なセキュリティ監査レポート。完了済み。
-
-#### STRICT_SECURITY_AUDIT.md - 厳格セキュリティ監査
-
-**Status**: 🔴 Critical Issues Found | **Date**: 2025-01-27
-
-厳格なセキュリティ監査レポート。重要な問題が発見された。
+### CLI監査
+- **CLI_AUDIT.md** - CLIコマンド監査レポート（未実施）
+- **SECURITY_AUDIT_PHASE1.md** - Phase 1セキュリティ監査（未実施）
 
 ## 監査計画
 
-### Phase 1（CLI Core）完了時
-- [x] `CORE_API_AUDIT.md` - Core API監査レポート ✅ 完了
-- [ ] `CLI_AUDIT.md` - CLIコマンド監査レポート ⏳ 未実施
-- [ ] `SECURITY_AUDIT_PHASE1.md` - Phase 1セキュリティ監査 ⏳ 未実施
+### 完了済み
+- ✅ Core API監査（全Phase完了）
+- ✅ 包括的セキュリティ監査（完了）
 
-### Phase 2（UI実装）完了時
-- [ ] `UI_DESIGN_AUDIT.md` - UI設計監査レポート
-- [ ] `UI_IMPLEMENTATION_AUDIT.md` - UI実装監査レポート
-- [ ] `UI_PAGES_AUDIT.md` - ページ単位監査レポート
-
-### Phase 3（パッケージング）完了時
-- [ ] `PACKAGING_SECURITY_AUDIT.md` - パッケージングセキュリティ監査
-- [ ] `COMPREHENSIVE_AUDIT.md` - 包括的監査レポート
+### 未実施
+- ⏳ CLI監査
+- ⏳ Phase 1セキュリティ監査
 
 ## 監査基準
 
@@ -163,24 +70,12 @@ IP露出に関するセキュリティ監査。重要な問題が発見された
 ## 監査レポートの分類
 
 ### 完了済み監査
-
-- `CORE_API_AUDIT.md` - Core API監査（完了）
-- `CORE_API_AUDIT_COMPLETE.md` - Core API監査完了サマリー
-- `CORE_API_AUDIT_KYK.md` - Core API監査KYK
-- `CORE_API_AUDIT_PHASE2-6_SUMMARY.md` - Phase別サマリー
-- `SECURITY_AUDIT_REVISED.md` - 改訂セキュリティ監査（完了）
-- `SECURITY_FIXES_IMPLEMENTED.md` - セキュリティ修正実装（完了）
-- `COMPREHENSIVE_SECURITY_AUDIT.md` - 包括的セキュリティ監査（完了）
+- Core API監査（全Phase完了、Phase別サマリーは統合済み）
+- 包括的セキュリティ監査（再監査版・IP公開問題・厳格監査を統合済み）
 
 ### 未実施監査
-
-- `CLI_AUDIT.md` - CLIコマンド監査（未実施）
-- `SECURITY_AUDIT_PHASE1.md` - Phase 1セキュリティ監査（未実施）
-
-### 問題発見済み監査
-
-- `SECURITY_AUDIT_IP_EXPOSURE.md` - IP露出セキュリティ監査（重要問題発見）
-- `STRICT_SECURITY_AUDIT.md` - 厳格セキュリティ監査（重要問題発見）
+- CLI監査
+- Phase 1セキュリティ監査
 
 ## 関連リソース
 

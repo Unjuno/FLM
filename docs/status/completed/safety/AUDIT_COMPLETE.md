@@ -6,6 +6,8 @@
 
 Core API監査を段階的に安全に実施し、全Phaseを完了しました。
 
+> **注意**: 本レポートは、監査修正完了、ドキュメント監査、評価レポートの結果を統合したものです。
+
 ### 実施したPhase
 
 1. ✅ **Phase 1: 準備** - 環境確認完了
@@ -44,11 +46,7 @@ Core API監査を段階的に安全に実施し、全Phaseを完了しました�
 
 1. `docs/audit/CORE_API_AUDIT_KYK.md` - KYK実施記録
 2. `docs/audit/CORE_API_AUDIT.md` - 監査レポート（更新）
-3. `docs/audit/CORE_API_AUDIT_PHASE2_SUMMARY.md` - Phase 2サマリー
-4. `docs/audit/CORE_API_AUDIT_PHASE3_SUMMARY.md` - Phase 3サマリー
-5. `docs/audit/CORE_API_AUDIT_PHASE4_SUMMARY.md` - Phase 4サマリー
-6. `docs/audit/CORE_API_AUDIT_PHASE5_SUMMARY.md` - Phase 5サマリー
-7. `docs/audit/CORE_API_AUDIT_PHASE6_SUMMARY.md` - Phase 6サマリー
+3. Phase 2-6サマリーは `docs/audit/CORE_API_AUDIT_COMPLETE.md` に統合済み
 8. `docs/audit/CORE_API_AUDIT_COMPLETE.md` - 監査完了レポート
 
 ### 次のステップ

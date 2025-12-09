@@ -16,6 +16,7 @@ docs/status/
     ├── tests/       # テストレポート
     ├── safety/      # 安全性・監査レポート
     ├── proxy/       # ProxyServiceレポート
+    ├── packaging/   # パッケージングレポート
     └── fixes/       # バグ修正レポート
 ```
 
@@ -23,15 +24,13 @@ docs/status/
 
 現在進行中または最新の参照情報：
 
-- **NEXT_STEPS.md** - 次の作業ステップと推奨事項（Ready）
-- **PHASE1_PROGRESS.md** - Phase 1実装進捗レポート（In Progress）
-- **PHASE1_NEXT_STEPS.md** - Phase 1の次のステップ（Ready for Next Implementation）
-- **BOTNET_PROTECTION_PLAN.md** - ボットネット対策実装計画の進捗状況（Planning Complete）
-- **LINT_REMEDIATION_STATUS.md** - Clippy/format差分の対応状況（In Progress）
-- **TEST_ENVIRONMENT_SETUP.md** - テスト環境セットアップガイド（Setup Guide）
-- **TEST_ENVIRONMENT_STATUS.md** - テスト環境の状態（Environment Setup Complete）
-- **UNIMPLEMENTED_REPORT.md** - 未実装事項レポート（Reference）
-- **UNIMPLEMENTED_ANALYSIS.md** - 未実装部分のコード分析（Analysis）
+- **NEXT_STEPS.md** - 次の作業ステップと推奨事項（統合済み：進捗レポート、プロジェクト状況要約を含む）
+- **REMAINING_TASKS.md** - 残りの作業タスクリスト（優先度順に整理）
+- **BOTNET_PROTECTION_PLAN.md** - ボットネット対策実装計画の進捗状況
+- **LINT_REMEDIATION_STATUS.md** - Clippy/format差分の対応状況
+- **TEST_ENVIRONMENT_STATUS.md** - テスト環境の状態（セットアップ情報を含む）
+- **UNIMPLEMENTED_REPORT.md** - 未実装事項レポート（コード分析情報を含む）
+- **RELEASE_READINESS_20251128.md** - リリース準備状況（2025-11-28）
 
 ## 完了済みレポート (`completed/`)
 
@@ -39,54 +38,60 @@ docs/status/
 
 ### `phases/` - フェーズ完了レポート
 
-- **PHASE0_COMPLETE.md** - Phase 0完了レポート
-- **PHASE1B_COMPLETE.md** - Phase 1B完了レポート（SecurityPolicy適用、ドメイン名検証）
-- **PHASE2_COMPLETE.md** - Phase 2完了レポート
-- **PHASE2_CLI_COMPLETE.md** - Phase 2 CLI完了レポート
+Phase別の完了レポートが含まれています。
 
 ### `tasks/` - タスク完了レポート
 
 - **FINAL_SUMMARY.md** - 最終サマリー（**推奨: 最新の完了状況を確認する際はこちらを参照**）
-- **EMBEDDINGS_ENDPOINT_COMPLETE.md** - Embeddingsエンドポイント実装完了
-- **STREAMING_IMPROVEMENTS_COMPLETE.md** - ストリーミング改善完了
-- **ENGINE_ADAPTERS_AND_POLICY_COMPLETE.md** - エンジンアダプターとポリシー完了
-- **SPEC_UPDATE_COMPLETE.md** - 仕様書更新完了
-- **STEP1_COMPLETE.md** - Step 1完了
-- **STEP1_VERIFICATION_COMPLETE.md** - Step 1検証完了
+- **IMPLEMENTATION_LOG_20250128.md** - 実装ログ（2025-01-28）
+- **IMPLEMENTATION_LOG_20250128_FINAL.md** - 最終実装ログ（2025-01-28）
+- **IMPLEMENTATION_LOG_20250128_PHASE3.md** - Phase 3パッケージング実装ログ（2025-01-28）
+- **IMPLEMENTATION_LOG_20250128_TESTS.md** - テスト拡充実装ログ（2025-01-28）
+- **IMPLEMENTATION_LOG_20250128_I18N.md** - I18N UI実装ログ（2025-01-28）
+- **HOME_PAGE_CODE_REVIEW_20250128.md** - Home.tsxコードレビュー報告書（2025-01-28）
+- その他のタスク完了レポート
 
 ### `tests/` - テストレポート
 
-- **PHASE1_TEST_REPORT.md** - Phase 1テストレポート
-- **PHASE1_TEST_RESULTS.md** - Phase 1テスト結果
-- **PHASE1_TEST_VERIFICATION.md** - Phase 1テスト検証
-- **PHASE2_TEST_REPORT.md** - Phase 2テストレポート
-- **PHASE2_TEST_RESULTS.md** - Phase 2テスト結果
+- **TEST_FIXES_20250128.md** - テスト修正完了レポート（2025-01-28）
+  - flm-proxyレート制限テスト修正
+  - flm-engine-vllmヘルスチェックテスト修正
+  - flm-cliプロキシ停止テスト改善
+  - Tauri環境依存テストの改善
+- **TEST_FIXES_20250201.md** - テスト修正完了レポート（2025-02-01）
+  - vLLMエンジンヘルスチェックテスト修正（タイムアウト設定、応答遅延シミュレート）
+  - TypeScriptテスト改善（archive/prototype除外、Tauri環境依存テスト改善）
+- **TEST_COMPLETION_REPORT.md** - テスト実装完了レポート（2025-01-28）
+- **PHASE1_TEST_REPORT.md** - Phase 1テストレポート（テスト結果・検証情報を統合済み）
+- **PHASE2_TEST_REPORT.md** - Phase 2テストレポート（テスト結果を統合済み）
 - **PHASE2_TEST_COMPLETE.md** - Phase 2テスト完了
 - **TEST_FIXES_REPORT.md** - テスト修正レポート
 
 ### `safety/` - 安全性・監査レポート
 
-- **PHASE1_SAFETY_AUDIT.md** - Phase 1安全性監査
-- **PHASE1_SAFETY_CHECK.md** - Phase 1安全性チェック
-- **PHASE1_SAFETY_REPORT.md** - Phase 1安全性レポート
-- **PHASE1_SAFETY_SUMMARY.md** - Phase 1安全性サマリー
-- **PHASE1_SAFETY_VERIFICATION.md** - Phase 1安全性検証
-- **AUDIT_COMPLETE.md** - 監査完了
-- **AUDIT_FIXES_COMPLETE.md** - 監査修正完了
-- **DOCUMENTATION_AUDIT.md** - ドキュメント監査
-- **EVALUATION_REPORT.md** - 評価レポート
+- **PHASE1_SAFETY_AUDIT.md** - Phase 1安全性監査（チェック・レポート・サマリー・検証を統合済み）
+- **AUDIT_COMPLETE.md** - 監査完了（修正完了・ドキュメント監査・評価レポートを統合済み）
+
+### `packaging/` - パッケージングレポート
+
+- **PHASE3_PACKAGING_COMPLETE_20250201.md** - Phase 3パッケージング作業完了レポート（2025-02-01）
+  - コード署名検証ステップの追加（Windows/macOS/Linux）
+  - セキュリティ対策の完全実装（ビルドログ記録、リリースノート改善）
+  - アンインストーラ統合の改善（Windows NSIS、Linux DEB、macOSドキュメント化）
+- **LINUX_GPG_SIGNING_COMPLETE.md** - Linux GPG署名実装完了レポート（2025-01-28）
+- **UNINSTALL_CERT_INTEGRATION_COMPLETE.md** - アンインストーラー証明書削除統合完了レポート（2025-01-28）
 
 ### `proxy/` - ProxyServiceレポート
 
-- **PROXY_SERVICE_PHASE1_COMPLETE.md** - ProxyService Phase 1完了
-- **PROXY_SERVICE_PHASE2_COMPLETE.md** - ProxyService Phase 2完了（Axum統合と統合テスト）
-- **PROXY_SERVICE_PHASE1_TEST_REPORT.md** - ProxyService Phase 1テストレポート
-- **PROXY_SERVICE_PHASE1_TEST_SUMMARY.md** - ProxyService Phase 1テストサマリー
+- **PROXY_SERVICE_PHASE1_COMPLETE.md** - ProxyService Phase 1完了（テストレポート・サマリーを統合済み）
+- **PROXY_SERVICE_PHASE2_COMPLETE.md** - ProxyService Phase 2完了
 - **PROXY_SERVICE_KYK.md** - ProxyService実装KYK（危険予知活動）
 
 ### `fixes/` - バグ修正レポート
 
 - **COMPILATION_ISSUE_RESOLVED.md** - Proxy Axumビルドエラー修正
+- **COMPILATION_ISSUE.md** - コンパイル問題トラッカー（rcgen API drift修正済み、2025-11-26）
+- **RCGEN_API_FIX.md** - rcgen API drift修正（2025-11-26）
 - **STATE_EXTRACTOR_FIXED.md** - State Extractor修正
 - **SYNC_ISSUE_FIXED.md** - 同期問題修正
 
@@ -148,5 +153,5 @@ docs/status/
 
 **注意**: 完了済みレポートは参照用に保持されています。最新の情報は `active/` ディレクトリとリポジトリ直下の `reports/` を確認してください。
 
-**最終更新**: 2025-11-26
+**最終更新**: 2025-02-01（完了済みレポートの移動、ドキュメント整備）
 

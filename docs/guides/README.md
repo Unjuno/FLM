@@ -50,7 +50,7 @@ FLMプロジェクトで使用される主要な用語の定義。アルファ�
 - 定期的な見直しと保守
 
 **関連ドキュメント**:
-- `docs/DOCUMENTATION_STRUCTURE.md` - ドキュメント構成ガイド
+- `docs/README.md` - ドキュメント構成ガイド（統合済み）
 - `docs/guides/GLOSSARY.md` - 用語集
 - `docs/templates/ADR_TEMPLATE.md` - Architecture Decision Recordテンプレート
 

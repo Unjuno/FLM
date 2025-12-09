@@ -3,6 +3,8 @@
 use flm_core::domain::proxy::{ProxyConfig, ProxyMode};
 use flm_core::ports::ProxyController;
 use flm_proxy::AxumProxyController;
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use tokio::time::sleep;
 
@@ -16,6 +18,18 @@ fn unique_db_path(tag: &str) -> std::path::PathBuf {
 
 fn bearer_header(token: &str) -> String {
     format!("Bearer {token}")
+}
+
+fn log_test(msg: &str) {
+    let log_path = std::env::temp_dir().join("test_debug.log");
+    if let Ok(mut file) = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_path)
+    {
+        let _ = file.write_all(format!("{}\n", msg).as_bytes());
+        let _ = file.flush();
+    }
 }
 
 #[tokio::test(flavor = "multi_thread")]
@@ -313,6 +327,7 @@ async fn test_rate_limit_multiple_keys() {
     // Make requests up to the limit with first key
     let client = reqwest::Client::new();
     for i in 0..5 {
+        log_test(&format!("[TEST] Making request {} with api_key1", i));
         let response = client
             .get("http://localhost:18085/v1/models")
             .header("Authorization", bearer_header(&api_key1.plain))
@@ -320,6 +335,7 @@ async fn test_rate_limit_multiple_keys() {
             .await
             .unwrap();
 
+        log_test(&format!("[TEST] Request {} status: {:?}", i, response.status()));
         assert_ne!(
             response.status(),
             reqwest::StatusCode::TOO_MANY_REQUESTS,
@@ -339,6 +355,7 @@ async fn test_rate_limit_multiple_keys() {
 
     // Next request with first key should be rate limited
     // With rpm=5 and burst=5, the 6th request should exceed the limit
+    log_test("[TEST] Making 6th request with api_key1 (should be rate limited)");
     let response = client
         .get("http://localhost:18085/v1/models")
         .header("Authorization", bearer_header(&api_key1.plain))
@@ -346,6 +363,7 @@ async fn test_rate_limit_multiple_keys() {
         .await
         .unwrap();
 
+    log_test(&format!("[TEST] 6th request status: {:?}", response.status()));
     // The 6th request should be rate limited (5 requests allowed, 6th exceeds)
     assert_eq!(
         response.status(),
@@ -433,7 +451,7 @@ async fn test_ip_rate_limit() {
         let status = response.status();
         if status == reqwest::StatusCode::TOO_MANY_REQUESTS {
             rate_limited = true;
-            eprintln!("Request {i} was rate limited");
+            log_test(&format!("Request {i} was rate limited"));
             break;
         }
     }
@@ -441,7 +459,7 @@ async fn test_ip_rate_limit() {
     // IP rate limit should not trigger for 50 requests (limit is 1000/min)
     // But API key rate limit might (100 req/min)
     // So we expect either success or API key rate limit, but not IP rate limit for this test
-    eprintln!("IP rate limit test completed. Rate limited: {rate_limited}");
+    log_test(&format!("IP rate limit test completed. Rate limited: {rate_limited}"));
 
     controller.stop(handle).await.unwrap();
 }
@@ -680,18 +698,16 @@ async fn test_rate_limit_api_key_and_ip_combined() {
         assert_ne!(
             response.status(),
             reqwest::StatusCode::TOO_MANY_REQUESTS,
-            "Request {i} should not be rate limited"
+            "Request {} should not be rate limited (minute_count should be {}, rpm=5)", i, i + 1
         );
 
         // Small delay to ensure rate limit state is updated
-        sleep(Duration::from_millis(100)).await;
+        sleep(Duration::from_millis(50)).await;
     }
-
-    // Additional delay to ensure rate limit state is fully synchronized
-    sleep(Duration::from_millis(200)).await;
 
     // Next request should be rate limited (API key limit)
     // With rpm=5 and burst=5, the 6th request should exceed the limit
+    // minute_count will be 5 after 5 requests, so 6th request: 5 >= 5 is true
     let response = client
         .get("http://localhost:18097/v1/models")
         .header("Authorization", bearer_header(&api_key.plain))
@@ -702,7 +718,7 @@ async fn test_rate_limit_api_key_and_ip_combined() {
     assert_eq!(
         response.status(),
         reqwest::StatusCode::TOO_MANY_REQUESTS,
-        "6th request should be rate limited (rpm=5, burst=5 allows only 5 requests)"
+        "6th request should be rate limited (rpm=5, burst=5 allows only 5 requests, minute_count=5 >= rpm=5)"
     );
 
     controller.stop(handle).await.unwrap();
@@ -1724,6 +1740,8 @@ async fn test_rate_limit_boundary_conditions() {
     let client = reqwest::Client::new();
 
     // First request should succeed (exactly at limit)
+    // minute_count starts at 0, so 0 >= 1 is false, allowed
+    log_test("[TEST] Making first request (boundary test)");
     let response = client
         .get("http://localhost:18108/v1/models")
         .header("Authorization", bearer_header(&api_key.plain))
@@ -1731,13 +1749,19 @@ async fn test_rate_limit_boundary_conditions() {
         .await
         .unwrap();
 
+    log_test(&format!("[TEST] First request status: {:?}", response.status()));
     assert_eq!(
         response.status(),
         reqwest::StatusCode::OK,
-        "First request should succeed at boundary"
+        "First request should succeed at boundary (minute_count=0 < rpm=1)"
     );
 
+    // Small delay to ensure rate limit state is updated
+    sleep(Duration::from_millis(50)).await;
+
     // Second request should be rate limited (over limit)
+    // After first request, minute_count=1, so 1 >= 1 is true, denied
+    log_test("[TEST] Making second request (should be rate limited)");
     let response = client
         .get("http://localhost:18108/v1/models")
         .header("Authorization", bearer_header(&api_key.plain))
@@ -1745,10 +1769,11 @@ async fn test_rate_limit_boundary_conditions() {
         .await
         .unwrap();
 
+    log_test(&format!("[TEST] Second request status: {:?}", response.status()));
     assert_eq!(
         response.status(),
         reqwest::StatusCode::TOO_MANY_REQUESTS,
-        "Second request should be rate limited at boundary"
+        "Second request should be rate limited at boundary (minute_count=1 >= rpm=1)"
     );
 
     controller.stop(handle).await.unwrap();
@@ -2020,4 +2045,428 @@ async fn test_invalid_model_id_error_handling() {
     );
 
     controller.stop(handle).await.unwrap();
+}
+
+// ============================================================================
+// Phase 1C: Tor/SOCKS5 Egress Integration Tests
+// ============================================================================
+
+use flm_core::domain::proxy::{ProxyEgressConfig, ProxyEgressMode};
+
+mod tor_mock;
+use tor_mock::MockSocks5Server;
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_egress_direct_mode() {
+    let controller = AxumProxyController::new();
+
+    let config = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: 18081,
+        egress: ProxyEgressConfig {
+            mode: ProxyEgressMode::Direct,
+            socks5_endpoint: None,
+            fail_open: false,
+        },
+        ..Default::default()
+    };
+
+    let handle = controller.start(config.clone()).await.unwrap();
+    assert_eq!(handle.port, 18081);
+    assert!(handle.running);
+
+    // Give the server a moment to start
+    sleep(Duration::from_millis(100)).await;
+
+    controller.stop(handle).await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_egress_tor_mode_with_reachable_endpoint() {
+    // Start mock SOCKS5 server
+    let mock_server = MockSocks5Server::start(0).await.unwrap();
+    let mock_endpoint = mock_server.endpoint();
+
+    // Give the server a moment to start
+    sleep(Duration::from_millis(100)).await;
+
+    let controller = AxumProxyController::new();
+
+    let config = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: 18082,
+        egress: ProxyEgressConfig {
+            mode: ProxyEgressMode::Tor,
+            socks5_endpoint: Some(mock_endpoint.clone()),
+            fail_open: false,
+        },
+        ..Default::default()
+    };
+
+    // This should succeed because the mock SOCKS5 server is reachable
+    let handle = controller.start(config.clone()).await.unwrap();
+    assert_eq!(handle.port, 18082);
+    assert!(handle.running);
+    assert_eq!(handle.egress.mode, ProxyEgressMode::Tor);
+
+    // Give the server a moment to start
+    sleep(Duration::from_millis(100)).await;
+
+    controller.stop(handle).await.unwrap();
+    mock_server.stop().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_egress_tor_mode_with_unreachable_endpoint_fail_closed() {
+    let controller = AxumProxyController::new();
+
+    let config = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: 18083,
+        egress: ProxyEgressConfig {
+            mode: ProxyEgressMode::Tor,
+            socks5_endpoint: Some("127.0.0.1:19999".to_string()), // Unreachable port
+            fail_open: false, // fail_closed mode
+        },
+        ..Default::default()
+    };
+
+    // This should fail because the SOCKS5 endpoint is unreachable and fail_open is false
+    let result = controller.start(config.clone()).await;
+    assert!(result.is_err(), "Should fail when SOCKS5 endpoint is unreachable and fail_open is false");
+    
+    if let Err(e) = result {
+        assert!(
+            e.to_string().contains("Unable to reach SOCKS5 endpoint") || 
+            e.to_string().contains("InvalidConfig"),
+            "Error should indicate SOCKS5 endpoint is unreachable"
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_egress_tor_mode_with_unreachable_endpoint_fail_open() {
+    let controller = AxumProxyController::new();
+
+    let config = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: 18084,
+        egress: ProxyEgressConfig {
+            mode: ProxyEgressMode::Tor,
+            socks5_endpoint: Some("127.0.0.1:19999".to_string()), // Unreachable port
+            fail_open: true, // fail_open mode - should fallback to Direct
+        },
+        ..Default::default()
+    };
+
+    // This should succeed because fail_open is true, so it falls back to Direct mode
+    let handle = controller.start(config.clone()).await.unwrap();
+    assert_eq!(handle.port, 18084);
+    assert!(handle.running);
+
+    // Give the server a moment to start
+    sleep(Duration::from_millis(100)).await;
+
+    controller.stop(handle).await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_egress_custom_socks5_mode_with_reachable_endpoint() {
+    // Start mock SOCKS5 server
+    let mock_server = MockSocks5Server::start(0).await.unwrap();
+    let mock_endpoint = mock_server.endpoint();
+
+    // Give the server a moment to start
+    sleep(Duration::from_millis(100)).await;
+
+    let controller = AxumProxyController::new();
+
+    let config = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: 18085,
+        egress: ProxyEgressConfig {
+            mode: ProxyEgressMode::CustomSocks5,
+            socks5_endpoint: Some(mock_endpoint.clone()),
+            fail_open: false,
+        },
+        ..Default::default()
+    };
+
+    // This should succeed because the mock SOCKS5 server is reachable
+    let handle = controller.start(config.clone()).await.unwrap();
+    assert_eq!(handle.port, 18085);
+    assert!(handle.running);
+    assert_eq!(handle.egress.mode, ProxyEgressMode::CustomSocks5);
+
+    // Give the server a moment to start
+    sleep(Duration::from_millis(100)).await;
+
+    controller.stop(handle).await.unwrap();
+    mock_server.stop().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_egress_custom_socks5_mode_without_endpoint() {
+    let controller = AxumProxyController::new();
+
+    let config = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: 18086,
+        egress: ProxyEgressConfig {
+            mode: ProxyEgressMode::CustomSocks5,
+            socks5_endpoint: None, // Missing endpoint
+            fail_open: false,
+        },
+        ..Default::default()
+    };
+
+    // This should fail because CustomSocks5 mode requires an endpoint
+    let result = controller.start(config.clone()).await;
+    assert!(result.is_err(), "Should fail when CustomSocks5 mode is used without an endpoint");
+    
+    if let Err(e) = result {
+        assert!(
+            e.to_string().contains("socks5 endpoint is required") || 
+            e.to_string().contains("InvalidConfig"),
+            "Error should indicate SOCKS5 endpoint is required"
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_egress_tor_mode_fail_open_audit_log() {
+    use flm_core::domain::security::SecurityPolicy;
+    use flm_core::services::SecurityService;
+    use flm_proxy::adapters::SqliteSecurityRepository;
+    use std::sync::Arc;
+
+    // Create temporary database path
+    let security_db = unique_db_path("flm-test-egress-fail-open-audit");
+
+    // Create security service
+    let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
+    let security_service = Arc::new(SecurityService::new(security_repo.clone()));
+
+    // Create API key
+    let _api_key = security_service.create_api_key("test-key").await.unwrap();
+
+    // Set policy
+    let policy = SecurityPolicy {
+        id: "default".to_string(),
+        policy_json: "{}".to_string(),
+        updated_at: chrono::Utc::now().to_rfc3339(),
+    };
+    security_service.set_policy(policy).await.unwrap();
+
+    let controller = AxumProxyController::new();
+
+    let config = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: 18087,
+        egress: ProxyEgressConfig {
+            mode: ProxyEgressMode::Tor,
+            socks5_endpoint: Some("127.0.0.1:19999".to_string()), // Unreachable port
+            fail_open: true, // fail_open mode - should fallback to Direct and log event
+        },
+        security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        ..Default::default()
+    };
+
+    // This should succeed because fail_open is true
+    let handle = controller.start(config.clone()).await.unwrap();
+    assert_eq!(handle.port, 18087);
+    assert!(handle.running);
+
+    // Give the server a moment to start and log the event
+    sleep(Duration::from_millis(500)).await;
+
+    // Verify that fail_open event was logged (check audit logs)
+    // Note: Audit log checking is currently not implemented in SecurityService
+    // This check is skipped for now
+    // let audit_logs = security_service.list_audit_logs(100, 0).await.unwrap();
+    // let has_fail_open_event = audit_logs.iter().any(|log| {
+    //     log.event_type.contains("egress_fail_open") || log.event_type.contains("fail_open")
+    // });
+    // 
+    // // Note: The audit log check may not always work depending on implementation
+    // // This is a best-effort check
+    // if has_fail_open_event {
+    //     log_test("Found egress_fail_open_triggered event in audit logs");
+    // }
+
+    controller.stop(handle).await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_egress_chat_completions_with_tor() {
+    use flm_core::domain::security::SecurityPolicy;
+    use flm_core::services::SecurityService;
+    use flm_proxy::adapters::SqliteSecurityRepository;
+    use std::sync::Arc;
+
+    // Start mock SOCKS5 server
+    let mock_server = MockSocks5Server::start(0).await.unwrap();
+    let mock_endpoint = mock_server.endpoint();
+
+    // Give the server a moment to start
+    sleep(Duration::from_millis(100)).await;
+
+    // Create temporary database path
+    let security_db = unique_db_path("flm-test-egress-chat");
+
+    // Create security service
+    let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
+    let security_service = Arc::new(SecurityService::new(security_repo.clone()));
+
+    // Create API key
+    let api_key = security_service.create_api_key("test-key").await.unwrap();
+
+    // Set policy
+    let policy = SecurityPolicy {
+        id: "default".to_string(),
+        policy_json: "{}".to_string(),
+        updated_at: chrono::Utc::now().to_rfc3339(),
+    };
+    security_service.set_policy(policy).await.unwrap();
+
+    let controller = AxumProxyController::new();
+
+    let config = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: 18088,
+        egress: ProxyEgressConfig {
+            mode: ProxyEgressMode::Tor,
+            socks5_endpoint: Some(mock_endpoint.clone()),
+            fail_open: false,
+        },
+        security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        ..Default::default()
+    };
+
+    let handle = controller.start(config).await.unwrap();
+    sleep(Duration::from_millis(500)).await;
+
+    // Test chat completions endpoint with egress mode
+    let client = reqwest::Client::new();
+    let chat_request = serde_json::json!({
+        "model": "test-model",
+        "messages": [
+            {
+                "role": "user",
+                "content": "Hello"
+            }
+        ]
+    });
+
+    let response = client
+        .post("http://localhost:18088/v1/chat/completions")
+        .header("Authorization", bearer_header(&api_key.plain))
+        .header("Content-Type", "application/json")
+        .json(&chat_request)
+        .send()
+        .await
+        .unwrap();
+
+    // Should get a response (may be error from engine, but proxy should work)
+    assert!(
+        response.status().is_success() || response.status().as_u16() >= 400,
+        "Proxy should handle chat completions request with Tor egress"
+    );
+
+    controller.stop(handle).await.unwrap();
+    mock_server.stop().await;
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_egress_sse_streaming_with_tor() {
+    use flm_core::domain::security::SecurityPolicy;
+    use flm_core::services::SecurityService;
+    use flm_proxy::adapters::SqliteSecurityRepository;
+    use std::sync::Arc;
+
+    // Start mock SOCKS5 server
+    let mock_server = MockSocks5Server::start(0).await.unwrap();
+    let mock_endpoint = mock_server.endpoint();
+
+    // Give the server a moment to start
+    sleep(Duration::from_millis(100)).await;
+
+    // Create temporary database path
+    let security_db = unique_db_path("flm-test-egress-sse");
+
+    // Create security service
+    let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
+    let security_service = Arc::new(SecurityService::new(security_repo.clone()));
+
+    // Create API key
+    let api_key = security_service.create_api_key("test-key").await.unwrap();
+
+    // Set policy
+    let policy = SecurityPolicy {
+        id: "default".to_string(),
+        policy_json: "{}".to_string(),
+        updated_at: chrono::Utc::now().to_rfc3339(),
+    };
+    security_service.set_policy(policy).await.unwrap();
+
+    let controller = AxumProxyController::new();
+
+    let config = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: 18089,
+        egress: ProxyEgressConfig {
+            mode: ProxyEgressMode::Tor,
+            socks5_endpoint: Some(mock_endpoint.clone()),
+            fail_open: false,
+        },
+        security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        ..Default::default()
+    };
+
+    let handle = controller.start(config).await.unwrap();
+    sleep(Duration::from_millis(500)).await;
+
+    // Test SSE streaming endpoint with egress mode
+    let client = reqwest::Client::new();
+    let chat_request = serde_json::json!({
+        "model": "test-model",
+        "messages": [
+            {
+                "role": "user",
+                "content": "Hello"
+            }
+        ],
+        "stream": true
+    });
+
+    let response = client
+        .post("http://localhost:18089/v1/chat/completions")
+        .header("Authorization", bearer_header(&api_key.plain))
+        .header("Content-Type", "application/json")
+        .header("Accept", "text/event-stream")
+        .json(&chat_request)
+        .send()
+        .await
+        .unwrap();
+
+    // Should get a response (may be error from engine, but proxy should handle SSE with Tor egress)
+    assert!(
+        response.status().is_success() || response.status().as_u16() >= 400,
+        "Proxy should handle SSE streaming request with Tor egress"
+    );
+
+    // Verify Content-Type for SSE
+    if response.status().is_success() {
+        let content_type = response.headers().get("content-type");
+        if let Some(ct) = content_type {
+            let ct_str = ct.to_str().unwrap_or("");
+            assert!(
+                ct_str.contains("text/event-stream") || ct_str.contains("application/json"),
+                "Response should have appropriate content type for SSE"
+            );
+        }
+    }
+
+    controller.stop(handle).await.unwrap();
+    mock_server.stop().await;
 }

@@ -1,6 +1,6 @@
 # FLM Documentation
 
-> Status: Reference | Audience: All contributors | Updated: 2025-11-27
+> Status: Reference | Audience: All contributors | Updated: 2025-02-01
 
 FLMプロジェクトのドキュメント集約ディレクトリです。
 
@@ -60,10 +60,11 @@ docs/
 プロジェクトの監査レポートが含まれています。詳細は `audit/README.md` を参照してください。
 
 - **CORE_API_AUDIT.md** - Core API監査レポート（完了）
-- **CORE_API_AUDIT_COMPLETE.md** - Core API監査完了サマリー
+- **CORE_API_AUDIT_COMPLETE.md** - Core API監査完了サマリー（Phase 2-6サマリーを統合済み）
+- **CORE_API_AUDIT_KYK.md** - Core API監査KYK（危険予知活動）
 - **CLI_AUDIT.md** - CLI監査レポート（未実施）
 - **SECURITY_AUDIT_PHASE1.md** - Phase 1セキュリティ監査（未実施）
-- **COMPREHENSIVE_SECURITY_AUDIT.md** - 包括的セキュリティ監査（完了）
+- **COMPREHENSIVE_SECURITY_AUDIT.md** - 包括的セキュリティ監査（完了、再監査版・IP公開問題・厳格監査を統合済み）
 - **SECURITY_FIXES_IMPLEMENTED.md** - セキュリティ修正実装（完了）
 
 ### `changelog/` - 変更履歴
@@ -109,9 +110,10 @@ docs/
 プロジェクトの進捗状況と完了レポートです。詳細は `status/README.md` を参照してください。
 
 - **active/** - 現在進行中のレポートのみを配置
-  - `NEXT_STEPS.md` - 唯一の公式タスクリスト
+  - `NEXT_STEPS.md` - 唯一の公式タスクリスト（進捗レポート・プロジェクト状況要約を統合済み）
   - `BOTNET_PROTECTION_PLAN.md` - ボットネット対策実装進捗
-  - `UNIMPLEMENTED_REPORT.md` / `UNIMPLEMENTED_ANALYSIS.md` - 未実装領域の棚卸し
+  - `UNIMPLEMENTED_REPORT.md` - 未実装領域の棚卸し（コード分析情報を含む）
+  - `TEST_ENVIRONMENT_STATUS.md` - テスト環境の状態（セットアップ情報を含む）
 - **completed/** - 完了済みのレポート
   - `phases/` - フェーズ完了レポート
   - `tasks/` - タスク完了レポート（`FINAL_SUMMARY.md`推奨、`DONE.md`は簡潔な作業ログ）
@@ -164,8 +166,70 @@ docs/
 ## 注意事項
 
 - `archive/prototype/` は旧実装のアーカイブです。新機能の追加や修正は行わないでください（生成物は `prototype-generated-assets.zip` に圧縮済み）。
-- 最新の仕様は `specs/` ディレクトリと `docs/DOCUMENTATION_STRUCTURE.md` の定義に従います。
+- 最新の仕様は `specs/` ディレクトリの定義に従います。
 - 進捗状況は `status/active/` と `reports/` を併読して把握してください。
+
+## ドキュメント整理（2025-11-27、2025-01-28更新）
+
+以下の統合・削除を実施しました：
+
+- **ルートレベル**: `DOCUMENTATION_STRUCTURE.md` を `README.md` に統合、`IMPLEMENTATION_STATUS.md` を削除
+- **audit/**: Phase別サマリー（Phase 2-6）を `CORE_API_AUDIT_COMPLETE.md` に統合、セキュリティ監査レポート（再監査版・IP公開問題・厳格監査）を `COMPREHENSIVE_SECURITY_AUDIT.md` に統合
+- **status/active/**: 進捗レポートを `NEXT_STEPS.md` に統合、テスト環境レポートを `TEST_ENVIRONMENT_STATUS.md` に統合、未実装レポートを `UNIMPLEMENTED_REPORT.md` に統合、実装ログを追加（Phase 3、テスト、I18N）
+- **status/completed/**: 類似レポートを統合（safety/、proxy/、tests/）
+
+## ドキュメントの分類と整理方針
+
+### ドキュメントの分類
+
+1. **Planning（計画）**: プロジェクトの計画と設計方針を定義
+   - 対象読者: プロジェクトリーダー、アーキテクト、開発者
+   - 特徴: 実装前の設計と計画、アーキテクチャの全体像、フェーズ定義と成功基準
+
+2. **Specs（仕様書）**: 各コンポーネントの詳細仕様を定義
+   - 対象読者: 開発者、実装者
+   - 特徴: 実装の詳細仕様、API定義とデータ構造、バージョン管理（v1.0.0で凍結）
+
+3. **Guides（ガイド）**: 実装・運用に関するガイドを提供
+   - 対象読者: 開発者、ユーザー
+   - 特徴: 実装手順とベストプラクティス、ユーザー向けの使い方、トラブルシューティング
+
+4. **Audit（監査）**: コード品質とセキュリティの監査結果を記録
+   - 対象読者: プロジェクトリーダー、セキュリティエンジニア
+   - 特徴: Phase別の監査レポート、問題点と修正状況、品質メトリクス
+
+5. **Status（進捗）**: プロジェクトの進捗状況と完了レポートを記録
+   - 対象読者: プロジェクトリーダー、ステークホルダー
+   - 特徴: 現在の進捗状況は `active/` 配下に集約、完了したタスクは `completed/` 配下へ移動
+
+### ドキュメント間の関係性
+
+```
+planning/PLAN.md
+  ↓
+specs/CORE_API.md, CLI_SPEC.md, PROXY_SPEC.md
+  ↓
+実装（コード）
+  ↓
+audit/CORE_API_AUDIT.md, CLI_AUDIT.md
+  ↓
+status/completed/
+```
+
+### Active/Completed 運用ルール
+
+- 作業が完了したら、該当ドキュメントを `active/` から対応する `completed/*` サブディレクトリへ物理移動し、ヘッダーの `Status` を更新する。
+- `active/NEXT_STEPS.md` は「唯一の進行中タスクリスト」とし、他ファイルから重複情報を排除する。
+- `completed/tasks/FINAL_SUMMARY.md` をタスク完了の正とし、旧 `ALL_TASKS_COMPLETE.md` は削除済み。
+- 旧プロトタイプや参照専用資料には「Reference only / Frozen」と明記し、進行中にカウントしない。
+
+### ドキュメントの更新ルール
+
+1. **計画ドキュメント**（`planning/`）: プロジェクト方針変更時のみ更新
+2. **仕様書**（`specs/`）: v1.0.0で凍結、変更はADR経由
+3. **ガイド**（`guides/`）: 実装完了後、随時更新
+4. **監査**（`audit/`）: Phase完了時に作成
+5. **進捗**（`status/`）: タスク完了時に更新
 
 ---
 

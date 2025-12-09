@@ -1,11 +1,55 @@
 // Formatting utility functions
 
 /**
- * Formats date and time to Japanese locale string
+ * Get current locale from localStorage or default to 'ja'
  */
-export const formatDateTime = (dateString: string): string => {
+function getCurrentLocale(): string {
+  if (typeof window !== 'undefined') {
+    try {
+      const stored = localStorage.getItem('locale');
+      if (stored === 'en' || stored === 'ja') {
+        return stored;
+      }
+      // Fallback to navigator language
+      const navLang = navigator.language.toLowerCase();
+      if (navLang.startsWith('en')) {
+        return 'en';
+      }
+    } catch {
+      // Ignore localStorage errors
+    }
+  }
+  return 'ja';
+}
+
+/**
+ * Get locale string for Intl API
+ */
+function getLocaleString(locale?: string): string {
+  const currentLocale = locale || getCurrentLocale();
+  const localeMap: { [key: string]: string } = {
+    'ja': 'ja-JP',
+    'en': 'en-US',
+  };
+  return localeMap[currentLocale] || 'ja-JP';
+}
+
+/**
+ * Get "Unknown" text based on locale
+ */
+function getUnknownText(locale?: string): string {
+  const currentLocale = locale || getCurrentLocale();
+  return currentLocale === 'en' ? 'Unknown' : '不明';
+}
+
+/**
+ * Formats date and time to locale-specific string
+ * @param dateString - ISO date string
+ * @param locale - Optional locale override ('ja' or 'en')
+ */
+export const formatDateTime = (dateString: string, locale?: string): string => {
   if (!dateString || dateString.trim() === '') {
-    return '不明';
+    return getUnknownText(locale);
   }
 
   try {
@@ -14,7 +58,8 @@ export const formatDateTime = (dateString: string): string => {
       return dateString;
     }
 
-    return date.toLocaleString('ja-JP', {
+    const targetLocale = getLocaleString(locale);
+    return date.toLocaleString(targetLocale, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',
@@ -28,11 +73,13 @@ export const formatDateTime = (dateString: string): string => {
 };
 
 /**
- * Formats date only (without time) to Japanese locale string
+ * Formats date only (without time) to locale-specific string
+ * @param dateString - ISO date string
+ * @param locale - Optional locale override ('ja' or 'en')
  */
-export const formatDate = (dateString: string): string => {
+export const formatDate = (dateString: string, locale?: string): string => {
   if (!dateString || dateString.trim() === '') {
-    return '不明';
+    return getUnknownText(locale);
   }
 
   try {
@@ -41,7 +88,8 @@ export const formatDate = (dateString: string): string => {
       return dateString;
     }
 
-    return date.toLocaleDateString('ja-JP', {
+    const targetLocale = getLocaleString(locale);
+    return date.toLocaleDateString(targetLocale, {
       year: 'numeric',
       month: '2-digit',
       day: '2-digit',

@@ -6,6 +6,7 @@
 pub mod api_prompts;
 pub mod config;
 pub mod engine;
+pub mod engine_health_log;
 pub mod http;
 pub mod model_profiles;
 pub mod process_controller;
@@ -16,6 +17,7 @@ pub mod security;
 pub use api_prompts::{ApiPromptRecord, ApiPromptStore};
 pub use config::SqliteConfigRepository;
 pub use engine::SqliteEngineRepository;
+pub use engine_health_log::SqliteEngineHealthLogRepository;
 pub use http::ReqwestHttpClient;
 pub use model_profiles::{ModelProfileRecord, ModelProfileStore};
 pub use process_controller::DefaultEngineProcessController;

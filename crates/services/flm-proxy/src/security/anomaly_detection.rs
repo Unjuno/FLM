@@ -8,6 +8,7 @@ use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
 use tokio::sync::RwLock;
+use tracing::error;
 
 /// Anomaly score for an IP address
 #[derive(Clone, Debug)]
@@ -276,9 +277,21 @@ impl AnomalyDetection {
             // If we see many different patterns in a short time, it might be scanning
             let unique_patterns = entry.request_patterns.len();
             let time_span = if entry.request_timestamps.len() >= 2 {
-                let oldest = entry.request_timestamps.iter().min().unwrap();
-                let newest = entry.request_timestamps.iter().max().unwrap();
-                newest.duration_since(*oldest)
+                // why: len() >= 2 チェック済みだが、min/maxがNoneを返す可能性を考慮して安全に処理
+                // alt: unwrap()を使用（理論上は安全だが、エラーメッセージが不明確）
+                // evidence: len() >= 2 なので min/max は常に Some を返すが、防御的プログラミングのため
+                match (
+                    entry.request_timestamps.iter().min(),
+                    entry.request_timestamps.iter().max(),
+                ) {
+                    (Some(oldest), Some(newest)) => newest.duration_since(*oldest),
+                    _ => {
+                        error!(
+                            "Failed to get min/max timestamps (should never happen with len >= 2)"
+                        );
+                        Duration::from_secs(0)
+                    }
+                }
             } else {
                 Duration::from_secs(0)
             };

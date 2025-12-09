@@ -4,6 +4,39 @@
 
 ## 環境整備完了項目
 
+### セットアップ手順
+
+#### 前提条件
+- **Rust ツールチェーン**: `nightly` ツールチェーンが必要（`rust-toolchain.toml` で指定）
+- **システム依存関係**: OpenSSL開発ヘッダ（Windows: vcpkg、Linux: `libssl-dev`、macOS: `openssl` via Homebrew）
+
+#### インストール手順
+```bash
+# nightlyツールチェーンのインストール
+rustup toolchain install nightly
+
+# 必要なコンポーネントの追加
+rustup component add rustfmt clippy --toolchain nightly
+```
+
+#### 環境変数（推奨設定）
+```bash
+# Windows (PowerShell)
+$env:CARGO_TARGET_DIR = "target"
+$env:RUST_BACKTRACE = "1"
+
+# Linux/macOS
+export CARGO_TARGET_DIR=target
+export RUST_BACKTRACE=1
+```
+
+#### トラブルシューティング
+- **`edition2024` エラー**: `rust-toolchain.toml` で `nightly` を指定し、`rustup toolchain install nightly` を実行
+- **OpenSSL エラー**: Windowsはvcpkg、Linuxは`libssl-dev`、macOSは`openssl`をインストール
+- **テストが実行できない**: `cargo clean`で一時ファイルをクリーンアップ、`cargo test -- --test-threads=1`で並列実行を無効化
+
+## 環境整備完了項目
+
 ### ✅ Rust ツールチェーン
 
 - ✅ **nightlyツールチェーン**: インストール済み
@@ -89,7 +122,7 @@ export CARGO_TARGET_DIR=target
 3. ⏳ **テスト実行**: 実行可能（必要に応じて実行）
 4. ⏳ **CI/CD統合**: GitHub Actions等での自動化
 
-詳細は `docs/status/TEST_ENVIRONMENT_SETUP.md` を参照してください。
+セットアップ手順は本レポートの「セットアップ手順」セクションを参照してください。
 
 ---
 

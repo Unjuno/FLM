@@ -12,6 +12,8 @@ use axum::Json;
 use flm_core::domain::proxy::ProxyEgressConfig;
 use flm_core::services::SecurityService;
 use ipnet::IpNet;
+use std::fs::OpenOptions;
+use std::io::Write;
 use std::net::IpAddr;
 use std::sync::Arc;
 use std::time::{Duration, Instant};
@@ -192,14 +194,25 @@ pub async fn policy_middleware(
     let client_ip = extract_client_ip(&request, &headers, &state.trusted_proxy_ips);
 
     // Get security policy (we know it exists because policy_check_middleware already checked)
+    // However, there might be a race condition or database issue, so we handle it gracefully
     let policy = match state.security_service.get_policy("default").await {
         Ok(Some(policy)) => policy,
-        Ok(None) | Err(_) => {
-            // This should not happen if policy_check_middleware is working correctly
-            // But fail closed anyway for safety
+        Ok(None) => {
+            // Policy was deleted between policy_check and policy_middleware
+            // This is rare but possible, fail closed for safety
             error!(
                 error_type = "policy_missing_in_policy_middleware",
                 "Policy missing in policy_middleware (should have been caught by policy_check_middleware)"
+            );
+            return create_forbidden_response("Security policy error. Access denied.")
+                .into_response();
+        }
+        Err(e) => {
+            // Error fetching policy - log and fail closed
+            error!(
+                error_type = "policy_fetch_error_in_policy_middleware",
+                error = %e,
+                "Failed to fetch policy in policy_middleware"
             );
             return create_forbidden_response("Security policy error. Access denied.")
                 .into_response();
@@ -1197,6 +1210,10 @@ async fn check_rate_limit_with_info(
         None
     };
 
+    // why: Hold write lock for the entire function to ensure state consistency
+    // alt: Release lock early, but that allows race conditions between check and update
+    // evidence: test_rate_limit_multiple_keys fails - state might not be consistent
+    // assumption: We need to hold the lock until all updates are complete
     let mut rate_limit_state = state.rate_limit_state.write().await;
     // Load or initialize state (prefer memory, fallback to DB snapshot)
     let entry = match rate_limit_state.entry(api_key_id.to_string()) {
@@ -1212,20 +1229,28 @@ async fn check_rate_limit_with_info(
     };
 
     // Reset minute_count if the reset time has passed
-    // Use checked_duration_since to handle the case where now is before minute_reset
-    if let Some(duration) = now.checked_duration_since(entry.minute_reset) {
+    // why: minute_reset is set to a future time (now + window_duration), so we check if now >= minute_reset
+    // alt: Use checked_duration_since, but that returns None when now < minute_reset
+    // evidence: test_rate_limit_multiple_keys fails - minute_count not resetting correctly
+    // assumption: We need to check if the reset time has passed by comparing now with minute_reset
+    let reset_occurred = now >= entry.minute_reset;
+    if reset_occurred {
         // Reset time has passed, reset the counter
         entry.minute_count = 0;
         entry.minute_reset = now + window_duration;
     }
 
     // Refill token bucket based on rpm (tokens per minute)
+    // Note: Token bucket refills continuously, but we only check at request time
+    // The fill rate is rpm tokens per minute, so we add tokens based on elapsed time
     let fill_rate_per_sec = rpm as f64 / window_duration.as_secs() as f64;
     let elapsed_since_refill = now
         .checked_duration_since(entry.last_refill)
         .unwrap_or_default()
         .as_secs_f64();
-    if elapsed_since_refill > 0.0 {
+    // Always update last_refill to current time, even if elapsed is 0
+    // This ensures consistent behavior
+    if elapsed_since_refill >= 0.0 {
         entry.tokens_available = (entry.tokens_available
             + elapsed_since_refill * fill_rate_per_sec)
             .min(burst_capacity as f64);
@@ -1233,13 +1258,40 @@ async fn check_rate_limit_with_info(
     }
 
     // Check limits BEFORE incrementing
-    // For minute limit: if minute_count is already at or above rpm, deny
+    // For minute limit: check if incrementing would exceed rpm
     // For burst limit: if tokens_available is less than 1.0, deny
-    let minute_limit_reached = entry.minute_count >= rpm;
+    // why: Check if (minute_count + 1) > rpm to deny when limit would be exceeded
+    // alt: Check current count >= rpm, but that would deny when count equals rpm, not when it would exceed
+    // evidence: test_rate_limit_multiple_keys fails - 6th request should be denied when rpm=5
+    // assumption: After 5 requests, minute_count=5, so (5+1) > 5 is true, should deny 6th request
+    let would_exceed_minute_limit = (entry.minute_count + 1) > rpm;
     let burst_limit_reached = entry.tokens_available < 1.0;
-    let allowed = !(minute_limit_reached || burst_limit_reached);
+    let allowed = !(would_exceed_minute_limit || burst_limit_reached);
+    
+    // Debug output for rate limiting (write to file to bypass cargo test output issues)
+    let log_msg = format!(
+        "[RATE_LIMIT] api_key_id={}, minute_count={}, rpm={}, would_exceed={}, tokens_available={:.2}, burst_limit_reached={}, allowed={}, now={:?}, minute_reset={:?}\n",
+        utils::mask_identifier(api_key_id),
+        entry.minute_count,
+        rpm,
+        would_exceed_minute_limit,
+        entry.tokens_available,
+        burst_limit_reached,
+        allowed,
+        now,
+        entry.minute_reset
+    );
+    let log_path = std::env::temp_dir().join("rate_limit_debug.log");
+    if let Ok(mut file) = OpenOptions::new()
+        .create(true)
+        .append(true)
+        .open(&log_path)
+    {
+        let _ = file.write_all(log_msg.as_bytes());
+        let _ = file.flush();
+    }
 
-    // Calculate remaining BEFORE incrementing (this is the key fix)
+    // Calculate remaining BEFORE incrementing
     let rpm_remaining = if allowed {
         // After this request, minute_count will be entry.minute_count + 1
         rpm.saturating_sub(entry.minute_count + 1)
@@ -1254,11 +1306,22 @@ async fn check_rate_limit_with_info(
     };
     let remaining = rpm_remaining.min(burst_remaining);
 
-    // Only increment if allowed
+    // Increment counters if allowed
+    // why: We must increment BEFORE releasing the lock to ensure state consistency
+    // alt: Increment after releasing lock, but that allows race conditions
+    // evidence: test_rate_limit_boundary_conditions fails - minute_count not being updated correctly
+    // assumption: The increment must happen while holding the write lock
     if allowed {
         entry.minute_count = entry.minute_count.saturating_add(1);
         entry.tokens_available = (entry.tokens_available - 1.0).max(0.0);
     }
+    
+    // why: Ensure entry is updated in HashMap before lock is released
+    // alt: Rely on entry being a mutable reference, but explicit is better
+    // evidence: Tests fail suggesting state is not being persisted correctly
+    // assumption: The entry reference should maintain the updated values
+    // Note: entry is a mutable reference from HashMap, so updates should be reflected
+    // The lock will be released when rate_limit_state goes out of scope at the end of the function
 
     // Persist to database asynchronously (don't block the request)
     let reset_duration = entry.minute_reset.saturating_duration_since(now);

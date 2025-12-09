@@ -1,12 +1,16 @@
 //! Engines command implementation
 
-use crate::adapters::{DefaultEngineProcessController, ReqwestHttpClient, SqliteEngineRepository};
+use crate::adapters::{
+    DefaultEngineProcessController, ReqwestHttpClient, SqliteEngineHealthLogRepository,
+    SqliteEngineRepository,
+};
 use crate::cli::engines::EnginesSubcommand;
 use crate::commands::CliUserError;
 use flm_core::domain::engine::EngineState;
 use flm_core::domain::models::EngineKind;
-use flm_core::ports::{EngineRepository, LlmEngine};
+use flm_core::ports::{EngineHealthLogRepository, EngineRepository, LlmEngine};
 use flm_core::services::EngineService;
+use chrono::Utc;
 use serde_json::json;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -98,6 +102,68 @@ pub async fn execute_detect(
     render_states(&states, &format)
 }
 
+/// Execute engines health-history command
+pub async fn execute_health_history(
+    engine: Option<String>,
+    model: Option<String>,
+    hours: u32,
+    limit: u32,
+    db_path: Option<String>,
+    format: String,
+) -> Result<(), Box<dyn std::error::Error>> {
+    let db_path = db_path
+        .map(PathBuf::from)
+        .unwrap_or_else(default_config_db_path);
+
+    let health_log_repo = SqliteEngineHealthLogRepository::new(&db_path).await?;
+
+    let end_time = Utc::now();
+    let start_time = end_time - chrono::Duration::hours(hours as i64);
+
+    let logs = health_log_repo
+        .get_logs_in_range(engine.as_deref(), model.as_deref(), start_time, end_time, Some(limit))
+        .await?;
+
+    if format == "json" {
+        let output = json!({
+            "version": "1.0",
+            "data": {
+                "logs": logs.iter().map(|log| json!({
+                    "id": log.id,
+                    "engine_id": log.engine_id,
+                    "model_id": log.model_id,
+                    "status": log.status,
+                    "latency_ms": log.latency_ms,
+                    "error_rate": log.error_rate,
+                    "created_at": log.created_at.to_rfc3339(),
+                })).collect::<Vec<_>>()
+            }
+        });
+        println!("{}", serde_json::to_string_pretty(&output)?);
+    } else {
+        if logs.is_empty() {
+            println!("No health logs found for the specified criteria.");
+        } else {
+            println!("Found {} health log(s):", logs.len());
+            for log in &logs {
+                println!("\nLog ID: {}", log.id);
+                println!("  Engine: {}", log.engine_id);
+                if let Some(model_id) = &log.model_id {
+                    println!("  Model: {}", model_id);
+                }
+                println!("  Status: {}", log.status);
+                if let Some(latency) = log.latency_ms {
+                    println!("  Latency: {}ms", latency);
+                }
+                println!("  Error Rate: {:.2}%", log.error_rate * 100.0);
+                println!("  Created At: {}", log.created_at.to_rfc3339());
+            }
+        }
+    }
+
+    Ok(())
+}
+
 /// Execute engines command
 pub async fn execute(
     subcommand: EnginesSubcommand,
@@ -108,6 +174,12 @@ pub async fn execute(
         EnginesSubcommand::Detect { engine, fresh } => {
             execute_detect(engine, fresh, db_path, format).await
         }
+        EnginesSubcommand::HealthHistory {
+            engine,
+            model,
+            hours,
+            limit,
+        } => execute_health_history(engine, model, hours, limit, db_path, format).await,
     }
 }
 

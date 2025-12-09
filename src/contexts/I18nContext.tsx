@@ -206,7 +206,8 @@ export const useI18n = (): I18nContextType => {
     return {
       locale: 'ja' as Locale,
       setLocale: async () => {
-        console.warn('setLocale called outside I18nProvider');
+        // setLocale called outside I18nProvider - this should not happen
+        // Note: Cannot use logger here due to potential circular dependency
       },
       t: fallbackT,
     };

@@ -55,6 +55,17 @@ impl ProxyController for MockProxyController {
         let handles = self.handles.lock().unwrap();
         Ok(handles.clone())
     }
+
+    async fn reload_config(&self, handle_id: &str) -> Result<(), ProxyError> {
+        let handles = self.handles.lock().unwrap();
+        if handles.iter().any(|h| h.id == handle_id) {
+            Ok(())
+        } else {
+            Err(ProxyError::HandleNotFound {
+                handle_id: handle_id.to_string(),
+            })
+        }
+    }
 }
 
 /// Mock ProxyRepository for testing

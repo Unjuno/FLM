@@ -4,7 +4,7 @@
 
 ## 実装概要
 
-セキュリティ監査レポート（`docs/audit/SECURITY_AUDIT_IP_EXPOSURE.md`）に基づいて、Phase 1の緊急修正を実装しました。
+セキュリティ監査レポート（`docs/audit/COMPREHENSIVE_SECURITY_AUDIT.md`に統合済み）に基づいて、Phase 1の緊急修正を実装しました。
 
 ## 実装完了項目
 

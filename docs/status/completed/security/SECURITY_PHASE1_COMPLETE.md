@@ -243,7 +243,7 @@ CREATE TABLE IF NOT EXISTS audit_logs (
 **関連ドキュメント**:
 - `docs/planning/BOTNET_PROTECTION_IMPLEMENTATION_PLAN.md` - 実装計画
 - `docs/guides/SECURITY_BOTNET_PROTECTION.md` - ユーザー向けガイド
-- `docs/IMPLEMENTATION_STATUS.md` - 実装状況レポート
+- `docs/status/completed/tasks/FINAL_SUMMARY.md` - 実装状況サマリー
 - `docs/status/active/NEXT_STEPS.md` - 次の作業ステップ
 - `docs/specs/PROXY_SPEC.md` - プロキシ仕様
 

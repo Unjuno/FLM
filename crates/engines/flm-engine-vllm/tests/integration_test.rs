@@ -54,26 +54,36 @@ async fn test_vllm_engine_list_models() {
 
 #[tokio::test]
 async fn test_vllm_engine_health_check() {
+    use std::time::Duration;
+    use tokio::time::timeout;
+
     let mock_server = MockServer::start().await;
 
-    // Mock the /health endpoint
+    // Mock the /health endpoint with fast response (<100ms)
     Mock::given(method("GET"))
         .and(path("/health"))
         .respond_with(
-            ResponseTemplate::new(StatusCode::OK).set_body_json(serde_json::json!({
+            ResponseTemplate::new(StatusCode::OK)
+                .set_body_json(serde_json::json!({
                 "status": "ok"
-            })),
+                }))
+                .set_delay(Duration::from_millis(50)), // Simulate fast response
         )
         .mount(&mock_server)
         .await;
 
     let engine = VllmEngine::new("vllm-test".to_string(), mock_server.uri()).unwrap();
 
-    let health = engine.health_check().await.unwrap();
+    // Add timeout to prevent hanging tests
+    let health_result = timeout(Duration::from_secs(10), engine.health_check()).await;
+    let health = health_result
+        .expect("Health check timed out")
+        .expect("Health check failed");
+
     // Accept both Healthy and Degraded status (latency might vary in tests)
     match health {
         flm_core::domain::engine::HealthStatus::Healthy { .. } => {
-            // Expected case
+            // Expected case for fast response
         }
         flm_core::domain::engine::HealthStatus::Degraded { .. } => {
             // Also acceptable for tests (high latency but still working)
@@ -228,4 +238,98 @@ async fn test_vllm_engine_chat_stream() {
 
     assert!(!chunks.is_empty());
     assert!(chunks.last().unwrap().is_done);
+}
+
+#[tokio::test]
+async fn test_vllm_engine_health_check_degraded() {
+    use std::time::Duration;
+    use tokio::time::timeout;
+
+    let mock_server = MockServer::start().await;
+
+    // Mock the /health endpoint with slow response (>1500ms)
+    Mock::given(method("GET"))
+        .and(path("/health"))
+        .respond_with(
+            ResponseTemplate::new(StatusCode::OK)
+                .set_body_json(serde_json::json!({
+                    "status": "ok"
+                }))
+                .set_delay(Duration::from_millis(1600)), // Simulate slow response (>1500ms)
+        )
+        .mount(&mock_server)
+        .await;
+
+    let engine = VllmEngine::new("vllm-test".to_string(), mock_server.uri()).unwrap();
+
+    // Add timeout to prevent hanging tests
+    let health_result = timeout(Duration::from_secs(10), engine.health_check()).await;
+    let health = health_result
+        .expect("Health check timed out")
+        .expect("Health check failed");
+
+    // Should return Degraded status for slow response
+    match health {
+        flm_core::domain::engine::HealthStatus::Degraded { latency_ms, .. } => {
+            assert!(latency_ms >= 1500, "Expected latency >= 1500ms, got {}", latency_ms);
+        }
+        flm_core::domain::engine::HealthStatus::Healthy { latency_ms } => {
+            // Also acceptable if test environment is very fast
+            assert!(latency_ms < 1500, "Unexpected high latency for Healthy status: {}ms", latency_ms);
+        }
+        _ => {
+            panic!("Expected Degraded or Healthy, got: {:?}", health);
+        }
+    }
+}
+
+#[tokio::test]
+async fn test_vllm_engine_health_check_fallback() {
+    use std::time::Duration;
+    use tokio::time::timeout;
+
+    let mock_server = MockServer::start().await;
+
+    // Mock /health endpoint to return 404 (not available)
+    // This should trigger fallback to /v1/models
+    Mock::given(method("GET"))
+        .and(path("/health"))
+        .respond_with(ResponseTemplate::new(StatusCode::NOT_FOUND))
+        .mount(&mock_server)
+        .await;
+
+    // Mock the /v1/models endpoint (fallback)
+    Mock::given(method("GET"))
+        .and(path("/v1/models"))
+        .respond_with(
+            ResponseTemplate::new(StatusCode::OK)
+                .set_body_json(serde_json::json!({
+                    "object": "list",
+                    "data": []
+                }))
+                .set_delay(Duration::from_millis(50)),
+        )
+        .mount(&mock_server)
+        .await;
+
+    let engine = VllmEngine::new("vllm-test".to_string(), mock_server.uri()).unwrap();
+
+    // Add timeout to prevent hanging tests
+    let health_result = timeout(Duration::from_secs(10), engine.health_check()).await;
+    let health = health_result
+        .expect("Health check timed out")
+        .expect("Health check failed");
+
+    // Should return Healthy or Degraded status (fallback worked)
+    match health {
+        flm_core::domain::engine::HealthStatus::Healthy { .. } => {
+            // Expected case for successful fallback
+        }
+        flm_core::domain::engine::HealthStatus::Degraded { .. } => {
+            // Also acceptable if latency is high
+        }
+        _ => {
+            panic!("Expected Healthy or Degraded after fallback, got: {:?}", health);
+        }
+    }
 }

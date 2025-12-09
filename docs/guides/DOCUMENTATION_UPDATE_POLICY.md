@@ -36,7 +36,7 @@
 - プロジェクト方針の変更時に更新
 - 定期的な見直しを推奨（四半期ごと）
 
-**例**: `docs/guides/GLOSSARY.md`, `docs/DOCUMENTATION_STRUCTURE.md`
+**例**: `docs/guides/GLOSSARY.md`, `docs/README.md`
 
 ## 2. 更新が必要なタイミング
 
@@ -158,7 +158,7 @@
 
 - 重複する内容は統合
 - 関連するドキュメントは相互にリンク
-- ディレクトリ構造は`docs/DOCUMENTATION_STRUCTURE.md`に従う
+- ディレクトリ構造は`docs/README.md`に従う
 
 ## 7. ツールと自動化
 
@@ -192,7 +192,7 @@
 ---
 
 **関連ドキュメント**:
-- `docs/DOCUMENTATION_STRUCTURE.md` - ドキュメント構成ガイド
+- `docs/README.md` - ドキュメント構成ガイド（統合済み）
 - `docs/guides/GLOSSARY.md` - 用語集
 - `docs/templates/ADR_TEMPLATE.md` - Architecture Decision Recordテンプレート
 - `docs/guides/VERSIONING_POLICY.md` - バージョニングポリシー

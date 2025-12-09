@@ -477,6 +477,226 @@ fn install_certificate_linux(cert_path: &Path, filename: &str) -> Result<()> {
     }
 }
 
+/// Check if a certificate is already registered in the OS trust store
+///
+/// This function attempts to check if the provided certificate PEM is already
+/// registered in the OS trust store. The check is best-effort and may not be
+/// 100% accurate on all platforms.
+///
+/// # Arguments
+/// * `cert_pem` - Certificate in PEM format
+///
+/// # Returns
+/// `true` if certificate appears to be registered, `false` otherwise
+pub fn is_certificate_registered_in_trust_store(cert_pem: &str) -> bool {
+    if cert_pem.trim().is_empty() {
+        return false;
+    }
+
+    #[cfg(target_os = "windows")]
+    return is_certificate_registered_windows(cert_pem);
+
+    #[cfg(target_os = "macos")]
+    return is_certificate_registered_macos(cert_pem);
+
+    #[cfg(target_os = "linux")]
+    return is_certificate_registered_linux(cert_pem);
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos", target_os = "linux")))]
+    return false;
+}
+
+#[cfg(target_os = "windows")]
+fn is_certificate_registered_windows(cert_pem: &str) -> bool {
+    // Extract certificate SHA256 fingerprint from PEM
+    let _fingerprint_sha256 = match extract_certificate_fingerprint(cert_pem) {
+        Some(fp) => fp,
+        None => return false,
+    };
+
+    // Also extract SHA1 thumbprint (Windows standard)
+    let fingerprint_sha1 = match extract_certificate_sha1_thumbprint(cert_pem) {
+        Some(fp) => fp,
+        None => return false,
+    };
+
+    // Check CurrentUser store first
+    // Try SHA256 fingerprint first
+    let current_user_script_sha256 = format!(
+        r#"$cert = Get-ChildItem -Path Cert:\CurrentUser\Root | Where-Object {{ $_.Thumbprint -eq '{fingerprint_sha1}' }}; if ($cert) {{ $cert | Select-Object -ExpandProperty Thumbprint }}"#
+    );
+    if let Ok(output) = Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            &current_user_script_sha256,
+        ])
+        .output()
+    {
+        if output.status.success() {
+            if let Ok(stdout) = String::from_utf8(output.stdout) {
+                if !stdout.trim().is_empty() {
+                    return true;
+                }
+            }
+        }
+    }
+
+    // Check LocalMachine store
+    let local_machine_script = format!(
+        r#"$cert = Get-ChildItem -Path Cert:\LocalMachine\Root | Where-Object {{ $_.Thumbprint -eq '{fingerprint_sha1}' }}; if ($cert) {{ $cert | Select-Object -ExpandProperty Thumbprint }}"#
+    );
+    if let Ok(output) = Command::new("powershell")
+        .args([
+            "-NoProfile",
+            "-NonInteractive",
+            "-Command",
+            &local_machine_script,
+        ])
+        .output()
+    {
+        if output.status.success() {
+            if let Ok(stdout) = String::from_utf8(output.stdout) {
+                if !stdout.trim().is_empty() {
+                    return true;
+                }
+            }
+        }
+    }
+
+    false
+}
+
+/// Extract SHA1 thumbprint from certificate PEM (Windows standard)
+#[cfg(target_os = "windows")]
+fn extract_certificate_sha1_thumbprint(cert_pem: &str) -> Option<String> {
+    match x509_parser::pem::parse_x509_pem(cert_pem.as_bytes()) {
+        Ok((_, pem)) => {
+            let der = pem.contents;
+            let fingerprint = digest::digest(&digest::SHA1_FOR_LEGACY_USE_ONLY, &der);
+            Some(
+                fingerprint
+                    .as_ref()
+                    .iter()
+                    .map(|b| format!("{b:02X}"))
+                    .collect::<Vec<_>>()
+                    .join(""),
+            )
+        }
+        Err(_) => None,
+    }
+}
+
+#[cfg(target_os = "macos")]
+fn is_certificate_registered_macos(cert_pem: &str) -> bool {
+    // Extract certificate fingerprint from PEM
+    let fingerprint = match extract_certificate_fingerprint(cert_pem) {
+        Some(fp) => fp,
+        None => return false,
+    };
+
+    let home = std::env::var("HOME").unwrap_or_else(|_| "/Users/Shared".to_string());
+    let keychain = format!("{home}/Library/Keychains/login.keychain-db");
+
+    // Check user keychain
+    let output = Command::new("security")
+        .args([
+            "find-certificate",
+            "-c",
+            "FLM Local Root CA",
+            "-a",
+            "-Z",
+            &keychain,
+        ])
+        .output();
+
+    if let Ok(output) = output {
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            // Check if fingerprint appears in output
+            if stdout.contains(&fingerprint) {
+                return true;
+            }
+        }
+    }
+
+    // Check system keychain
+    let system_output = Command::new("security")
+        .args([
+            "find-certificate",
+            "-c",
+            "FLM Local Root CA",
+            "-a",
+            "-Z",
+            "/Library/Keychains/System.keychain",
+        ])
+        .output();
+
+    if let Ok(output) = system_output {
+        if output.status.success() {
+            let stdout = String::from_utf8_lossy(&output.stdout);
+            if stdout.contains(&fingerprint) {
+                return true;
+            }
+        }
+    }
+
+    false
+}
+
+#[cfg(target_os = "linux")]
+fn is_certificate_registered_linux(cert_pem: &str) -> bool {
+    // Extract certificate fingerprint from PEM
+    let fingerprint = match extract_certificate_fingerprint(cert_pem) {
+        Some(fp) => fp,
+        None => return false,
+    };
+
+    // Check common CA certificate directories
+    let cert_dirs = vec![
+        "/usr/local/share/ca-certificates",
+        "/etc/ssl/certs",
+        "/etc/ca-certificates/trust-source/anchors",
+    ];
+
+    for cert_dir in cert_dirs {
+        if let Ok(entries) = fs::read_dir(cert_dir) {
+            for entry in entries.flatten() {
+                if let Ok(file_path) = entry.path().canonicalize() {
+                    if let Ok(file_contents) = fs::read_to_string(&file_path) {
+                        // Check if fingerprint matches (simplified check)
+                        if file_contents.contains(&fingerprint) {
+                            return true;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    false
+}
+
+/// Extract SHA256 fingerprint from certificate PEM
+fn extract_certificate_fingerprint(cert_pem: &str) -> Option<String> {
+    match x509_parser::pem::parse_x509_pem(cert_pem.as_bytes()) {
+        Ok((_, pem)) => {
+            let der = pem.contents;
+            let fingerprint = digest::digest(&digest::SHA256, &der);
+            Some(
+                fingerprint
+                    .as_ref()
+                    .iter()
+                    .map(|b| format!("{b:02X}"))
+                    .collect::<Vec<_>>()
+                    .join(""),
+            )
+        }
+        Err(_) => None,
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -508,10 +728,13 @@ mod tests {
             root_cert.tbs_certificate.subject
         );
 
+        // why: SAN拡張の取得は証明書検証の重要な部分で、失敗時は明確なエラーメッセージが必要
+        // alt: Result型を返す（呼び出し側の処理が複雑化）
+        // evidence: この関数は証明書検証専用で、SANが存在しない証明書は無効とみなす
         let san = server_cert
             .subject_alternative_name()
-            .expect("Failed to parse SAN extension")
-            .expect("SAN extension missing")
+            .expect("Failed to parse SAN extension from server certificate")
+            .expect("SAN extension missing in server certificate (required for validation)")
             .value;
 
         let mut has_localhost = false;

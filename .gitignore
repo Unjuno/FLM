@@ -49,3 +49,4 @@ archive/prototype/model-availability-check-results.json
 logs/
 *.log
 test_results.txt
+node_modules

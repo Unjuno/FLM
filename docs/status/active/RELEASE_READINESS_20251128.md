@@ -29,7 +29,7 @@ Release readiness preparation completed with code fixes and documentation update
 ### 5. Documentation & Packaging 🔄
 - Created `reports/BUILD_LOG_20251128.md` with detailed fix log
 - Updated `docs/status/PROGRESS_REPORT.md` with latest date
-- Updated `docs/status/active/PROJECT_STATUS_SUMMARY.md` with current build status
+- Updated `docs/status/active/NEXT_STEPS.md` with current build status
 
 ## Known Issues
 
@@ -59,7 +59,7 @@ Release readiness preparation completed with code fixes and documentation update
 - `crates/core/flm-core/src/ports/engine.rs` - Fixed unused variable
 - `reports/BUILD_LOG_20251128.md` - New build log
 - `docs/status/PROGRESS_REPORT.md` - Updated date
-- `docs/status/active/PROJECT_STATUS_SUMMARY.md` - Updated build status
+- `docs/status/active/NEXT_STEPS.md` - Updated build status
 
 ## Release Checklist
 

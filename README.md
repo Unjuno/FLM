@@ -51,7 +51,7 @@ flm/
 
 #### エンジンアダプター
 - ✅ Ollama（完全実装）
-- ✅ vLLM（実装済み、テスト修正必要）
+- ✅ vLLM（実装済み、テスト修正完了）
 - ✅ LM Studio（実装済み）
 - ✅ llama.cpp（実装済み）
 
@@ -98,6 +98,10 @@ flm/
       - ⚠️ **注意**: インストーラーフックは、証明書ファイルが存在する場合にのみ実行されます。ユーザーは証明書のインストールを選択できます。
   - ✅ コード署名（Windows/macOS/Linux、GitHub Actions統合）
     - ✅ 基本方針策定: コード署名ポリシー策定（`docs/specs/CODE_SIGNING_POLICY.md`）、GitHub Actionsワークフロー基本設定
+    - ✅ Windowsコード署名: Tauri Signing Private Key統合完了
+    - ✅ macOSコード署名: Apple Developer ID統合完了
+    - ✅ Linux GPG署名: GitHub ActionsワークフローにGPG署名ステップ追加完了、Secrets設定ドキュメント化完了
+      - ✅ アンインストーラー証明書削除統合: Windows NSIS、Linux DEBのアンインストールフック実装完了（`tauri.conf.json`に`postRemoveScript`設定追加完了）
     - ✅ Tauriが自動的に署名処理を実行（Secretsが設定されている場合）
     - ✅ Linux GPG署名: 実装完了（`.github/workflows/build.yml`に追加、`LINUX_GPG_KEY`、`LINUX_GPG_KEY_PASS`、`LINUX_GPG_KEY_ID` Secretsが必要）
     - ✅ 署名検証とハッシュ値公開: 実装完了（`checksums.txt`生成とGPG署名、GitHub Releasesへの公開）
@@ -118,7 +122,7 @@ flm/
   - ✅ `flm security audit-logs` - 監査ログ表示（`--event-type`, `--severity`, `--ip`, `--limit`, `--offset`オプション）
   - ✅ `flm security intrusion` - 侵入検知イベント表示（`--ip`, `--min-score`, `--limit`, `--offset`オプション）
   - ✅ `flm security anomaly` - 異常検知イベント表示（`--ip`, `--anomaly-type`, `--limit`, `--offset`オプション）
-- ⏳ **UI機能**（未実装、詳細は「UI機能」セクションを参照）
+- ✅ **UI機能**（実装完了、詳細は「UI機能」セクションを参照）
 - 詳細: [`docs/planning/BOTNET_PROTECTION_IMPLEMENTATION_PLAN.md`](docs/planning/BOTNET_PROTECTION_IMPLEMENTATION_PLAN.md), [`docs/status/completed/security/`](docs/status/completed/security/)
 
 #### UI機能
@@ -126,31 +130,35 @@ flm/
   - ✅ モデルプロファイル管理UI（`/models/profiles`）
   - ✅ APIプロンプト管理UI（`/api/prompts`）
   - ✅ Tauri IPCブリッジ拡張
-- ⏳ **未実装**（Tauriアプリケーションのフロントエンド実装が必要）
-  - ⏳ **Chat Tester**（モデルテスト用UI）
+  - ✅ **Chat Tester**（モデルテスト用UI）
     - ✅ バックエンドAPI実装済み（`/v1/chat/completions`、`/v1/models`エンドポイント）
-    - ⏳ フロントエンドUI実装（プロトタイプの`ChatTester.tsx`を参考に実装可能）
-    - ⚠️ **実装状況**: プロトタイプ（`archive/prototype/src/pages/ChatTester.tsx`）に実装例あり。新しい実装では未実装。
+    - ✅ フロントエンドUI実装完了（`src/pages/ChatTester.tsx`）
+    - ✅ I18N対応（日本語/英語）
     - 詳細: [`docs/specs/UI_MINIMAL.md`](docs/specs/UI_MINIMAL.md) セクション2.3
-  - ⏳ **セキュリティUI**（Botnet対策のUI統合）
-    - ⏳ セキュリティイベント可視化UI（監査ログ、侵入検知、異常検知の可視化）
-    - ⏳ IPブロックリスト管理UI（ブロック/解除、ホワイトリスト管理）
-    - ⏳ 正当ユーザーホワイトリスト機能（IPホワイトリストのUI管理）
-    - ⏳ ログレベル調整機能（セキュリティログの詳細度調整）
-    - ⏳ アラート通知機能（セキュリティイベントの通知設定）
-  - ⏳ Setup Wizard Firewall自動適用 IPC
-  - ⏳ モデル詳細設定パネル（UI Extensions）
-  - ⏳ モデル比較/ヘルス履歴（UI Extensions）
+  - ✅ **セキュリティUI**（Botnet対策のUI統合）
+    - ✅ セキュリティイベント可視化UI（監査ログ、侵入検知、異常検知の可視化）
+    - ✅ IPブロックリスト管理UI（ブロック/解除、一時ブロッククリア）
+    - ✅ I18N対応（日本語/英語）
+    - ⏳ 正当ユーザーホワイトリスト機能（IPホワイトリストのUI管理）- Phase 3以降
+    - ⏳ ログレベル調整機能（セキュリティログの詳細度調整）- Phase 3以降
+    - ⏳ アラート通知機能（セキュリティイベントの通知設定）- Phase 3以降
+  - ✅ **ホーム画面**（アプリケーション概要、クイックアクション、システムステータス表示）
+  - ✅ **設定ページ**（言語切り替えUI）
+  - ⏳ Setup Wizard Firewall自動適用 IPC - Phase 3以降
+  - ⏳ モデル詳細設定パネル（UI Extensions）- Phase 3以降
+  - ⏳ モデル比較/ヘルス履歴（UI Extensions）- Phase 3以降
   - ⏳ ダークモード（Phase 3以降）
 - 詳細: [`docs/specs/UI_MINIMAL.md`](docs/specs/UI_MINIMAL.md), [`docs/specs/UI_EXTENSIONS.md`](docs/specs/UI_EXTENSIONS.md)
 
 #### 国際化（I18N）
-- ✅ **基本構造**: 実装完了
-  - ✅ 翻訳ファイルの基本構造作成（`locales/ja.json`, `locales/en.json`）
+- ✅ **完全実装**: 実装完了
+  - ✅ 翻訳ファイルの作成（`locales/ja.json`, `locales/en.json`）
   - ✅ `preferred_language` 設定保存機能（`flm config set preferred_language <ja|en>`で設定可能、`config.db`の`settings`テーブルに保存）
   - ✅ `flm config get preferred_language`で言語設定を取得可能
-- ⏳ **UI実装**（未実装、Tauriアプリケーションのフロントエンド実装が必要）
-  - ⏳ i18n コンテキストの実装（プロトタイプの `I18nContext.tsx` を参考）
+  - ✅ i18n コンテキストの実装（`src/contexts/I18nContext.tsx`）
+  - ✅ 言語切り替えUIの実装（設定ページ）
+  - ✅ 初回起動時の言語自動検出（OSの言語設定から検出）
+  - ✅ 全ページのI18N対応（Home、ChatTester、SecurityEvents、IpBlocklistManagement、Settings、Sidebar）
   - ⏳ 言語切り替えUIの実装（設定画面）
   - ⏳ 初回起動時の言語自動検出（OSの言語設定を自動検出）
 - ⚠️ **注意**: CLIは英語のみ（技術者向けのため）。UIのみ日本語・英語対応。

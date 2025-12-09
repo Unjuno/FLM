@@ -4,6 +4,16 @@
 
 ## 実装完了項目
 
+> **注意**: 本レポートは、Phase 1テストレポートとテストサマリーの結果を統合したものです。
+
+### テスト実行結果サマリー
+
+- **ProxyRepository テスト**: 6 passed, 0 failed
+- **ProxyService テスト**: 7 passed, 0 failed
+- **合計**: 13 passed, 0 failed
+
+詳細は `docs/status/completed/proxy/PROXY_SERVICE_PHASE1_TEST_REPORT.md` を参照（統合前の詳細レポート）。
+
 ### ✅ Phase 1: 基盤実装
 
 #### 1. ProxyRepository実装（flm-cli）

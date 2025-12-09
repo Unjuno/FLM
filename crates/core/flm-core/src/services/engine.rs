@@ -6,13 +6,16 @@ use crate::domain::chat::{
     ChatRequest, ChatResponse, ChatStreamChunk, EmbeddingRequest, EmbeddingResponse,
 };
 use crate::domain::engine::{
-    EngineBinaryInfo, EngineRuntimeInfo, EngineState, EngineStatus, ModelInfo,
+    EngineBinaryInfo, EngineRuntimeInfo, EngineState, EngineStatus, HealthStatus, ModelInfo,
 };
 use crate::domain::models::{EngineCapabilities, EngineId, EngineKind};
 use crate::error::EngineError;
-use crate::ports::{EngineProcessController, EngineRepository, HttpClient};
+use crate::ports::{
+    EngineHealthLogRepository, EngineProcessController, EngineRepository, HttpClient,
+};
 use futures::Stream;
 use std::pin::Pin;
+use std::sync::Arc;
 use std::time::Instant;
 
 fn default_ollama_base_url() -> String {
@@ -38,6 +41,7 @@ pub struct EngineService {
     process_controller: Box<dyn EngineProcessController + Send + Sync>,
     http_client: Box<dyn HttpClient + Send + Sync>,
     engine_repo: Box<dyn EngineRepository + Send + Sync>,
+    health_log_repo: Option<Arc<dyn EngineHealthLogRepository + Send + Sync>>,
 }
 
 impl EngineService {
@@ -52,6 +56,22 @@ impl EngineService {
             process_controller,
             http_client,
             engine_repo,
+            health_log_repo: None,
+        }
+    }
+
+    /// Create a new EngineService with health log repository
+    pub fn with_health_log_repo(
+        process_controller: Box<dyn EngineProcessController + Send + Sync>,
+        http_client: Box<dyn HttpClient + Send + Sync>,
+        engine_repo: Box<dyn EngineRepository + Send + Sync>,
+        health_log_repo: Arc<dyn EngineHealthLogRepository + Send + Sync>,
+    ) -> Self {
+        Self {
+            process_controller,
+            http_client,
+            engine_repo,
+            health_log_repo: Some(health_log_repo),
         }
     }
 
@@ -79,6 +99,48 @@ impl EngineService {
             if !states.iter().any(|s| s.id == runtime.engine_id) {
                 let state = self.detect_engine_from_runtime(&runtime).await?;
                 states.push(state);
+            }
+        }
+
+        // Step 3: Record health logs if repository is available
+        if let Some(health_log_repo) = &self.health_log_repo {
+            for state in &states {
+                let health_status = match &state.status {
+                    EngineStatus::RunningHealthy { latency_ms } => {
+                        HealthStatus::Healthy {
+                            latency_ms: *latency_ms,
+                        }
+                    },
+                    EngineStatus::RunningDegraded {
+                        latency_ms,
+                        reason,
+                    } => HealthStatus::Degraded {
+                        latency_ms: *latency_ms,
+                        reason: reason.clone(),
+                    },
+                    EngineStatus::ErrorNetwork { reason, .. }
+                    | EngineStatus::ErrorApi { reason } => HealthStatus::Unreachable {
+                        reason: reason.clone(),
+                    },
+                    EngineStatus::InstalledOnly => HealthStatus::Unreachable {
+                        reason: "Engine binary detected but not running".to_string(),
+                    },
+                };
+
+                let error_rate = match &state.status {
+                    EngineStatus::RunningHealthy { .. } => 0.0,
+                    EngineStatus::RunningDegraded { .. } => 0.1,
+                    EngineStatus::ErrorNetwork { .. } | EngineStatus::ErrorApi { .. } => 1.0,
+                    EngineStatus::InstalledOnly => 0.0,
+                };
+
+                if let Err(e) = health_log_repo
+                    .record_health_check(&state.id, None, &health_status, error_rate)
+                    .await
+                {
+                    // Log error but don't fail detection
+                    eprintln!("Warning: Failed to record health log for engine {}: {}", state.id, e);
+                }
             }
         }
 

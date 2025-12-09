@@ -105,6 +105,8 @@ impl ResourceProtection {
         *last_check = now;
 
         // Refresh CPU metrics
+        // On Windows, sysinfo needs multiple refresh cycles to get accurate CPU usage
+        // For test environments, we may get 0.0 initially, which is fine and won't trigger throttling
         let mut system = self.system.write().await;
         system.refresh_cpu();
 
@@ -116,7 +118,8 @@ impl ResourceProtection {
             let usage = (avg / 100.0).clamp(0.0, 1.0);
             // On Windows, sysinfo may return invalid values initially
             // If usage is NaN or infinity, return 0.0
-            if usage.is_nan() || usage.is_infinite() {
+            // Also, if usage is suspiciously high (> 1.0 after clamping), return 0.0
+            if usage.is_nan() || usage.is_infinite() || usage > 1.0 {
                 0.0
             } else {
                 usage
@@ -156,7 +159,8 @@ impl ResourceProtection {
             let usage = (used_memory as f64 / total_memory as f64).clamp(0.0, 1.0);
             // On Windows, sysinfo may return invalid values initially
             // If usage is NaN or infinity, return 0.0
-            if usage.is_nan() || usage.is_infinite() {
+            // Also, if usage is suspiciously high (> 1.0 after clamping), return 0.0
+            if usage.is_nan() || usage.is_infinite() || usage > 1.0 {
                 0.0
             } else {
                 usage

@@ -250,7 +250,7 @@ async fn test_rotate_nonexistent_api_key() {
     let service = SecurityService::new(repo);
 
     // Try to rotate a non-existent API key
-    let result = service.rotate_api_key("nonexistent-id").await;
+    let result = service.rotate_api_key("nonexistent-id", None).await;
     assert!(result.is_err());
 }
 
