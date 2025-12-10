@@ -11,7 +11,7 @@ describe('tauri utilities', () => {
     vi.clearAllMocks();
     // Reset window.__TAURI__ for tests that need to check availability
     // Note: src/test/setup.ts will restore it, but we need to test both cases
-    delete (window as any).__TAURI__;
+    delete (window as Window & { __TAURI__?: unknown }).__TAURI__;
     // Ensure mockInvoke is used for invoke calls
     vi.mocked(tauriInvoke).mockImplementation(mockInvoke);
   });
@@ -22,7 +22,7 @@ describe('tauri utilities', () => {
     });
 
     it('should return true when Tauri is available', () => {
-      (window as any).__TAURI__ = {};
+      (window as Window & { __TAURI__?: unknown }).__TAURI__ = {};
       expect(isTauriAvailable()).toBe(true);
     });
   });
@@ -35,7 +35,7 @@ describe('tauri utilities', () => {
     });
 
     it('should invoke Tauri command when available', async () => {
-      (window as any).__TAURI__ = {};
+      (window as Window & { __TAURI__?: unknown }).__TAURI__ = {};
       vi.mocked(tauriInvoke).mockResolvedValue({ success: true });
 
       const result = await safeInvoke('test_command', { arg: 'value' });
@@ -45,7 +45,7 @@ describe('tauri utilities', () => {
     });
 
     it('should handle CLI errors with enhanced error information', async () => {
-      (window as any).__TAURI__ = {};
+      (window as Window & { __TAURI__?: unknown }).__TAURI__ = {};
       const cliError = {
         code: 'CLI_ERROR',
         message: 'Command failed',
@@ -71,7 +71,7 @@ describe('tauri utilities', () => {
     });
 
     it('should handle network errors', async () => {
-      (window as any).__TAURI__ = {};
+      (window as Window & { __TAURI__?: unknown }).__TAURI__ = {};
       const networkError = new Error('network connection failed');
       vi.mocked(tauriInvoke).mockRejectedValue(networkError);
 
@@ -81,7 +81,7 @@ describe('tauri utilities', () => {
     });
 
     it('should handle connection errors', async () => {
-      (window as any).__TAURI__ = {};
+      (window as Window & { __TAURI__?: unknown }).__TAURI__ = {};
       const connectionError = new Error('connection timeout');
       vi.mocked(tauriInvoke).mockRejectedValue(connectionError);
 
@@ -91,7 +91,7 @@ describe('tauri utilities', () => {
     });
 
     it('should rethrow other errors as-is', async () => {
-      (window as any).__TAURI__ = {};
+      (window as Window & { __TAURI__?: unknown }).__TAURI__ = {};
       const otherError = new Error('Other error');
       vi.mocked(tauriInvoke).mockRejectedValue(otherError);
 

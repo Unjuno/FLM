@@ -102,7 +102,7 @@ export const formatDate = (dateString: string, locale?: string): string => {
 /**
  * Formats ProxyMode enum to human-readable string
  */
-export const formatProxyMode = (mode: string | { [key: string]: any }): string => {
+export const formatProxyMode = (mode: string | { [key: string]: unknown }): string => {
   if (typeof mode === 'string') {
     // Handle kebab-case format from serde
     const modeMap: { [key: string]: string } = {
@@ -129,7 +129,7 @@ export const formatProxyMode = (mode: string | { [key: string]: any }): string =
 /**
  * Formats EngineStatus enum to human-readable string
  */
-export const formatEngineStatus = (status: string | { [key: string]: any }): string => {
+export const formatEngineStatus = (status: string | { [key: string]: unknown }): string => {
   if (typeof status === 'string') {
     // Handle kebab-case format from serde
     const statusMap: { [key: string]: string } = {

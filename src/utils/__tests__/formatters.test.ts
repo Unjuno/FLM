@@ -167,8 +167,8 @@ describe('formatters', () => {
     });
 
     it('should return Unknown for invalid status', () => {
-      expect(formatEngineStatus(null as any)).toBe('Unknown');
-      expect(formatEngineStatus(undefined as any)).toBe('Unknown');
+      expect(formatEngineStatus(null as unknown as string)).toBe('Unknown');
+      expect(formatEngineStatus(undefined as unknown as string)).toBe('Unknown');
     });
 
     it('should return JSON string for unknown object status', () => {
