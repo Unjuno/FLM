@@ -33,8 +33,8 @@ async fn test_rate_limit_performance() {
 
     let policy_json = serde_json::json!({
         "rate_limit": {
-            "rpm": 1000,
-            "burst": 1000
+            "rpm": 10000,
+            "burst": 10000
         }
     });
 
