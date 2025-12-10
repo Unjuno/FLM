@@ -129,7 +129,7 @@ export const formatProxyMode = (mode: string | { [key: string]: unknown }): stri
 /**
  * Formats EngineStatus enum to human-readable string
  */
-export const formatEngineStatus = (status: string | { [key: string]: unknown }): string => {
+export const formatEngineStatus = (status: string | { [key: string]: unknown } | unknown): string => {
   if (typeof status === 'string') {
     // Handle kebab-case format from serde
     const statusMap: { [key: string]: string } = {
@@ -143,38 +143,44 @@ export const formatEngineStatus = (status: string | { [key: string]: unknown }):
   }
   // EngineStatus enum can be: "InstalledOnly", "RunningHealthy", "RunningDegraded", "ErrorNetwork", "ErrorApi"
   if (status && typeof status === 'object') {
+    const statusObj = status as Record<string, unknown>;
     // Check for enum variants (tagged enum format: { "status": "running-healthy", "latency_ms": 100 })
-    if ('status' in status) {
-      const statusValue = status.status;
+    if ('status' in statusObj) {
+      const statusValue = statusObj.status;
       if (typeof statusValue === 'string') {
+        const latency = typeof statusObj.latency_ms === 'number' ? statusObj.latency_ms : undefined;
+        const reason = typeof statusObj.reason === 'string' ? statusObj.reason : undefined;
         const statusMap: { [key: string]: string } = {
           'installed-only': 'Installed Only',
-          'running-healthy': `Running Healthy${status.latency_ms ? ` (${status.latency_ms}ms)` : ''}`,
-          'running-degraded': `Running Degraded${status.latency_ms ? ` (${status.latency_ms}ms)` : ''}`,
-          'error-network': `Network Error${status.reason ? `: ${status.reason}` : ''}`,
-          'error-api': `API Error${status.reason ? `: ${status.reason}` : ''}`,
+          'running-healthy': `Running Healthy${latency ? ` (${latency}ms)` : ''}`,
+          'running-degraded': `Running Degraded${latency ? ` (${latency}ms)` : ''}${reason ? `: ${reason}` : ''}`,
+          'error-network': `Network Error${reason ? `: ${reason}` : ''}`,
+          'error-api': `API Error${reason ? `: ${reason}` : ''}`,
         };
         return statusMap[statusValue] || statusValue.replace(/-/g, ' ').replace(/\b\w/g, (l) => l.toUpperCase());
       }
     }
     // Check for direct enum variants (untagged format)
-    if ('InstalledOnly' in status || 'installed-only' in status) return 'Installed Only';
-    if ('RunningHealthy' in status || 'running-healthy' in status) {
-      const latency = status.RunningHealthy?.latency_ms || status['running-healthy']?.latency_ms || status.latency_ms;
+    if ('InstalledOnly' in statusObj || 'installed-only' in statusObj) return 'Installed Only';
+    if ('RunningHealthy' in statusObj || 'running-healthy' in statusObj) {
+      const runningHealthy = (statusObj.RunningHealthy || statusObj['running-healthy'] || statusObj) as Record<string, unknown>;
+      const latency = typeof runningHealthy.latency_ms === 'number' ? runningHealthy.latency_ms : undefined;
       return `Running Healthy${latency ? ` (${latency}ms)` : ''}`;
     }
-    if ('RunningDegraded' in status || 'running-degraded' in status) {
-      const info = status.RunningDegraded || status['running-degraded'];
-      const latency = info?.latency_ms || status.latency_ms;
-      const reason = info?.reason || status.reason;
+    if ('RunningDegraded' in statusObj || 'running-degraded' in statusObj) {
+      const runningDegraded = (statusObj.RunningDegraded || statusObj['running-degraded'] || statusObj) as Record<string, unknown>;
+      const latency = typeof runningDegraded.latency_ms === 'number' ? runningDegraded.latency_ms : undefined;
+      const reason = typeof runningDegraded.reason === 'string' ? runningDegraded.reason : undefined;
       return `Running Degraded${latency ? ` (${latency}ms)` : ''}${reason ? `: ${reason}` : ''}`;
     }
-    if ('ErrorNetwork' in status || 'error-network' in status) {
-      const reason = status.ErrorNetwork?.reason || status['error-network']?.reason || status.reason;
+    if ('ErrorNetwork' in statusObj || 'error-network' in statusObj) {
+      const errorNetwork = (statusObj.ErrorNetwork || statusObj['error-network'] || statusObj) as Record<string, unknown>;
+      const reason = typeof errorNetwork.reason === 'string' ? errorNetwork.reason : undefined;
       return `Network Error${reason ? `: ${reason}` : ''}`;
     }
-    if ('ErrorApi' in status || 'error-api' in status) {
-      const reason = status.ErrorApi?.reason || status['error-api']?.reason || status.reason;
+    if ('ErrorApi' in statusObj || 'error-api' in statusObj) {
+      const errorApi = (statusObj.ErrorApi || statusObj['error-api'] || statusObj) as Record<string, unknown>;
+      const reason = typeof errorApi.reason === 'string' ? errorApi.reason : undefined;
       return `API Error${reason ? `: ${reason}` : ''}`;
     }
     // Fallback to JSON stringify

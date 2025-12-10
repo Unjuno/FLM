@@ -446,7 +446,7 @@ export const Home: React.FC = () => {
         <div className="engine-list">
           {displayedEngines.map((engine) => (
             <div key={engine.id} className="engine-item">
-              {engine.name} ({formatEngineStatus(engine.status)})
+              {engine.name} ({formatEngineStatus(engine.status as string | { [key: string]: unknown })})
             </div>
           ))}
           {remainingCount > 0 && (
