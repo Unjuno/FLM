@@ -83,7 +83,7 @@ jobs:
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
       
       - name: Verify Windows signatures
-        if: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY != '' }}
+        if: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
         run: |
           # MSI署名の検証
           if (Test-Path "src-tauri/target/x86_64-pc-windows-msvc/release/bundle/msi/*.msi") {
@@ -180,7 +180,7 @@ jobs:
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD }}
       
       - name: Verify macOS signatures
-        if: ${{ secrets.APPLE_CERTIFICATE != '' }}
+        if: ${{ secrets.APPLE_CERTIFICATE }}
         run: |
           # DMG署名の検証
           if [ -f "src-tauri/target/release/*.dmg" ]; then
@@ -273,7 +273,7 @@ jobs:
         run: npm run tauri build
       
       - name: Setup GPG for signing
-        if: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.LINUX_GPG_KEY != '' }}
+        if: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.LINUX_GPG_KEY }}
         run: |
           sudo apt-get update
           sudo apt-get install -y gnupg2
@@ -282,7 +282,7 @@ jobs:
         continue-on-error: true
       
       - name: Sign Linux artifacts with GPG
-        if: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.LINUX_GPG_KEY != '' && secrets.LINUX_GPG_KEY_PASS != '' }}
+        if: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.LINUX_GPG_KEY && secrets.LINUX_GPG_KEY_PASS }}
         run: |
           cd src-tauri/target/release
           for file in *.AppImage; do
@@ -305,7 +305,7 @@ jobs:
         continue-on-error: true
       
       - name: Verify Linux GPG signatures
-        if: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.LINUX_GPG_KEY != '' }}
+        if: ${{ startsWith(github.ref, 'refs/tags/v') && secrets.LINUX_GPG_KEY }}
         run: |
           # GPG公開鍵のインポート（検証用）
           echo "${{ secrets.LINUX_GPG_KEY }}" | gpg --batch --import
@@ -434,7 +434,7 @@ jobs:
           cat "$LOG_FILE"
       
       - name: Sign checksums with GPG
-        if: ${{ secrets.LINUX_GPG_KEY != '' && secrets.LINUX_GPG_KEY_PASS != '' }}
+        if: ${{ secrets.LINUX_GPG_KEY && secrets.LINUX_GPG_KEY_PASS }}
         run: |
           sudo apt-get update
           sudo apt-get install -y gnupg2
