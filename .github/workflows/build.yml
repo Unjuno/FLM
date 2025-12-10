@@ -64,16 +64,19 @@ jobs:
         continue-on-error: false
       
       - name: Check Rust compilation
+        shell: pwsh
         run: |
           # アーカイブを除外してチェック
           # Note: continue-on-error is acceptable here as this is a pre-build check
           # Actual compilation errors will be caught during the build step
-          if [ -d "src-tauri" ] && [ ! -d "src-tauri/archive" ]; then
-            cargo check --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msvc || true
-          fi
-          if [ -d "crates" ]; then
-            find crates -name "Cargo.toml" -exec cargo check --manifest-path {} --target x86_64-pc-windows-msvc \; || true
-          fi
+          if (Test-Path "src-tauri") -and -not (Test-Path "src-tauri/archive") {
+            cargo check --manifest-path src-tauri/Cargo.toml --target x86_64-pc-windows-msvc
+          }
+          if (Test-Path "crates") {
+            Get-ChildItem -Path crates -Recurse -Filter "Cargo.toml" | ForEach-Object {
+              cargo check --manifest-path $_.FullName --target x86_64-pc-windows-msvc
+            }
+          }
         continue-on-error: true
       
       - name: Build Tauri (Windows)
