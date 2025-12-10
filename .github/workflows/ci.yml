@@ -28,27 +28,27 @@ jobs:
 
       - name: Install dependencies
         run: npm ci
-        if: hashFiles('package.json') != ''
+        if: ${{ hashFiles('package.json') != '' }}
         continue-on-error: true
 
       - name: Run linter
         run: npm run lint
-        if: hashFiles('package.json') != ''
+        if: ${{ hashFiles('package.json') != '' }}
         continue-on-error: true
 
       - name: Run type check
         run: npm run type-check
-        if: hashFiles('package.json') != ''
+        if: ${{ hashFiles('package.json') != '' }}
         continue-on-error: true
 
       - name: Check formatting
         run: npm run format
-        if: hashFiles('package.json') != ''
+        if: ${{ hashFiles('package.json') != '' }}
         continue-on-error: true
 
       - name: Run tests with coverage
         run: npm run test:coverage
-        if: hashFiles('package.json') != ''
+        if: ${{ hashFiles('package.json') != '' }}
         continue-on-error: true
 
       - name: Check coverage threshold
