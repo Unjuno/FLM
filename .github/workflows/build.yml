@@ -175,7 +175,7 @@ jobs:
         continue-on-error: true
       
       - name: Build Tauri (macOS)
-        run: npm run tauri build
+        run: npm run tauri:build
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
@@ -278,7 +278,7 @@ jobs:
         continue-on-error: true
       
       - name: Build Tauri (Linux)
-        run: npm run tauri build
+        run: npm run tauri:build
       
       - name: Setup GPG for signing
         if: env.IS_TAG == 'true' && env.HAS_LINUX_GPG_KEY == 'true'
