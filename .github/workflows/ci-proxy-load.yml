@@ -10,17 +10,105 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  load-test:
-    name: Proxy Load Test
+  load-test-basic:
+    name: Basic Load Test
     runs-on: self-hosted
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
+      - name: Install k6
+        run: |
+          # Install k6 (adjust for your system)
+          # For Ubuntu/Debian: sudo gpg -k && sudo gpg --no-default-keyring --keyring /usr/share/keyrings/k6-archive-keyring.gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C5AD17C747E3415A3642D57D77C6C491D6AC1D69
+          # echo "deb [signed-by=/usr/share/keyrings/k6-archive-keyring.gpg] https://dl.k6.io/deb stable main" | sudo tee /etc/apt/sources.list.d/k6.list
+          # sudo apt-get update && sudo apt-get install k6
+          echo "k6 installation (adjust for your system)"
       - name: Build proxy
         run: cargo build --release -p flm-proxy
-      - name: Run load test
+      - name: Start proxy
         run: |
-          # TODO: Implement load test with k6 or wrk
-          # See docs/TEST_STRATEGY.md section 2.2
-          echo "Load test not yet implemented"
+          cargo run --release -p flm-cli -- proxy start --mode dev-selfsigned --port 9000 &
+          sleep 5
+          # Wait for proxy to be ready
+          for i in {1..30}; do
+            if curl -s http://localhost:9000/health > /dev/null; then
+              echo "Proxy is ready"
+              break
+            fi
+            sleep 1
+          done
+      - name: Run basic load test
+        run: |
+          PROXY_URL=http://localhost:9000 k6 run scripts/load-test/k6-basic.js --out json=target/load-test-basic-results.json
+        continue-on-error: true
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: load-test-basic-results
+          path: target/load-test-basic-results.json
+
+  load-test-stress:
+    name: Stress Test
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install k6
+        run: echo "k6 installation (adjust for your system)"
+      - name: Build proxy
+        run: cargo build --release -p flm-proxy
+      - name: Start proxy
+        run: |
+          cargo run --release -p flm-cli -- proxy start --mode dev-selfsigned --port 9000 &
+          sleep 5
+          for i in {1..30}; do
+            if curl -s http://localhost:9000/health > /dev/null; then
+              echo "Proxy is ready"
+              break
+            fi
+            sleep 1
+          done
+      - name: Run stress test
+        run: |
+          PROXY_URL=http://localhost:9000 k6 run scripts/load-test/k6-stress.js --out json=target/load-test-stress-results.json
+        continue-on-error: true
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: load-test-stress-results
+          path: target/load-test-stress-results.json
+
+  load-test-concurrent:
+    name: Concurrent Connections Test
+    runs-on: self-hosted
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - name: Install k6
+        run: echo "k6 installation (adjust for your system)"
+      - name: Build proxy
+        run: cargo build --release -p flm-proxy
+      - name: Start proxy
+        run: |
+          cargo run --release -p flm-cli -- proxy start --mode dev-selfsigned --port 9000 &
+          sleep 5
+          for i in {1..30}; do
+            if curl -s http://localhost:9000/health > /dev/null; then
+              echo "Proxy is ready"
+              break
+            fi
+            sleep 1
+          done
+      - name: Run concurrent connections test
+        run: |
+          PROXY_URL=http://localhost:9000 k6 run scripts/load-test/k6-concurrent.js --out json=target/load-test-concurrent-results.json
+        continue-on-error: true
+      - name: Upload results
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: load-test-concurrent-results
+          path: target/load-test-concurrent-results.json
 
