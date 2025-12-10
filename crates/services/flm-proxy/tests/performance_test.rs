@@ -109,7 +109,11 @@ async fn test_rate_limit_performance() {
     // Note: In test environments, rate limiting may occur due to resource protection
     // Allow some rate limiting if throttling occurred
     if throttled_count == 0 {
+        // Note: In test environments, rate limiting may occur due to resource protection
+    // Allow some rate limiting if throttling occurred
+    if throttled_count == 0 {
         assert_eq!(rate_limited_count, 0, "No requests should be rate limited");
+    }
     }
 
     controller.stop(handle).await.unwrap();
