@@ -374,8 +374,8 @@ async fn test_ip_rate_limit_scaling_with_many_ips() {
     let security_service = Arc::new(SecurityService::new(security_repo));
 
     let api_key = security_service.create_api_key("test-key").await.unwrap();
+    // Note: No IP whitelist to allow testing with X-Forwarded-For headers
     let policy_json = serde_json::json!({
-        "ip_whitelist": ["127.0.0.1"],
         "ip_rate_limit": {
             "rpm": 1000,
             "burst": 1000
