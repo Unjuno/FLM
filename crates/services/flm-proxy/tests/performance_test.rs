@@ -107,7 +107,6 @@ async fn test_rate_limit_performance() {
         rate_limited_count,
         throttled_count
     );
-    }
 
     controller.stop(handle).await.unwrap();
 }
