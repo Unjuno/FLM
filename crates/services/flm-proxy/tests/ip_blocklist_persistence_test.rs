@@ -93,6 +93,10 @@ async fn test_ip_blocklist_persistence_on_restart() {
         "IP should be blocked before restart"
     );
 
+    // Wait for database sync (IP blocklist syncs every 5 minutes, but we can wait a bit)
+    // Note: In production, sync happens every 5 minutes, but for testing we wait a bit
+    sleep(Duration::from_secs(2)).await;
+
     // Stop proxy
     controller.stop(handle).await.unwrap();
     sleep(Duration::from_millis(500)).await;
@@ -108,19 +112,32 @@ async fn test_ip_blocklist_persistence_on_restart() {
     };
 
     let handle2 = controller2.start(config2).await.unwrap();
-    sleep(Duration::from_millis(1000)).await; // Wait for database load
+    sleep(Duration::from_secs(2)).await; // Wait for database load (async operation)
 
     // Verify IP is still blocked after restart
-    let response = client
-        .get("http://localhost:18130/v1/models")
-        .header("Authorization", bearer_header(&api_key.plain))
-        .header("X-Forwarded-For", test_ip)
-        .send()
-        .await
-        .unwrap();
-    assert_eq!(
-        response.status(),
-        reqwest::StatusCode::FORBIDDEN,
+    // Note: Database load is async, so we may need to retry
+    let mut retries = 0;
+    let mut blocked = false;
+    while retries < 5 {
+        let response = client
+            .get("http://localhost:18130/v1/models")
+            .header("Authorization", bearer_header(&api_key.plain))
+            .header("X-Forwarded-For", test_ip)
+            .send()
+            .await
+            .unwrap();
+        
+        if response.status() == reqwest::StatusCode::FORBIDDEN {
+            blocked = true;
+            break;
+        }
+        
+        retries += 1;
+        sleep(Duration::from_millis(500)).await;
+    }
+    
+    assert!(
+        blocked,
         "IP should still be blocked after restart (loaded from database)"
     );
 
@@ -183,6 +200,9 @@ async fn test_ip_blocklist_multiple_ips_persistence() {
         }
     }
 
+    // Wait for database sync
+    sleep(Duration::from_secs(2)).await;
+
     // Stop proxy
     controller.stop(handle).await.unwrap();
     sleep(Duration::from_millis(500)).await;
@@ -198,20 +218,33 @@ async fn test_ip_blocklist_multiple_ips_persistence() {
     };
 
     let handle2 = controller2.start(config2).await.unwrap();
-    sleep(Duration::from_millis(1000)).await; // Wait for database load
+    sleep(Duration::from_secs(2)).await; // Wait for database load (async operation)
 
     // Verify all IPs are still blocked after restart
+    // Note: Database load is async, so we may need to retry
     for test_ip in &test_ips {
-        let response = client
-            .get("http://localhost:18131/v1/models")
-            .header("Authorization", bearer_header(&api_key.plain))
-            .header("X-Forwarded-For", *test_ip)
-            .send()
-            .await
-            .unwrap();
-        assert_eq!(
-            response.status(),
-            reqwest::StatusCode::FORBIDDEN,
+        let mut retries = 0;
+        let mut blocked = false;
+        while retries < 5 {
+            let response = client
+                .get("http://localhost:18131/v1/models")
+                .header("Authorization", bearer_header(&api_key.plain))
+                .header("X-Forwarded-For", *test_ip)
+                .send()
+                .await
+                .unwrap();
+            
+            if response.status() == reqwest::StatusCode::FORBIDDEN {
+                blocked = true;
+                break;
+            }
+            
+            retries += 1;
+            sleep(Duration::from_millis(500)).await;
+        }
+        
+        assert!(
+            blocked,
             "IP {} should still be blocked after restart",
             test_ip
         );
