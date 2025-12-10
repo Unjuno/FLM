@@ -22,11 +22,7 @@ fn bearer_header(token: &str) -> String {
 
 fn log_test(msg: &str) {
     let log_path = std::env::temp_dir().join("test_debug.log");
-    if let Ok(mut file) = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_path)
-    {
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_path) {
         let _ = file.write_all(format!("{}\n", msg).as_bytes());
         let _ = file.flush();
     }
@@ -335,7 +331,11 @@ async fn test_rate_limit_multiple_keys() {
             .await
             .unwrap();
 
-        log_test(&format!("[TEST] Request {} status: {:?}", i, response.status()));
+        log_test(&format!(
+            "[TEST] Request {} status: {:?}",
+            i,
+            response.status()
+        ));
         assert_ne!(
             response.status(),
             reqwest::StatusCode::TOO_MANY_REQUESTS,
@@ -363,7 +363,10 @@ async fn test_rate_limit_multiple_keys() {
         .await
         .unwrap();
 
-    log_test(&format!("[TEST] 6th request status: {:?}", response.status()));
+    log_test(&format!(
+        "[TEST] 6th request status: {:?}",
+        response.status()
+    ));
     // The 6th request should be rate limited (5 requests allowed, 6th exceeds)
     assert_eq!(
         response.status(),
@@ -459,7 +462,9 @@ async fn test_ip_rate_limit() {
     // IP rate limit should not trigger for 50 requests (limit is 1000/min)
     // But API key rate limit might (100 req/min)
     // So we expect either success or API key rate limit, but not IP rate limit for this test
-    log_test(&format!("IP rate limit test completed. Rate limited: {rate_limited}"));
+    log_test(&format!(
+        "IP rate limit test completed. Rate limited: {rate_limited}"
+    ));
 
     controller.stop(handle).await.unwrap();
 }
@@ -698,7 +703,9 @@ async fn test_rate_limit_api_key_and_ip_combined() {
         assert_ne!(
             response.status(),
             reqwest::StatusCode::TOO_MANY_REQUESTS,
-            "Request {} should not be rate limited (minute_count should be {}, rpm=5)", i, i + 1
+            "Request {} should not be rate limited (minute_count should be {}, rpm=5)",
+            i,
+            i + 1
         );
 
         // Small delay to ensure rate limit state is updated
@@ -1749,7 +1756,10 @@ async fn test_rate_limit_boundary_conditions() {
         .await
         .unwrap();
 
-    log_test(&format!("[TEST] First request status: {:?}", response.status()));
+    log_test(&format!(
+        "[TEST] First request status: {:?}",
+        response.status()
+    ));
     assert_eq!(
         response.status(),
         reqwest::StatusCode::OK,
@@ -1769,7 +1779,10 @@ async fn test_rate_limit_boundary_conditions() {
         .await
         .unwrap();
 
-    log_test(&format!("[TEST] Second request status: {:?}", response.status()));
+    log_test(&format!(
+        "[TEST] Second request status: {:?}",
+        response.status()
+    ));
     assert_eq!(
         response.status(),
         reqwest::StatusCode::TOO_MANY_REQUESTS,
@@ -2126,19 +2139,22 @@ async fn test_egress_tor_mode_with_unreachable_endpoint_fail_closed() {
         egress: ProxyEgressConfig {
             mode: ProxyEgressMode::Tor,
             socks5_endpoint: Some("127.0.0.1:19999".to_string()), // Unreachable port
-            fail_open: false, // fail_closed mode
+            fail_open: false,                                     // fail_closed mode
         },
         ..Default::default()
     };
 
     // This should fail because the SOCKS5 endpoint is unreachable and fail_open is false
     let result = controller.start(config.clone()).await;
-    assert!(result.is_err(), "Should fail when SOCKS5 endpoint is unreachable and fail_open is false");
-    
+    assert!(
+        result.is_err(),
+        "Should fail when SOCKS5 endpoint is unreachable and fail_open is false"
+    );
+
     if let Err(e) = result {
         assert!(
-            e.to_string().contains("Unable to reach SOCKS5 endpoint") || 
-            e.to_string().contains("InvalidConfig"),
+            e.to_string().contains("Unable to reach SOCKS5 endpoint")
+                || e.to_string().contains("InvalidConfig"),
             "Error should indicate SOCKS5 endpoint is unreachable"
         );
     }
@@ -2222,12 +2238,15 @@ async fn test_egress_custom_socks5_mode_without_endpoint() {
 
     // This should fail because CustomSocks5 mode requires an endpoint
     let result = controller.start(config.clone()).await;
-    assert!(result.is_err(), "Should fail when CustomSocks5 mode is used without an endpoint");
-    
+    assert!(
+        result.is_err(),
+        "Should fail when CustomSocks5 mode is used without an endpoint"
+    );
+
     if let Err(e) = result {
         assert!(
-            e.to_string().contains("socks5 endpoint is required") || 
-            e.to_string().contains("InvalidConfig"),
+            e.to_string().contains("socks5 endpoint is required")
+                || e.to_string().contains("InvalidConfig"),
             "Error should indicate SOCKS5 endpoint is required"
         );
     }
@@ -2287,7 +2306,7 @@ async fn test_egress_tor_mode_fail_open_audit_log() {
     // let has_fail_open_event = audit_logs.iter().any(|log| {
     //     log.event_type.contains("egress_fail_open") || log.event_type.contains("fail_open")
     // });
-    // 
+    //
     // // Note: The audit log check may not always work depending on implementation
     // // This is a best-effort check
     // if has_fail_open_event {

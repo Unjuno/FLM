@@ -1,5 +1,6 @@
 //! SQLite-based EngineHealthLogRepository implementation
 
+use chrono::{DateTime, Utc};
 use flm_core::domain::engine::HealthStatus;
 use flm_core::error::RepoError;
 use flm_core::ports::engine_health_log::{
@@ -7,7 +8,6 @@ use flm_core::ports::engine_health_log::{
 };
 use sqlx::sqlite::{SqliteConnectOptions, SqlitePool, SqlitePoolOptions};
 use std::path::Path;
-use chrono::{DateTime, Utc};
 
 /// SQLite-based EngineHealthLogRepository implementation
 pub struct SqliteEngineHealthLogRepository {
@@ -109,23 +109,25 @@ impl EngineHealthLogRepository for SqliteEngineHealthLogRepository {
 
         let logs = rows
             .into_iter()
-            .map(|(id, engine_id, model_id, status, latency_ms, error_rate, created_at)| {
-                let created_at = DateTime::parse_from_rfc3339(&created_at)
-                    .map_err(|e| RepoError::IoError {
-                        reason: format!("Failed to parse created_at: {e}"),
-                    })?
-                    .with_timezone(&Utc);
+            .map(
+                |(id, engine_id, model_id, status, latency_ms, error_rate, created_at)| {
+                    let created_at = DateTime::parse_from_rfc3339(&created_at)
+                        .map_err(|e| RepoError::IoError {
+                            reason: format!("Failed to parse created_at: {e}"),
+                        })?
+                        .with_timezone(&Utc);
 
-                Ok(EngineHealthLog {
-                    id,
-                    engine_id,
-                    model_id,
-                    status,
-                    latency_ms: latency_ms.map(|l| l as u64),
-                    error_rate,
-                    created_at,
-                })
-            })
+                    Ok(EngineHealthLog {
+                        id,
+                        engine_id,
+                        model_id,
+                        status,
+                        latency_ms: latency_ms.map(|l| l as u64),
+                        error_rate,
+                        created_at,
+                    })
+                },
+            )
             .collect::<Result<Vec<_>, RepoError>>()?;
 
         Ok(logs)
@@ -154,23 +156,25 @@ impl EngineHealthLogRepository for SqliteEngineHealthLogRepository {
 
         let logs = rows
             .into_iter()
-            .map(|(id, engine_id, model_id, status, latency_ms, error_rate, created_at)| {
-                let created_at = DateTime::parse_from_rfc3339(&created_at)
-                    .map_err(|e| RepoError::IoError {
-                        reason: format!("Failed to parse created_at: {e}"),
-                    })?
-                    .with_timezone(&Utc);
+            .map(
+                |(id, engine_id, model_id, status, latency_ms, error_rate, created_at)| {
+                    let created_at = DateTime::parse_from_rfc3339(&created_at)
+                        .map_err(|e| RepoError::IoError {
+                            reason: format!("Failed to parse created_at: {e}"),
+                        })?
+                        .with_timezone(&Utc);
 
-                Ok(EngineHealthLog {
-                    id,
-                    engine_id,
-                    model_id,
-                    status,
-                    latency_ms: latency_ms.map(|l| l as u64),
-                    error_rate,
-                    created_at,
-                })
-            })
+                    Ok(EngineHealthLog {
+                        id,
+                        engine_id,
+                        model_id,
+                        status,
+                        latency_ms: latency_ms.map(|l| l as u64),
+                        error_rate,
+                        created_at,
+                    })
+                },
+            )
             .collect::<Result<Vec<_>, RepoError>>()?;
 
         Ok(logs)
@@ -202,9 +206,20 @@ impl EngineHealthLogRepository for SqliteEngineHealthLogRepository {
         }
         query.push_str(" ORDER BY created_at DESC LIMIT ?");
 
-        let mut query_builder = sqlx::query_as::<_, (i64, String, Option<String>, String, Option<i64>, f64, String)>(&query)
-            .bind(start_time.to_rfc3339())
-            .bind(end_time.to_rfc3339());
+        let mut query_builder = sqlx::query_as::<
+            _,
+            (
+                i64,
+                String,
+                Option<String>,
+                String,
+                Option<i64>,
+                f64,
+                String,
+            ),
+        >(&query)
+        .bind(start_time.to_rfc3339())
+        .bind(end_time.to_rfc3339());
 
         if bind_engine_id {
             if let Some(eid) = engine_id {
@@ -235,23 +250,25 @@ impl EngineHealthLogRepository for SqliteEngineHealthLogRepository {
 
         let logs = rows
             .into_iter()
-            .map(|(id, engine_id, model_id, status, latency_ms, error_rate, created_at)| {
-                let created_at = DateTime::parse_from_rfc3339(&created_at)
-                    .map_err(|e| RepoError::IoError {
-                        reason: format!("Failed to parse created_at: {e}"),
-                    })?
-                    .with_timezone(&Utc);
+            .map(
+                |(id, engine_id, model_id, status, latency_ms, error_rate, created_at)| {
+                    let created_at = DateTime::parse_from_rfc3339(&created_at)
+                        .map_err(|e| RepoError::IoError {
+                            reason: format!("Failed to parse created_at: {e}"),
+                        })?
+                        .with_timezone(&Utc);
 
-                Ok(EngineHealthLog {
-                    id,
-                    engine_id,
-                    model_id,
-                    status,
-                    latency_ms: latency_ms.map(|l| l as u64),
-                    error_rate,
-                    created_at,
-                })
-            })
+                    Ok(EngineHealthLog {
+                        id,
+                        engine_id,
+                        model_id,
+                        status,
+                        latency_ms: latency_ms.map(|l| l as u64),
+                        error_rate,
+                        created_at,
+                    })
+                },
+            )
             .collect::<Result<Vec<_>, RepoError>>()?;
 
         Ok(logs)
@@ -280,8 +297,9 @@ impl EngineHealthLogRepository for SqliteEngineHealthLogRepository {
             query.push_str(" AND created_at <= ?");
         }
 
-        let mut query_builder = sqlx::query_as::<_, (i64, i64, i64, i64, Option<f64>, Option<f64>)>(&query)
-            .bind(engine_id);
+        let mut query_builder =
+            sqlx::query_as::<_, (i64, i64, i64, i64, Option<f64>, Option<f64>)>(&query)
+                .bind(engine_id);
 
         if let Some(st) = start_time {
             query_builder = query_builder.bind(st.to_rfc3339());
@@ -343,8 +361,9 @@ impl EngineHealthLogRepository for SqliteEngineHealthLogRepository {
             query.push_str(" AND created_at <= ?");
         }
 
-        let mut query_builder = sqlx::query_as::<_, (i64, i64, i64, i64, Option<f64>, Option<f64>)>(&query)
-            .bind(model_id);
+        let mut query_builder =
+            sqlx::query_as::<_, (i64, i64, i64, i64, Option<f64>, Option<f64>)>(&query)
+                .bind(model_id);
 
         if let Some(st) = start_time {
             query_builder = query_builder.bind(st.to_rfc3339());
@@ -398,4 +417,3 @@ impl EngineHealthLogRepository for SqliteEngineHealthLogRepository {
         Ok(result.rows_affected())
     }
 }
-

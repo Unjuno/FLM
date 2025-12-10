@@ -190,19 +190,28 @@ impl ProxyController for AxumProxyController {
                 // DevSelfSigned also uses prepare_proxy_router, so we need to get AppState
                 let (_, _, app_state) = prepare_proxy_router(config.clone()).await?;
                 let app_state = Arc::new(app_state);
-                (start_dev_self_signed_server(config.clone(), shutdown_rx).await?, app_state)
+                (
+                    start_dev_self_signed_server(config.clone(), shutdown_rx).await?,
+                    app_state,
+                )
             }
             ProxyMode::HttpsAcme => {
                 // HttpsAcme also uses prepare_proxy_router, so we need to get AppState
                 let (_, _, app_state) = prepare_proxy_router(config.clone()).await?;
                 let app_state = Arc::new(app_state);
-                (start_https_acme_server(config.clone(), shutdown_rx).await?, app_state)
+                (
+                    start_https_acme_server(config.clone(), shutdown_rx).await?,
+                    app_state,
+                )
             }
             ProxyMode::PackagedCa => {
                 // PackagedCa also uses prepare_proxy_router, so we need to get AppState
                 let (_, _, app_state) = prepare_proxy_router(config.clone()).await?;
                 let app_state = Arc::new(app_state);
-                (start_packaged_ca_server(config.clone(), shutdown_rx).await?, app_state)
+                (
+                    start_packaged_ca_server(config.clone(), shutdown_rx).await?,
+                    app_state,
+                )
             }
         };
 
@@ -225,7 +234,10 @@ impl ProxyController for AxumProxyController {
         };
 
         // Store security_db_path for reload_config fallback
-        let security_db_path = config.security_db_path.as_ref().map(|p| std::path::PathBuf::from(p));
+        let security_db_path = config
+            .security_db_path
+            .as_ref()
+            .map(|p| std::path::PathBuf::from(p));
 
         // Store the handle with AppState for hot reloading
         let mut handles = self.handles.write().await;
@@ -338,11 +350,12 @@ impl ProxyController for AxumProxyController {
         } else {
             // If AppState is not available, reload from database using security_db_path
             if let Some(security_db_path) = &server_handle.security_db_path {
-                let security_repo = crate::adapters::SqliteSecurityRepository::new(security_db_path)
-                    .await
-                    .map_err(|e| ProxyError::InvalidConfig {
-                        reason: format!("Failed to create security repository for reload: {e}"),
-                    })?;
+                let security_repo =
+                    crate::adapters::SqliteSecurityRepository::new(security_db_path)
+                        .await
+                        .map_err(|e| ProxyError::InvalidConfig {
+                            reason: format!("Failed to create security repository for reload: {e}"),
+                        })?;
 
                 // Reload blocked IPs
                 match security_repo.get_blocked_ips().await {
@@ -465,9 +478,7 @@ async fn prepare_proxy_router(
     // alt: Disable resource protection entirely in tests, but that requires config changes
     // evidence: Integration tests fail with 503 (Service Unavailable) instead of 429 (Rate Limited)
     // assumption: Test environment CPU/memory usage is below 150%, so 1.5 threshold effectively disables protection
-    let resource_protection = Arc::new(
-        ResourceProtection::new().with_thresholds(1.5, 1.5)
-    );
+    let resource_protection = Arc::new(ResourceProtection::new().with_thresholds(1.5, 1.5));
     let ip_blocklist_for_state = ip_blocklist.clone();
     let ip_blocklist_for_sync = ip_blocklist.clone();
     let security_repo_for_load = security_repo_for_state.clone();

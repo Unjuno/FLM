@@ -355,7 +355,7 @@ async fn test_resource_protection_performance_under_load() {
             _ => panic!("Unexpected status code: {}", response.status()),
         }
     }
-    
+
     // At least some requests should succeed (resource protection may throttle some in test env)
     // Note: In test environments, all requests may be throttled
     assert!(
@@ -448,7 +448,7 @@ async fn test_ip_rate_limit_scaling_with_many_ips() {
             _ => panic!("Unexpected status code: {}", response.status()),
         }
     }
-    
+
     // At least some requests should succeed (allow for IP whitelist/blocklist restrictions)
     // Note: In test environments, IP restrictions may block all requests
     assert!(

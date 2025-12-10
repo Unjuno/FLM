@@ -6,11 +6,11 @@ use crate::adapters::{
 };
 use crate::cli::engines::EnginesSubcommand;
 use crate::commands::CliUserError;
+use chrono::Utc;
 use flm_core::domain::engine::EngineState;
 use flm_core::domain::models::EngineKind;
 use flm_core::ports::{EngineHealthLogRepository, EngineRepository, LlmEngine};
 use flm_core::services::EngineService;
-use chrono::Utc;
 use serde_json::json;
 use std::path::PathBuf;
 use std::sync::Arc;
@@ -121,7 +121,13 @@ pub async fn execute_health_history(
     let start_time = end_time - chrono::Duration::hours(hours as i64);
 
     let logs = health_log_repo
-        .get_logs_in_range(engine.as_deref(), model.as_deref(), start_time, end_time, Some(limit))
+        .get_logs_in_range(
+            engine.as_deref(),
+            model.as_deref(),
+            start_time,
+            end_time,
+            Some(limit),
+        )
         .await?;
 
     if format == "json" {

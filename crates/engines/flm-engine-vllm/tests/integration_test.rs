@@ -271,11 +271,19 @@ async fn test_vllm_engine_health_check_degraded() {
     // Should return Degraded status for slow response
     match health {
         flm_core::domain::engine::HealthStatus::Degraded { latency_ms, .. } => {
-            assert!(latency_ms >= 1500, "Expected latency >= 1500ms, got {}", latency_ms);
+            assert!(
+                latency_ms >= 1500,
+                "Expected latency >= 1500ms, got {}",
+                latency_ms
+            );
         }
         flm_core::domain::engine::HealthStatus::Healthy { latency_ms } => {
             // Also acceptable if test environment is very fast
-            assert!(latency_ms < 1500, "Unexpected high latency for Healthy status: {}ms", latency_ms);
+            assert!(
+                latency_ms < 1500,
+                "Unexpected high latency for Healthy status: {}ms",
+                latency_ms
+            );
         }
         _ => {
             panic!("Expected Degraded or Healthy, got: {:?}", health);
@@ -329,7 +337,10 @@ async fn test_vllm_engine_health_check_fallback() {
             // Also acceptable if latency is high
         }
         _ => {
-            panic!("Expected Healthy or Degraded after fallback, got: {:?}", health);
+            panic!(
+                "Expected Healthy or Degraded after fallback, got: {:?}",
+                health
+            );
         }
     }
 }

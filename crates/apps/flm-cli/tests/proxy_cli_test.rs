@@ -83,7 +83,7 @@ async fn test_proxy_start_local_http() {
         "json".to_string(),
     )
     .await;
-    
+
     // Status should succeed and show the running proxy
     assert!(
         status_check_result.is_ok(),
@@ -512,15 +512,15 @@ async fn test_proxy_start_with_tor_egress() {
     if result.is_err() {
         let error_msg = result.unwrap_err().to_string();
         assert!(
-            error_msg.contains("SOCKS5") || 
-            error_msg.contains("Unable to reach") ||
-            error_msg.contains("InvalidConfig"),
+            error_msg.contains("SOCKS5")
+                || error_msg.contains("Unable to reach")
+                || error_msg.contains("InvalidConfig"),
             "Error should mention SOCKS5 endpoint issue. Got: {error_msg}"
         );
     } else {
         // If it succeeded, verify the proxy is running
         tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
-        
+
         let status_subcommand = ProxySubcommand::Status;
         let status_result = proxy::execute(
             status_subcommand,
@@ -529,9 +529,9 @@ async fn test_proxy_start_with_tor_egress() {
             "json".to_string(),
         )
         .await;
-        
+
         assert!(status_result.is_ok(), "Status should succeed");
-        
+
         // Stop the proxy
         let stop_subcommand = ProxySubcommand::Stop {
             port: Some(19090),
@@ -577,12 +577,15 @@ async fn test_proxy_start_with_socks5_egress() {
     )
     .await;
 
-    assert!(result.is_err(), "Should fail when SOCKS5 endpoint is unreachable");
+    assert!(
+        result.is_err(),
+        "Should fail when SOCKS5 endpoint is unreachable"
+    );
     let error_msg = result.unwrap_err().to_string();
     assert!(
-        error_msg.contains("SOCKS5") || 
-        error_msg.contains("Unable to reach") ||
-        error_msg.contains("InvalidConfig"),
+        error_msg.contains("SOCKS5")
+            || error_msg.contains("Unable to reach")
+            || error_msg.contains("InvalidConfig"),
         "Error should mention SOCKS5 endpoint issue. Got: {error_msg}"
     );
 }
@@ -597,7 +600,7 @@ async fn test_proxy_start_with_egress_fail_open() {
         mode: "local-http".to_string(),
         egress_mode: "tor".to_string(),
         socks5_endpoint: Some("127.0.0.1:19999".to_string()), // Unreachable endpoint
-        egress_fail_open: true, // Should fallback to Direct mode
+        egress_fail_open: true,                               // Should fallback to Direct mode
         bind: "127.0.0.1".to_string(),
         acme_email: None,
         acme_domain: None,
@@ -617,7 +620,10 @@ async fn test_proxy_start_with_egress_fail_open() {
     )
     .await;
 
-    assert!(result.is_ok(), "Should succeed with fail_open=true even if SOCKS5 endpoint is unreachable");
+    assert!(
+        result.is_ok(),
+        "Should succeed with fail_open=true even if SOCKS5 endpoint is unreachable"
+    );
 
     tokio::time::sleep(tokio::time::Duration::from_millis(500)).await;
 

@@ -137,7 +137,7 @@ async fn test_rate_limit_zero_values() {
         .send()
         .await
         .unwrap();
-    
+
     // Should not panic - either OK or TOO_MANY_REQUESTS is acceptable
     assert!(
         response.status() == reqwest::StatusCode::OK
@@ -576,4 +576,3 @@ async fn test_rapid_start_stop() {
     // If we get here, the test passed
     assert!(true, "Rapid start/stop should not cause panics");
 }
-

@@ -86,4 +86,3 @@ pub struct EngineHealthSummary {
     pub average_error_rate: f64,
     pub success_rate: f64,
 }
-

@@ -29,10 +29,10 @@ impl MockSocks5Server {
     pub async fn start(port: u16) -> Result<Self, std::io::Error> {
         let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).await?;
         let actual_port = listener.local_addr()?.port();
-        
+
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
         let mut shutdown_rx = shutdown_rx;
-        
+
         let handle = tokio::spawn(async move {
             let mut shutdown = false;
             loop {
@@ -52,24 +52,24 @@ impl MockSocks5Server {
                 }
             }
         });
-        
+
         Ok(Self {
             port: actual_port,
             shutdown_tx: Some(shutdown_tx),
             handle: Some(handle),
         })
     }
-    
+
     /// Get the port the server is listening on
     pub fn port(&self) -> u16 {
         self.port
     }
-    
+
     /// Get the endpoint string (host:port)
     pub fn endpoint(&self) -> String {
         format!("127.0.0.1:{}", self.port)
     }
-    
+
     /// Stop the mock server
     pub async fn stop(self) {
         if let Some(tx) = self.shutdown_tx {
@@ -88,35 +88,35 @@ async fn handle_socks5_connection(mut stream: TcpStream) {
     if stream.read_exact(&mut buf).await.is_err() {
         return;
     }
-    
+
     let version = buf[0];
     let num_methods = buf[1];
-    
+
     if version != SOCKS5_VERSION {
         return;
     }
-    
+
     // Read authentication methods
     let mut methods = vec![0u8; num_methods as usize];
     if stream.read_exact(&mut methods).await.is_err() {
         return;
     }
-    
+
     // Respond with "no authentication required"
     let response = [SOCKS5_VERSION, SOCKS5_AUTH_NONE];
     if stream.write_all(&response).await.is_err() {
         return;
     }
-    
+
     // SOCKS5 request: client sends connection request
     let mut request_buf = [0u8; 4];
     if stream.read_exact(&mut request_buf).await.is_err() {
         return;
     }
-    
+
     let cmd = request_buf[1];
     let atyp = request_buf[3];
-    
+
     if cmd != SOCKS5_CMD_CONNECT {
         // Send error response
         let error_response = [
@@ -124,13 +124,17 @@ async fn handle_socks5_connection(mut stream: TcpStream) {
             SOCKS5_REP_CONNECTION_REFUSED,
             0x00,
             SOCKS5_ATYP_IPV4,
-            0x00, 0x00, 0x00, 0x00,
-            0x00, 0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
+            0x00,
         ];
         let _ = stream.write_all(&error_response).await;
         return;
     }
-    
+
     // Read address based on address type
     let mut addr_buf = Vec::new();
     match atyp {
@@ -150,25 +154,29 @@ async fn handle_socks5_connection(mut stream: TcpStream) {
             return;
         }
     }
-    
+
     if stream.read_exact(&mut addr_buf).await.is_err() {
         return;
     }
-    
+
     // Send success response
     let success_response = [
         SOCKS5_VERSION,
         SOCKS5_REP_SUCCESS,
         0x00,
         SOCKS5_ATYP_IPV4,
-        0x00, 0x00, 0x00, 0x00,
-        0x00, 0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
+        0x00,
     ];
-    
+
     if stream.write_all(&success_response).await.is_err() {
         return;
     }
-    
+
     // Keep connection alive for a short time to simulate successful connection
     tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
 }
@@ -177,7 +185,7 @@ async fn handle_socks5_connection(mut stream: TcpStream) {
 pub async fn verify_socks5_endpoint(endpoint: &str) -> Result<(), String> {
     use std::time::Duration;
     use tokio::time::timeout;
-    
+
     match timeout(Duration::from_secs(3), TcpStream::connect(endpoint)).await {
         Ok(Ok(_stream)) => Ok(()),
         Ok(Err(e)) => Err(format!("Connection failed: {}", e)),
@@ -188,32 +196,32 @@ pub async fn verify_socks5_endpoint(endpoint: &str) -> Result<(), String> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    
+
     #[tokio::test]
     async fn test_mock_socks5_server_start_stop() {
         let server = MockSocks5Server::start(0).await.unwrap();
         let port = server.port();
         assert!(port > 0);
-        
+
         // Verify endpoint is reachable
         let endpoint = server.endpoint();
         let result = verify_socks5_endpoint(&endpoint).await;
         assert!(result.is_ok(), "Mock server should be reachable");
-        
+
         server.stop().await;
     }
-    
+
     #[tokio::test]
     async fn test_mock_socks5_server_multiple_connections() {
         let server = MockSocks5Server::start(0).await.unwrap();
         let endpoint = server.endpoint();
-        
+
         // Try multiple connections
         for _ in 0..3 {
             let result = verify_socks5_endpoint(&endpoint).await;
             assert!(result.is_ok(), "Should be able to connect multiple times");
         }
-        
+
         server.stop().await;
     }
 }

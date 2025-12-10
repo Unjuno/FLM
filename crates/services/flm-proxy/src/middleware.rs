@@ -193,7 +193,7 @@ pub async fn policy_middleware(
     // Get client IP from request
     let client_ip = extract_client_ip(&request, &headers, &state.trusted_proxy_ips);
     let path = request.uri().path().to_string();
-    
+
     debug!(
         middleware = "policy_middleware",
         path = %path,
@@ -386,10 +386,8 @@ pub async fn policy_middleware(
 
                     // Debug: Log rate limit check
                     let log_path = std::env::temp_dir().join("rate_limit_debug.log");
-                    if let Ok(mut file) = OpenOptions::new()
-                        .create(true)
-                        .append(true)
-                        .open(&log_path)
+                    if let Ok(mut file) =
+                        OpenOptions::new().create(true).append(true).open(&log_path)
                     {
                         let _ = file.write_all(
                             format!(
@@ -408,10 +406,8 @@ pub async fn policy_middleware(
                             .await;
 
                     // Debug: Log rate limit result
-                    if let Ok(mut file) = OpenOptions::new()
-                        .create(true)
-                        .append(true)
-                        .open(&log_path)
+                    if let Ok(mut file) =
+                        OpenOptions::new().create(true).append(true).open(&log_path)
                     {
                         let _ = file.write_all(
                             format!(
@@ -443,14 +439,9 @@ pub async fn policy_middleware(
         // or if auth failed. In either case, skip rate limiting.
         // Debug: Log missing API key ID
         let log_path = std::env::temp_dir().join("rate_limit_debug.log");
-        if let Ok(mut file) = OpenOptions::new()
-            .create(true)
-            .append(true)
-            .open(&log_path)
-        {
+        if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_path) {
             let _ = file.write_all(
-                "[POLICY_MIDDLEWARE] No API key ID in extensions, skipping rate limit\n"
-                    .as_bytes(),
+                "[POLICY_MIDDLEWARE] No API key ID in extensions, skipping rate limit\n".as_bytes(),
             );
             let _ = file.flush();
         }
@@ -1358,7 +1349,7 @@ async fn check_rate_limit_with_info(
     let burst_limit_reached = entry.tokens_available < 1.0;
     // Deny if EITHER limit would be exceeded
     let allowed = !would_exceed_minute_limit && !burst_limit_reached;
-    
+
     // Debug output for rate limiting (write to file to bypass cargo test output issues)
     let log_msg = format!(
         "[RATE_LIMIT] api_key_id={}, minute_count={}, rpm={}, would_exceed={}, tokens_available={:.2}, burst_limit_reached={}, allowed={}, now={:?}, minute_reset={:?}\n",
@@ -1373,11 +1364,7 @@ async fn check_rate_limit_with_info(
         entry.minute_reset
     );
     let log_path = std::env::temp_dir().join("rate_limit_debug.log");
-    if let Ok(mut file) = OpenOptions::new()
-        .create(true)
-        .append(true)
-        .open(&log_path)
-    {
+    if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_path) {
         let _ = file.write_all(log_msg.as_bytes());
         let _ = file.flush();
     }
@@ -1406,7 +1393,7 @@ async fn check_rate_limit_with_info(
         entry.minute_count = entry.minute_count.saturating_add(1);
         entry.tokens_available = (entry.tokens_available - 1.0).max(0.0);
     }
-    
+
     // why: Ensure entry is updated in HashMap before lock is released
     // alt: Rely on entry being a mutable reference, but explicit is better
     // evidence: Tests fail suggesting state is not being persisted correctly

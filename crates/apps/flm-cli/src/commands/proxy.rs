@@ -79,7 +79,9 @@ pub async fn execute(
         ProxySubcommand::Stop { port, handle_id } => {
             execute_stop(port, handle_id, db_path_config, db_path_security).await
         }
-        ProxySubcommand::Status => execute_status(db_path_config, db_path_security, output_format).await,
+        ProxySubcommand::Status => {
+            execute_status(db_path_config, db_path_security, output_format).await
+        }
         ProxySubcommand::Reload {
             port,
             handle_id,
@@ -294,7 +296,9 @@ async fn execute_start(options: StartCommandOptions) -> Result<(), Box<dyn std::
             mode: egress_mode_parsed.clone(),
             socks5_endpoint: match &egress_mode_parsed {
                 ProxyEgressMode::Tor => Some(DEFAULT_TOR_SOCKS_ENDPOINT.to_string()),
-                ProxyEgressMode::CustomSocks5 => socks5_endpoint.or(Some(DEFAULT_TOR_SOCKS_ENDPOINT.to_string())),
+                ProxyEgressMode::CustomSocks5 => {
+                    socks5_endpoint.or(Some(DEFAULT_TOR_SOCKS_ENDPOINT.to_string()))
+                }
                 ProxyEgressMode::Direct => None,
             },
             fail_open: egress_fail_open,

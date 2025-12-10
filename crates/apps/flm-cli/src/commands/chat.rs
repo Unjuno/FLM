@@ -37,7 +37,9 @@ fn parse_model_id(model_id: &str) -> Result<(String, String), Box<dyn std::error
     // why: starts_withでチェック済みなので、strip_prefixは常にSomeを返す
     // alt: unwrap()を使用（理論上は安全だが、expect()の方が明確）
     // evidence: starts_with("flm://")がtrueの場合、strip_prefix("flm://")は常にSomeを返す
-    let without_prefix = model_id.strip_prefix("flm://").expect("prefix check failed");
+    let without_prefix = model_id
+        .strip_prefix("flm://")
+        .expect("prefix check failed");
     let parts: Vec<&str> = without_prefix.splitn(2, '/').collect();
 
     if parts.len() != 2 {

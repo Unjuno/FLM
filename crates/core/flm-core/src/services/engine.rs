@@ -106,18 +106,15 @@ impl EngineService {
         if let Some(health_log_repo) = &self.health_log_repo {
             for state in &states {
                 let health_status = match &state.status {
-                    EngineStatus::RunningHealthy { latency_ms } => {
-                        HealthStatus::Healthy {
-                            latency_ms: *latency_ms,
-                        }
-                    },
-                    EngineStatus::RunningDegraded {
-                        latency_ms,
-                        reason,
-                    } => HealthStatus::Degraded {
+                    EngineStatus::RunningHealthy { latency_ms } => HealthStatus::Healthy {
                         latency_ms: *latency_ms,
-                        reason: reason.clone(),
                     },
+                    EngineStatus::RunningDegraded { latency_ms, reason } => {
+                        HealthStatus::Degraded {
+                            latency_ms: *latency_ms,
+                            reason: reason.clone(),
+                        }
+                    }
                     EngineStatus::ErrorNetwork { reason, .. }
                     | EngineStatus::ErrorApi { reason } => HealthStatus::Unreachable {
                         reason: reason.clone(),
@@ -139,7 +136,10 @@ impl EngineService {
                     .await
                 {
                     // Log error but don't fail detection
-                    eprintln!("Warning: Failed to record health log for engine {}: {}", state.id, e);
+                    eprintln!(
+                        "Warning: Failed to record health log for engine {}: {}",
+                        state.id, e
+                    );
                 }
             }
         }
