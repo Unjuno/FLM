@@ -1,6 +1,6 @@
 // Model Comparison page
 
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState, useMemo } from 'react';
 import { useI18n } from '../contexts/I18nContext';
 import {
   fetchEngineHealthHistory,
@@ -22,11 +22,11 @@ export const ModelComparison: React.FC = () => {
   const [engineFilter, setEngineFilter] = useState('');
   const [modelFilter, setModelFilter] = useState('');
 
-  const hoursMap: Record<TimeRange, number> = {
+  const hoursMap = useMemo<Record<TimeRange, number>>(() => ({
     '24h': 24,
     '7d': 168,
     '30d': 720,
-  };
+  }), []);
 
   const loadHealthHistory = useCallback(async () => {
     setLoading(true);
@@ -48,7 +48,7 @@ export const ModelComparison: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [engineFilter, modelFilter, timeRange, t]);
+  }, [engineFilter, modelFilter, timeRange, t, hoursMap]);
 
   useEffect(() => {
     void loadHealthHistory();

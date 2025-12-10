@@ -33,7 +33,7 @@ interface FirewallApplyResponse {
 }
 
 export const SetupWizard: React.FC = () => {
-  const { t } = useI18n();
+  const { t: _t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);

@@ -58,10 +58,12 @@ beforeEach(async () => {
   vi.mocked(invoke).mockImplementation(mockInvoke);
     } catch (error) {
       // If import fails, ensure mockInvoke is still available
+      // eslint-disable-next-line no-console
       console.warn('Failed to import @tauri-apps/api/core in test setup:', error);
     }
   } catch (error) {
     // Log error but don't fail the test setup
+    // eslint-disable-next-line no-console
     console.error('Error in test setup:', error);
   }
 });

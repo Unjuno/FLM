@@ -294,7 +294,7 @@ export const Home: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [loadProxyStatus, handleStartProxyError]);
+  }, [loadProxyStatus, handleStartProxyError, t]);
 
   const handleStopProxy = useCallback(async () => {
     setLoading(true);
@@ -365,7 +365,7 @@ export const Home: React.FC = () => {
         setError(result.message);
       }
     }
-  }, [loadEngines, handleDetectEnginesError]);
+  }, [loadEngines, handleDetectEnginesError, t]);
 
   useEffect(() => {
     void loadProxyStatus();

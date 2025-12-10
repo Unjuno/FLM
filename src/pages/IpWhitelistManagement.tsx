@@ -81,7 +81,18 @@ export const IpWhitelistManagement: React.FC = () => {
     void loadWhitelistedIps();
   }, [loadWhitelistedIps]);
 
-  const validateIpOrCidr = (input: string): boolean => {
+  const validateIpAddress = useCallback((ip: string): boolean => {
+    // IPv4 regex
+    const ipv4Regex =
+      /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+    // IPv6 regex (simplified)
+    const ipv6Regex =
+      /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^::$|^(?:[0-9a-fA-F]{1,4}:)*::(?:[0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}$/;
+
+    return ipv4Regex.test(ip) || ipv6Regex.test(ip);
+  }, []);
+
+  const validateIpOrCidr = useCallback((input: string): boolean => {
     const trimmed = input.trim();
     if (!trimmed) {
       return false;
@@ -100,18 +111,7 @@ export const IpWhitelistManagement: React.FC = () => {
 
     // Validate as regular IP address
     return validateIpAddress(trimmed);
-  };
-
-  const validateIpAddress = (ip: string): boolean => {
-    // IPv4 regex
-    const ipv4Regex =
-      /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
-    // IPv6 regex (simplified)
-    const ipv6Regex =
-      /^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$|^::1$|^::$|^(?:[0-9a-fA-F]{1,4}:)*::(?:[0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}$/;
-
-    return ipv4Regex.test(ip) || ipv6Regex.test(ip);
-  };
+  }, [validateIpAddress]);
 
   const handleAdd = useCallback(async () => {
     const trimmedIp = newIp.trim();
@@ -148,7 +148,7 @@ export const IpWhitelistManagement: React.FC = () => {
     } finally {
       setAdding(false);
     }
-  }, [newIp, loadWhitelistedIps, handleAddError, t]);
+  }, [newIp, loadWhitelistedIps, handleAddError, t, validateIpOrCidr]);
 
   const handleRemove = useCallback(
     (ip: string) => {

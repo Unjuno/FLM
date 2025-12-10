@@ -18,8 +18,14 @@ vi.mock('../../utils/tauri', () => ({
 }));
 
 // Mock ConfirmDialog - use actual component but make it testable
+interface MockConfirmDialogProps {
+  message: string;
+  onConfirm: () => void;
+  onCancel: () => void;
+  confirmText?: string;
+}
 vi.mock('../../components/common/ConfirmDialog', () => ({
-  ConfirmDialog: ({ message, onConfirm, onCancel, confirmText = '確認' }: any) => (
+  ConfirmDialog: ({ message, onConfirm, onCancel, confirmText = '確認' }: MockConfirmDialogProps) => (
     <div data-testid="confirm-dialog">
       <p>{message}</p>
       <button onClick={onConfirm}>{confirmText}</button>

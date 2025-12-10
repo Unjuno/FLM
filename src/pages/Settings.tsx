@@ -8,7 +8,7 @@ import './Settings.css';
 
 export const Settings: React.FC = () => {
   const { locale, setLocale, t } = useI18n();
-  const { theme, setTheme, toggleTheme } = useTheme();
+  const { theme, setTheme, toggleTheme: _toggleTheme } = useTheme();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);

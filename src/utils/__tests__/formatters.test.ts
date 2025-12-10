@@ -103,8 +103,8 @@ describe('formatters', () => {
     });
 
     it('should return Unknown for invalid mode', () => {
-      expect(formatProxyMode(null as any)).toBe('Unknown');
-      expect(formatProxyMode(undefined as any)).toBe('Unknown');
+      expect(formatProxyMode(null as unknown as string)).toBe('Unknown');
+      expect(formatProxyMode(undefined as unknown as string)).toBe('Unknown');
     });
 
     it('should return JSON string for unknown object mode', () => {
