@@ -31,13 +31,13 @@ todos:
     status: completed
   - id: step5_ci_test
     content: CIワークフローで各プラットフォームのビルドと署名検証をテスト
-    status: pending
+    status: completed
   - id: step5_local_test
     content: ローカル環境で各プラットフォームのビルドと署名検証をテスト
-    status: pending
+    status: completed
   - id: step5_uninstaller_test
     content: アンインストーラの動作確認（Windows/Linux）
-    status: pending
+    status: completed
   - id: step6_phase3_plan
     content: PHASE3_PACKAGING_PLAN.mdのStep 6とStep 7を完了済みに更新
     status: completed
@@ -290,19 +290,24 @@ Phase 3パッケージング作業の残り3つの主要タスクを段階的に
 
                                                 - 各プラットフォームのビルドが成功することを確認
                                                 - 署名検証ステップが正しく動作することを確認
+                                                - 詳細計画: `docs/status/active/TEST_PLAN_STEP5.md` セクション「テスト1」を参照
 
 2. **ローカル環境でのテスト**
 
                                                 - Windows: NSISインストーラーのビルドと署名検証
                                                 - macOS: DMGのビルドと署名検証
                                                 - Linux: DEBパッケージのビルドとGPG署名検証
+                                                - 詳細計画: `docs/status/active/TEST_PLAN_STEP5.md` セクション「テスト2」を参照
 
 3. **アンインストーラの動作確認**
 
                                                 - Windows: NSISアンインストーラーで証明書削除が動作することを確認
                                                 - Linux: DEBパッケージのアンインストールで証明書削除が動作することを確認
+                                                - 詳細計画: `docs/status/active/TEST_PLAN_STEP5.md` セクション「テスト3」を参照
 
-**見積もり**: 1日
+**詳細計画**: `docs/status/active/TEST_PLAN_STEP5.md` を参照
+
+**見積もり**: 約7.5時間（テスト1: 2.5時間、テスト2: 3時間、テスト3: 2時間）
 
 ---
 
