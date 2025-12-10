@@ -182,6 +182,7 @@ async fn test_ip_blocklist_multiple_ips_persistence() {
     let test_ips = vec!["192.168.1.301", "192.168.1.302", "192.168.1.303"];
 
     // Block multiple IPs
+    // Note: IP blocklist blocks after 5 failures (0-4 are failures, 5th triggers block)
     for test_ip in &test_ips {
         for i in 0..6 {
             let response = client
@@ -193,9 +194,23 @@ async fn test_ip_blocklist_multiple_ips_persistence() {
                 .unwrap();
 
             if i < 5 {
-                assert_eq!(response.status(), reqwest::StatusCode::UNAUTHORIZED);
+                // First 5 requests should be UNAUTHORIZED (failures recorded)
+                assert_eq!(
+                    response.status(),
+                    reqwest::StatusCode::UNAUTHORIZED,
+                    "IP {} request {} should be UNAUTHORIZED (failure recorded)",
+                    test_ip,
+                    i
+                );
             } else {
-                assert_eq!(response.status(), reqwest::StatusCode::FORBIDDEN);
+                // 6th request (after 5 failures) should be FORBIDDEN (IP blocked)
+                assert_eq!(
+                    response.status(),
+                    reqwest::StatusCode::FORBIDDEN,
+                    "IP {} request {} should be FORBIDDEN (IP blocked after 5 failures)",
+                    test_ip,
+                    i
+                );
             }
         }
     }
