@@ -59,7 +59,7 @@ export const ChatTester: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [handleProxyEndpointError]);
+  }, [handleProxyEndpointError, t]);
 
   const handleModelsError = useMemo(
     () =>

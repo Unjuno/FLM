@@ -2,7 +2,6 @@
 
 import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { axe, toHaveNoViolations } from 'jest-axe';
 import { ConfirmDialog } from '../ConfirmDialog';
 
@@ -71,7 +70,6 @@ describe('ConfirmDialog Accessibility', () => {
   });
 
   it('should be keyboard accessible with Enter key', async () => {
-    const user = userEvent.setup();
     const onConfirm = vi.fn();
     const onCancel = vi.fn();
     

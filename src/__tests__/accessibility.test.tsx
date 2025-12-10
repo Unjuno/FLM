@@ -4,7 +4,7 @@ import { describe, it, expect } from 'vitest';
 import { render } from '@testing-library/react';
 import { BrowserRouter } from 'react-router-dom';
 import { axe, toHaveNoViolations } from 'jest-axe';
-import { App } from '../App';
+import App from '../App';
 import { I18nProvider } from '../contexts/I18nContext';
 
 expect.extend(toHaveNoViolations);

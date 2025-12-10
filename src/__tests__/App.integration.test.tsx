@@ -1,6 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen } from '@testing-library/react';
 import { BrowserRouter, MemoryRouter } from 'react-router-dom';
 import App from '../App';
 import { logger } from '../utils/logger';
@@ -11,14 +10,6 @@ vi.mock('../utils/logger', () => ({
     error: vi.fn(),
   },
 }));
-
-// Mock ErrorBoundary to test error handling
-const ThrowError = ({ shouldThrow }: { shouldThrow: boolean }) => {
-  if (shouldThrow) {
-    throw new Error('Test error');
-  }
-  return <div>No error</div>;
-};
 
 describe('App Integration', () => {
   beforeEach(() => {
@@ -37,7 +28,6 @@ describe('App Integration', () => {
   });
 
   it('should handle navigation between routes', async () => {
-    const user = userEvent.setup();
     render(
       <BrowserRouter>
         <App />

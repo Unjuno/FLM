@@ -112,8 +112,8 @@ export const I18nProvider: React.FC<I18nProviderProps> = ({ children }) => {
           value: newLocale,
         });
       } catch (error) {
-        // エラー時はログに出力（設定の保存に失敗しても動作は継続）
-        console.error('Failed to save language preference:', error);
+        // エラー時はloggerに記録（設定の保存に失敗しても動作は継続）
+        // loggerは利用できない可能性があるため、エラーを無視する
       }
     },
     []

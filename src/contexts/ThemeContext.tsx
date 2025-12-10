@@ -32,6 +32,18 @@ interface ThemeProviderProps {
 export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
   const [theme, setThemeState] = useState<Theme>('light');
 
+  // テーマを適用する
+  const applyTheme = useCallback((newTheme: Theme) => {
+    const root = document.documentElement;
+    if (newTheme === 'dark') {
+      root.classList.add('dark-theme');
+      root.classList.remove('light-theme');
+    } else {
+      root.classList.add('light-theme');
+      root.classList.remove('dark-theme');
+    }
+  }, []);
+
   // 設定からテーマを読み込む
   useEffect(() => {
     const loadTheme = async () => {
@@ -69,19 +81,7 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     };
     mediaQuery.addEventListener('change', handleChange);
     return () => mediaQuery.removeEventListener('change', handleChange);
-  }, []);
-
-  // テーマを適用する
-  const applyTheme = useCallback((newTheme: Theme) => {
-    const root = document.documentElement;
-    if (newTheme === 'dark') {
-      root.classList.add('dark-theme');
-      root.classList.remove('light-theme');
-    } else {
-      root.classList.add('light-theme');
-      root.classList.remove('dark-theme');
-    }
-  }, []);
+  }, [applyTheme]);
 
   // テーマを設定する
   const setTheme = useCallback(

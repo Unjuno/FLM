@@ -128,7 +128,7 @@ describe('ConfirmDialog', () => {
   });
 
   it('should apply danger class when danger prop is true', () => {
-    const { container } = render(
+    render(
       <ConfirmDialog
         message="Are you sure?"
         onConfirm={vi.fn()}
