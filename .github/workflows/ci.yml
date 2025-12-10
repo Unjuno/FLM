@@ -142,7 +142,7 @@ jobs:
         continue-on-error: true
 
       - name: Install cargo-tarpaulin
-        run: cargo install cargo-tarpaulin --locked
+        run: cargo install cargo-tarpaulin --locked --force
 
       - name: Run Rust tests with coverage
         run: |
