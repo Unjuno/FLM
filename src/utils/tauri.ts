@@ -31,7 +31,8 @@ export async function safeInvoke<T = unknown>(
   }
 
   try {
-    return await tauriInvoke<T>(cmd, args);
+    // Only pass args if it's defined to avoid passing undefined as second argument
+    return args !== undefined ? await tauriInvoke<T>(cmd, args) : await tauriInvoke<T>(cmd);
   } catch (error) {
     // Enhanced error handling for CLI errors
     if (error && typeof error === 'object' && 'code' in error) {
