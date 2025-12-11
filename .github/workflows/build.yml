@@ -180,10 +180,29 @@ jobs:
       - name: Build Tauri (macOS)
         run: |
           echo "Starting Tauri build for macOS..."
+          echo "Apple certificate available: $([ -n "$APPLE_CERTIFICATE" ] && echo 'yes' || echo 'no')"
+          echo "Apple signing identity: ${APPLE_SIGNING_IDENTITY:-not set}"
+          
+          # Set environment variables for Tauri build
+          export APPLE_CERTIFICATE="${APPLE_CERTIFICATE:-}"
+          export APPLE_CERTIFICATE_PASSWORD="${APPLE_CERTIFICATE_PASSWORD:-}"
+          export APPLE_SIGNING_IDENTITY="${APPLE_SIGNING_IDENTITY:-}"
+          export APPLE_ID="${APPLE_ID:-}"
+          export APPLE_APP_SPECIFIC_PASSWORD="${APPLE_APP_SPECIFIC_PASSWORD:-}"
+          
           npm run tauri:build || {
             echo "Build failed, checking for artifacts..."
             if [ -d "src-tauri/target/release" ]; then
+              echo "Release directory contents:"
               find src-tauri/target/release -type f -exec ls -lh {} \;
+            fi
+            if [ -d "src-tauri/target/release/bundle" ]; then
+              echo "Bundle directory contents:"
+              find src-tauri/target/release/bundle -type f -exec ls -lh {} \;
+            fi
+            echo "Build logs:"
+            if [ -f "src-tauri/target/release/build.log" ]; then
+              tail -100 src-tauri/target/release/build.log
             fi
             exit 1
           }
@@ -194,6 +213,7 @@ jobs:
           APPLE_ID: ${{ secrets.APPLE_ID || '' }}
           APPLE_APP_SPECIFIC_PASSWORD: ${{ secrets.APPLE_APP_SPECIFIC_PASSWORD || '' }}
         continue-on-error: false
+        timeout-minutes: 30
       
       - name: Verify macOS signatures
         if: env.HAS_APPLE_CERT == 'true'
