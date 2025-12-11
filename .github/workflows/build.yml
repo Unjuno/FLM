@@ -48,6 +48,9 @@ jobs:
       - name: Install build dependencies (Windows)
         shell: pwsh
         run: |
+          # Refresh PATH to include Chocolatey-installed tools
+          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+          
           # Check if CMake is already installed (GitHub Actions Windows runners may have it)
           Write-Host "Checking for CMake..."
           if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) {
@@ -56,11 +59,19 @@ jobs:
               choco install cmake --version=3.28.0 -y
               # Refresh PATH after Chocolatey install
               $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+              # Also add Chocolatey bin directory explicitly
+              $chocoBin = "$env:ProgramData\chocolatey\bin"
+              if (Test-Path $chocoBin) {
+                $env:Path = "$chocoBin;$env:Path"
+              }
             } else {
               Write-Host "ERROR: CMake not found and Chocolatey not available"
               exit 1
             }
           }
+          # Verify CMake is accessible
+          $cmakePath = (Get-Command cmake -ErrorAction SilentlyContinue).Source
+          Write-Host "CMake found at: $cmakePath"
           cmake --version
           
           # Check if NASM is already installed
@@ -71,11 +82,19 @@ jobs:
               choco install nasm -y
               # Refresh PATH after Chocolatey install
               $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+              # Also add Chocolatey bin directory explicitly
+              $chocoBin = "$env:ProgramData\chocolatey\bin"
+              if (Test-Path $chocoBin) {
+                $env:Path = "$chocoBin;$env:Path"
+              }
             } else {
               Write-Host "ERROR: NASM not found and Chocolatey not available"
               exit 1
             }
           }
+          # Verify NASM is accessible
+          $nasmPath = (Get-Command nasm -ErrorAction SilentlyContinue).Source
+          Write-Host "NASM found at: $nasmPath"
           nasm --version
       
       - name: Cache Rust dependencies
@@ -113,7 +132,22 @@ jobs:
         continue-on-error: true
       
       - name: Build Tauri (Windows)
+        shell: pwsh
         run: |
+          # Refresh PATH to ensure CMake and NASM are available
+          $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+          $chocoBin = "$env:ProgramData\chocolatey\bin"
+          if (Test-Path $chocoBin) {
+            $env:Path = "$chocoBin;$env:Path"
+          }
+          
+          # Verify CMake and NASM are accessible
+          Write-Host "Verifying build dependencies..."
+          $cmakePath = (Get-Command cmake -ErrorAction SilentlyContinue).Source
+          $nasmPath = (Get-Command nasm -ErrorAction SilentlyContinue).Source
+          Write-Host "CMake: $cmakePath"
+          Write-Host "NASM: $nasmPath"
+          
           echo "Starting Tauri build for Windows..."
           npm run tauri:build || {
             echo "Build failed, checking for artifacts..."
@@ -127,6 +161,7 @@ jobs:
         env:
           TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY || '' }}
           TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD || '' }}
+          PATH: ${{ env.PATH }};${{ env.ProgramData }}\chocolatey\bin
       
       - name: Verify Windows signatures
         if: env.HAS_SIGNING_KEY == 'true'
