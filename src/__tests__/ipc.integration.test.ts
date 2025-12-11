@@ -211,7 +211,12 @@ describe('IPC Commands Integration', () => {
 
       const result = await safeInvoke('ipc_proxy_status');
 
-      expect(invoke).toHaveBeenCalledWith('ipc_proxy_status');
+      // CI環境ではundefinedが第2引数として渡される可能性があるため、柔軟にチェック
+      expect(invoke).toHaveBeenCalled();
+      // 第1引数が正しいことを確認し、第2引数はundefinedまたは存在しないことを許容
+      const calls = vi.mocked(invoke).mock.calls;
+      expect(calls[0][0]).toBe('ipc_proxy_status');
+      expect(calls[0][1]).toBeUndefined();
       expect(result).toEqual(mockResponse);
     });
 
@@ -227,7 +232,12 @@ describe('IPC Commands Integration', () => {
 
       const result = await safeInvoke('ipc_proxy_status');
 
-      expect(invoke).toHaveBeenCalledWith('ipc_proxy_status');
+      // CI環境ではundefinedが第2引数として渡される可能性があるため、柔軟にチェック
+      expect(invoke).toHaveBeenCalled();
+      // 第1引数が正しいことを確認し、第2引数はundefinedまたは存在しないことを許容
+      const calls = vi.mocked(invoke).mock.calls;
+      expect(calls[0][0]).toBe('ipc_proxy_status');
+      expect(calls[0][1]).toBeUndefined();
       expect(result).toEqual(mockResponse);
     });
   });
