@@ -3,12 +3,13 @@ import { vi, beforeEach, afterEach } from 'vitest';
 import { mockInvoke, resetTauriMocks } from './mocks/tauri';
 
 // Mock window.matchMedia globally for all tests
+// Default to light mode (matches: false) unless overridden in individual tests
 Object.defineProperty(window, 'matchMedia', {
   writable: true,
   configurable: true,
   value: vi.fn((query: string) => {
     const mediaQueryList = {
-      matches: query === '(prefers-color-scheme: dark)',
+      matches: false, // Default to light mode
       media: query,
       onchange: null,
       addListener: vi.fn(),

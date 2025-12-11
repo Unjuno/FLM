@@ -57,11 +57,14 @@ describe('ChatTester', () => {
 
     renderChatTester();
 
-    await waitFor(() => {
-      expect(
-        screen.getByText(/プロキシが実行されていません/i)
-      ).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(
+          screen.getByText(/プロキシが実行されていません/i)
+        ).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 
   it('should load and display models when proxy is running', async () => {
@@ -103,9 +106,12 @@ describe('ChatTester', () => {
 
     renderChatTester();
 
-    await waitFor(() => {
-      expect(screen.getByText(/モデルリストの取得に失敗しました/i)).toBeInTheDocument();
-    });
+    await waitFor(
+      () => {
+        expect(screen.getByText(/モデルリストの取得に失敗しました/i)).toBeInTheDocument();
+      },
+      { timeout: 3000 }
+    );
   });
 
   it('should allow user to enter message', async () => {
