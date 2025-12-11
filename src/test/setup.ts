@@ -2,6 +2,25 @@ import '@testing-library/jest-dom';
 import { vi, beforeEach, afterEach } from 'vitest';
 import { mockInvoke, resetTauriMocks } from './mocks/tauri';
 
+// Mock window.matchMedia globally for all tests
+Object.defineProperty(window, 'matchMedia', {
+  writable: true,
+  configurable: true,
+  value: vi.fn((query: string) => {
+    const mediaQueryList = {
+      matches: query === '(prefers-color-scheme: dark)',
+      media: query,
+      onchange: null,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+      addEventListener: vi.fn(),
+      removeEventListener: vi.fn(),
+      dispatchEvent: vi.fn(),
+    };
+    return mediaQueryList;
+  }),
+});
+
 // Mock Tauri API - must be hoisted before imports
 vi.mock('@tauri-apps/api/core', async () => {
   const actual = await vi.importActual<typeof import('@tauri-apps/api/core')>('@tauri-apps/api/core');

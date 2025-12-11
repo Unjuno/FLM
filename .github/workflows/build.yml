@@ -45,6 +45,39 @@ jobs:
         with:
           targets: x86_64-pc-windows-msvc
       
+      - name: Install build dependencies (Windows)
+        shell: pwsh
+        run: |
+          # Check if CMake is already installed (GitHub Actions Windows runners may have it)
+          Write-Host "Checking for CMake..."
+          if (-not (Get-Command cmake -ErrorAction SilentlyContinue)) {
+            Write-Host "CMake not found, installing via Chocolatey..."
+            if (Get-Command choco -ErrorAction SilentlyContinue) {
+              choco install cmake --version=3.28.0 -y
+              # Refresh PATH after Chocolatey install
+              $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+            } else {
+              Write-Host "ERROR: CMake not found and Chocolatey not available"
+              exit 1
+            }
+          }
+          cmake --version
+          
+          # Check if NASM is already installed
+          Write-Host "Checking for NASM..."
+          if (-not (Get-Command nasm -ErrorAction SilentlyContinue)) {
+            Write-Host "NASM not found, installing via Chocolatey..."
+            if (Get-Command choco -ErrorAction SilentlyContinue) {
+              choco install nasm -y
+              # Refresh PATH after Chocolatey install
+              $env:Path = [System.Environment]::GetEnvironmentVariable("Path","Machine") + ";" + [System.Environment]::GetEnvironmentVariable("Path","User")
+            } else {
+              Write-Host "ERROR: NASM not found and Chocolatey not available"
+              exit 1
+            }
+          }
+          nasm --version
+      
       - name: Cache Rust dependencies
         uses: actions/cache@v4
         with:

@@ -6,6 +6,25 @@ describe('ThemeContext', () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.classList.remove('light-theme', 'dark-theme');
+    
+    // window.matchMediaをモック（configurable: trueを追加して確実に上書き）
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      configurable: true,
+      value: vi.fn((query: string) => {
+        const mediaQueryList = {
+          matches: query === '(prefers-color-scheme: dark)',
+          media: query,
+          onchange: null,
+          addListener: vi.fn(),
+          removeListener: vi.fn(),
+          addEventListener: vi.fn(),
+          removeEventListener: vi.fn(),
+          dispatchEvent: vi.fn(),
+        };
+        return mediaQueryList;
+      }),
+    });
   });
 
   it('provides default light theme', () => {
@@ -184,6 +203,7 @@ describe('ThemeContext', () => {
       dispatchEvent: vi.fn(),
     }));
 
+    // beforeEachで既にモックされているが、このテストでは特定の動作をテストするため再設定
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
       value: mockMatchMedia,
