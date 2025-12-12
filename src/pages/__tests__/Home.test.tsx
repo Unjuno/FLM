@@ -133,7 +133,8 @@ describe('Home', () => {
     });
 
     expect(screen.getAllByText(/Ollama/).length).toBeGreaterThan(0);
-    expect(screen.getByText(/vLLM/)).toBeInTheDocument();
+    // vLLMも複数表示される可能性があるため、getAllByTextを使用
+    expect(screen.getAllByText(/vLLM/).length).toBeGreaterThan(0);
   });
 
   it('should start proxy when start button is clicked', async () => {

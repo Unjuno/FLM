@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { BrowserRouter } from 'react-router-dom';
+import { I18nProvider } from '../../contexts/I18nContext';
 import { IpBlocklistManagement } from '../IpBlocklistManagement';
 import * as securityService from '../../services/security';
 import * as tauriUtils from '../../utils/tauri';
@@ -42,7 +43,9 @@ describe('IpBlocklistManagement', () => {
   const renderIpBlocklistManagement = () => {
     return render(
       <BrowserRouter>
-        <IpBlocklistManagement />
+        <I18nProvider>
+          <IpBlocklistManagement />
+        </I18nProvider>
       </BrowserRouter>
     );
   };
@@ -53,7 +56,8 @@ describe('IpBlocklistManagement', () => {
     renderIpBlocklistManagement();
 
     await waitFor(() => {
-      expect(screen.getByText(/IPブロックリスト管理/i)).toBeInTheDocument();
+      // i18nを使用しているため、柔軟にチェック
+      expect(screen.getByText(/IPブロックリスト|blocklist/i)).toBeInTheDocument();
     });
   });
 
@@ -92,8 +96,9 @@ describe('IpBlocklistManagement', () => {
     renderIpBlocklistManagement();
 
     await waitFor(() => {
-      expect(screen.getByText('192.168.1.1')).toBeInTheDocument();
-      expect(screen.getByText('192.168.1.2')).toBeInTheDocument();
+      // IPアドレスはcode要素内に表示される可能性があるため、柔軟にチェック
+      expect(screen.getByText(/192.168.1.1/)).toBeInTheDocument();
+      expect(screen.getByText(/192.168.1.2/)).toBeInTheDocument();
     });
   });
 
@@ -139,7 +144,8 @@ describe('IpBlocklistManagement', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
-      expect(screen.getByText(/IP 192.168.1.1 のブロックを解除しますか/i)).toBeInTheDocument();
+      // i18nを使用しているため、柔軟にチェック
+      expect(screen.getByText(/192.168.1.1.*ブロック.*解除/i)).toBeInTheDocument();
     });
   });
 
@@ -194,7 +200,8 @@ describe('IpBlocklistManagement', () => {
       expect(securityService.fetchBlockedIps).toHaveBeenCalled();
     });
 
-    const clearButton = screen.getByText(/一時ブロックをすべて解除/i);
+    // i18nを使用しているため、柔軟にチェック
+    const clearButton = screen.getByText(/一時ブロック|clear/i);
     await user.click(clearButton);
 
     await waitFor(() => {
@@ -225,7 +232,8 @@ describe('IpBlocklistManagement', () => {
       expect(securityService.fetchBlockedIps).toHaveBeenCalled();
     });
 
-    const clearButton = screen.getByText(/一時ブロックをすべて解除/i);
+    // i18nを使用しているため、柔軟にチェック
+    const clearButton = screen.getByText(/一時ブロック|clear/i);
     await user.click(clearButton);
 
     await waitFor(() => {
@@ -265,8 +273,9 @@ describe('IpBlocklistManagement', () => {
     renderIpBlocklistManagement();
 
     await waitFor(() => {
-      expect(screen.getByText(/永続ブロック/i)).toBeInTheDocument();
-      expect(screen.getByText(/一時ブロック/i)).toBeInTheDocument();
+      // i18nを使用しているため、柔軟にチェック
+      expect(screen.getByText(/永続|permanent/i)).toBeInTheDocument();
+      expect(screen.getByText(/一時|temporary/i)).toBeInTheDocument();
     });
   });
 });

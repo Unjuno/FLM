@@ -134,8 +134,9 @@ describe('AuditLogsView Integration', () => {
       expect(securityService.fetchAuditLogs).toHaveBeenCalled();
     });
 
+    // severityFilterのオプションは low, medium, high, critical のみ
     const severitySelect = screen.getByLabelText(/重要度/i);
-    await user.selectOptions(severitySelect, 'warning');
+    await user.selectOptions(severitySelect, 'medium');
 
     const filterButton = screen.getByText(/フィルター適用/i);
     await user.click(filterButton);
@@ -143,7 +144,7 @@ describe('AuditLogsView Integration', () => {
     await waitFor(() => {
       expect(securityService.fetchAuditLogs).toHaveBeenCalledWith(
         expect.objectContaining({
-          severity: 'warning',
+          severity: 'medium',
         })
       );
     });
