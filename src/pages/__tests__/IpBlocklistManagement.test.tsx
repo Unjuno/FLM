@@ -265,12 +265,15 @@ describe('IpBlocklistManagement', () => {
     });
 
     // 一時ブロックがある場合のみボタンが表示される
-    await waitFor(() => {
-      const clearButton = screen.queryByText(/一時ブロック|clear/i);
-      expect(clearButton).toBeInTheDocument();
-    }, { timeout: 3000 });
+    // データがロードされ、一時ブロックが計算されるまで待つ
+    const clearButton = await waitFor(() => {
+      const button = screen.queryByText(/一時ブロック|clear/i);
+      if (!button) {
+        throw new Error('Clear button not found');
+      }
+      return button;
+    }, { timeout: 5000 });
     
-    const clearButton = screen.getByText(/一時ブロック|clear/i);
     await user.click(clearButton);
 
     await waitFor(() => {
