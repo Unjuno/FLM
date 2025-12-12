@@ -246,7 +246,9 @@ describe('Home', () => {
 
     // プロキシが停止中の場合、停止ボタンは表示されない
     // 代わりに起動ボタンが表示される
-    expect(screen.queryByText(/プロキシを停止|stop/i)).not.toBeInTheDocument();
+    // 「Stopped」ステータスバッジが表示される可能性があるため、柔軟にチェック
+    const stopButton = screen.queryByText(/プロキシを停止/i);
+    expect(stopButton).not.toBeInTheDocument();
   });
 
   it('should show error when stopping proxy without port', async () => {
@@ -281,8 +283,12 @@ describe('Home', () => {
     await user.click(stopButton);
 
     await waitFor(() => {
-      // i18nを使用しているため、柔軟にチェック
-      expect(screen.getByText(/プロキシ|proxy/i)).toBeInTheDocument();
+      // エラーメッセージが表示されているか確認
+      // 「プロキシが実行されていません」または「Proxy is not running」が表示される
+      const errorMessage = screen.queryByText(/プロキシが実行されていません/i) ||
+                          screen.queryByText(/Proxy is not running/i) ||
+                          screen.queryByRole('alert');
+      expect(errorMessage).toBeTruthy();
     });
 
     // ipc_proxy_stop should not be called when port is missing
