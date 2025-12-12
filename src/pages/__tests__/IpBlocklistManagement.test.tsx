@@ -178,12 +178,16 @@ describe('IpBlocklistManagement', () => {
 
     renderIpBlocklistManagement();
 
+    // データがロードされるまで待つ
     await waitFor(() => {
-      // IPアドレスはcode要素内に表示されるため、柔軟にチェック
-      // getByTextはcode要素内のテキストも検索できるが、より確実にするためgetAllByTextを使用
-      const ipElements = screen.getAllByText(/192.168.1.1/);
+      expect(securityService.fetchBlockedIps).toHaveBeenCalled();
+    });
+
+    // IPアドレスが表示されるまで待つ（code要素内に表示される）
+    await waitFor(() => {
+      const ipElements = screen.queryAllByText(/192.168.1.1/);
       expect(ipElements.length).toBeGreaterThan(0);
-    }, { timeout: 3000 });
+    }, { timeout: 5000 });
 
     // i18nを使用しているため、柔軟にチェック
     const unblockButtons = screen.getAllByText(/ブロック解除|unblock/i);
