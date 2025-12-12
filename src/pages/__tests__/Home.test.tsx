@@ -128,10 +128,11 @@ describe('Home', () => {
 
     await waitFor(() => {
       // i18nを使用しているため、柔軟にチェック（エンジン名で確認）
-      expect(screen.getByText(/Ollama/)).toBeInTheDocument();
+      // 「Ollama」が複数表示される可能性があるため、getAllByTextを使用
+      expect(screen.getAllByText(/Ollama/).length).toBeGreaterThan(0);
     });
 
-    expect(screen.getByText(/Ollama/)).toBeInTheDocument();
+    expect(screen.getAllByText(/Ollama/).length).toBeGreaterThan(0);
     expect(screen.getByText(/vLLM/)).toBeInTheDocument();
   });
 
