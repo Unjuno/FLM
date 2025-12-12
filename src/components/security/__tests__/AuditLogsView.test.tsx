@@ -119,7 +119,7 @@ describe('AuditLogsView', () => {
     const ipInput = screen.getByPlaceholderText(/例: 192.168.1.1/i);
     await user.type(ipInput, '192.168.1.1');
 
-    const clearButton = screen.getByText(/フィルタークリア/i);
+    const clearButton = screen.getByText(/クリア/i);
     await user.click(clearButton);
 
     expect(ipInput).toHaveValue('');
