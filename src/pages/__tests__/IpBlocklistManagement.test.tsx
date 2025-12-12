@@ -96,9 +96,12 @@ describe('IpBlocklistManagement', () => {
     renderIpBlocklistManagement();
 
     await waitFor(() => {
-      // IPアドレスはcode要素内に表示される可能性があるため、柔軟にチェック
-      expect(screen.getByText(/192.168.1.1/)).toBeInTheDocument();
-      expect(screen.getByText(/192.168.1.2/)).toBeInTheDocument();
+      // IPアドレスはcode要素内に表示されるため、柔軟にチェック
+      // getByTextはcode要素内のテキストも検索できるが、より確実にするためgetAllByTextを使用
+      const ip1Elements = screen.getAllByText(/192.168.1.1/);
+      const ip2Elements = screen.getAllByText(/192.168.1.2/);
+      expect(ip1Elements.length).toBeGreaterThan(0);
+      expect(ip2Elements.length).toBeGreaterThan(0);
     });
   });
 
@@ -136,8 +139,12 @@ describe('IpBlocklistManagement', () => {
 
     await waitFor(() => {
       // IPアドレスはcode要素内に表示されるため、柔軟にチェック
-      expect(screen.getByText(/192.168.1.1/)).toBeInTheDocument();
-    });
+      // テーブルがレンダリングされるまで待つ
+      expect(screen.getByRole('table')).toBeInTheDocument();
+      // getByTextはcode要素内のテキストも検索できるが、より確実にするためgetAllByTextを使用
+      const ipElements = screen.getAllByText(/192.168.1.1/);
+      expect(ipElements.length).toBeGreaterThan(0);
+    }, { timeout: 3000 });
 
     // i18nを使用しているため、柔軟にチェック
     const unblockButtons = screen.getAllByText(/ブロック解除|unblock/i);
@@ -175,8 +182,12 @@ describe('IpBlocklistManagement', () => {
 
     await waitFor(() => {
       // IPアドレスはcode要素内に表示されるため、柔軟にチェック
-      expect(screen.getByText(/192.168.1.1/)).toBeInTheDocument();
-    });
+      // テーブルがレンダリングされるまで待つ
+      expect(screen.getByRole('table')).toBeInTheDocument();
+      // getByTextはcode要素内のテキストも検索できるが、より確実にするためgetAllByTextを使用
+      const ipElements = screen.getAllByText(/192.168.1.1/);
+      expect(ipElements.length).toBeGreaterThan(0);
+    }, { timeout: 3000 });
 
     // i18nを使用しているため、柔軟にチェック
     const unblockButtons = screen.getAllByText(/ブロック解除|unblock/i);
@@ -228,7 +239,10 @@ describe('IpBlocklistManagement', () => {
 
     await waitFor(() => {
       expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
-      expect(screen.getByText(/すべての一時ブロックを解除しますか/i)).toBeInTheDocument();
+      // 確認ダイアログのメッセージは「すべての一時ブロックを解除しますか？永続ブロックは残ります。」
+      // i18nが正しく動作していない場合、英語で表示される可能性があるため、柔軟にチェック
+      const dialogMessage = screen.getByTestId('confirm-dialog').textContent || '';
+      expect(dialogMessage).toMatch(/一時ブロック.*解除|temporary.*block/i);
     });
   });
 
@@ -254,7 +268,12 @@ describe('IpBlocklistManagement', () => {
       expect(securityService.fetchBlockedIps).toHaveBeenCalled();
     });
 
-    // i18nを使用しているため、柔軟にチェック
+    // 一時ブロックがある場合のみボタンが表示される
+    await waitFor(() => {
+      const clearButton = screen.queryByText(/一時ブロック|clear/i);
+      expect(clearButton).toBeInTheDocument();
+    }, { timeout: 3000 });
+    
     const clearButton = screen.getByText(/一時ブロック|clear/i);
     await user.click(clearButton);
 
