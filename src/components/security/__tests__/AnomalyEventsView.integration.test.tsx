@@ -63,8 +63,10 @@ describe('AnomalyEventsView Integration', () => {
       expect(securityService.fetchAnomalyDetections).toHaveBeenCalled();
     });
 
-    const anomalyTypeSelect = screen.getByLabelText(/異常タイプ/i);
-    await user.selectOptions(anomalyTypeSelect, 'rate_limit_exceeded');
+    // anomalyTypeFilterはinput要素なので、typeメソッドを使用
+    const anomalyTypeInput = screen.getByLabelText(/異常タイプ/i);
+    await user.clear(anomalyTypeInput);
+    await user.type(anomalyTypeInput, 'rate_limit_exceeded');
 
     const filterButton = screen.getByText(/フィルター適用/i);
     await user.click(filterButton);

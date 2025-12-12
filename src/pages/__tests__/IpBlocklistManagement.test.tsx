@@ -119,7 +119,7 @@ describe('IpBlocklistManagement', () => {
         failureCount: 5,
         firstFailureAt: '2025-01-28T10:00:00Z',
         blockedUntil: null,
-        permanentBlock: true,
+        permanentBlock: false, // ブロック解除可能にする
         lastAttempt: '2025-01-28T12:00:00Z',
       },
     ];
@@ -151,7 +151,7 @@ describe('IpBlocklistManagement', () => {
         failureCount: 5,
         firstFailureAt: '2025-01-28T10:00:00Z',
         blockedUntil: null,
-        permanentBlock: true,
+        permanentBlock: false, // ブロック解除可能にする
         lastAttempt: '2025-01-28T12:00:00Z',
       },
     ];

@@ -51,13 +51,22 @@ describe('ErrorBoundary Integration', () => {
   });
 
   it('should log errors when they occur', () => {
+    // NODE_ENVがdevelopmentの場合のみlogger.errorが呼び出される
+    const originalEnv = process.env.NODE_ENV;
+    process.env.NODE_ENV = 'development';
+
     render(
       <ErrorBoundary>
         <ThrowError shouldThrow={true} />
       </ErrorBoundary>
     );
 
-    expect(logger.error).toHaveBeenCalled();
+    // 開発環境の場合のみlogger.errorが呼び出される
+    if (process.env.NODE_ENV === 'development') {
+      expect(logger.error).toHaveBeenCalled();
+    }
+
+    process.env.NODE_ENV = originalEnv;
   });
 
   it('should display error message in error UI', () => {

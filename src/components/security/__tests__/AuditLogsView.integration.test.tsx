@@ -107,8 +107,10 @@ describe('AuditLogsView Integration', () => {
       expect(securityService.fetchAuditLogs).toHaveBeenCalled();
     });
 
-    const eventTypeSelect = screen.getByLabelText(/イベントタイプ/i);
-    await user.selectOptions(eventTypeSelect, 'api_request');
+    // eventTypeFilterはinput要素なので、typeメソッドを使用
+    const eventTypeInput = screen.getByLabelText(/イベントタイプ/i);
+    await user.clear(eventTypeInput);
+    await user.type(eventTypeInput, 'api_request');
 
     const filterButton = screen.getByText(/フィルター適用/i);
     await user.click(filterButton);
