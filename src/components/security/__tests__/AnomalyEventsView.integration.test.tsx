@@ -151,7 +151,7 @@ describe('AnomalyEventsView Integration', () => {
     render(<AnomalyEventsView />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Failed to fetch anomaly events/i)).toBeInTheDocument();
+      expect(screen.getByText(/異常検知イベントの取得に失敗しました/i)).toBeInTheDocument();
       expect(screen.getByText(/Detailed error information/i)).toBeInTheDocument();
     });
   });
