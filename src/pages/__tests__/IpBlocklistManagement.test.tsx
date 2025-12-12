@@ -135,7 +135,8 @@ describe('IpBlocklistManagement', () => {
     renderIpBlocklistManagement();
 
     await waitFor(() => {
-      expect(screen.getByText('192.168.1.1')).toBeInTheDocument();
+      // IPアドレスはcode要素内に表示されるため、柔軟にチェック
+      expect(screen.getByText(/192.168.1.1/)).toBeInTheDocument();
     });
 
     // i18nを使用しているため、柔軟にチェック
@@ -145,7 +146,10 @@ describe('IpBlocklistManagement', () => {
     await waitFor(() => {
       expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
       // i18nを使用しているため、柔軟にチェック
-      expect(screen.getByText(/192.168.1.1.*ブロック.*解除/i)).toBeInTheDocument();
+      // 確認ダイアログのメッセージは「IP 192.168.1.1 のブロックを解除しますか？」の形式
+      const dialogMessage = screen.getByTestId('confirm-dialog').textContent;
+      expect(dialogMessage).toMatch(/192.168.1.1/);
+      expect(dialogMessage).toMatch(/ブロック.*解除|unblock/i);
     });
   });
 
@@ -170,7 +174,8 @@ describe('IpBlocklistManagement', () => {
     renderIpBlocklistManagement();
 
     await waitFor(() => {
-      expect(screen.getByText('192.168.1.1')).toBeInTheDocument();
+      // IPアドレスはcode要素内に表示されるため、柔軟にチェック
+      expect(screen.getByText(/192.168.1.1/)).toBeInTheDocument();
     });
 
     // i18nを使用しているため、柔軟にチェック
@@ -191,7 +196,18 @@ describe('IpBlocklistManagement', () => {
 
   it('should show confirm dialog when clear temporary blocks button is clicked', async () => {
     const user = userEvent.setup();
-    vi.mocked(securityService.fetchBlockedIps).mockResolvedValue([]);
+    // 一時ブロックを含むデータを返す（ボタンが表示されるようにする）
+    const mockBlockedIps = [
+      {
+        ip: '192.168.1.2',
+        failureCount: 3,
+        firstFailureAt: '2025-01-28T11:00:00Z',
+        blockedUntil: '2025-01-29T11:00:00Z',
+        permanentBlock: false, // 一時ブロック
+        lastAttempt: '2025-01-28T13:00:00Z',
+      },
+    ];
+    vi.mocked(securityService.fetchBlockedIps).mockResolvedValue(mockBlockedIps);
     vi.mocked(securityService.clearTemporaryBlocks).mockResolvedValue();
 
     renderIpBlocklistManagement();
@@ -201,6 +217,12 @@ describe('IpBlocklistManagement', () => {
     });
 
     // i18nを使用しているため、柔軟にチェック
+    // 一時ブロックがある場合のみボタンが表示される
+    await waitFor(() => {
+      const clearButton = screen.queryByText(/一時ブロック|clear/i);
+      expect(clearButton).toBeInTheDocument();
+    });
+    
     const clearButton = screen.getByText(/一時ブロック|clear/i);
     await user.click(clearButton);
 
