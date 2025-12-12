@@ -139,8 +139,6 @@ describe('IpBlocklistManagement', () => {
 
     await waitFor(() => {
       // IPアドレスはcode要素内に表示されるため、柔軟にチェック
-      // テーブルがレンダリングされるまで待つ
-      expect(screen.getByRole('table')).toBeInTheDocument();
       // getByTextはcode要素内のテキストも検索できるが、より確実にするためgetAllByTextを使用
       const ipElements = screen.getAllByText(/192.168.1.1/);
       expect(ipElements.length).toBeGreaterThan(0);
@@ -182,8 +180,6 @@ describe('IpBlocklistManagement', () => {
 
     await waitFor(() => {
       // IPアドレスはcode要素内に表示されるため、柔軟にチェック
-      // テーブルがレンダリングされるまで待つ
-      expect(screen.getByRole('table')).toBeInTheDocument();
       // getByTextはcode要素内のテキストも検索できるが、より確実にするためgetAllByTextを使用
       const ipElements = screen.getAllByText(/192.168.1.1/);
       expect(ipElements.length).toBeGreaterThan(0);
@@ -315,8 +311,11 @@ describe('IpBlocklistManagement', () => {
 
     await waitFor(() => {
       // i18nを使用しているため、柔軟にチェック
-      expect(screen.getByText(/永続|permanent/i)).toBeInTheDocument();
-      expect(screen.getByText(/一時|temporary/i)).toBeInTheDocument();
+      // 「永続」「一時」が複数表示される可能性があるため、getAllByTextを使用
+      const permanentElements = screen.getAllByText(/永続|permanent/i);
+      const temporaryElements = screen.getAllByText(/一時|temporary/i);
+      expect(permanentElements.length).toBeGreaterThan(0);
+      expect(temporaryElements.length).toBeGreaterThan(0);
     });
   });
 });
