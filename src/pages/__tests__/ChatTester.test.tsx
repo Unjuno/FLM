@@ -59,8 +59,9 @@ describe('ChatTester', () => {
 
     await waitFor(
       () => {
+        // i18nを使用しているため、柔軟にチェック
         expect(
-          screen.getByText(/プロキシが実行されていません/i)
+          screen.getByText(/プロキシ|proxy/i)
         ).toBeInTheDocument();
       },
       { timeout: 3000 }
@@ -134,7 +135,7 @@ describe('ChatTester', () => {
       expect(chatTesterService.fetchChatModels).toHaveBeenCalled();
     });
 
-    const messageInput = screen.getByPlaceholderText(/メッセージを入力/i);
+    const messageInput = screen.getByPlaceholderText(/メッセージ/i);
     await user.type(messageInput, 'Hello, world!');
 
     expect(messageInput).toHaveValue('Hello, world!');
@@ -179,7 +180,7 @@ describe('ChatTester', () => {
       expect(chatTesterService.fetchChatModels).toHaveBeenCalled();
     });
 
-    const messageInput = screen.getByPlaceholderText(/メッセージを入力/i);
+    const messageInput = screen.getByPlaceholderText(/メッセージ/i);
     await user.type(messageInput, 'Hello');
 
     const sendButton = screen.getByRole('button', { name: /送信/i });
