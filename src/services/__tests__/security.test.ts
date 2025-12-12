@@ -12,7 +12,7 @@ import {
 } from '../security';
 
 // Mock Tauri utilities
-vi.mock('../utils/tauri', () => ({
+vi.mock('../../utils/tauri', () => ({
   safeInvoke: vi.fn(),
 }));
 
@@ -322,7 +322,11 @@ describe('security service', () => {
 
       await clearTemporaryBlocks();
 
-      expect(safeInvoke).toHaveBeenCalledWith('ipc_security_ip_blocklist_clear', undefined);
+      // safeInvokeは引数がない場合、undefinedを渡さない
+      expect(safeInvoke).toHaveBeenCalled();
+      const calls = vi.mocked(safeInvoke).mock.calls;
+      expect(calls[0][0]).toBe('ipc_security_ip_blocklist_clear');
+      expect(calls[0][1]).toBeUndefined();
     });
   });
 });

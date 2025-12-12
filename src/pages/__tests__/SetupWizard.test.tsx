@@ -16,7 +16,7 @@ describe('SetupWizard', () => {
   });
 
   it('renders firewall configuration form', () => {
-    vi.mocked(safeInvoke).mockResolvedValue('windows');
+    vi.mocked(safeInvoke).mockResolvedValue({ platform: 'windows' });
     render(<SetupWizard />);
     
     expect(screen.getByText('Setup Wizard - Firewall Configuration')).toBeInTheDocument();
@@ -27,7 +27,7 @@ describe('SetupWizard', () => {
 
   it('generates firewall script preview', async () => {
     vi.mocked(safeInvoke)
-      .mockResolvedValueOnce('windows')
+      .mockResolvedValueOnce({ platform: 'windows' })
       .mockResolvedValueOnce({
         script: '# Windows Firewall Rules\nNew-NetFirewallRule -DisplayName "FLM Proxy 8080" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8080',
         display_name: 'Windows / PowerShell',
@@ -57,7 +57,7 @@ describe('SetupWizard', () => {
     });
 
     vi.mocked(safeInvoke)
-      .mockResolvedValueOnce('windows')
+      .mockResolvedValueOnce({ platform: 'windows' })
       .mockResolvedValueOnce({
         script: '# Test script',
         display_name: 'Windows / PowerShell',
@@ -87,7 +87,7 @@ describe('SetupWizard', () => {
 
   it('handles firewall script application', async () => {
     vi.mocked(safeInvoke)
-      .mockResolvedValueOnce('windows')
+      .mockResolvedValueOnce({ platform: 'windows' })
       .mockResolvedValueOnce({
         script: '# Test script',
         display_name: 'Windows / PowerShell',
@@ -122,7 +122,7 @@ describe('SetupWizard', () => {
 
   it('handles firewall script application failure', async () => {
     vi.mocked(safeInvoke)
-      .mockResolvedValueOnce('windows')
+      .mockResolvedValueOnce({ platform: 'windows' })
       .mockResolvedValueOnce({
         script: '# Test script',
         display_name: 'Windows / PowerShell',
@@ -157,7 +157,7 @@ describe('SetupWizard', () => {
 
   it('handles firewall rollback', async () => {
     vi.mocked(safeInvoke)
-      .mockResolvedValueOnce('windows')
+      .mockResolvedValueOnce({ platform: 'windows' })
       .mockResolvedValueOnce({
         script: '# Test script',
         display_name: 'Windows / PowerShell',

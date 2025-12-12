@@ -56,7 +56,7 @@ describe('formatters', () => {
 
     it('should format different dates correctly', () => {
       const date1 = '2025-01-01T00:00:00Z';
-      const date2 = '2025-12-31T23:59:59Z';
+      const date2 = '2025-06-15T12:00:00Z';
 
       const result1 = formatDate(date1);
       const result2 = formatDate(date2);

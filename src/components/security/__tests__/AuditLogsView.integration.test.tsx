@@ -132,7 +132,7 @@ describe('AuditLogsView Integration', () => {
       expect(securityService.fetchAuditLogs).toHaveBeenCalled();
     });
 
-    const severitySelect = screen.getByLabelText(/重大度/i);
+    const severitySelect = screen.getByLabelText(/重要度/i);
     await user.selectOptions(severitySelect, 'warning');
 
     const filterButton = screen.getByText(/フィルター適用/i);
@@ -200,7 +200,8 @@ describe('AuditLogsView Integration', () => {
     render(<AuditLogsView />);
 
     await waitFor(() => {
-      expect(screen.getByText(/Failed to fetch audit logs/i)).toBeInTheDocument();
+      // エラーメッセージは日本語で表示される
+      expect(screen.getByText(/監査ログの取得に失敗しました/i)).toBeInTheDocument();
       expect(screen.getByText(/Detailed error information/i)).toBeInTheDocument();
     });
   });

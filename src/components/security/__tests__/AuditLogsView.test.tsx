@@ -89,7 +89,7 @@ describe('AuditLogsView', () => {
       expect(securityService.fetchAuditLogs).toHaveBeenCalled();
     });
 
-    const ipInput = screen.getByPlaceholderText(/IPアドレス/i);
+    const ipInput = screen.getByPlaceholderText(/例: 192.168.1.1/i);
     await user.type(ipInput, '192.168.1.1');
 
     const filterButton = screen.getByText(/フィルター適用/i);
@@ -114,7 +114,7 @@ describe('AuditLogsView', () => {
       expect(securityService.fetchAuditLogs).toHaveBeenCalled();
     });
 
-    const ipInput = screen.getByPlaceholderText(/IPアドレス/i);
+    const ipInput = screen.getByPlaceholderText(/例: 192.168.1.1/i);
     await user.type(ipInput, '192.168.1.1');
 
     const clearButton = screen.getByText(/フィルタークリア/i);
