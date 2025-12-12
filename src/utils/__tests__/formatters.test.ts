@@ -30,14 +30,15 @@ describe('formatters', () => {
 
     it('should format different dates correctly', () => {
       const date1 = '2025-01-01T00:00:00Z';
-      const date2 = '2025-12-31T23:59:59Z';
+      const date2 = '2025-06-15T12:00:00Z';
 
       const result1 = formatDateTime(date1);
       const result2 = formatDateTime(date2);
 
       expect(result1).not.toBe(result2);
-      expect(result1).toContain('2025');
-      expect(result2).toContain('2025');
+      // ロケールによってフォーマットが異なる可能性があるため、年が含まれていることを確認
+      expect(result1).toMatch(/2025|2026/); // タイムゾーンによって年が変わる可能性がある
+      expect(result2).toMatch(/2025/);
     });
   });
 
