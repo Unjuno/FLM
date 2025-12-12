@@ -108,7 +108,8 @@ describe('ChatTester', () => {
 
     await waitFor(
       () => {
-        expect(screen.getByText(/モデルリストの取得に失敗しました/i)).toBeInTheDocument();
+        // Errorオブジェクトの場合はerr.messageが使用される
+        expect(screen.getByText(/Failed to fetch models/i)).toBeInTheDocument();
       },
       { timeout: 3000 }
     );
