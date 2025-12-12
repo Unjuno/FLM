@@ -106,7 +106,8 @@ describe('IpBlocklistManagement', () => {
     renderIpBlocklistManagement();
 
     await waitFor(() => {
-      expect(screen.getByText(/IPブロックリストの取得に失敗しました/i)).toBeInTheDocument();
+      // Errorオブジェクトの場合はerr.messageが使用される
+      expect(screen.getByText(/Failed to fetch blocked IPs/i)).toBeInTheDocument();
     });
   });
 
