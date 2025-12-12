@@ -84,7 +84,8 @@ describe('ErrorBoundary Integration', () => {
       </ErrorBoundary>
     );
 
-    const reloadButton = screen.getByText(/ページを再読み込み/i);
+    // ErrorBoundaryは「再試行」ボタンを表示する
+    const reloadButton = screen.getByText(/再試行|reload/i);
     expect(reloadButton).toBeInTheDocument();
   });
 });

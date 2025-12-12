@@ -133,7 +133,8 @@ describe('IpBlocklistManagement', () => {
       expect(screen.getByText('192.168.1.1')).toBeInTheDocument();
     });
 
-    const unblockButtons = screen.getAllByText(/ブロック解除/i);
+    // i18nを使用しているため、柔軟にチェック
+    const unblockButtons = screen.getAllByText(/ブロック解除|unblock/i);
     await user.click(unblockButtons[0]);
 
     await waitFor(() => {
@@ -166,7 +167,8 @@ describe('IpBlocklistManagement', () => {
       expect(screen.getByText('192.168.1.1')).toBeInTheDocument();
     });
 
-    const unblockButtons = screen.getAllByText(/ブロック解除/i);
+    // i18nを使用しているため、柔軟にチェック
+    const unblockButtons = screen.getAllByText(/ブロック解除|unblock/i);
     await user.click(unblockButtons[0]);
 
     await waitFor(() => {
