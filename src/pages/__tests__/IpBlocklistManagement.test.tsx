@@ -171,17 +171,18 @@ describe('IpBlocklistManagement', () => {
       },
     ];
 
-    vi.mocked(securityService.fetchBlockedIps)
-      .mockResolvedValueOnce(mockBlockedIps)
-      .mockResolvedValueOnce([]);
+    // 最初のロード時はデータを返し、unblock後の再ロード時は空配列を返す
+    let callCount = 0;
+    vi.mocked(securityService.fetchBlockedIps).mockImplementation(async () => {
+      callCount++;
+      if (callCount === 1) {
+        return mockBlockedIps;
+      }
+      return [];
+    });
     vi.mocked(securityService.unblockIp).mockResolvedValue();
 
     renderIpBlocklistManagement();
-
-    // データがロードされるまで待つ
-    await waitFor(() => {
-      expect(securityService.fetchBlockedIps).toHaveBeenCalled();
-    });
 
     // IPアドレスが表示されるまで待つ（code要素内に表示される）
     await waitFor(() => {
@@ -248,25 +249,29 @@ describe('IpBlocklistManagement', () => {
 
   it('should clear temporary blocks when confirmed', async () => {
     const user = userEvent.setup();
-    vi.mocked(securityService.fetchBlockedIps)
-      .mockResolvedValueOnce([
-        {
-          ip: '192.168.1.2',
-          failureCount: 3,
-          firstFailureAt: '2025-01-28T11:00:00Z',
-          blockedUntil: '2025-01-29T11:00:00Z',
-          permanentBlock: false,
-          lastAttempt: '2025-01-28T13:00:00Z',
-        },
-      ])
-      .mockResolvedValueOnce([]);
+    const mockBlockedIps = [
+      {
+        ip: '192.168.1.2',
+        failureCount: 3,
+        firstFailureAt: '2025-01-28T11:00:00Z',
+        blockedUntil: '2025-01-29T11:00:00Z',
+        permanentBlock: false, // 一時ブロック
+        lastAttempt: '2025-01-28T13:00:00Z',
+      },
+    ];
+    
+    // 最初のロード時はデータを返し、clear後の再ロード時は空配列を返す
+    let callCount = 0;
+    vi.mocked(securityService.fetchBlockedIps).mockImplementation(async () => {
+      callCount++;
+      if (callCount === 1) {
+        return mockBlockedIps;
+      }
+      return [];
+    });
     vi.mocked(securityService.clearTemporaryBlocks).mockResolvedValue();
 
     renderIpBlocklistManagement();
-
-    await waitFor(() => {
-      expect(securityService.fetchBlockedIps).toHaveBeenCalled();
-    });
 
     // 一時ブロックがある場合のみボタンが表示される
     // データがロードされ、一時ブロックが計算されるまで待つ
