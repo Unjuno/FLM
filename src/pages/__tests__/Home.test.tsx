@@ -375,7 +375,8 @@ describe('Home', () => {
     await user.click(stopButton);
 
     await waitFor(() => {
-      expect(screen.getByText(/Failed to stop proxy/)).toBeInTheDocument();
+      // Errorオブジェクトの場合はerr.messageが使用される
+      expect(screen.getByText(/Failed to stop proxy/i)).toBeInTheDocument();
     });
   });
 

@@ -87,7 +87,12 @@ function determineProtocol(
   }
 
   if (typeof mode === 'string') {
-    return mode.toLowerCase().includes('https') ? 'https' : 'http';
+    const modeLower = mode.toLowerCase();
+    // dev-self-signedとpackaged-caはhttpsを使用
+    if (modeLower.includes('https') || modeLower.includes('dev-self-signed') || modeLower.includes('packaged-ca')) {
+      return 'https';
+    }
+    return 'http';
   }
 
   if (typeof mode === 'object') {
