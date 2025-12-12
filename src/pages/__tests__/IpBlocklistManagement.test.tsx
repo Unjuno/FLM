@@ -172,17 +172,17 @@ describe('IpBlocklistManagement', () => {
     ];
 
     // 最初のロード時はデータを返し、unblock後の再ロード時は空配列を返す
-    let callCount = 0;
-    vi.mocked(securityService.fetchBlockedIps).mockImplementation(async () => {
-      callCount++;
-      if (callCount === 1) {
-        return mockBlockedIps;
-      }
-      return [];
-    });
+    vi.mocked(securityService.fetchBlockedIps)
+      .mockResolvedValueOnce(mockBlockedIps)
+      .mockResolvedValueOnce([]);
     vi.mocked(securityService.unblockIp).mockResolvedValue();
 
     renderIpBlocklistManagement();
+
+    // ローディングが終了するまで待つ
+    await waitFor(() => {
+      expect(screen.queryByText(/読み込み中/i)).not.toBeInTheDocument();
+    }, { timeout: 5000 });
 
     // IPアドレスが表示されるまで待つ（code要素内に表示される）
     await waitFor(() => {
@@ -261,17 +261,17 @@ describe('IpBlocklistManagement', () => {
     ];
     
     // 最初のロード時はデータを返し、clear後の再ロード時は空配列を返す
-    let callCount = 0;
-    vi.mocked(securityService.fetchBlockedIps).mockImplementation(async () => {
-      callCount++;
-      if (callCount === 1) {
-        return mockBlockedIps;
-      }
-      return [];
-    });
+    vi.mocked(securityService.fetchBlockedIps)
+      .mockResolvedValueOnce(mockBlockedIps)
+      .mockResolvedValueOnce([]);
     vi.mocked(securityService.clearTemporaryBlocks).mockResolvedValue();
 
     renderIpBlocklistManagement();
+
+    // ローディングが終了するまで待つ
+    await waitFor(() => {
+      expect(screen.queryByText(/読み込み中/i)).not.toBeInTheDocument();
+    }, { timeout: 5000 });
 
     // 一時ブロックがある場合のみボタンが表示される
     // データがロードされ、一時ブロックが計算されるまで待つ
