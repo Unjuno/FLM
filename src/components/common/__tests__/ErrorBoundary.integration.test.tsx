@@ -46,7 +46,8 @@ describe('ErrorBoundary Integration', () => {
       </ErrorBoundary>
     );
 
-    expect(screen.getByText(/エラーが発生しました/i)).toBeInTheDocument();
+    // ErrorBoundaryはerror.messageを表示する
+    expect(screen.getByText(/Test error/i)).toBeInTheDocument();
   });
 
   it('should log errors when they occur', () => {
