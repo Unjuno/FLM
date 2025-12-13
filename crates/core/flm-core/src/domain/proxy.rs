@@ -253,7 +253,7 @@ mod tests {
 
     #[test]
     fn test_proxy_config_without_secrets() {
-        let mut config = ProxyConfig {
+        let config = ProxyConfig {
             mode: ProxyMode::HttpsAcme,
             port: 8443,
             resolved_dns_credential: Some(ResolvedDnsCredential {

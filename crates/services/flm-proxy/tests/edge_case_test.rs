@@ -31,7 +31,7 @@ async fn test_rate_limit_boundary_values() {
     let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
     let security_service = Arc::new(SecurityService::new(security_repo));
 
-    let api_key = security_service.create_api_key("test-key").await.unwrap();
+    let _api_key = security_service.create_api_key("test-key").await.unwrap();
 
     // Test with very low rate limit (rpm=1, burst=1)
     let policy_json = serde_json::json!({
@@ -98,7 +98,7 @@ async fn test_rate_limit_zero_values() {
     let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
     let security_service = Arc::new(SecurityService::new(security_repo));
 
-    let api_key = security_service.create_api_key("test-key").await.unwrap();
+    let _api_key = security_service.create_api_key("test-key").await.unwrap();
 
     // Test with zero rate limit (should allow all requests or handle gracefully)
     let policy_json = serde_json::json!({
@@ -156,7 +156,7 @@ async fn test_concurrent_requests_under_rate_limit() {
     let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
     let security_service = Arc::new(SecurityService::new(security_repo));
 
-    let api_key = security_service.create_api_key("test-key").await.unwrap();
+    let _api_key = security_service.create_api_key("test-key").await.unwrap();
 
     // Set rate limit to allow 10 requests
     let policy_json = serde_json::json!({
@@ -237,7 +237,7 @@ async fn test_concurrent_requests_exceeding_rate_limit() {
     let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
     let security_service = Arc::new(SecurityService::new(security_repo));
 
-    let api_key = security_service.create_api_key("test-key").await.unwrap();
+    let _api_key = security_service.create_api_key("test-key").await.unwrap();
 
     // Set rate limit to allow 5 requests
     let policy_json = serde_json::json!({
@@ -323,7 +323,7 @@ async fn test_very_long_api_key() {
     let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
     let security_service = Arc::new(SecurityService::new(security_repo));
 
-    let api_key = security_service.create_api_key("test-key").await.unwrap();
+    let _api_key = security_service.create_api_key("test-key").await.unwrap();
 
     let policy_json = serde_json::json!({});
     let policy = SecurityPolicy {
@@ -373,7 +373,7 @@ async fn test_empty_request_body() {
     let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
     let security_service = Arc::new(SecurityService::new(security_repo));
 
-    let api_key = security_service.create_api_key("test-key").await.unwrap();
+    let _api_key = security_service.create_api_key("test-key").await.unwrap();
 
     let policy_json = serde_json::json!({});
     let policy = SecurityPolicy {
@@ -425,7 +425,7 @@ async fn test_very_large_request_body() {
     let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
     let security_service = Arc::new(SecurityService::new(security_repo));
 
-    let api_key = security_service.create_api_key("test-key").await.unwrap();
+    let _api_key = security_service.create_api_key("test-key").await.unwrap();
 
     let policy_json = serde_json::json!({});
     let policy = SecurityPolicy {
@@ -492,7 +492,7 @@ async fn test_multiple_authorization_headers() {
     let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
     let security_service = Arc::new(SecurityService::new(security_repo));
 
-    let api_key = security_service.create_api_key("test-key").await.unwrap();
+    let _api_key = security_service.create_api_key("test-key").await.unwrap();
 
     let policy_json = serde_json::json!({});
     let policy = SecurityPolicy {
@@ -517,7 +517,7 @@ async fn test_multiple_authorization_headers() {
     let client = reqwest::Client::new();
 
     // Test with multiple Authorization headers (should use first one or reject)
-    let mut request = client
+    let request = client
         .get("http://localhost:18147/v1/models")
         .header("Authorization", bearer_header(&api_key.plain))
         .header("Authorization", "Bearer invalid-key");
@@ -544,7 +544,7 @@ async fn test_rapid_start_stop() {
     let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
     let security_service = Arc::new(SecurityService::new(security_repo));
 
-    let api_key = security_service.create_api_key("test-key").await.unwrap();
+    let _api_key = security_service.create_api_key("test-key").await.unwrap();
 
     let policy_json = serde_json::json!({});
     let policy = SecurityPolicy {

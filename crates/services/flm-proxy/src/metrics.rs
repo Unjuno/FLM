@@ -310,6 +310,7 @@ mod tests {
 }
 
 /// Create metrics endpoint router
+#[allow(dead_code)]
 pub fn create_metrics_router(metrics: Arc<Metrics>) -> Router {
     Router::new()
         .route("/metrics", get(metrics_handler))

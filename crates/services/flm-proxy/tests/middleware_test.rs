@@ -11,6 +11,7 @@ use std::collections::HashMap;
 use std::sync::Arc;
 use tokio::sync::RwLock;
 
+#[allow(dead_code)]
 async fn create_test_state() -> AppState {
     let security_db = std::env::temp_dir().join(format!(
         "test-{}.db",

@@ -3,7 +3,6 @@
 //! This module provides a minimal SOCKS5 server implementation for testing
 //! proxy egress modes (Tor and CustomSocks5).
 
-use std::net::SocketAddr;
 use tokio::io::{AsyncReadExt, AsyncWriteExt};
 use tokio::net::{TcpListener, TcpStream};
 use tokio::sync::oneshot;
@@ -34,7 +33,6 @@ impl MockSocks5Server {
         let mut shutdown_rx = shutdown_rx;
 
         let handle = tokio::spawn(async move {
-            let mut shutdown = false;
             loop {
                 tokio::select! {
                     result = listener.accept() => {
@@ -46,7 +44,6 @@ impl MockSocks5Server {
                         }
                     }
                     _ = &mut shutdown_rx => {
-                        shutdown = true;
                         break;
                     }
                 }

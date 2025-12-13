@@ -261,7 +261,7 @@ async fn test_authentication_bypass_protection() {
         security_db_path: Some(security_db.to_str().unwrap().to_string()),
         ..Default::default()
     };
-    let config_clone = config.clone();
+    let _config_clone = config.clone();
 
     let handle = controller.start(config).await.unwrap();
     sleep(Duration::from_millis(500)).await;

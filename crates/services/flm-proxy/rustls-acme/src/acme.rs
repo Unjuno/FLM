@@ -337,7 +337,7 @@ mod tests {
         let err = account.dns_01(&challenges).unwrap_err();
         match err {
             AcmeError::NoDns01Challenge => {}
-            other => panic!("unexpected error {other:?}"),
+            _other => panic!("unexpected error: {:?}", _other),
         }
     }
 }

@@ -261,9 +261,9 @@ async fn test_verify_api_key_timing_attack_prevention() {
 
     // Create multiple API keys to test timing attack prevention
     let key1 = service.create_api_key("key1").await.unwrap();
-    let key2 = service.create_api_key("key2").await.unwrap();
-    let key3 = service.create_api_key("key3").await.unwrap();
-    let key4 = service.create_api_key("key4").await.unwrap();
+    let _key2 = service.create_api_key("key2").await.unwrap();
+    let _key3 = service.create_api_key("key3").await.unwrap();
+    let _key4 = service.create_api_key("key4").await.unwrap();
     let key5 = service.create_api_key("key5").await.unwrap();
 
     // Test that verification time is consistent regardless of which key matches

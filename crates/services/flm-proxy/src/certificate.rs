@@ -108,6 +108,7 @@ pub fn ensure_server_cert_artifacts(
 ///
 /// # Returns
 /// Root CA certificate and private key in PEM format
+#[allow(dead_code)]
 pub fn load_packaged_root_ca(
     cert_dir: &Path,
     cert_filename: &str,

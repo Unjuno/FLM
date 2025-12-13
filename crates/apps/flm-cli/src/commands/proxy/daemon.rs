@@ -62,6 +62,7 @@ impl AdminClient {
         Ok(handle)
     }
 
+    #[allow(dead_code)]
     pub async fn stop_proxy(&self, port: Option<u16>, handle_id: Option<String>) -> DynResult<()> {
         let payload = StopRequest { port, handle_id };
         self.http
@@ -74,6 +75,7 @@ impl AdminClient {
         Ok(())
     }
 
+    #[allow(dead_code)]
     pub async fn status(&self) -> DynResult<Vec<ProxyHandle>> {
         let handles = self
             .http
@@ -89,6 +91,7 @@ impl AdminClient {
 }
 
 #[derive(Serialize)]
+#[allow(dead_code)]
 struct StopRequest {
     port: Option<u16>,
     handle_id: Option<String>,
