@@ -39,7 +39,15 @@ fn parse_model_id(model_id: &str) -> Result<(String, String), Box<dyn std::error
     // evidence: starts_with("flm://")がtrueの場合、strip_prefix("flm://")は常にSomeを返す
     let without_prefix = model_id
         .strip_prefix("flm://")
-        .expect("prefix check failed");
+        .ok_or_else(|| {
+            format!(
+                "Error: Internal validation failure while parsing model ID.\n\
+                Model ID: {}\n\
+                This is an unexpected error. Please report this issue if it persists.\n\
+                Expected format: flm://engine_id/model_name",
+                model_id
+            )
+        })?;
     let parts: Vec<&str> = without_prefix.splitn(2, '/').collect();
 
     if parts.len() != 2 {
@@ -234,14 +242,23 @@ pub async fn execute(
     // First, detect engines to register them
     service.detect_engines().await?;
 
-    // Get engine capabilities to validate multimodal support
+    // Get engine and model capabilities to validate multimodal support
     let engine_repo_arc = SqliteEngineRepository::new(&db_path).await?;
     let engines = engine_repo_arc.list_registered().await;
     let engine = engines
         .iter()
         .find(|e| e.id() == engine_id)
         .ok_or_else(|| format!("Engine '{engine_id}' not found"))?;
-    let capabilities = engine.capabilities();
+    let engine_capabilities = engine.capabilities();
+
+    // Get model-specific capabilities if available
+    let model_capabilities = match engine.list_models().await {
+        Ok(models) => models
+            .iter()
+            .find(|m| m.model_id == model_id)
+            .and_then(|m| m.capabilities.clone()),
+        Err(_) => None,
+    };
 
     // Load multimodal attachments
     let mut attachments = Vec::new();
@@ -267,7 +284,7 @@ pub async fn execute(
         attachments.push(attachment);
     }
 
-    // Validate capabilities
+    // Validate capabilities (use model-specific if available, otherwise engine capabilities)
     if !attachments.is_empty() {
         let has_images = attachments
             .iter()
@@ -276,16 +293,25 @@ pub async fn execute(
             .iter()
             .any(|a| matches!(a.kind, MultimodalAttachmentKind::InputAudio));
 
-        if has_images && !capabilities.vision_inputs {
+        let vision_supported = model_capabilities
+            .as_ref()
+            .map(|c| c.vision)
+            .unwrap_or(engine_capabilities.vision_inputs);
+        let audio_inputs_supported = model_capabilities
+            .as_ref()
+            .map(|c| c.audio_inputs)
+            .unwrap_or(engine_capabilities.audio_inputs);
+
+        if has_images && !vision_supported {
             return Err(format!(
-                "Engine '{engine_id}' does not support vision inputs. Selected model: {model_id}"
+                "Model '{model_id}' does not support vision inputs"
             )
             .into());
         }
 
-        if has_audio && !capabilities.audio_inputs {
+        if has_audio && !audio_inputs_supported {
             return Err(format!(
-                "Engine '{engine_id}' does not support audio inputs. Selected model: {model_id}"
+                "Model '{model_id}' does not support audio inputs"
             )
             .into());
         }

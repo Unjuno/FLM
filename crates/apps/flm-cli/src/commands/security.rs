@@ -255,7 +255,15 @@ pub async fn execute_backup_create(
         let output_json = json!({
             "version": "1.0",
             "data": {
-                "backup_path": backup_path.to_str().unwrap(),
+                "backup_path": backup_path.to_str().ok_or_else(|| {
+                    format!(
+                        "Error: Invalid UTF-8 encoding in backup path.\n\
+                        Path: {}\n\
+                        This usually indicates a system configuration issue.\n\
+                        Please ensure your system locale supports UTF-8 or use a different backup location.",
+                        backup_path.display()
+                    )
+                })?,
                 "timestamp": timestamp.to_string(),
                 "total_backups": backup_files.len().min(3)
             }
@@ -316,7 +324,15 @@ pub async fn execute_backup_restore(
                 let output_json = json!({
                     "version": "1.0",
                     "data": {
-                        "restored_path": security_db_path.to_str().unwrap(),
+                        "restored_path": security_db_path.to_str().ok_or_else(|| {
+                            format!(
+                                "Error: Invalid UTF-8 encoding in restored database path.\n\
+                                Path: {}\n\
+                                This usually indicates a system configuration issue.\n\
+                                Please ensure your system locale supports UTF-8 or use a different database path.",
+                                security_db_path.display()
+                            )
+                        })?,
                         "backup_path": file,
                         "migrations_applied": true
                     }

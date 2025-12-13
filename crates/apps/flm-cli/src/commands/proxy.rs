@@ -4,19 +4,16 @@ mod daemon;
 
 use crate::adapters::{SqliteProxyRepository, SqliteSecurityRepository};
 use crate::cli::proxy::ProxySubcommand;
-use crate::commands::error::CliUserError;
 use crate::utils::secrets::load_dns_token;
 use crate::utils::{get_config_db_path, get_security_db_path};
-use daemon::{ensure_daemon_client, load_existing_client};
+use daemon::ensure_daemon_client;
 use flm_core::domain::proxy::{
     AcmeChallengeKind, ProxyConfig, ProxyEgressConfig, ProxyEgressMode, ProxyHandle, ProxyMode,
     ResolvedDnsCredential, DEFAULT_TOR_SOCKS_ENDPOINT,
 };
-use flm_core::error::ProxyError;
 use flm_core::ports::ProxyRepository;
-use flm_core::services::{ProxyService, SecurityService};
+use flm_core::services::ProxyService;
 use flm_proxy::AxumProxyController;
-use local_ip_address::local_ip;
 use once_cell::sync::Lazy;
 use serde_json::json;
 use std::collections::HashMap;
@@ -140,8 +137,8 @@ async fn execute_start(options: StartCommandOptions) -> Result<(), Box<dyn std::
         acme_domain,
         acme_challenge,
         acme_dns_profile,
-        mut acme_dns_lego_path,
-        mut acme_dns_propagation_wait,
+        acme_dns_lego_path,
+        acme_dns_propagation_wait,
         db_path_config,
         db_path_security,
         no_daemon,
@@ -281,7 +278,7 @@ async fn execute_start(options: StartCommandOptions) -> Result<(), Box<dyn std::
         };
 
     // Build proxy config
-    let mut config = ProxyConfig {
+    let config = ProxyConfig {
         port,
         mode: proxy_mode,
         listen_addr: bind,

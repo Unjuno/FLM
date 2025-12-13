@@ -2,7 +2,7 @@
 //!
 //! See `docs/CORE_API.md` section 2 for the complete specification.
 
-use super::models::{EngineCapabilities, EngineId, EngineKind, ModelId};
+use super::models::{EngineCapabilities, EngineId, EngineKind, ModelCapabilities, ModelId};
 use serde::{Deserialize, Serialize};
 
 /// Health status of an engine
@@ -91,6 +91,11 @@ pub struct ModelInfo {
     pub supports_streaming: bool,
     /// Whether the model supports embeddings
     pub supports_embeddings: bool,
+    /// Model-specific capabilities (reasoning, tools, vision, audio, etc.)
+    /// Detected from model name or metadata.
+    /// None if capabilities are not detected or not available.
+    #[serde(default)]
+    pub capabilities: Option<ModelCapabilities>,
 }
 
 /// Engine binary information (for process detection)
@@ -197,6 +202,7 @@ mod tests {
             context_length: Some(4096),
             supports_streaming: true,
             supports_embeddings: false,
+            capabilities: None,
         };
 
         let json = serde_json::to_string(&model).unwrap();
@@ -207,6 +213,82 @@ mod tests {
         assert_eq!(model.context_length, deserialized.context_length);
         assert_eq!(model.supports_streaming, deserialized.supports_streaming);
         assert_eq!(model.supports_embeddings, deserialized.supports_embeddings);
+        assert_eq!(model.capabilities, deserialized.capabilities);
+
+        // Test with capabilities
+        let model_with_caps = ModelInfo {
+            engine_id: "ollama".to_string(),
+            model_id: "flm://ollama/o1:latest".to_string(),
+            display_name: "O1".to_string(),
+            context_length: Some(8192),
+            supports_streaming: true,
+            supports_embeddings: false,
+            capabilities: Some(ModelCapabilities {
+                reasoning: true,
+                tools: false,
+                vision: false,
+                audio_inputs: false,
+                audio_outputs: false,
+            }),
+        };
+
+        let json = serde_json::to_string(&model_with_caps).unwrap();
+        let deserialized: ModelInfo = serde_json::from_str(&json).unwrap();
+        assert_eq!(model_with_caps.capabilities, deserialized.capabilities);
+        assert!(deserialized.capabilities.as_ref().unwrap().reasoning);
+    }
+
+    #[test]
+    fn test_model_info_with_all_capabilities() {
+        let model = ModelInfo {
+            engine_id: "ollama".to_string(),
+            model_id: "flm://ollama/multimodal-model:latest".to_string(),
+            display_name: "Multimodal Model".to_string(),
+            context_length: Some(16384),
+            supports_streaming: true,
+            supports_embeddings: true,
+            capabilities: Some(ModelCapabilities {
+                reasoning: true,
+                tools: true,
+                vision: true,
+                audio_inputs: true,
+                audio_outputs: true,
+            }),
+        };
+
+        let json = serde_json::to_string(&model).unwrap();
+        let deserialized: ModelInfo = serde_json::from_str(&json).unwrap();
+        assert!(deserialized.capabilities.as_ref().unwrap().reasoning);
+        assert!(deserialized.capabilities.as_ref().unwrap().tools);
+        assert!(deserialized.capabilities.as_ref().unwrap().vision);
+        assert!(deserialized.capabilities.as_ref().unwrap().audio_inputs);
+        assert!(deserialized.capabilities.as_ref().unwrap().audio_outputs);
+    }
+
+    #[test]
+    fn test_model_info_with_partial_capabilities() {
+        let model = ModelInfo {
+            engine_id: "ollama".to_string(),
+            model_id: "flm://ollama/vision-model:latest".to_string(),
+            display_name: "Vision Model".to_string(),
+            context_length: Some(8192),
+            supports_streaming: true,
+            supports_embeddings: false,
+            capabilities: Some(ModelCapabilities {
+                reasoning: false,
+                tools: false,
+                vision: true,
+                audio_inputs: false,
+                audio_outputs: false,
+            }),
+        };
+
+        let caps = model.capabilities.as_ref().unwrap();
+        assert!(!caps.reasoning);
+        assert!(!caps.tools);
+        assert!(caps.vision);
+        assert!(!caps.audio_inputs);
+        assert!(!caps.audio_outputs);
     }
 
     #[test]

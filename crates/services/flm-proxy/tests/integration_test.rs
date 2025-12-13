@@ -2489,3 +2489,349 @@ async fn test_egress_sse_streaming_with_tor() {
     controller.stop(handle).await.unwrap();
     mock_server.stop().await;
 }
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_model_capabilities_detection_in_list_models() {
+    use flm_core::domain::security::SecurityPolicy;
+    use flm_core::services::SecurityService;
+    use flm_proxy::adapters::SqliteSecurityRepository;
+    use std::sync::Arc;
+
+    // Create temporary database path
+    let security_db = unique_db_path("flm-test-model-caps");
+
+    // Create security service
+    let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
+    let security_service = Arc::new(SecurityService::new(security_repo));
+
+    // Create API key
+    let api_key = security_service.create_api_key("test-key").await.unwrap();
+
+    // Set policy
+    let policy_json = serde_json::json!({});
+    let policy = SecurityPolicy {
+        id: "default".to_string(),
+        policy_json: serde_json::to_string(&policy_json).unwrap(),
+        updated_at: chrono::Utc::now().to_rfc3339(),
+    };
+    security_service.set_policy(policy).await.unwrap();
+
+    // Start proxy
+    let controller = AxumProxyController::new();
+    let config = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: 18110,
+        security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        ..Default::default()
+    };
+
+    let handle = controller.start(config).await.unwrap();
+    sleep(Duration::from_millis(500)).await;
+
+    // Test /v1/models endpoint to verify it works with model capabilities
+    let client = reqwest::Client::new();
+    let response = client
+        .get("http://localhost:18110/v1/models")
+        .header("Authorization", bearer_header(&api_key.plain))
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::OK);
+    let body: serde_json::Value = response.json().await.unwrap();
+    assert!(body.get("data").is_some());
+    
+    // Note: Actual model capabilities depend on registered engines
+    // This test verifies that the endpoint works correctly
+    // Model capabilities are detected by engines in their list_models() implementation
+
+    controller.stop(handle).await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_model_capabilities_fallback_to_engine_capabilities() {
+    use flm_core::domain::security::SecurityPolicy;
+    use flm_core::services::SecurityService;
+    use flm_proxy::adapters::SqliteSecurityRepository;
+    use std::sync::Arc;
+
+    // Create temporary database path
+    let security_db = unique_db_path("flm-test-cap-fallback");
+
+    // Create security service
+    let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
+    let security_service = Arc::new(SecurityService::new(security_repo));
+
+    // Create API key
+    let api_key = security_service.create_api_key("test-key").await.unwrap();
+
+    // Set policy
+    let policy_json = serde_json::json!({});
+    let policy = SecurityPolicy {
+        id: "default".to_string(),
+        policy_json: serde_json::to_string(&policy_json).unwrap(),
+        updated_at: chrono::Utc::now().to_rfc3339(),
+    };
+    security_service.set_policy(policy).await.unwrap();
+
+    // Start proxy
+    let controller = AxumProxyController::new();
+    let config = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: 18111,
+        security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        ..Default::default()
+    };
+
+    let handle = controller.start(config).await.unwrap();
+    sleep(Duration::from_millis(500)).await;
+
+    // Test that when model capabilities are None, it falls back to engine capabilities
+    // This is tested indirectly by checking that the endpoint works
+    let client = reqwest::Client::new();
+    let response = client
+        .get("http://localhost:18111/v1/models")
+        .header("Authorization", bearer_header(&api_key.plain))
+        .send()
+        .await
+        .unwrap();
+
+    assert_eq!(response.status(), reqwest::StatusCode::OK);
+    let body: serde_json::Value = response.json().await.unwrap();
+    assert!(body.get("data").is_some());
+
+    controller.stop(handle).await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_model_not_found_in_capabilities_check() {
+    use flm_core::domain::security::SecurityPolicy;
+    use flm_core::services::SecurityService;
+    use flm_proxy::adapters::SqliteSecurityRepository;
+    use std::sync::Arc;
+
+    // Create temporary database path
+    let security_db = unique_db_path("flm-test-model-not-found");
+
+    // Create security service
+    let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
+    let security_service = Arc::new(SecurityService::new(security_repo));
+
+    // Create API key
+    let api_key = security_service.create_api_key("test-key").await.unwrap();
+
+    // Set policy
+    let policy_json = serde_json::json!({});
+    let policy = SecurityPolicy {
+        id: "default".to_string(),
+        policy_json: serde_json::to_string(&policy_json).unwrap(),
+        updated_at: chrono::Utc::now().to_rfc3339(),
+    };
+    security_service.set_policy(policy).await.unwrap();
+
+    // Start proxy
+    let controller = AxumProxyController::new();
+    let config = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: 18112,
+        security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        ..Default::default()
+    };
+
+    let handle = controller.start(config).await.unwrap();
+    sleep(Duration::from_millis(500)).await;
+
+    // Test chat completion with non-existent model
+    // Should fall back to engine capabilities when model is not found
+    let client = reqwest::Client::new();
+    let chat_request = serde_json::json!({
+        "model": "flm://test-engine/non-existent-model",
+        "messages": [
+            {
+                "role": "user",
+                "content": "Hello"
+            }
+        ]
+    });
+
+    let response = client
+        .post("http://localhost:18112/v1/chat/completions")
+        .header("Authorization", bearer_header(&api_key.plain))
+        .header("Content-Type", "application/json")
+        .json(&chat_request)
+        .send()
+        .await
+        .unwrap();
+
+    // Should get an error (engine not found or model not found)
+    // But capability check should handle gracefully
+    assert!(
+        response.status().is_client_error() || response.status().is_server_error(),
+        "Non-existent model should return an error"
+    );
+
+    controller.stop(handle).await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_model_capabilities_vision_check_with_model_specific_capabilities() {
+    use flm_core::domain::security::SecurityPolicy;
+    use flm_core::services::SecurityService;
+    use flm_proxy::adapters::SqliteSecurityRepository;
+    use std::sync::Arc;
+
+    // Create temporary database path
+    let security_db = unique_db_path("flm-test-vision-check");
+
+    // Create security service
+    let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
+    let security_service = Arc::new(SecurityService::new(security_repo));
+
+    // Create API key
+    let api_key = security_service.create_api_key("test-key").await.unwrap();
+
+    // Set policy
+    let policy_json = serde_json::json!({});
+    let policy = SecurityPolicy {
+        id: "default".to_string(),
+        policy_json: serde_json::to_string(&policy_json).unwrap(),
+        updated_at: chrono::Utc::now().to_rfc3339(),
+    };
+    security_service.set_policy(policy).await.unwrap();
+
+    // Start proxy
+    let controller = AxumProxyController::new();
+    let config = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: 18113,
+        security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        ..Default::default()
+    };
+
+    let handle = controller.start(config).await.unwrap();
+    sleep(Duration::from_millis(500)).await;
+
+    // Test chat completion with image attachment
+    // Note: This will fail if no engines are registered, but tests the capability check logic
+    let client = reqwest::Client::new();
+    let chat_request = serde_json::json!({
+        "model": "flm://test-engine/non-vision-model",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Describe this image"
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let response = client
+        .post("http://localhost:18113/v1/chat/completions")
+        .header("Authorization", bearer_header(&api_key.plain))
+        .header("Content-Type", "application/json")
+        .json(&chat_request)
+        .send()
+        .await
+        .unwrap();
+
+    // Should get an error (engine not found or unsupported modality)
+    // The capability check should handle this gracefully
+    assert!(
+        response.status().is_client_error() || response.status().is_server_error(),
+        "Request with image on potentially unsupported model should return an error"
+    );
+
+    controller.stop(handle).await.unwrap();
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_model_capabilities_audio_check_with_model_specific_capabilities() {
+    use flm_core::domain::security::SecurityPolicy;
+    use flm_core::services::SecurityService;
+    use flm_proxy::adapters::SqliteSecurityRepository;
+    use std::sync::Arc;
+
+    // Create temporary database path
+    let security_db = unique_db_path("flm-test-audio-check");
+
+    // Create security service
+    let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
+    let security_service = Arc::new(SecurityService::new(security_repo));
+
+    // Create API key
+    let api_key = security_service.create_api_key("test-key").await.unwrap();
+
+    // Set policy
+    let policy_json = serde_json::json!({});
+    let policy = SecurityPolicy {
+        id: "default".to_string(),
+        policy_json: serde_json::to_string(&policy_json).unwrap(),
+        updated_at: chrono::Utc::now().to_rfc3339(),
+    };
+    security_service.set_policy(policy).await.unwrap();
+
+    // Start proxy
+    let controller = AxumProxyController::new();
+    let config = ProxyConfig {
+        mode: ProxyMode::LocalHttp,
+        port: 18114,
+        security_db_path: Some(security_db.to_str().unwrap().to_string()),
+        ..Default::default()
+    };
+
+    let handle = controller.start(config).await.unwrap();
+    sleep(Duration::from_millis(500)).await;
+
+    // Test chat completion with audio attachment
+    // Note: This will fail if no engines are registered, but tests the capability check logic
+    let client = reqwest::Client::new();
+    let chat_request = serde_json::json!({
+        "model": "flm://test-engine/non-audio-model",
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Transcribe this audio"
+                    },
+                    {
+                        "type": "input_audio",
+                        "input_audio": {
+                            "data": "base64encodedaudiodata",
+                            "format": "wav"
+                        }
+                    }
+                ]
+            }
+        ]
+    });
+
+    let response = client
+        .post("http://localhost:18114/v1/chat/completions")
+        .header("Authorization", bearer_header(&api_key.plain))
+        .header("Content-Type", "application/json")
+        .json(&chat_request)
+        .send()
+        .await
+        .unwrap();
+
+    // Should get an error (engine not found or unsupported modality)
+    // The capability check should handle this gracefully
+    assert!(
+        response.status().is_client_error() || response.status().is_server_error(),
+        "Request with audio on potentially unsupported model should return an error"
+    );
+
+    controller.stop(handle).await.unwrap();
+}

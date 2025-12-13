@@ -177,7 +177,10 @@ impl EngineRepository for SqliteEngineRepository {
         let engines = self
             .engines
             .read()
-            .expect("Failed to acquire read lock on engine registry");
+            .unwrap_or_else(|e| {
+                eprintln!("Warning: Failed to acquire read lock on engine registry (poisoned), using empty list");
+                e.into_inner()
+            });
         engines.clone()
     }
 
@@ -185,7 +188,10 @@ impl EngineRepository for SqliteEngineRepository {
         let mut engines = self
             .engines
             .write()
-            .expect("Failed to acquire write lock on engine registry");
+            .unwrap_or_else(|e| {
+                eprintln!("Warning: Failed to acquire write lock on engine registry (poisoned), attempting to recover");
+                e.into_inner()
+            });
         engines.push(engine);
     }
 }

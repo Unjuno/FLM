@@ -144,8 +144,24 @@ async fn execute_legacy(
                     "data": {
                         "status": "success",
                         "summary": summary,
-                        "tmp_dir": tmp_dir.to_str().unwrap(),
-                        "log_file": log_file.to_str().unwrap(),
+                        "tmp_dir": tmp_dir.to_str().ok_or_else(|| {
+                            format!(
+                                "Error: Invalid UTF-8 encoding in temporary directory path.\n\
+                                Path: {}\n\
+                                This usually indicates a system configuration issue.\n\
+                                Please ensure your system locale supports UTF-8.",
+                                tmp_dir.display()
+                            )
+                        })?,
+                        "log_file": log_file.to_str().ok_or_else(|| {
+                            format!(
+                                "Error: Invalid UTF-8 encoding in log file path.\n\
+                                Path: {}\n\
+                                This usually indicates a system configuration issue.\n\
+                                Please ensure your system locale supports UTF-8.",
+                                log_file.display()
+                            )
+                        })?,
                         "dry_run": is_dry_run,
                         "applied": should_apply
                     }
@@ -173,13 +189,24 @@ async fn execute_legacy(
                     "error": {
                         "code": "MIGRATION_FAILED",
                         "message": e.to_string(),
-                        "log_file": log_file.to_str().unwrap()
+                        "log_file": log_file.to_str().ok_or_else(|| {
+                            format!(
+                                "Error: Invalid UTF-8 encoding in log file path.\n\
+                                Path: {}\n\
+                                This usually indicates a system configuration issue.\n\
+                                Please ensure your system locale supports UTF-8.",
+                                log_file.display()
+                            )
+                        })?,
+                        "suggestion": "Check the log file for detailed error information and ensure all prerequisites are met."
                     }
                 });
                 eprintln!("{}", serde_json::to_string_pretty(&output)?);
             } else {
-                eprintln!("Migration failed: {e}");
-                eprintln!("See log file for details: {}", log_file.display());
+                eprintln!("Error: Migration failed");
+                eprintln!("Details: {e}");
+                eprintln!("Log file: {}", log_file.display());
+                eprintln!("Suggestion: Check the log file for detailed error information.");
             }
             Err(e)
         }
@@ -247,7 +274,15 @@ async fn execute_dry_run(
     let report_path = tmp_dir.join("migration-plan.json");
     let report = json!({
         "timestamp": Utc::now().to_rfc3339(),
-        "source": source.to_str().unwrap(),
+        "source": source.to_str().ok_or_else(|| {
+            format!(
+                "Error: Invalid UTF-8 encoding in source path.\n\
+                Path: {}\n\
+                This usually indicates a system configuration issue.\n\
+                Please ensure your system locale supports UTF-8 or use a different path.",
+                source.display()
+            )
+        })?,
         "summary": {
             "config_json_found": summary.config_json_found,
             "legacy_db_found": summary.legacy_db_found,
@@ -419,7 +454,15 @@ async fn execute_apply(
         let timestamp = Utc::now().format("%Y%m%d_%H%M%S");
         let backup_path = config_db_path
             .parent()
-            .unwrap()
+            .ok_or_else(|| {
+                format!(
+                    "Error: Cannot determine parent directory for database path.\n\
+                    Path: {}\n\
+                    This may occur if the path is a root directory.\n\
+                    Please specify a valid database path.",
+                    config_db_path.display()
+                )
+            })?
             .join(format!("config.db.bak.{timestamp}"));
         fs::copy(&config_db_path, &backup_path).await?;
         log_entries.push(format!(
@@ -434,7 +477,15 @@ async fn execute_apply(
         let timestamp = Utc::now().format("%Y%m%d_%H%M%S");
         let backup_path = security_db_path
             .parent()
-            .unwrap()
+            .ok_or_else(|| {
+                format!(
+                    "Error: Cannot determine parent directory for database path.\n\
+                    Path: {}\n\
+                    This may occur if the path is a root directory.\n\
+                    Please specify a valid database path.",
+                    security_db_path.display()
+                )
+            })?
             .join(format!("security.db.bak.{timestamp}"));
         fs::copy(&security_db_path, &backup_path).await?;
         log_entries.push(format!(
@@ -512,7 +563,16 @@ async fn execute_apply(
 
     // Write log
     let log_content = log_entries.join("\n");
-    let existing_content = fs::read_to_string(log_file).await.unwrap_or_default();
+    let existing_content = match fs::read_to_string(log_file).await {
+        Ok(content) => content,
+        Err(e) => {
+            // Log file may not exist yet, which is fine
+            if e.kind() != std::io::ErrorKind::NotFound {
+                eprintln!("Warning: Failed to read existing log file {}: {}", log_file.display(), e);
+            }
+            String::new()
+        }
+    };
     fs::write(log_file, format!("{existing_content}\n{log_content}")).await?;
 
     if format != "json" {
@@ -660,7 +720,7 @@ async fn convert_legacy_db(
 
     // Write proxy profiles
     let profiles_json = json!({
-        "source": db_path.to_str().unwrap(),
+        "source": db_path.to_string_lossy().to_string(),
         "proxy_profiles": proxy_profiles,
         "converted_at": Utc::now().to_rfc3339(),
         "count": proxy_profiles_count
@@ -729,7 +789,7 @@ async fn convert_legacy_db(
 
     // Write API keys
     let api_keys_json = json!({
-        "source": db_path.to_str().unwrap(),
+        "source": db_path.to_string_lossy().to_string(),
         "api_keys": api_keys,
         "converted_at": Utc::now().to_rfc3339(),
         "count": api_keys_count,
@@ -787,7 +847,7 @@ async fn convert_legacy_db(
 
     // Write settings
     let settings_json = json!({
-        "source": db_path.to_str().unwrap(),
+        "source": db_path.to_string_lossy().to_string(),
         "settings": settings,
         "converted_at": Utc::now().to_rfc3339(),
         "count": settings.len()
@@ -866,7 +926,7 @@ async fn apply_settings(
         // Handle config.json format (object instead of array)
         for (key, value) in settings_obj {
             let value_str = if value.is_string() {
-                value.as_str().unwrap().to_string()
+                value.as_str().expect("value should be string since is_string() returned true").to_string()
             } else {
                 serde_json::to_string(value)?
             };

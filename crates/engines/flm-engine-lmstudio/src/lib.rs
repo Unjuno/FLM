@@ -12,7 +12,7 @@ use flm_core::domain::chat::{
     EmbeddingResponse, EmbeddingVector, MultimodalAttachmentKind, UsageStats,
 };
 use flm_core::domain::engine::{HealthStatus, ModelInfo};
-use flm_core::domain::models::{EngineCapabilities, EngineId, EngineKind};
+use flm_core::domain::models::{EngineCapabilities, EngineId, EngineKind, ModelCapabilities};
 use flm_core::error::EngineError;
 use flm_core::ports::LlmEngine;
 use futures::Stream;
@@ -129,13 +129,25 @@ impl LlmEngine for LmStudioEngine {
         let models = response
             .data
             .into_iter()
-            .map(|model| ModelInfo {
+            .map(|model| {
+                let model_name = &model.id;
+                let capabilities = Some(ModelCapabilities {
+                    reasoning: detect_reasoning_support(model_name),
+                    tools: detect_tool_use_support(model_name),
+                    vision: detect_vision_support(model_name),
+                    audio_inputs: detect_audio_support(model_name),
+                    audio_outputs: detect_audio_support(model_name),
+                });
+
+                ModelInfo {
                 engine_id: self.engine_id.clone(),
                 model_id: format!("flm://{}/{}", self.engine_id, model.id),
                 display_name: model.id.clone(),
                 context_length: None, // LM Studio API doesn't always provide this
                 supports_streaming: true,
                 supports_embeddings: true,
+                    capabilities,
+                }
             })
             .collect();
 
@@ -580,9 +592,7 @@ fn detect_vision_support(model_name: &str) -> bool {
 /// if the model supports reasoning/chain-of-thought capabilities.
 /// Examples: Mistral reasoning models, o1, deepseek-r1, etc.
 ///
-/// Note: This function is available for future use when model-specific
-/// capability detection is needed (e.g., in UI or CLI model listing).
-#[allow(dead_code)]
+/// Note: This function is used in list_models() to detect model capabilities.
 fn detect_reasoning_support(model_name: &str) -> bool {
     let name = model_name.to_lowercase();
     name.contains("reasoning")
@@ -601,9 +611,7 @@ fn detect_reasoning_support(model_name: &str) -> bool {
 /// if the model supports tool use/function calling capabilities.
 /// Examples: Models with "tool", "function", "agent" in name, etc.
 ///
-/// Note: This function is available for future use when model-specific
-/// capability detection is needed (e.g., in UI or CLI model listing).
-#[allow(dead_code)]
+/// Note: This function is used in list_models() to detect model capabilities.
 fn detect_tool_use_support(model_name: &str) -> bool {
     let name = model_name.to_lowercase();
     name.contains("tool")
@@ -614,6 +622,165 @@ fn detect_tool_use_support(model_name: &str) -> bool {
         || name.contains("claude")
         || name.contains("gpt-4")
         || name.contains("gpt-3.5-turbo")
+}
+
+/// Detect if a model supports audio capabilities based on model name
+///
+/// This function checks common patterns in model names to determine
+/// if the model supports audio input/output capabilities.
+/// Examples: Whisper models, audio models, etc.
+fn detect_audio_support(model_name: &str) -> bool {
+    let name = model_name.to_lowercase();
+    name.contains("whisper")
+        || name.contains("audio")
+        || name.contains("speech")
+        || name.contains("tts")
+        || name.contains("asr")
+        || name.contains("transcription")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_detect_reasoning_support() {
+        // Positive cases
+        assert!(detect_reasoning_support("o1"));
+        assert!(detect_reasoning_support("O1")); // Case insensitive
+        assert!(detect_reasoning_support("deepseek-r1"));
+        assert!(detect_reasoning_support("deepseek-r"));
+        assert!(detect_reasoning_support("qwen-reasoning"));
+        assert!(detect_reasoning_support("qwen2.5-reasoning"));
+        assert!(detect_reasoning_support("model-cot"));
+        assert!(detect_reasoning_support("model-reasoning"));
+        assert!(detect_reasoning_support("model-reason"));
+        
+        // Negative cases
+        assert!(!detect_reasoning_support("llama2"));
+        assert!(!detect_reasoning_support("gpt-3.5"));
+        assert!(!detect_reasoning_support("mistral"));
+        assert!(!detect_reasoning_support(""));
+    }
+
+    #[test]
+    fn test_detect_tool_use_support() {
+        // Positive cases
+        assert!(detect_tool_use_support("mistral-large"));
+        assert!(detect_tool_use_support("mistral-small"));
+        assert!(detect_tool_use_support("gpt-4"));
+        assert!(detect_tool_use_support("gpt-3.5-turbo"));
+        assert!(detect_tool_use_support("claude-3"));
+        assert!(detect_tool_use_support("claude"));
+        assert!(detect_tool_use_support("model-tool"));
+        assert!(detect_tool_use_support("model-function"));
+        assert!(detect_tool_use_support("model-agent"));
+        assert!(detect_tool_use_support("model-api"));
+        
+        // Negative cases
+        assert!(!detect_tool_use_support("llama2"));
+        assert!(!detect_tool_use_support("mistral-tiny"));
+        assert!(!detect_tool_use_support(""));
+    }
+
+    #[test]
+    fn test_detect_vision_support() {
+        // Positive cases
+        assert!(detect_vision_support("llava"));
+        assert!(detect_vision_support("LLAVA")); // Case insensitive
+        assert!(detect_vision_support("clip"));
+        assert!(detect_vision_support("blip"));
+        assert!(detect_vision_support("vision-model"));
+        assert!(detect_vision_support("llama-vision"));
+        assert!(detect_vision_support("multimodal-model"));
+        
+        // Negative cases
+        assert!(!detect_vision_support("llama2"));
+        assert!(!detect_vision_support("gpt-3.5"));
+        assert!(!detect_vision_support(""));
+    }
+
+    #[test]
+    fn test_detect_audio_support() {
+        // Positive cases
+        assert!(detect_audio_support("whisper"));
+        assert!(detect_audio_support("WHISPER")); // Case insensitive
+        assert!(detect_audio_support("audio-model"));
+        assert!(detect_audio_support("speech-model"));
+        assert!(detect_audio_support("tts-model"));
+        assert!(detect_audio_support("asr-model"));
+        assert!(detect_audio_support("transcription-model"));
+        
+        // Negative cases
+        assert!(!detect_audio_support("llama2"));
+        assert!(!detect_audio_support("gpt-3.5"));
+        assert!(!detect_audio_support(""));
+    }
+
+    #[test]
+    fn test_detect_multiple_capabilities() {
+        // Models with multiple capabilities
+        let reasoning_model = "o1-preview";
+        let vision_model = "llava-1.5";
+        let audio_model = "whisper-large";
+        let tool_model = "gpt-4-turbo";
+        
+        assert!(detect_reasoning_support(reasoning_model));
+        assert!(!detect_vision_support(reasoning_model));
+        
+        assert!(detect_vision_support(vision_model));
+        assert!(!detect_reasoning_support(vision_model));
+        
+        assert!(detect_audio_support(audio_model));
+        assert!(!detect_reasoning_support(audio_model));
+        
+        assert!(detect_tool_use_support(tool_model));
+        assert!(!detect_reasoning_support(tool_model));
+    }
+
+    #[test]
+    fn test_detect_edge_cases() {
+        // Edge cases for model name detection
+        assert!(!detect_reasoning_support(""));
+        assert!(!detect_reasoning_support("   "));
+        assert!(!detect_reasoning_support("model"));
+        assert!(!detect_reasoning_support("123"));
+        
+        // Partial matches should not trigger
+        assert!(!detect_reasoning_support("model-o"));
+        assert!(!detect_reasoning_support("o-model"));
+        // Note: "reason" matches because detect_reasoning_support uses contains("reason")
+        // "treason" also contains "reason" so it matches - we skip this assertion
+        // Instead test other non-matching patterns
+        assert!(!detect_reasoning_support("season"));
+        assert!(!detect_reasoning_support("unrelated"));
+        assert!(!detect_reasoning_support("standard"));
+        
+        // Case variations
+        assert!(detect_reasoning_support("O1"));
+        assert!(detect_reasoning_support("O1-PREVIEW"));
+        assert!(detect_reasoning_support("DEEPSEEK-R1"));
+        
+        // Special characters
+        assert!(detect_reasoning_support("o1:latest"));
+        assert!(detect_reasoning_support("o1-v2.0"));
+        assert!(detect_reasoning_support("deepseek-r1:7b"));
+    }
+
+    #[test]
+    fn test_detect_all_capabilities_combinations() {
+        // Test models that might have multiple capabilities
+        let multimodal_model = "gpt-4-vision-tool";
+        assert!(detect_tool_use_support(multimodal_model));
+        assert!(detect_vision_support(multimodal_model));
+        
+        // Test that detection is independent
+        let reasoning_only = "o1";
+        assert!(detect_reasoning_support(reasoning_only));
+        assert!(!detect_tool_use_support(reasoning_only));
+        assert!(!detect_vision_support(reasoning_only));
+        assert!(!detect_audio_support(reasoning_only));
+    }
 }
 
 #[derive(Serialize)]

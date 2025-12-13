@@ -305,13 +305,21 @@ pub async fn policy_middleware(
                 let rpm = ip_rate_limit
                     .get("rpm")
                     .and_then(|v| v.as_u64())
-                    .map(|v| v as u32)
-                    .unwrap_or(1000);
+                    .and_then(|v| u32::try_from(v).ok())
+                    .unwrap_or_else(|| {
+                        warn!("RPM value exceeds u32::MAX, clamping to u32::MAX");
+                        u32::MAX
+                    })
+                    .min(1000);
                 let burst = ip_rate_limit
                     .get("burst")
                     .and_then(|v| v.as_u64())
-                    .map(|v| v as u32)
-                    .unwrap_or(rpm);
+                    .and_then(|v| u32::try_from(v).ok())
+                    .unwrap_or_else(|| {
+                        warn!("Burst value exceeds u32::MAX, clamping to u32::MAX");
+                        u32::MAX
+                    })
+                    .min(rpm);
                 (rpm, burst)
             } else {
                 // Default: 1000 requests per minute
@@ -345,7 +353,8 @@ pub async fn policy_middleware(
                 reset_time
                     .duration_since(std::time::SystemTime::now())
                     .unwrap_or_default()
-                    .as_secs() as i64,
+                    .as_secs()
+                    .min(i64::MAX as u64) as i64,
             ))
             .unwrap_or_else(chrono::Utc::now)
             .to_rfc3339();
@@ -389,7 +398,7 @@ pub async fn policy_middleware(
                     if let Ok(mut file) =
                         OpenOptions::new().create(true).append(true).open(&log_path)
                     {
-                        let _ = file.write_all(
+                        if let Err(e) = file.write_all(
                             format!(
                                 "[POLICY_MIDDLEWARE] Checking rate limit for api_key_id={}, rpm={}, burst={}\n",
                                 utils::mask_identifier(api_key_id),
@@ -397,8 +406,12 @@ pub async fn policy_middleware(
                                 burst
                             )
                             .as_bytes(),
-                        );
-                        let _ = file.flush();
+                        ) {
+                            debug!("Failed to write debug log: {}", e);
+                        }
+                        if let Err(e) = file.flush() {
+                            debug!("Failed to flush debug log: {}", e);
+                        }
                     }
 
                     let (allowed, remaining, reset_time) =
@@ -409,14 +422,18 @@ pub async fn policy_middleware(
                     if let Ok(mut file) =
                         OpenOptions::new().create(true).append(true).open(&log_path)
                     {
-                        let _ = file.write_all(
+                        if let Err(e) = file.write_all(
                             format!(
                                 "[POLICY_MIDDLEWARE] Rate limit result: allowed={}, remaining={}\n",
                                 allowed, remaining
                             )
                             .as_bytes(),
-                        );
-                        let _ = file.flush();
+                        ) {
+                            debug!("Failed to write debug log: {}", e);
+                        }
+                        if let Err(e) = file.flush() {
+                            debug!("Failed to flush debug log: {}", e);
+                        }
                     }
 
                     if !allowed {
@@ -440,10 +457,14 @@ pub async fn policy_middleware(
         // Debug: Log missing API key ID
         let log_path = std::env::temp_dir().join("rate_limit_debug.log");
         if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_path) {
-            let _ = file.write_all(
+            if let Err(e) = file.write_all(
                 "[POLICY_MIDDLEWARE] No API key ID in extensions, skipping rate limit\n".as_bytes(),
-            );
-            let _ = file.flush();
+            ) {
+                debug!("Failed to write debug log: {}", e);
+            }
+            if let Err(e) = file.flush() {
+                debug!("Failed to flush debug log: {}", e);
+            }
         }
         None
     };
@@ -556,7 +577,7 @@ pub async fn intrusion_detection_middleware(
             let id = new_request_id();
 
             // Save to database
-            let _ = security_repo
+            if let Err(e) = security_repo
                 .save_intrusion_attempt(
                     &id,
                     &client_ip_for_db,
@@ -568,7 +589,10 @@ pub async fn intrusion_detection_middleware(
                         method: Some(&method_clone),
                     },
                 )
-                .await;
+                .await
+            {
+                warn!("Failed to save intrusion attempt for {}: {}", client_ip_for_db, e);
+            }
 
             // Check if should block
             let (should_block, block_duration) =
@@ -586,7 +610,9 @@ pub async fn intrusion_detection_middleware(
                 };
 
                 for _ in 0..failures_to_record {
-                    let _ = ip_blocklist.record_failure(client_ip_for_db).await;
+                    if !ip_blocklist.record_failure(client_ip_for_db).await {
+                        warn!("Failed to record IP blocklist failure for {}", client_ip_for_db);
+                    }
                 }
 
                 // Log the intrusion event
@@ -597,7 +623,7 @@ pub async fn intrusion_detection_middleware(
                     "failures_recorded": failures_to_record
                 })
                 .to_string();
-                let _ = security_repo
+                if let Err(e) = security_repo
                     .save_audit_log(
                         &request_id,
                         None,
@@ -611,7 +637,10 @@ pub async fn intrusion_detection_middleware(
                             details: Some(detail_json.as_str()),
                         },
                     )
-                    .await;
+                    .await
+                {
+                    warn!("Failed to save audit log for intrusion: {}", e);
+                }
             }
         });
     }
@@ -700,7 +729,7 @@ pub async fn anomaly_detection_middleware(
                 "is_404": is_404
             })
             .to_string();
-            let _ = security_repo
+            if let Err(e) = security_repo
                 .save_audit_log(
                     &id,
                     None,
@@ -714,7 +743,10 @@ pub async fn anomaly_detection_middleware(
                         details: Some(detail_json.as_str()),
                     },
                 )
-                .await;
+                .await
+            {
+                warn!("Failed to save audit log for anomaly: {}", e);
+            }
 
             // Check if should block
             let (should_block, block_duration) =
@@ -732,7 +764,9 @@ pub async fn anomaly_detection_middleware(
                 };
 
                 for _ in 0..failures_to_record {
-                    let _ = ip_blocklist.record_failure(client_ip_for_db).await;
+                    if !ip_blocklist.record_failure(client_ip_for_db).await {
+                        warn!("Failed to record IP blocklist failure for {}", client_ip_for_db);
+                    }
                 }
 
                 // Log the block event
@@ -743,7 +777,7 @@ pub async fn anomaly_detection_middleware(
                     "failures_recorded": failures_to_record
                 })
                 .to_string();
-                let _ = security_repo
+                if let Err(e) = security_repo
                     .save_audit_log(
                         &request_id,
                         None,
@@ -757,7 +791,10 @@ pub async fn anomaly_detection_middleware(
                             details: Some(detail_json.as_str()),
                         },
                     )
-                    .await;
+                    .await
+                {
+                    warn!("Failed to save audit log for anomaly block: {}", e);
+                }
             }
         });
     }
@@ -797,7 +834,7 @@ pub async fn resource_protection_middleware(
                 "memory_threshold": 0.9
             })
             .to_string();
-            let _ = security_repo
+            if let Err(e) = security_repo
                 .save_audit_log(
                     &request_id,
                     None,
@@ -811,7 +848,10 @@ pub async fn resource_protection_middleware(
                         details: Some(detail_json.as_str()),
                     },
                 )
-                .await;
+                .await
+            {
+                warn!("Failed to save audit log for resource alert: {}", e);
+            }
         });
 
         return (
@@ -861,7 +901,7 @@ pub async fn ip_block_check_middleware(
                 "reason": "ip_blocked"
             })
             .to_string();
-            let _ = security_repo
+            if let Err(e) = security_repo
                 .save_audit_log(
                     &request_id,
                     None,
@@ -875,7 +915,10 @@ pub async fn ip_block_check_middleware(
                         details: Some(detail_json.as_str()),
                     },
                 )
-                .await;
+                .await
+            {
+                warn!("Failed to save audit log for IP block: {}", e);
+            }
         });
 
         return (
@@ -939,7 +982,7 @@ pub async fn auth_middleware(
                     "reason": "missing_authorization_header"
                 })
                 .to_string();
-                let _ = security_repo
+                if let Err(e) = security_repo
                     .save_audit_log(
                         &request_id,
                         None,
@@ -953,7 +996,10 @@ pub async fn auth_middleware(
                             details: Some(detail_json.as_str()),
                         },
                     )
-                    .await;
+                    .await
+                {
+                    warn!("Failed to save audit log for auth failure: {}", e);
+                }
 
                 // Sync to database if needed
                 if should_block {
@@ -976,7 +1022,9 @@ pub async fn auth_middleware(
         let endpoint = request.uri().path().to_string();
 
         // Record failure
-        let _ = ip_blocklist.record_failure(client_ip).await;
+        if !ip_blocklist.record_failure(client_ip).await {
+            warn!("Failed to record IP blocklist failure for {}", client_ip);
+        }
 
         // Log security event
         tokio::spawn(async move {
@@ -984,7 +1032,7 @@ pub async fn auth_middleware(
                 "reason": "invalid_authorization_format"
             })
             .to_string();
-            let _ = security_repo
+            if let Err(e) = security_repo
                 .save_audit_log(
                     &request_id,
                     None,
@@ -998,7 +1046,10 @@ pub async fn auth_middleware(
                         details: Some(detail_json.as_str()),
                     },
                 )
-                .await;
+                .await
+            {
+                warn!("Failed to save audit log for auth failure: {}", e);
+            }
         });
 
         return create_unauthorized_response().into_response();
@@ -1042,7 +1093,7 @@ pub async fn auth_middleware(
                     "reason": "invalid_or_revoked_api_key"
                 })
                 .to_string();
-                let _ = security_repo
+                if let Err(e) = security_repo
                     .save_audit_log(
                         &request_id,
                         None,
@@ -1056,7 +1107,10 @@ pub async fn auth_middleware(
                             details: Some(detail_json.as_str()),
                         },
                     )
-                    .await;
+                    .await
+                {
+                    warn!("Failed to save audit log for auth failure: {}", e);
+                }
 
                 // Sync to database if block was applied
                 if should_block {
@@ -1081,7 +1135,7 @@ pub async fn auth_middleware(
                     "reason": "verification_error"
                 })
                 .to_string();
-                let _ = security_repo
+                if let Err(e) = security_repo
                     .save_audit_log(
                         &request_id,
                         None,
@@ -1095,7 +1149,10 @@ pub async fn auth_middleware(
                             details: Some(detail_json.as_str()),
                         },
                     )
-                    .await;
+                    .await
+                {
+                    warn!("Failed to save audit log for auth failure: {}", e);
+                }
             });
             create_internal_error_response().into_response()
         }
@@ -1321,7 +1378,12 @@ async fn check_rate_limit_with_info(
     // Refill token bucket based on rpm (tokens per minute)
     // Note: Token bucket refills continuously, but we only check at request time
     // The fill rate is rpm tokens per minute, so we add tokens based on elapsed time
-    let fill_rate_per_sec = rpm as f64 / window_duration.as_secs() as f64;
+    let fill_rate_per_sec = if window_duration.as_secs() > 0 {
+        rpm as f64 / window_duration.as_secs() as f64
+    } else {
+        warn!("window_duration is zero, using default fill rate");
+        rpm as f64 / 60.0 // Default to 60 seconds
+    };
     let elapsed_since_refill = now
         .checked_duration_since(entry.last_refill)
         .unwrap_or_default()
@@ -1329,9 +1391,15 @@ async fn check_rate_limit_with_info(
     // Always update last_refill to current time, even if elapsed is 0
     // This ensures consistent behavior
     if elapsed_since_refill >= 0.0 {
-        entry.tokens_available = (entry.tokens_available
-            + elapsed_since_refill * fill_rate_per_sec)
-            .min(burst_capacity as f64);
+        let new_tokens = entry.tokens_available + elapsed_since_refill * fill_rate_per_sec;
+        entry.tokens_available = new_tokens.min(burst_capacity as f64);
+        // why: Check for NaN/Infinity after calculation
+        // alt: Assume calculation is always finite, but fill_rate_per_sec may be invalid
+        // evidence: BUG-056 - NaN/Infinity check is missing
+        if !entry.tokens_available.is_finite() {
+            warn!("tokens_available became NaN/Infinity, resetting to 0");
+            entry.tokens_available = 0.0;
+        }
         entry.last_refill = now;
     }
 
@@ -1343,7 +1411,9 @@ async fn check_rate_limit_with_info(
     // evidence: test_rate_limit_multiple_keys fails - 6th request should be denied when rpm=5
     // assumption: After 5 requests, minute_count=5, so (5+1) > 5 is true, should deny 6th request
     // Note: Both limits must be respected - if EITHER limit would be exceeded, deny the request
-    let would_exceed_minute_limit = (entry.minute_count + 1) > rpm;
+    let would_exceed_minute_limit = entry.minute_count.checked_add(1)
+        .map(|next_count| next_count > rpm)
+        .unwrap_or(true); // If overflow, treat as exceeded
     // For burst limit, we need at least 1.0 token to allow the request
     // If tokens_available is less than 1.0, we cannot allow the request
     let burst_limit_reached = entry.tokens_available < 1.0;
@@ -1372,13 +1442,24 @@ async fn check_rate_limit_with_info(
     // Calculate remaining BEFORE incrementing
     let rpm_remaining = if allowed {
         // After this request, minute_count will be entry.minute_count + 1
-        rpm.saturating_sub(entry.minute_count + 1)
+        entry.minute_count.checked_add(1)
+            .map(|next_count| rpm.saturating_sub(next_count))
+            .unwrap_or(0) // If overflow, return 0 remaining
     } else {
         0
     };
     let burst_remaining = if allowed {
         // After this request, tokens_available will be entry.tokens_available - 1.0
-        (entry.tokens_available - 1.0).max(0.0).floor() as u32
+        let remaining = (entry.tokens_available - 1.0).max(0.0);
+        // why: Check for NaN/Infinity before conversion
+        // alt: Direct conversion, but may produce invalid values
+        // evidence: BUG-056 - NaN/Infinity check is missing
+        if remaining.is_finite() {
+            u32::try_from(remaining.floor() as u64).unwrap_or(0)
+        } else {
+            warn!("tokens_available is NaN/Infinity, using 0 for burst_remaining");
+            0
+        }
     } else {
         0
     };
@@ -1407,16 +1488,24 @@ async fn check_rate_limit_with_info(
     let api_key_id_clone = api_key_id.to_string();
     let minute_count_snapshot = entry.minute_count;
     let reset_at = chrono::Utc::now()
-        .checked_add_signed(chrono::Duration::seconds(reset_duration.as_secs() as i64))
+        .checked_add_signed(chrono::Duration::seconds(
+            reset_duration.as_secs().min(i64::MAX as u64) as i64
+        ))
         .unwrap_or_else(chrono::Utc::now)
         .to_rfc3339();
 
-    tokio::spawn(async move {
+    let persist_handle = tokio::spawn(async move {
         if let Err(e) = security_repo
             .save_rate_limit_state(&api_key_id_clone, minute_count_snapshot, &reset_at)
             .await
         {
             error!(error_type = "rate_limit_persist_failed", api_key_id = %utils::mask_identifier(&api_key_id_clone), "Failed to persist rate limit state: {}", e);
+        }
+    });
+    // Monitor the task for panics (fire and forget)
+    tokio::spawn(async move {
+        if let Err(e) = persist_handle.await {
+            error!("Rate limit persist task panicked: {:?}", e);
         }
     });
 
@@ -1447,12 +1536,22 @@ async fn adjust_ip_rate_limit_dynamically(
 
     if anomaly_score >= 100 || intrusion_score >= 100 {
         // High score IPs get reduced rate limit (50% of base)
-        return (base_rpm / 2, base_burst / 2);
+        // why: Use floating point for accurate percentage calculation
+        // alt: Integer division, but loses precision for odd values
+        // evidence: BUG-039 - integer division causes precision loss
+        let rpm_50 = (base_rpm as f64 * 0.5).round() as u32;
+        let burst_50 = (base_burst as f64 * 0.5).round() as u32;
+        return (rpm_50, burst_50);
     }
 
     if anomaly_score >= 50 || intrusion_score >= 50 {
         // Medium score IPs get slightly reduced rate limit (75% of base)
-        return ((base_rpm * 3) / 4, (base_burst * 3) / 4);
+        // why: Use floating point for accurate percentage calculation
+        // alt: Integer division, but loses precision
+        // evidence: BUG-039 - integer division causes precision loss
+        let rpm_75 = (base_rpm as f64 * 0.75).round() as u32;
+        let burst_75 = (base_burst as f64 * 0.75).round() as u32;
+        return (rpm_75, burst_75);
     }
 
     // Normal IPs get full rate limit
@@ -1468,38 +1567,33 @@ pub(crate) async fn check_ip_rate_limit_with_info(
     _rpm: u32,
     burst: u32,
 ) -> (bool, u32, std::time::SystemTime) {
-    let mut ip_rate_limit_state = state.ip_rate_limit_state.write().await;
     let now = Instant::now();
     let window_duration = Duration::from_secs(60); // 1 minute window
 
-    // Try to load from database first (for persistence across restarts)
+    // Load from database BEFORE acquiring lock (to minimize lock hold time)
+    let ip_key = format!("ip:{ip}");
+    let db_snapshot = state.security_repo.fetch_rate_limit_state(&ip_key).await.ok()
+        .and_then(|opt| opt)
+        .and_then(|(db_count, db_reset_at)| {
+            chrono::DateTime::parse_from_rfc3339(&db_reset_at).ok()
+                .map(|reset_chrono| {
+                    let reset_utc = reset_chrono.with_timezone(&chrono::Utc);
+                    let now_utc = chrono::Utc::now();
+                    reset_utc.signed_duration_since(now_utc).to_std().ok()
+                        .filter(|d| *d > Duration::ZERO)
+                        .map(|reset_duration| (db_count.min(burst), now + reset_duration))
+                })
+                .flatten()
+        });
+
+    // Now acquire lock and use memory state or db_snapshot
+    let mut ip_rate_limit_state = state.ip_rate_limit_state.write().await;
     let (count, reset_time) = if let Some((mem_count, mem_reset)) = ip_rate_limit_state.get(ip) {
         (*mem_count, *mem_reset)
+    } else if let Some((db_count, db_reset)) = db_snapshot {
+        (db_count, db_reset)
     } else {
-        // New IP, try to load from database
-        let ip_key = format!("ip:{ip}");
-        if let Ok(Some((db_count, db_reset_at))) =
-            state.security_repo.fetch_rate_limit_state(&ip_key).await
-        {
-            if let Ok(reset_chrono) = chrono::DateTime::parse_from_rfc3339(&db_reset_at) {
-                let reset_utc = reset_chrono.with_timezone(&chrono::Utc);
-                let now_utc = chrono::Utc::now();
-                if let Ok(reset_duration) = reset_utc.signed_duration_since(now_utc).to_std() {
-                    if reset_duration > Duration::ZERO {
-                        let reset_instant = now + reset_duration;
-                        (db_count.min(burst), reset_instant)
-                    } else {
-                        (0, now + window_duration)
-                    }
-                } else {
-                    (0, now + window_duration)
-                }
-            } else {
-                (0, now + window_duration)
-            }
-        } else {
-            (0, now + window_duration)
-        }
+        (0, now + window_duration)
     };
 
     // Reset if window has expired
@@ -1510,7 +1604,7 @@ pub(crate) async fn check_ip_rate_limit_with_info(
     };
 
     // Check if limit would be exceeded after incrementing
-    let new_count = count + 1;
+    let new_count = count.checked_add(1).unwrap_or(u32::MAX); // Clamp on overflow
     let allowed = new_count <= burst;
 
     // Calculate remaining requests (after this request is counted, if allowed)

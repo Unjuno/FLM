@@ -96,7 +96,9 @@ pub async fn execute_detect(
 
     // Cache latest states for subsequent runs
     for state in &states {
-        let _ = engine_repo_arc.cache_engine_state(state).await;
+        if let Err(e) = engine_repo_arc.cache_engine_state(state).await {
+            eprintln!("Warning: Failed to cache engine state: {}", e);
+        }
     }
 
     render_states(&states, &format)

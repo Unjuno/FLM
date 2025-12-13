@@ -463,13 +463,13 @@ mod tests {
     }
 
     struct MockEngineRepository {
-        engines: std::sync::Mutex<Vec<Arc<dyn LlmEngine>>>,
+        engines: tokio::sync::Mutex<Vec<Arc<dyn LlmEngine>>>,
     }
 
     impl MockEngineRepository {
         fn new(engines: Vec<Arc<dyn LlmEngine>>) -> Self {
             Self {
-                engines: std::sync::Mutex::new(engines),
+                engines: tokio::sync::Mutex::new(engines),
             }
         }
     }
@@ -477,17 +477,17 @@ mod tests {
     #[async_trait::async_trait]
     impl EngineRepository for MockEngineRepository {
         async fn list_registered(&self) -> Vec<Arc<dyn LlmEngine>> {
-            self.engines
-                .lock()
-                .expect("mock engine repo poisoned")
-                .clone()
+            // why: Use tokio::sync::Mutex in async context to avoid blocking
+            // alt: std::sync::Mutex, but that blocks async runtime
+            // evidence: Best practice for async Rust code
+            // assumption: tokio runtime is available
+            let engines = self.engines.lock().await;
+            engines.clone()
         }
 
         async fn register(&self, engine: Arc<dyn LlmEngine>) {
-            self.engines
-                .lock()
-                .expect("mock engine repo poisoned")
-                .push(engine);
+            let mut engines = self.engines.lock().await;
+            engines.push(engine);
         }
     }
 
@@ -511,6 +511,7 @@ mod tests {
                 context_length: Some(4096),
                 supports_streaming: true,
                 supports_embeddings: true,
+                capabilities: None,
             },
             ModelInfo {
                 engine_id: "engine-1".to_string(),
@@ -519,6 +520,7 @@ mod tests {
                 context_length: None,
                 supports_streaming: false,
                 supports_embeddings: true,
+                capabilities: None,
             },
         ];
         let engine = Arc::new(MockEngine {
@@ -529,7 +531,7 @@ mod tests {
 
         let listed = service.list_models("engine-1".to_string()).await.unwrap();
         assert_eq!(listed.len(), 2);
-        assert_eq!(listed[0].model_id, "flm://engine-1/model-a");
+        assert_eq!(listed.get(0).expect("Expected at least one model").model_id, "flm://engine-1/model-a");
     }
 
     #[tokio::test]
@@ -546,6 +548,211 @@ mod tests {
             }
             _ => panic!("Unexpected error variant"),
         }
+    }
+
+    #[tokio::test]
+    async fn list_models_with_capabilities() {
+        use crate::domain::models::ModelCapabilities;
+        
+        let models = vec![
+            ModelInfo {
+                engine_id: "engine-1".to_string(),
+                model_id: "flm://engine-1/o1:latest".to_string(),
+                display_name: "O1".to_string(),
+                context_length: Some(8192),
+                supports_streaming: true,
+                supports_embeddings: false,
+                capabilities: Some(ModelCapabilities {
+                    reasoning: true,
+                    tools: false,
+                    vision: false,
+                    audio_inputs: false,
+                    audio_outputs: false,
+                }),
+            },
+            ModelInfo {
+                engine_id: "engine-1".to_string(),
+                model_id: "flm://engine-1/llava:latest".to_string(),
+                display_name: "LLaVA".to_string(),
+                context_length: Some(4096),
+                supports_streaming: true,
+                supports_embeddings: false,
+                capabilities: Some(ModelCapabilities {
+                    reasoning: false,
+                    tools: false,
+                    vision: true,
+                    audio_inputs: false,
+                    audio_outputs: false,
+                }),
+            },
+            ModelInfo {
+                engine_id: "engine-1".to_string(),
+                model_id: "flm://engine-1/gpt-4:latest".to_string(),
+                display_name: "GPT-4".to_string(),
+                context_length: Some(8192),
+                supports_streaming: true,
+                supports_embeddings: false,
+                capabilities: Some(ModelCapabilities {
+                    reasoning: false,
+                    tools: true,
+                    vision: true,
+                    audio_inputs: false,
+                    audio_outputs: false,
+                }),
+            },
+            ModelInfo {
+                engine_id: "engine-1".to_string(),
+                model_id: "flm://engine-1/whisper:latest".to_string(),
+                display_name: "Whisper".to_string(),
+                context_length: Some(4096),
+                supports_streaming: false,
+                supports_embeddings: false,
+                capabilities: Some(ModelCapabilities {
+                    reasoning: false,
+                    tools: false,
+                    vision: false,
+                    audio_inputs: true,
+                    audio_outputs: true,
+                }),
+            },
+        ];
+        let engine = Arc::new(MockEngine {
+            id: "engine-1".to_string(),
+            models: models.clone(),
+        });
+        let service = make_service(vec![engine]);
+
+        let listed = service.list_models("engine-1".to_string()).await.unwrap();
+        assert_eq!(listed.len(), 4);
+        
+        // Check O1 model capabilities
+        let o1_model = listed.iter().find(|m| m.model_id == "flm://engine-1/o1:latest")
+            .expect("Expected o1:latest model to be in the list");
+        assert!(o1_model.capabilities.as_ref().unwrap().reasoning);
+        assert!(!o1_model.capabilities.as_ref().unwrap().vision);
+        
+        // Check LLaVA model capabilities
+        let llava_model = listed.iter().find(|m| m.model_id == "flm://engine-1/llava:latest").unwrap();
+        assert!(llava_model.capabilities.as_ref().unwrap().vision);
+        assert!(!llava_model.capabilities.as_ref().unwrap().reasoning);
+        
+        // Check GPT-4 model capabilities
+        let gpt4_model = listed.iter().find(|m| m.model_id == "flm://engine-1/gpt-4:latest").unwrap();
+        assert!(gpt4_model.capabilities.as_ref().unwrap().tools);
+        assert!(gpt4_model.capabilities.as_ref().unwrap().vision);
+        
+        // Check Whisper model capabilities
+        let whisper_model = listed.iter().find(|m| m.model_id == "flm://engine-1/whisper:latest").unwrap();
+        assert!(whisper_model.capabilities.as_ref().unwrap().audio_inputs);
+        assert!(whisper_model.capabilities.as_ref().unwrap().audio_outputs);
+    }
+
+    #[tokio::test]
+    async fn list_models_without_capabilities() {
+        let models = vec![
+            ModelInfo {
+                engine_id: "engine-1".to_string(),
+                model_id: "flm://engine-1/llama2:latest".to_string(),
+                display_name: "Llama 2".to_string(),
+                context_length: Some(4096),
+                supports_streaming: true,
+                supports_embeddings: true,
+                capabilities: None,
+            },
+        ];
+        let engine = Arc::new(MockEngine {
+            id: "engine-1".to_string(),
+            models: models.clone(),
+        });
+        let service = make_service(vec![engine]);
+
+        let listed = service.list_models("engine-1".to_string()).await.unwrap();
+        assert_eq!(listed.len(), 1);
+        assert!(listed[0].capabilities.is_none());
+    }
+
+    #[tokio::test]
+    async fn list_models_with_mixed_capabilities() {
+        use crate::domain::models::ModelCapabilities;
+        
+        let models = vec![
+            ModelInfo {
+                engine_id: "engine-1".to_string(),
+                model_id: "flm://engine-1/model-with-caps".to_string(),
+                display_name: "Model With Caps".to_string(),
+                context_length: Some(4096),
+                supports_streaming: true,
+                supports_embeddings: true,
+                capabilities: Some(ModelCapabilities {
+                    reasoning: true,
+                    tools: false,
+                    vision: false,
+                    audio_inputs: false,
+                    audio_outputs: false,
+                }),
+            },
+            ModelInfo {
+                engine_id: "engine-1".to_string(),
+                model_id: "flm://engine-1/model-without-caps".to_string(),
+                display_name: "Model Without Caps".to_string(),
+                context_length: Some(4096),
+                supports_streaming: true,
+                supports_embeddings: true,
+                capabilities: None,
+            },
+        ];
+        let engine = Arc::new(MockEngine {
+            id: "engine-1".to_string(),
+            models: models.clone(),
+        });
+        let service = make_service(vec![engine]);
+
+        let listed = service.list_models("engine-1".to_string()).await.unwrap();
+        assert_eq!(listed.len(), 2);
+        
+        let with_caps = listed.iter().find(|m| m.model_id == "flm://engine-1/model-with-caps").unwrap();
+        assert!(with_caps.capabilities.is_some());
+        assert!(with_caps.capabilities.as_ref().unwrap().reasoning);
+        
+        let without_caps = listed.iter().find(|m| m.model_id == "flm://engine-1/model-without-caps").unwrap();
+        assert!(without_caps.capabilities.is_none());
+    }
+
+    #[tokio::test]
+    async fn list_models_empty_capabilities() {
+        use crate::domain::models::ModelCapabilities;
+        
+        let models = vec![
+            ModelInfo {
+                engine_id: "engine-1".to_string(),
+                model_id: "flm://engine-1/empty-caps-model".to_string(),
+                display_name: "Empty Caps Model".to_string(),
+                context_length: Some(4096),
+                supports_streaming: true,
+                supports_embeddings: true,
+                capabilities: Some(ModelCapabilities {
+                    reasoning: false,
+                    tools: false,
+                    vision: false,
+                    audio_inputs: false,
+                    audio_outputs: false,
+                }),
+            },
+        ];
+        let engine = Arc::new(MockEngine {
+            id: "engine-1".to_string(),
+            models: models.clone(),
+        });
+        let service = make_service(vec![engine]);
+
+        let listed = service.list_models("engine-1".to_string()).await.unwrap();
+        assert_eq!(listed.len(), 1);
+        let caps = listed.get(0).expect("Expected at least one model").capabilities.as_ref().expect("Expected capabilities");
+        assert!(!caps.reasoning);
+        assert!(!caps.tools);
+        assert!(!caps.vision);
+        assert!(!caps.audio_inputs);
+        assert!(!caps.audio_outputs);
     }
 
     #[tokio::test]
@@ -622,5 +829,129 @@ mod tests {
 
         let states = service.detect_engines().await.unwrap();
         assert_eq!(states.len(), 0);
+    }
+
+    #[tokio::test]
+    async fn list_models_capability_detection_integration() {
+        use crate::domain::models::ModelCapabilities;
+        
+        // Test that capability detection is properly integrated in list_models
+        let models = vec![
+            ModelInfo {
+                engine_id: "engine-1".to_string(),
+                model_id: "flm://engine-1/o1-preview".to_string(),
+                display_name: "O1 Preview".to_string(),
+                context_length: Some(8192),
+                supports_streaming: true,
+                supports_embeddings: false,
+                capabilities: Some(ModelCapabilities {
+                    reasoning: true,  // Detected from "o1" in name
+                    tools: false,
+                    vision: false,
+                    audio_inputs: false,
+                    audio_outputs: false,
+                }),
+            },
+            ModelInfo {
+                engine_id: "engine-1".to_string(),
+                model_id: "flm://engine-1/llava-1.5".to_string(),
+                display_name: "LLaVA 1.5".to_string(),
+                context_length: Some(4096),
+                supports_streaming: true,
+                supports_embeddings: false,
+                capabilities: Some(ModelCapabilities {
+                    reasoning: false,
+                    tools: false,
+                    vision: true,  // Detected from "llava" in name
+                    audio_inputs: false,
+                    audio_outputs: false,
+                }),
+            },
+            ModelInfo {
+                engine_id: "engine-1".to_string(),
+                model_id: "flm://engine-1/gpt-4-turbo".to_string(),
+                display_name: "GPT-4 Turbo".to_string(),
+                context_length: Some(8192),
+                supports_streaming: true,
+                supports_embeddings: false,
+                capabilities: Some(ModelCapabilities {
+                    reasoning: false,
+                    tools: true,   // Detected from "gpt-4" in name
+                    vision: true, // Detected from "gpt-4" in name
+                    audio_inputs: false,
+                    audio_outputs: false,
+                }),
+            },
+        ];
+        let engine = Arc::new(MockEngine {
+            id: "engine-1".to_string(),
+            models: models.clone(),
+        });
+        let service = make_service(vec![engine]);
+
+        let listed = service.list_models("engine-1".to_string()).await.unwrap();
+        assert_eq!(listed.len(), 3);
+        
+        // Verify capabilities are correctly detected and stored
+        let o1_model = listed.iter().find(|m| m.model_id.contains("o1")).unwrap();
+        assert!(o1_model.capabilities.as_ref().unwrap().reasoning);
+        assert!(!o1_model.capabilities.as_ref().unwrap().vision);
+        
+        let llava_model = listed.iter().find(|m| m.model_id.contains("llava")).unwrap();
+        assert!(llava_model.capabilities.as_ref().unwrap().vision);
+        assert!(!llava_model.capabilities.as_ref().unwrap().reasoning);
+        
+        let gpt4_model = listed.iter().find(|m| m.model_id.contains("gpt-4")).unwrap();
+        assert!(gpt4_model.capabilities.as_ref().unwrap().tools);
+        assert!(gpt4_model.capabilities.as_ref().unwrap().vision);
+    }
+
+    #[tokio::test]
+    async fn list_models_capability_fallback_behavior() {
+        use crate::domain::models::ModelCapabilities;
+        
+        // Test that when capabilities are None, the system falls back to engine capabilities
+        let models = vec![
+            ModelInfo {
+                engine_id: "engine-1".to_string(),
+                model_id: "flm://engine-1/model-with-caps".to_string(),
+                display_name: "Model With Caps".to_string(),
+                context_length: Some(4096),
+                supports_streaming: true,
+                supports_embeddings: true,
+                capabilities: Some(ModelCapabilities {
+                    reasoning: true,
+                    tools: false,
+                    vision: false,
+                    audio_inputs: false,
+                    audio_outputs: false,
+                }),
+            },
+            ModelInfo {
+                engine_id: "engine-1".to_string(),
+                model_id: "flm://engine-1/model-without-caps".to_string(),
+                display_name: "Model Without Caps".to_string(),
+                context_length: Some(4096),
+                supports_streaming: true,
+                supports_embeddings: true,
+                capabilities: None, // No model-specific capabilities
+            },
+        ];
+        let engine = Arc::new(MockEngine {
+            id: "engine-1".to_string(),
+            models: models.clone(),
+        });
+        let service = make_service(vec![engine]);
+
+        let listed = service.list_models("engine-1".to_string()).await.unwrap();
+        assert_eq!(listed.len(), 2);
+        
+        // Model with capabilities should have them
+        let with_caps = listed.iter().find(|m| m.model_id.contains("with-caps")).unwrap();
+        assert!(with_caps.capabilities.is_some());
+        
+        // Model without capabilities should have None
+        let without_caps = listed.iter().find(|m| m.model_id.contains("without-caps")).unwrap();
+        assert!(without_caps.capabilities.is_none());
     }
 }

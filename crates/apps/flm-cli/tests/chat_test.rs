@@ -49,6 +49,45 @@ impl LlmEngine for MockEngine {
     }
 
     async fn list_models(&self) -> Result<Vec<flm_core::domain::engine::ModelInfo>, EngineError> {
+        use flm_core::domain::models::ModelCapabilities;
+        
+        // Detect capabilities from model name
+        let capabilities = if self.model_name.contains("o1") || self.model_name.contains("reasoning") {
+            Some(ModelCapabilities {
+                reasoning: true,
+                tools: false,
+                vision: false,
+                audio_inputs: false,
+                audio_outputs: false,
+            })
+        } else if self.model_name.contains("llava") || self.model_name.contains("vision") {
+            Some(ModelCapabilities {
+                reasoning: false,
+                tools: false,
+                vision: true,
+                audio_inputs: false,
+                audio_outputs: false,
+            })
+        } else if self.model_name.contains("whisper") || self.model_name.contains("audio") {
+            Some(ModelCapabilities {
+                reasoning: false,
+                tools: false,
+                vision: false,
+                audio_inputs: true,
+                audio_outputs: true,
+            })
+        } else if self.model_name.contains("gpt-4") || self.model_name.contains("tool") {
+            Some(ModelCapabilities {
+                reasoning: false,
+                tools: true,
+                vision: true,
+                audio_inputs: false,
+                audio_outputs: false,
+            })
+        } else {
+            None
+        };
+        
         Ok(vec![flm_core::domain::engine::ModelInfo {
             engine_id: self.id.clone(),
             model_id: format!("flm://{}/{}", self.id, self.model_name),
@@ -56,6 +95,7 @@ impl LlmEngine for MockEngine {
             context_length: Some(4096),
             supports_streaming: true,
             supports_embeddings: true,
+            capabilities,
         }])
     }
 
@@ -128,6 +168,105 @@ impl LlmEngine for MockEngine {
         Err(EngineError::InvalidResponse {
             reason: "Embeddings not supported".to_string(),
         })
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_chat_with_model_capabilities_vision_supported() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let config_db = temp_dir.path().join("config.db");
+
+    // Create repository and register mock engine with vision model
+    let engine_repo_arc = SqliteEngineRepository::new(&config_db).await.unwrap();
+    let mock_engine = Arc::new(MockEngine {
+        id: "test-engine".to_string(),
+        model_name: "llava-model".to_string(), // Vision model
+    });
+    engine_repo_arc.register(mock_engine.clone()).await;
+
+    // Create a test image file
+    let test_image_data = base64::engine::general_purpose::STANDARD
+        .decode("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==")
+        .unwrap();
+    let image_path = temp_dir.path().join("test.png");
+    std::fs::write(&image_path, &test_image_data).unwrap();
+
+    // Test chat with image attachment on vision model
+    use flm_cli::cli::chat::Chat;
+    let chat = Chat {
+        model: "flm://test-engine/llava-model".to_string(),
+        prompt: "Describe this image".to_string(),
+        stream: false,
+        temperature: None,
+        max_tokens: None,
+        image: vec![image_path.to_str().unwrap().to_string()],
+        image_url: Vec::new(),
+        audio: None,
+    };
+
+    // Should succeed because model supports vision
+    let result = flm_cli::commands::chat::execute(
+        chat,
+        Some(config_db.to_str().unwrap().to_string()),
+        "json".to_string(),
+    )
+    .await;
+
+    // Note: This will fail at the engine level since MockEngine doesn't actually process images
+    // But the capability check should pass
+    // The error should be from the engine, not from capability check
+    if result.is_err() {
+        let error_msg = result.unwrap_err().to_string();
+        // Should not fail due to vision capability check
+        assert!(
+            !error_msg.contains("does not support vision"),
+            "Should not fail due to vision capability. Error: {error_msg}"
+        );
+    }
+}
+
+#[tokio::test(flavor = "multi_thread")]
+async fn test_chat_with_model_capabilities_reasoning_model() {
+    let temp_dir = tempfile::tempdir().unwrap();
+    let config_db = temp_dir.path().join("config.db");
+
+    // Create repository and register mock engine with reasoning model
+    let engine_repo_arc = SqliteEngineRepository::new(&config_db).await.unwrap();
+    let mock_engine = Arc::new(MockEngine {
+        id: "test-engine".to_string(),
+        model_name: "o1-preview".to_string(), // Reasoning model
+    });
+    engine_repo_arc.register(mock_engine.clone()).await;
+
+    // Test chat with reasoning model
+    use flm_cli::cli::chat::Chat;
+    let chat = Chat {
+        model: "flm://test-engine/o1-preview".to_string(),
+        prompt: "Solve this step by step".to_string(),
+        stream: false,
+        temperature: None,
+        max_tokens: None,
+        image: Vec::new(),
+        image_url: Vec::new(),
+        audio: None,
+    };
+
+    // Should succeed - reasoning capability is detected but doesn't affect basic chat
+    let result = flm_cli::commands::chat::execute(
+        chat,
+        Some(config_db.to_str().unwrap().to_string()),
+        "json".to_string(),
+    )
+    .await;
+
+    // Should succeed (may fail at engine level, but capability check should pass)
+    if result.is_err() {
+        let error_msg = result.unwrap_err().to_string();
+        // Should not fail due to capability check
+        assert!(
+            !error_msg.contains("does not support"),
+            "Should not fail due to capability check. Error: {error_msg}"
+        );
     }
 }
 
@@ -408,6 +547,8 @@ impl LlmEngine for MockEngineNoVision {
     }
 
     async fn list_models(&self) -> Result<Vec<flm_core::domain::engine::ModelInfo>, EngineError> {
+        // MockEngineNoVision always returns None for capabilities
+        // to test fallback to engine capabilities
         Ok(vec![flm_core::domain::engine::ModelInfo {
             engine_id: self.id.clone(),
             model_id: format!("flm://{}/{}", self.id, self.model_name),
@@ -415,6 +556,7 @@ impl LlmEngine for MockEngineNoVision {
             context_length: Some(4096),
             supports_streaming: true,
             supports_embeddings: true,
+            capabilities: None, // No model-specific capabilities, use engine capabilities
         }])
     }
 

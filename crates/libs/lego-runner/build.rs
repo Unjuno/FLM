@@ -107,7 +107,11 @@ fn verify_checksum(
     let mut expected: Option<String> = None;
     for line in text.lines() {
         if line.ends_with(&target_line) {
-            expected = Some(line.split_whitespace().next().unwrap().to_string());
+            expected = line.split_whitespace().next()
+                .map(|s| s.to_string());
+            if expected.is_none() {
+                return Err(format!("Invalid checksum line format (empty checksum): {}", line).into());
+            }
             break;
         }
     }

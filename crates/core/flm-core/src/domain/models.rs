@@ -64,9 +64,29 @@ pub struct EngineCapabilities {
     pub max_audio_bytes: Option<u64>,
 }
 
+/// Model-specific capabilities
+///
+/// Represents capabilities that are specific to individual models,
+/// detected from model names or metadata.
+/// Used in `ModelInfo` to indicate per-model feature support.
+#[derive(Clone, Debug, Default, Serialize, Deserialize, PartialEq, Eq)]
+pub struct ModelCapabilities {
+    /// Whether the model supports reasoning capabilities (chain-of-thought, step-by-step reasoning)
+    pub reasoning: bool,
+    /// Whether the model supports function/tool calling
+    pub tools: bool,
+    /// Whether the model accepts vision inputs (images in chat/responses API)
+    pub vision: bool,
+    /// Whether the model accepts audio inputs (transcriptions / audio content)
+    pub audio_inputs: bool,
+    /// Whether the model can emit audio outputs (Responses/audio.speech)
+    pub audio_outputs: bool,
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::domain::engine::ModelInfo;
 
     #[test]
     fn test_engine_kind_serialization() {
@@ -147,5 +167,236 @@ mod tests {
         assert!(deserialized.audio_outputs);
         assert_eq!(deserialized.max_image_bytes, Some(20_000_000));
         assert_eq!(deserialized.max_audio_bytes, Some(10_000_000));
+    }
+
+    #[test]
+    fn test_model_capabilities_default() {
+        let caps = ModelCapabilities::default();
+        assert!(!caps.reasoning);
+        assert!(!caps.tools);
+        assert!(!caps.vision);
+        assert!(!caps.audio_inputs);
+        assert!(!caps.audio_outputs);
+    }
+
+    #[test]
+    fn test_model_capabilities_serialization() {
+        let caps = ModelCapabilities {
+            reasoning: true,
+            tools: true,
+            vision: true,
+            audio_inputs: false,
+            audio_outputs: false,
+        };
+
+        let json = serde_json::to_string(&caps).unwrap();
+        let deserialized: ModelCapabilities = serde_json::from_str(&json).unwrap();
+        assert!(deserialized.reasoning);
+        assert!(deserialized.tools);
+        assert!(deserialized.vision);
+        assert!(!deserialized.audio_inputs);
+        assert!(!deserialized.audio_outputs);
+    }
+
+    #[test]
+    fn test_model_capabilities_all_true() {
+        let caps = ModelCapabilities {
+            reasoning: true,
+            tools: true,
+            vision: true,
+            audio_inputs: true,
+            audio_outputs: true,
+        };
+
+        let json = serde_json::to_string(&caps).unwrap();
+        let deserialized: ModelCapabilities = serde_json::from_str(&json).unwrap();
+        assert!(deserialized.reasoning);
+        assert!(deserialized.tools);
+        assert!(deserialized.vision);
+        assert!(deserialized.audio_inputs);
+        assert!(deserialized.audio_outputs);
+    }
+
+    #[test]
+    fn test_model_capabilities_reasoning_only() {
+        let caps = ModelCapabilities {
+            reasoning: true,
+            tools: false,
+            vision: false,
+            audio_inputs: false,
+            audio_outputs: false,
+        };
+
+        assert!(caps.reasoning);
+        assert!(!caps.tools);
+        assert!(!caps.vision);
+        assert!(!caps.audio_inputs);
+        assert!(!caps.audio_outputs);
+    }
+
+    #[test]
+    fn test_model_capabilities_vision_only() {
+        let caps = ModelCapabilities {
+            reasoning: false,
+            tools: false,
+            vision: true,
+            audio_inputs: false,
+            audio_outputs: false,
+        };
+
+        assert!(!caps.reasoning);
+        assert!(!caps.tools);
+        assert!(caps.vision);
+        assert!(!caps.audio_inputs);
+        assert!(!caps.audio_outputs);
+    }
+
+    #[test]
+    fn test_model_capabilities_audio_only() {
+        let caps = ModelCapabilities {
+            reasoning: false,
+            tools: false,
+            vision: false,
+            audio_inputs: true,
+            audio_outputs: true,
+        };
+
+        assert!(!caps.reasoning);
+        assert!(!caps.tools);
+        assert!(!caps.vision);
+        assert!(caps.audio_inputs);
+        assert!(caps.audio_outputs);
+    }
+
+    #[test]
+    fn test_model_capabilities_equality() {
+        let caps1 = ModelCapabilities {
+            reasoning: true,
+            tools: false,
+            vision: true,
+            audio_inputs: false,
+            audio_outputs: false,
+        };
+
+        let caps2 = ModelCapabilities {
+            reasoning: true,
+            tools: false,
+            vision: true,
+            audio_inputs: false,
+            audio_outputs: false,
+        };
+
+        let caps3 = ModelCapabilities {
+            reasoning: false,
+            tools: false,
+            vision: true,
+            audio_inputs: false,
+            audio_outputs: false,
+        };
+
+        assert_eq!(caps1, caps2);
+        assert_ne!(caps1, caps3);
+    }
+
+    #[test]
+    fn test_model_capabilities_deserialization_partial_json() {
+        // Test deserialization with all fields (serde requires all fields by default)
+        let json = r#"{"reasoning": true, "tools": false, "vision": true, "audio_inputs": false, "audio_outputs": false}"#;
+        let caps: ModelCapabilities = serde_json::from_str(json).unwrap();
+        assert!(caps.reasoning);
+        assert!(!caps.tools);
+        assert!(caps.vision);
+        assert!(!caps.audio_inputs);
+        assert!(!caps.audio_outputs);
+    }
+
+    #[test]
+    fn test_model_capabilities_deserialization_extra_fields() {
+        // Test deserialization with extra fields (should be ignored)
+        let json = r#"{"reasoning": true, "tools": false, "vision": true, "audio_inputs": false, "audio_outputs": false, "extra_field": "ignored"}"#;
+        let caps: ModelCapabilities = serde_json::from_str(json).unwrap();
+        assert!(caps.reasoning);
+        assert!(!caps.tools);
+        assert!(caps.vision);
+    }
+
+    #[test]
+    fn test_model_capabilities_round_trip() {
+        // Test round-trip serialization/deserialization
+        let original = ModelCapabilities {
+            reasoning: true,
+            tools: true,
+            vision: false,
+            audio_inputs: true,
+            audio_outputs: false,
+        };
+
+        let json = serde_json::to_string(&original).unwrap();
+        let deserialized: ModelCapabilities = serde_json::from_str(&json).unwrap();
+        assert_eq!(original, deserialized);
+    }
+
+    #[test]
+    fn test_model_info_deserialization_with_capabilities() {
+        // Test deserialization of ModelInfo with capabilities
+        let json = r#"{
+            "engine_id": "test-engine",
+            "model_id": "flm://test-engine/test-model",
+            "display_name": "Test Model",
+            "context_length": 4096,
+            "supports_streaming": true,
+            "supports_embeddings": false,
+            "capabilities": {
+                "reasoning": true,
+                "tools": false,
+                "vision": true,
+                "audio_inputs": false,
+                "audio_outputs": false
+            }
+        }"#;
+
+        let model: ModelInfo = serde_json::from_str(json).unwrap();
+        assert_eq!(model.engine_id, "test-engine");
+        assert_eq!(model.model_id, "flm://test-engine/test-model");
+        assert!(model.capabilities.is_some());
+        let caps = model.capabilities.as_ref().unwrap();
+        assert!(caps.reasoning);
+        assert!(!caps.tools);
+        assert!(caps.vision);
+    }
+
+    #[test]
+    fn test_model_info_deserialization_without_capabilities() {
+        // Test deserialization of ModelInfo without capabilities field
+        let json = r#"{
+            "engine_id": "test-engine",
+            "model_id": "flm://test-engine/test-model",
+            "display_name": "Test Model",
+            "context_length": 4096,
+            "supports_streaming": true,
+            "supports_embeddings": false
+        }"#;
+
+        let model: ModelInfo = serde_json::from_str(json).unwrap();
+        assert_eq!(model.engine_id, "test-engine");
+        assert!(model.capabilities.is_none());
+    }
+
+    #[test]
+    fn test_model_info_deserialization_with_null_capabilities() {
+        // Test deserialization with explicit null capabilities
+        let json = r#"{
+            "engine_id": "test-engine",
+            "model_id": "flm://test-engine/test-model",
+            "display_name": "Test Model",
+            "context_length": 4096,
+            "supports_streaming": true,
+            "supports_embeddings": false,
+            "capabilities": null
+        }"#;
+
+        let model: ModelInfo = serde_json::from_str(json).unwrap();
+        assert_eq!(model.engine_id, "test-engine");
+        assert!(model.capabilities.is_none());
     }
 }
