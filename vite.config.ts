@@ -58,9 +58,16 @@ export default defineConfig(async () => ({
     setupFiles: ['./src/test/setup.ts'],
     css: true,
     exclude: [
-      'node_modules/',
-      'dist/',
-      'archive/prototype/**', // Exclude archive/prototype tests
+      '**/node_modules/**',
+      '**/dist/**',
+      '**/archive/prototype/**',
+      '**/.git/**',
+      '**/.next/**',
+      '**/coverage/**',
+    ],
+    include: [
+      'src/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
+      'tests/**/*.{test,spec}.{js,mjs,cjs,ts,mts,cts,jsx,tsx}',
     ],
     coverage: {
       provider: 'v8',
