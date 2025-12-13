@@ -211,14 +211,26 @@ impl LlmEngine for LlamaCppEngine {
                 reason: "No choices in response".to_string(),
             })?;
 
-        let content = choice.message.content.clone().unwrap_or_default();
+        let content = if let Some(ref c) = choice.message.content {
+            c.clone()
+        } else {
+            eprintln!("Warning: message content is missing in llama.cpp response");
+            String::new()
+        };
 
-        Ok(ChatResponse {
-            usage: response.usage.unwrap_or(UsageStats {
+        let usage = if let Some(u) = response.usage {
+            u
+        } else {
+            eprintln!("Warning: usage stats are missing in llama.cpp response");
+            UsageStats {
                 prompt_tokens: 0,
                 completion_tokens: 0,
                 total_tokens: 0,
-            }),
+            }
+        };
+
+        Ok(ChatResponse {
+            usage,
             messages: vec![ChatMessage {
                 role: ChatRole::Assistant,
                 content,
@@ -386,12 +398,19 @@ impl LlmEngine for LlamaCppEngine {
                 status_code: None,
             })?;
 
-        Ok(EmbeddingResponse {
-            usage: response.usage.unwrap_or(UsageStats {
+        let usage = if let Some(u) = response.usage {
+            u
+        } else {
+            eprintln!("Warning: usage stats are missing in llama.cpp embedding response");
+            UsageStats {
                 prompt_tokens: 0,
                 completion_tokens: 0,
                 total_tokens: 0,
-            }),
+            }
+        };
+
+        Ok(EmbeddingResponse {
+            usage,
             vectors: response
                 .data
                 .into_iter()

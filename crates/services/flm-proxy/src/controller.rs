@@ -2461,7 +2461,7 @@ async fn start_packaged_ca_server(
     let http_task = tokio::spawn(async move {
         let result = axum::serve(http_listener, http_router)
             .with_graceful_shutdown(async {
-                http_shutdown_rx.await;
+                let _ = http_shutdown_rx.await;
             })
             .await
             .map_err(|e| ProxyError::InvalidConfig {
@@ -2754,7 +2754,7 @@ async fn start_https_acme_server(
     let http_task = tokio::spawn(async move {
         let result = axum::serve(http_listener, http_router)
             .with_graceful_shutdown(async {
-                http_shutdown_rx.await;
+                let _ = http_shutdown_rx.await;
             })
             .await
             .map_err(|e| ProxyError::InvalidConfig {
@@ -3024,7 +3024,7 @@ async fn start_dns01_acme_server(
     let http_task = tokio::spawn(async move {
         let result = axum::serve(http_listener, http_router)
             .with_graceful_shutdown(async {
-                http_shutdown_rx.await;
+                let _ = http_shutdown_rx.await;
             })
             .await
             .map_err(|e| ProxyError::InvalidConfig {
@@ -3470,7 +3470,7 @@ async fn start_dev_self_signed_server(
     let http_task = tokio::spawn(async move {
         let result = axum::serve(http_listener, http_router)
             .with_graceful_shutdown(async {
-                http_shutdown_rx.await;
+                let _ = http_shutdown_rx.await;
             })
             .await
             .map_err(|e| ProxyError::InvalidConfig {

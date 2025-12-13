@@ -203,14 +203,24 @@ impl LlmEngine for OllamaEngine {
                 status_code: None,
             })?;
 
+        let prompt_tokens = response.prompt_eval_count.unwrap_or_else(|| {
+            eprintln!("Warning: prompt_eval_count is missing in Ollama response");
+            0
+        });
+        let completion_tokens = response.eval_count.unwrap_or_else(|| {
+            eprintln!("Warning: eval_count is missing in Ollama response");
+            0
+        });
+        let total_tokens = response
+            .prompt_eval_count
+            .unwrap_or(0)
+            .saturating_add(response.eval_count.unwrap_or(0));
+
         Ok(ChatResponse {
             usage: UsageStats {
-                prompt_tokens: response.prompt_eval_count.unwrap_or(0),
-                completion_tokens: response.eval_count.unwrap_or(0),
-                total_tokens: response
-                    .prompt_eval_count
-                    .unwrap_or(0)
-                    .saturating_add(response.eval_count.unwrap_or(0)),
+                prompt_tokens,
+                completion_tokens,
+                total_tokens,
             },
             messages: vec![ChatMessage {
                 role: ChatRole::Assistant,
@@ -302,13 +312,22 @@ impl LlmEngine for OllamaEngine {
                                         attachments: Vec::new(),
                                     },
                                     usage: if chunk.done {
+                                        let prompt_tokens = chunk.prompt_eval_count.unwrap_or_else(|| {
+                                            eprintln!("Warning: prompt_eval_count is missing in Ollama stream chunk");
+                                            0
+                                        });
+                                        let completion_tokens = chunk.eval_count.unwrap_or_else(|| {
+                                            eprintln!("Warning: eval_count is missing in Ollama stream chunk");
+                                            0
+                                        });
+                                        let total_tokens = chunk
+                                            .prompt_eval_count
+                                            .unwrap_or(0)
+                                            .saturating_add(chunk.eval_count.unwrap_or(0));
                                         Some(UsageStats {
-                                            prompt_tokens: chunk.prompt_eval_count.unwrap_or(0),
-                                            completion_tokens: chunk.eval_count.unwrap_or(0),
-                                            total_tokens: chunk
-                                                .prompt_eval_count
-                                                .unwrap_or(0)
-                                                .saturating_add(chunk.eval_count.unwrap_or(0)),
+                                            prompt_tokens,
+                                            completion_tokens,
+                                            total_tokens,
                                         })
                                     } else {
                                         None

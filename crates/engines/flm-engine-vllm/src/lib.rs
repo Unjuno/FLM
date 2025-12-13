@@ -391,12 +391,19 @@ impl LlmEngine for VllmEngine {
                 status_code: None,
             })?;
 
-        Ok(EmbeddingResponse {
-            usage: response.usage.unwrap_or(UsageStats {
+        let usage = if let Some(u) = response.usage {
+            u
+        } else {
+            eprintln!("Warning: usage stats are missing in vLLM embedding response");
+            UsageStats {
                 prompt_tokens: 0,
                 completion_tokens: 0,
                 total_tokens: 0,
-            }),
+            }
+        };
+
+        Ok(EmbeddingResponse {
+            usage,
             vectors: response
                 .data
                 .into_iter()
