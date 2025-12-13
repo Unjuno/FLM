@@ -244,12 +244,105 @@ jobs:
           fi
         continue-on-error: true
       
+      - name: Verify build prerequisites
+        run: |
+          echo "=== Verifying Build Prerequisites ==="
+          
+          # Check required tools
+          echo "Checking required tools..."
+          command -v node >/dev/null 2>&1 || { echo "✗ node not found"; exit 1; }
+          command -v npm >/dev/null 2>&1 || { echo "✗ npm not found"; exit 1; }
+          command -v cargo >/dev/null 2>&1 || { echo "✗ cargo not found"; exit 1; }
+          command -v rustc >/dev/null 2>&1 || { echo "✗ rustc not found"; exit 1; }
+          echo "✓ All required tools are available"
+          
+          # Check Tauri CLI
+          echo "Checking Tauri CLI..."
+          if npx tauri --version >/dev/null 2>&1; then
+            echo "✓ Tauri CLI is available: $(npx tauri --version)"
+          else
+            echo "⚠ Tauri CLI check failed, but will try to install if needed"
+          fi
+          
+          # Check frontend build output
+          echo "Checking frontend build output..."
+          if [ -d "dist" ] && [ "$(ls -A dist 2>/dev/null)" ]; then
+            echo "✓ Frontend build output exists in dist/"
+          else
+            echo "✗ Frontend build output not found in dist/"
+            exit 1
+          fi
+          
+          # Check Tauri configuration
+          echo "Checking Tauri configuration..."
+          if [ -f "src-tauri/tauri.conf.json" ]; then
+            echo "✓ tauri.conf.json exists"
+            # Validate JSON
+            if jq empty src-tauri/tauri.conf.json 2>/dev/null; then
+              echo "✓ tauri.conf.json is valid JSON"
+            else
+              echo "✗ tauri.conf.json is not valid JSON"
+              exit 1
+            fi
+          else
+            echo "✗ tauri.conf.json not found"
+            exit 1
+          fi
+          
+          # Check icon files
+          echo "Checking icon files..."
+          if [ -f "src-tauri/icons/icon.icns" ]; then
+            echo "✓ macOS icon file exists"
+          else
+            echo "⚠ macOS icon file (icon.icns) not found - build may fail"
+          fi
+          
+          echo "✓ All prerequisites verified"
+      
       - name: Build Tauri (macOS)
         run: |
-          echo "Starting Tauri build for macOS..."
-          echo "Apple certificate available: $([ -n "$APPLE_CERTIFICATE" ] && echo 'yes' || echo 'no')"
-          echo "Apple signing identity: ${APPLE_SIGNING_IDENTITY:-not set}"
+          set -e
           
+          echo "=== macOS Build Environment Check ==="
+          echo "Node.js version: $(node --version)"
+          echo "npm version: $(npm --version)"
+          echo "Rust version: $(rustc --version)"
+          echo "Cargo version: $(cargo --version)"
+          echo "Tauri CLI version: $(npx tauri --version || echo 'not available')"
+          echo ""
+          
+          echo "=== Apple Certificate Status ==="
+          if [ -n "$APPLE_CERTIFICATE" ]; then
+            echo "✓ Apple certificate is set"
+            echo "Certificate length: ${#APPLE_CERTIFICATE} characters"
+          else
+            echo "⚠ Apple certificate is NOT set (build will continue without signing)"
+          fi
+          echo "Apple signing identity: ${APPLE_SIGNING_IDENTITY:-not set}"
+          echo "Apple ID: ${APPLE_ID:-not set}"
+          echo ""
+          
+          echo "=== Pre-build Checks ==="
+          echo "Checking frontend dist directory..."
+          if [ -d "dist" ]; then
+            echo "✓ dist directory exists"
+            echo "Dist files: $(ls -la dist/ | head -10)"
+          else
+            echo "✗ dist directory not found!"
+            exit 1
+          fi
+          
+          echo "Checking src-tauri directory..."
+          if [ -d "src-tauri" ]; then
+            echo "✓ src-tauri directory exists"
+            echo "Tauri config: $(cat src-tauri/tauri.conf.json | jq -r '.bundle.targets' 2>/dev/null || echo 'config check failed')"
+          else
+            echo "✗ src-tauri directory not found!"
+            exit 1
+          fi
+          echo ""
+          
+          echo "=== Starting Tauri Build ==="
           # Set environment variables for Tauri build
           export APPLE_CERTIFICATE="${APPLE_CERTIFICATE:-}"
           export APPLE_CERTIFICATE_PASSWORD="${APPLE_CERTIFICATE_PASSWORD:-}"
@@ -257,22 +350,87 @@ jobs:
           export APPLE_ID="${APPLE_ID:-}"
           export APPLE_APP_SPECIFIC_PASSWORD="${APPLE_APP_SPECIFIC_PASSWORD:-}"
           
-          npm run tauri:build || {
-            echo "Build failed, checking for artifacts..."
+          # Enable verbose output
+          export RUST_BACKTRACE=1
+          export RUST_LOG=debug
+          
+          # Run build with detailed output
+          echo "Running: npm run tauri:build"
+          npm run tauri:build 2>&1 | tee /tmp/tauri-build.log || BUILD_EXIT_CODE=$?
+          
+          if [ -n "$BUILD_EXIT_CODE" ]; then
+            echo ""
+            echo "=== Build Failed - Debugging Information ==="
+            echo "Exit code: $BUILD_EXIT_CODE"
+            echo ""
+            
+            echo "=== Build Log (last 200 lines) ==="
+            tail -200 /tmp/tauri-build.log || echo "Could not read build log"
+            echo ""
+            
+            echo "=== Target Directory Structure ==="
+            if [ -d "src-tauri/target" ]; then
+              echo "Target directory exists"
+              find src-tauri/target -type d -maxdepth 3 | head -20
+            else
+              echo "Target directory does not exist"
+            fi
+            echo ""
+            
+            echo "=== Release Directory Contents ==="
             if [ -d "src-tauri/target/release" ]; then
-              echo "Release directory contents:"
-              find src-tauri/target/release -type f -exec ls -lh {} \;
+              echo "Release directory exists:"
+              find src-tauri/target/release -type f -exec ls -lh {} \; 2>/dev/null | head -20 || echo "No files found"
+            else
+              echo "Release directory does not exist"
             fi
+            echo ""
+            
+            echo "=== Bundle Directory Contents ==="
             if [ -d "src-tauri/target/release/bundle" ]; then
-              echo "Bundle directory contents:"
-              find src-tauri/target/release/bundle -type f -exec ls -lh {} \;
+              echo "Bundle directory exists:"
+              find src-tauri/target/release/bundle -type f -exec ls -lh {} \; 2>/dev/null | head -20 || echo "No files found"
+            else
+              echo "Bundle directory does not exist"
             fi
-            echo "Build logs:"
+            echo ""
+            
+            echo "=== macOS Specific Artifacts ==="
+            echo "DMG files:"
+            find src-tauri/target/release -name "*.dmg" -exec ls -lh {} \; 2>/dev/null || echo "No DMG files found"
+            echo ""
+            echo "App bundles:"
+            find src-tauri/target/release/bundle/macos -name "*.app" -type d 2>/dev/null | head -5 || echo "No App bundles found"
+            echo ""
+            
+            echo "=== Cargo Build Logs ==="
             if [ -f "src-tauri/target/release/build.log" ]; then
               tail -100 src-tauri/target/release/build.log
+            else
+              echo "No build.log found"
             fi
+            echo ""
+            
+            echo "=== Recent Cargo Error Messages ==="
+            find src-tauri/target -name "*.stderr" -exec tail -50 {} \; 2>/dev/null | head -100 || echo "No stderr files found"
+            echo ""
+            
+            echo "=== System Information ==="
+            echo "macOS version: $(sw_vers -productVersion)"
+            echo "Xcode version: $(xcodebuild -version 2>/dev/null || echo 'Xcode not available')"
+            echo "Available disk space: $(df -h . | tail -1)"
+            echo ""
+            
             exit 1
-          }
+          fi
+          
+          echo ""
+          echo "=== Build Success - Verifying Artifacts ==="
+          echo "DMG files:"
+          find src-tauri/target/release -name "*.dmg" -exec ls -lh {} \; 2>/dev/null || echo "No DMG files found"
+          echo ""
+          echo "App bundles:"
+          find src-tauri/target/release/bundle/macos -name "*.app" -type d 2>/dev/null || echo "No App bundles found"
         env:
           APPLE_CERTIFICATE: ${{ secrets.APPLE_CERTIFICATE || '' }}
           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD || '' }}
@@ -285,15 +443,53 @@ jobs:
       - name: Verify macOS signatures
         if: env.HAS_APPLE_CERT == 'true'
         run: |
+          echo "=== Verifying macOS Signatures ==="
+          
           # DMG署名の検証
-          if [ -f "src-tauri/target/release/*.dmg" ]; then
+          echo "Checking DMG files..."
+          DMG_COUNT=0
+          if find src-tauri/target/release -name "*.dmg" -type f 2>/dev/null | grep -q .; then
             for dmg in src-tauri/target/release/*.dmg; do
-              spctl --assess --type execute --verbose "$dmg" || exit 1
+              if [ -f "$dmg" ]; then
+                DMG_COUNT=$((DMG_COUNT + 1))
+                echo "Verifying DMG: $(basename "$dmg")"
+                if spctl --assess --type execute --verbose "$dmg" 2>&1; then
+                  echo "✓ DMG signature verified: $(basename "$dmg")"
+                else
+                  echo "✗ DMG signature verification failed: $(basename "$dmg")"
+                  exit 1
+                fi
+              fi
             done
+            echo "✓ Verified $DMG_COUNT DMG file(s)"
+          else
+            echo "⚠ No DMG files found for signature verification"
           fi
+          
           # App署名の検証
+          echo "Checking App bundles..."
+          APP_COUNT=0
           if [ -d "src-tauri/target/release/bundle/macos" ]; then
-            find src-tauri/target/release/bundle/macos -name "*.app" -exec codesign --verify --verbose {} \; || exit 1
+            while IFS= read -r -d '' app; do
+              APP_COUNT=$((APP_COUNT + 1))
+              echo "Verifying App bundle: $(basename "$app")"
+              if codesign --verify --verbose "$app" 2>&1; then
+                echo "✓ App bundle signature verified: $(basename "$app")"
+                # Show signature details
+                codesign -dvv "$app" 2>&1 | head -10 || true
+              else
+                echo "✗ App bundle signature verification failed: $(basename "$app")"
+                exit 1
+              fi
+            done < <(find src-tauri/target/release/bundle/macos -name "*.app" -type d -print0)
+            echo "✓ Verified $APP_COUNT App bundle(s)"
+          else
+            echo "⚠ No App bundles found for signature verification"
+          fi
+          
+          if [ "$DMG_COUNT" -eq 0 ] && [ "$APP_COUNT" -eq 0 ]; then
+            echo "⚠ No artifacts found for signature verification"
+            echo "This may indicate a build failure even though the build step succeeded"
           fi
         continue-on-error: false
       
