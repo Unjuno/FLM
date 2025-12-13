@@ -81,7 +81,7 @@ jobs:
 
       - name: Upload coverage reports
         uses: codecov/codecov-action@v4
-        if: always()
+        if: always() && hashFiles('coverage/lcov.info') != ''
         with:
           files: ./coverage/lcov.info
           fail_ci_if_error: false
@@ -179,7 +179,7 @@ jobs:
 
       - name: Upload Rust coverage reports
         uses: codecov/codecov-action@v4
-        if: always()
+        if: always() && hashFiles('coverage-rust/cobertura.xml') != ''
         with:
           files: ./coverage-rust/cobertura.xml
           fail_ci_if_error: false
