@@ -1163,7 +1163,7 @@ grep -n "Default.*expect" crates/apps/flm-cli/src/adapters/http.rs
 ### BUG-060: テストコード内のexpect()によるパニックリスク
 
 **発見日**: 2025-02-01  
-**状態**: 未修正  
+**状態**: 修正済み (2025-02-01)  
 **優先度**: 低（テストコード、実際の運用には影響しない）
 
 **ファイル**: `crates/apps/flm-cli/src/db/migration.rs`
@@ -1209,7 +1209,7 @@ grep -n "\.expect(" crates/apps/flm-cli/src/db/migration.rs
 ### BUG-061: イテレータのnext().unwrap()によるパニックリスク
 
 **発見日**: 2025-02-01  
-**状態**: 未修正  
+**状態**: 修正済み (2025-02-01)  
 **優先度**: 低（ビルドスクリプト、実際の運用には影響しない可能性）
 
 **ファイル**: `crates/libs/lego-runner/build.rs`
@@ -1369,7 +1369,7 @@ grep -rn "\.find.*\.unwrap()" crates/apps/flm-cli/tests/
 ### BUG-064: テストコード内の配列インデックスアクセスによるパニックリスク
 
 **発見日**: 2025-02-01  
-**状態**: 未修正  
+**状態**: 修正済み (2025-02-01)  
 **優先度**: 低（テストコード、実際の運用には影響しない）
 
 **ファイル**: `crates/core/flm-core/src/services/engine.rs`
