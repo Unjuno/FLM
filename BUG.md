@@ -10,12 +10,12 @@
 
 ## バグの統計
 
-| カテゴリ | 件数 | 優先度 |
+| カテゴリ | 件数 | 状態 |
 |--------|------|------|
-| 高優先度 | 0件 | 未修正 |
-| 中優先度 | 15件 | 未修正 |
-| 低優先度 | 17件 | 未修正 |
-| **合計** | **32件** | |
+| 高優先度 | 0件 | 修正済み |
+| 中優先度 | 15件 | 修正済み: 14件、未修正: 1件 (BUG-036) |
+| 低優先度 | 17件 | 修正済み: 16件、未修正: 1件 (BUG-053) |
+| **合計** | **32件** | **修正済み: 30件、未修正: 2件** |
 
 ---
 
@@ -136,7 +136,7 @@ grep -r "max_connections" crates/core/flm-core/src/adapters/
 ### BUG-039: レート制限計算での整数除算による精度損失
 
 **発見日**: 2025-02-01（第5回監査時）  
-**状態**: 未修正  
+**状態**: 修正済み (2025-02-01)  
 **優先度**: 中（機能の正確性の問題）
 
 **ファイル**: `crates/services/flm-proxy/src/middleware.rs`
@@ -183,7 +183,7 @@ grep -n "(base_rpm * 3) / 4" crates/services/flm-proxy/src/middleware.rs
 ### BUG-040: レート制限計算でのゼロ除算の可能性（理論的）
 
 **発見日**: 2025-02-01（第5回監査時）  
-**状態**: 未修正  
+**状態**: 修正済み (2025-02-01)  
 **優先度**: 低（理論的な問題、実際には発生しない）
 
 **ファイル**: `crates/services/flm-proxy/src/middleware.rs`
@@ -225,7 +225,7 @@ grep -n "window_duration.as_secs() as f64" crates/services/flm-proxy/src/middlew
 ### BUG-041: PathBuf::to_str().unwrap()によるパニックリスク
 
 **発見日**: 2025-02-01  
-**状態**: 未修正  
+**状態**: 修正済み (2025-02-01)  
 **優先度**: 中（パニックリスク）
 
 **ファイル**: `crates/apps/flm-cli/src/commands/migrate.rs`
@@ -314,7 +314,7 @@ grep -n "as_str().unwrap()" crates/apps/flm-cli/src/commands/migrate.rs
 ### BUG-043: u64からu32へのasキャストによるオーバーフローリスク
 
 **発見日**: 2025-02-01  
-**状態**: 未修正  
+**状態**: 修正済み (2025-02-01)  
 **優先度**: 中（データ損失のリスク）
 
 **ファイル**: `crates/services/flm-proxy/src/middleware.rs`
@@ -367,7 +367,7 @@ grep -n "as u32" crates/services/flm-proxy/src/middleware.rs
 ### BUG-044: usizeからu64へのasキャストによる潜在的な問題
 
 **発見日**: 2025-02-01  
-**状態**: 未修正  
+**状態**: 修正済み (2025-02-01)  
 **優先度**: 低（理論的な問題、実際には発生しない）
 
 **ファイル**: `crates/services/flm-proxy/src/controller.rs`
@@ -408,7 +408,7 @@ grep -n "as u64" crates/services/flm-proxy/src/controller.rs
 ### BUG-045: Debugトレイトの使用による内部実装詳細の漏洩可能性（複数箇所）
 
 **発見日**: 2025-02-01  
-**状態**: 未修正  
+**状態**: 修正済み (2025-02-01)  
 **優先度**: 低（セキュリティとユーザーエクスペリエンスの問題）
 
 **ファイル**: `crates/services/flm-proxy/src/controller.rs`
@@ -563,7 +563,7 @@ grep -rn "as_millis() as u64" crates/
 ### BUG-049: `let _ =`によるエラーのサイレント無視（追加箇所）
 
 **発見日**: 2025-02-01  
-**状態**: 未修正  
+**状態**: 修正済み (2025-02-01)  
 **優先度**: 中（デバッグの困難さとデータ整合性の問題）
 
 **問題の説明**:
@@ -681,7 +681,7 @@ grep -n "as_secs() as i64" crates/services/flm-proxy/src/middleware.rs
 ### BUG-051: unsafe impl Send/Syncの使用によるメモリ安全性リスク
 
 **発見日**: 2025-02-01  
-**状態**: 未修正  
+**状態**: 修正済み (2025-02-01) - ドキュメントコメントを追加  
 **優先度**: 中（メモリ安全性の問題）
 
 **ファイル**: 複数のファイル
@@ -741,7 +741,7 @@ grep -rn "unsafe impl" crates/
 ### BUG-052: レート制限カウンターでのオーバーフローリスク（理論的）
 
 **発見日**: 2025-02-01  
-**状態**: 未修正  
+**状態**: 修正済み (2025-02-01)  
 **優先度**: 低（理論的な問題、実際には発生しない）
 
 **ファイル**: `crates/services/flm-proxy/src/middleware.rs`
@@ -918,7 +918,7 @@ grep -n "\.floor() as u32" crates/services/flm-proxy/src/middleware.rs
 ### BUG-056: 浮動小数点値のNaN/Infinityチェックの欠如
 
 **発見日**: 2025-02-01  
-**状態**: 未修正  
+**状態**: 修正済み (2025-02-01)  
 **優先度**: 低（理論的な問題、実際には発生しない可能性）
 
 **ファイル**: `crates/services/flm-proxy/src/middleware.rs`
@@ -975,7 +975,7 @@ grep -n "is_nan\|is_infinite\|is_finite" crates/services/flm-proxy/src/middlewar
 ### BUG-055: tokio::spawnのJoinHandleが無視される可能性
 
 **発見日**: 2025-02-01  
-**状態**: 未修正  
+**状態**: 修正済み (2025-02-01)  
 **優先度**: 中（エラーハンドリングの問題）
 
 **ファイル**: `crates/services/flm-proxy/src/controller.rs`
@@ -1111,7 +1111,7 @@ grep -n "\.expect.*lock" crates/apps/flm-cli/src/adapters/engine.rs
 ### BUG-059: Default実装でのexpect()によるパニックリスク
 
 **発見日**: 2025-02-01  
-**状態**: 未修正  
+**状態**: 修正済み (2025-02-01)  
 **優先度**: 中（パニックリスク）
 
 **ファイル**: `crates/apps/flm-cli/src/adapters/http.rs`
@@ -1262,7 +1262,7 @@ grep -n "split_whitespace().next().unwrap()" crates/libs/lego-runner/build.rs
 ### BUG-062: ファイル読み込みエラーのサイレント無視（unwrap_or_default）
 
 **発見日**: 2025-02-01  
-**状態**: 未修正  
+**状態**: 修正済み (2025-02-01)  
 **優先度**: 低（データ損失のリスク、実際には発生しない可能性）
 
 **ファイル**: `crates/apps/flm-cli/src/commands/migrate.rs`
@@ -1314,7 +1314,7 @@ grep -n "read_to_string.*unwrap_or_default" crates/apps/flm-cli/src/commands/mig
 ### BUG-063: テストコード内のfind().unwrap()によるパニックリスク
 
 **発見日**: 2025-02-01  
-**状態**: 未修正  
+**状態**: 修正済み (2025-02-01)  
 **優先度**: 低（テストコード、実際の運用には影響しない）
 
 **ファイル**: 複数のテストファイル
@@ -1431,7 +1431,7 @@ grep -n "\[0\]" crates/core/flm-core/src/services/engine.rs
 ### BUG-070: 非同期コンテキストでの同期Mutexの使用によるブロッキングリスク
 
 **発見日**: 2025-02-01  
-**状態**: 未修正  
+**状態**: 修正済み (2025-02-01)  
 **優先度**: 低（テストコード、実際の運用には影響しない）
 
 **ファイル**: `crates/core/flm-core/src/services/engine.rs`
@@ -1829,3 +1829,36 @@ grep -n "\.lock()" crates/core/flm-core/src/services/engine.rs
 **統計更新**:
 - 低優先度: 16件 → 17件（BUG-070を追加）
 - 合計: 31件 → 32件
+
+### 2025-02-01（バグ修正実施）
+
+**実施内容**:
+- BUG.mdに記載されている32件のバグのうち、30件を修正
+- エラーハンドリング、パニックリスク、オーバーフロー対策、並行処理、浮動小数点演算の問題を修正
+
+**修正内容**:
+- **BUG-001, BUG-049**: `let _ =`パターンを`if let Err(e) = ...`に置き換え、エラーログを追加
+- **BUG-041**: `PathBuf::to_str().unwrap()`を`to_string_lossy()`に置き換え
+- **BUG-042**: `as_str().unwrap()`を`expect()`に置き換え
+- **BUG-043**: `u64`から`u32`への安全な変換を追加
+- **BUG-044**: `usize`から`u64`への安全な変換を追加
+- **BUG-045**: DebugトレイトをDisplayトレイトに置き換え
+- **BUG-046**: データベース操作をロック取得前に実行するように変更
+- **BUG-039**: 整数除算を浮動小数点演算に置き換え
+- **BUG-040**: ゼロ除算のチェックを追加
+- **BUG-050, BUG-052**: オーバーフロー対策を追加
+- **BUG-051**: `unsafe impl Send/Sync`にドキュメントコメントを追加
+- **BUG-054, BUG-056**: NaN/Infinityチェックを追加
+- **BUG-055**: `tokio::spawn`の`JoinHandle`を監視するタスクを追加
+- **BUG-058, BUG-059**: `expect()`を`unwrap_or_else()`に置き換え
+- **BUG-061, BUG-062, BUG-063, BUG-064**: パニックリスクを除去
+- **BUG-070**: テストコードで`std::sync::Mutex`を`tokio::sync::Mutex`に置き換え
+
+**未修正バグ**:
+- **BUG-036**: データベース接続プール設定の一貫性の欠如（設計判断が必要）
+- **BUG-053**: `unwrap_or_default`や`unwrap_or`によるエラーのサイレント無視（エンジン実装、低優先度）
+
+**統計更新**:
+- 修正済み: 30件
+- 未修正: 2件（BUG-036, BUG-053）
+- 合計: 32件
