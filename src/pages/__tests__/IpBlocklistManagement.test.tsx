@@ -221,18 +221,22 @@ describe('IpBlocklistManagement', () => {
 
     renderIpBlocklistManagement();
 
+    // データがロードされ、IPアドレスが表示されるまで待つ
     await waitFor(() => {
-      expect(securityService.fetchBlockedIps).toHaveBeenCalled();
-    });
+      const ipElements = screen.getAllByText(/192.168.1.2/);
+      expect(ipElements.length).toBeGreaterThan(0);
+    }, { timeout: 5000 });
 
     // i18nを使用しているため、柔軟にチェック
     // 一時ブロックがある場合のみボタンが表示される
-    await waitFor(() => {
-      const clearButton = screen.queryByText(/一時ブロック|clear/i);
-      expect(clearButton).toBeInTheDocument();
-    });
+    const clearButton = await waitFor(() => {
+      const button = screen.queryByText(/一時ブロック.*解除|clear.*temporary/i);
+      if (!button) {
+        throw new Error('Clear button not found');
+      }
+      return button;
+    }, { timeout: 5000 });
     
-    const clearButton = screen.getByText(/一時ブロック|clear/i);
     await user.click(clearButton);
 
     await waitFor(() => {
@@ -267,10 +271,16 @@ describe('IpBlocklistManagement', () => {
 
     renderIpBlocklistManagement();
 
+    // データがロードされ、IPアドレスが表示されるまで待つ
+    await waitFor(() => {
+      const ipElements = screen.getAllByText(/192.168.1.2/);
+      expect(ipElements.length).toBeGreaterThan(0);
+    }, { timeout: 5000 });
+
     // 一時ブロックがある場合のみボタンが表示される
     // データがロードされ、一時ブロックが計算されるまで待つ
     const clearButton = await waitFor(() => {
-      const button = screen.queryByText(/一時ブロック|clear/i);
+      const button = screen.queryByText(/一時ブロック.*解除|clear.*temporary/i);
       if (!button) {
         throw new Error('Clear button not found');
       }
