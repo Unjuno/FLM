@@ -54,6 +54,8 @@ See `docs/guides/VERSIONING_POLICY.md` for versioning policy details.
 - Improved error handling for proxy stop when proxy is not running
 - Expanded test coverage with integration tests for routing, security UI, and error handling
 - Added I18N support: Settings page for language switching, automatic language detection from OS settings, translation integration in all pages (Home, ChatTester, SecurityEvents, IpBlocklistManagement, Settings) and Sidebar
+- Improved code quality: Resolved all Clippy warnings and compilation errors across all Rust crates and test suites
+- Enhanced CI/CD: Improved Codecov integration with proper coverage report generation and conditional uploads
 
 ### Fixed
 - Duplicate command definition errors (E0255)
@@ -64,6 +66,19 @@ See `docs/guides/VERSIONING_POLICY.md` for versioning policy details.
 - Missing type guards for CLI responses
 - Memory leaks from URL.createObjectURL (fixed with URL.revokeObjectURL)
 - Missing NaN validation for parseInt results
+- All Clippy warnings across Rust crates (flm-cli, flm-proxy, flm-core)
+  - Fixed `format!` macro usage to use direct variable interpolation
+  - Replaced `if let Err(_)` with `.is_err()` pattern
+  - Fixed redundant closure warnings
+  - Replaced `.map().flatten()` with `.and_then()`
+  - Fixed unused variable warnings in test code
+  - Fixed `tempdir().keep()` usage in secrets_dns_test.rs
+  - Fixed variable naming in edge_case_test.rs
+  - Replaced `.get(0)` with `.first()` for better idiomatic Rust
+  - Fixed field assignment warnings by using struct initializer
+  - Removed unnecessary `assert!(true)` statements
+- Codecov coverage report generation: Added `lcov` reporter to vite.config.ts
+- Codecov upload conditions: Added file existence check before uploading to prevent "No coverage reports found" errors
 
 ## [1.0.0] - TBD
 
