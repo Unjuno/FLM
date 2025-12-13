@@ -424,8 +424,7 @@ pub async fn policy_middleware(
                     {
                         if let Err(e) = file.write_all(
                             format!(
-                                "[POLICY_MIDDLEWARE] Rate limit result: allowed={}, remaining={}\n",
-                                allowed, remaining
+                                "[POLICY_MIDDLEWARE] Rate limit result: allowed={allowed}, remaining={remaining}\n"
                             )
                             .as_bytes(),
                         ) {
@@ -1594,7 +1593,7 @@ pub(crate) async fn check_ip_rate_limit_with_info(
         .and_then(|(db_count, db_reset_at)| {
             chrono::DateTime::parse_from_rfc3339(&db_reset_at)
                 .ok()
-                .map(|reset_chrono| {
+                .and_then(|reset_chrono| {
                     let reset_utc = reset_chrono.with_timezone(&chrono::Utc);
                     let now_utc = chrono::Utc::now();
                     reset_utc
@@ -1604,7 +1603,6 @@ pub(crate) async fn check_ip_rate_limit_with_info(
                         .filter(|d| *d > Duration::ZERO)
                         .map(|reset_duration| (db_count.min(burst), now + reset_duration))
                 })
-                .flatten()
         });
 
     // Now acquire lock and use memory state or db_snapshot

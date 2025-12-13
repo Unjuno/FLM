@@ -6,11 +6,8 @@ use tempfile::tempdir;
 
 fn temp_db_path() -> String {
     let dir = tempdir().expect("tempdir");
-    dir.keep()
-        .expect("keep tempdir")
-        .join("security.db")
-        .to_string_lossy()
-        .to_string()
+    let path = dir.keep();
+    path.join("security.db").to_string_lossy().to_string()
 }
 
 #[tokio::test]

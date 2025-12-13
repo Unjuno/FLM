@@ -1026,7 +1026,7 @@ async fn validate_migration_data(tmp_dir: &Path, log_entries: &mut Vec<String>) 
         if let Ok(content) = fs::read_to_string(&settings_path).await {
             if let Ok(data) = serde_json::from_str::<serde_json::Value>(&content) {
                 // Validate settings structure
-                if !data.get("settings").is_some() {
+                if data.get("settings").is_none() {
                     errors.push("settings.json missing 'settings' field".to_string());
                 }
             } else {
@@ -1046,7 +1046,7 @@ async fn validate_migration_data(tmp_dir: &Path, log_entries: &mut Vec<String>) 
                 if let Some(profiles) = data.get("proxy_profiles").and_then(|p| p.as_array()) {
                     for (idx, profile) in profiles.iter().enumerate() {
                         if !profile.is_object() {
-                            errors.push(format!("proxy_profiles[{}] is not an object", idx));
+                            errors.push(format!("proxy_profiles[{idx}] is not an object"));
                         }
                     }
                 }

@@ -303,7 +303,6 @@ async fn test_verify_api_key_timing_attack_prevention() {
     // This is a basic check; a more sophisticated test would use statistical analysis
     assert!(
         max_time.as_nanos() <= min_time.as_nanos() * 2 || min_time.as_nanos() == 0,
-        "Verification times should be similar regardless of key position. time1: {:?}, time5: {:?}, time_invalid: {:?}",
-        time1, time5, time_invalid
+        "Verification times should be similar regardless of key position. time1: {time1:?}, time5: {time5:?}, time_invalid: {time_invalid:?}"
     );
 }

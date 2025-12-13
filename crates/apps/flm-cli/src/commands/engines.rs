@@ -97,7 +97,7 @@ pub async fn execute_detect(
     // Cache latest states for subsequent runs
     for state in &states {
         if let Err(e) = engine_repo_arc.cache_engine_state(state).await {
-            eprintln!("Warning: Failed to cache engine state: {}", e);
+            eprintln!("Warning: Failed to cache engine state: {e}");
         }
     }
 
@@ -148,24 +148,22 @@ pub async fn execute_health_history(
             }
         });
         println!("{}", serde_json::to_string_pretty(&output)?);
+    } else if logs.is_empty() {
+        println!("No health logs found for the specified criteria.");
     } else {
-        if logs.is_empty() {
-            println!("No health logs found for the specified criteria.");
-        } else {
-            println!("Found {} health log(s):", logs.len());
-            for log in &logs {
-                println!("\nLog ID: {}", log.id);
-                println!("  Engine: {}", log.engine_id);
-                if let Some(model_id) = &log.model_id {
-                    println!("  Model: {}", model_id);
-                }
-                println!("  Status: {}", log.status);
-                if let Some(latency) = log.latency_ms {
-                    println!("  Latency: {}ms", latency);
-                }
-                println!("  Error Rate: {:.2}%", log.error_rate * 100.0);
-                println!("  Created At: {}", log.created_at.to_rfc3339());
+        println!("Found {} health log(s):", logs.len());
+        for log in &logs {
+            println!("\nLog ID: {}", log.id);
+            println!("  Engine: {}", log.engine_id);
+            if let Some(model_id) = &log.model_id {
+                println!("  Model: {model_id}");
             }
+            println!("  Status: {}", log.status);
+            if let Some(latency) = log.latency_ms {
+                println!("  Latency: {latency}ms");
+            }
+            println!("  Error Rate: {:.2}%", log.error_rate * 100.0);
+            println!("  Created At: {}", log.created_at.to_rfc3339());
         }
     }
 

@@ -53,7 +53,7 @@ pub async fn execute(
                 });
                 println!("{}", serde_json::to_string_pretty(&output)?);
             } else {
-                println!("Deleted prompt '{}'", api_id);
+                println!("Deleted prompt '{api_id}'");
             }
         }
     }

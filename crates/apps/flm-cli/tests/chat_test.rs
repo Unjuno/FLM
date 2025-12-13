@@ -110,7 +110,7 @@ impl LlmEngine for MockEngine {
 
         let mut response_content = format!("Mock response to: {}", req.messages[0].content);
         if has_attachments {
-            response_content.push_str(&format!(" (with {} attachment(s))", attachment_count));
+            response_content.push_str(&format!(" (with {attachment_count} attachment(s))"));
         }
 
         Ok(ChatResponse {

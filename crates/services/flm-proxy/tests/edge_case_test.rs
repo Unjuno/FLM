@@ -31,7 +31,7 @@ async fn test_rate_limit_boundary_values() {
     let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
     let security_service = Arc::new(SecurityService::new(security_repo));
 
-    let _api_key = security_service.create_api_key("test-key").await.unwrap();
+    let api_key = security_service.create_api_key("test-key").await.unwrap();
 
     // Test with very low rate limit (rpm=1, burst=1)
     let policy_json = serde_json::json!({
@@ -98,7 +98,7 @@ async fn test_rate_limit_zero_values() {
     let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
     let security_service = Arc::new(SecurityService::new(security_repo));
 
-    let _api_key = security_service.create_api_key("test-key").await.unwrap();
+    let api_key = security_service.create_api_key("test-key").await.unwrap();
 
     // Test with zero rate limit (should allow all requests or handle gracefully)
     let policy_json = serde_json::json!({
@@ -156,7 +156,7 @@ async fn test_concurrent_requests_under_rate_limit() {
     let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
     let security_service = Arc::new(SecurityService::new(security_repo));
 
-    let _api_key = security_service.create_api_key("test-key").await.unwrap();
+    let api_key = security_service.create_api_key("test-key").await.unwrap();
 
     // Set rate limit to allow 10 requests
     let policy_json = serde_json::json!({
@@ -206,15 +206,12 @@ async fn test_concurrent_requests_under_rate_limit() {
     let mut rate_limited_count = 0;
 
     for handle in handles {
-        match handle.await {
-            Ok(Ok(response)) => {
-                if response.status() == reqwest::StatusCode::OK {
-                    success_count += 1;
-                } else if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
-                    rate_limited_count += 1;
-                }
+        if let Ok(Ok(response)) = handle.await {
+            if response.status() == reqwest::StatusCode::OK {
+                success_count += 1;
+            } else if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                rate_limited_count += 1;
             }
-            _ => {}
         }
     }
 
@@ -222,9 +219,7 @@ async fn test_concurrent_requests_under_rate_limit() {
     // Allow for some rate limiting due to concurrent access
     assert!(
         success_count >= 8,
-        "Most concurrent requests should succeed (success: {}, rate_limited: {})",
-        success_count,
-        rate_limited_count
+        "Most concurrent requests should succeed (success: {success_count}, rate_limited: {rate_limited_count})"
     );
 
     controller.stop(handle).await.unwrap();
@@ -237,7 +232,7 @@ async fn test_concurrent_requests_exceeding_rate_limit() {
     let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
     let security_service = Arc::new(SecurityService::new(security_repo));
 
-    let _api_key = security_service.create_api_key("test-key").await.unwrap();
+    let api_key = security_service.create_api_key("test-key").await.unwrap();
 
     // Set rate limit to allow 5 requests
     let policy_json = serde_json::json!({
@@ -287,15 +282,12 @@ async fn test_concurrent_requests_exceeding_rate_limit() {
     let mut rate_limited_count = 0;
 
     for handle in handles {
-        match handle.await {
-            Ok(Ok(response)) => {
-                if response.status() == reqwest::StatusCode::OK {
-                    success_count += 1;
-                } else if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
-                    rate_limited_count += 1;
-                }
+        if let Ok(Ok(response)) = handle.await {
+            if response.status() == reqwest::StatusCode::OK {
+                success_count += 1;
+            } else if response.status() == reqwest::StatusCode::TOO_MANY_REQUESTS {
+                rate_limited_count += 1;
             }
-            _ => {}
         }
     }
 
@@ -308,9 +300,7 @@ async fn test_concurrent_requests_exceeding_rate_limit() {
     );
     assert!(
         rate_limited_count > 0,
-        "Some requests should be rate limited (success: {}, rate_limited: {})",
-        success_count,
-        rate_limited_count
+        "Some requests should be rate limited (success: {success_count}, rate_limited: {rate_limited_count})"
     );
 
     controller.stop(handle).await.unwrap();
@@ -373,7 +363,7 @@ async fn test_empty_request_body() {
     let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
     let security_service = Arc::new(SecurityService::new(security_repo));
 
-    let _api_key = security_service.create_api_key("test-key").await.unwrap();
+    let api_key = security_service.create_api_key("test-key").await.unwrap();
 
     let policy_json = serde_json::json!({});
     let policy = SecurityPolicy {
@@ -425,7 +415,7 @@ async fn test_very_large_request_body() {
     let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
     let security_service = Arc::new(SecurityService::new(security_repo));
 
-    let _api_key = security_service.create_api_key("test-key").await.unwrap();
+    let api_key = security_service.create_api_key("test-key").await.unwrap();
 
     let policy_json = serde_json::json!({});
     let policy = SecurityPolicy {
@@ -468,8 +458,7 @@ async fn test_very_large_request_body() {
             let status = resp.status();
             assert!(
                 status.is_client_error() || status.is_server_error() || status.is_success(),
-                "Large request body should return valid status (got: {})",
-                status
+                "Large request body should return valid status (got: {status})"
             );
         }
         Err(e) => {
@@ -492,7 +481,7 @@ async fn test_multiple_authorization_headers() {
     let security_repo = SqliteSecurityRepository::new(&security_db).await.unwrap();
     let security_service = Arc::new(SecurityService::new(security_repo));
 
-    let _api_key = security_service.create_api_key("test-key").await.unwrap();
+    let api_key = security_service.create_api_key("test-key").await.unwrap();
 
     let policy_json = serde_json::json!({});
     let policy = SecurityPolicy {
@@ -574,5 +563,4 @@ async fn test_rapid_start_stop() {
 
     // Should not panic or leak resources
     // If we get here, the test passed
-    assert!(true, "Rapid start/stop should not cause panics");
 }

@@ -264,8 +264,7 @@ async fn execute_start(options: StartCommandOptions) -> Result<(), Box<dyn std::
                     }
                     Err(e) => {
                         return Err(format!(
-                            "Failed to load DNS credential for profile {}: {}",
-                            profile_id, e
+                            "Failed to load DNS credential for profile {profile_id}: {e}"
                         )
                         .into());
                     }
@@ -651,7 +650,7 @@ async fn execute_reload(
             if !errors.is_empty() {
                 eprintln!("Errors occurred during reload:");
                 for (id, msg) in &errors {
-                    eprintln!("  {}: {}", id, msg);
+                    eprintln!("  {id}: {msg}");
                 }
             }
         }
@@ -694,7 +693,7 @@ async fn execute_reload(
                 }
                 Ok(())
             }
-            Err(e) => Err(format!("Failed to reload proxy: {}", e).into()),
+            Err(e) => Err(format!("Failed to reload proxy: {e}").into()),
         }
     }
 }

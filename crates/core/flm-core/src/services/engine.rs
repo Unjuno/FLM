@@ -532,7 +532,10 @@ mod tests {
         let listed = service.list_models("engine-1".to_string()).await.unwrap();
         assert_eq!(listed.len(), 2);
         assert_eq!(
-            listed.get(0).expect("Expected at least one model").model_id,
+            listed
+                .first()
+                .expect("Expected at least one model")
+                .model_id,
             "flm://engine-1/model-a"
         );
     }
@@ -764,7 +767,7 @@ mod tests {
         let listed = service.list_models("engine-1".to_string()).await.unwrap();
         assert_eq!(listed.len(), 1);
         let caps = listed
-            .get(0)
+            .first()
             .expect("Expected at least one model")
             .capabilities
             .as_ref()

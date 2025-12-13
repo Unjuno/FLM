@@ -50,9 +50,9 @@ impl Display for CliUserError {
     fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
         if let Some(msg) = &self.message {
             if let Some(code) = &self.error_code {
-                write!(f, "[{}] {}", code, msg)
+                write!(f, "[{code}] {msg}")
             } else {
-                write!(f, "{}", msg)
+                write!(f, "{msg}")
             }
         } else {
             Ok(())

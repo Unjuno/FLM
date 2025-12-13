@@ -23,7 +23,7 @@ fn bearer_header(token: &str) -> String {
 fn log_test(msg: &str) {
     let log_path = std::env::temp_dir().join("test_debug.log");
     if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_path) {
-        let _ = file.write_all(format!("{}\n", msg).as_bytes());
+        let _ = file.write_all(format!("{msg}\n").as_bytes());
         let _ = file.flush();
     }
 }
@@ -323,7 +323,7 @@ async fn test_rate_limit_multiple_keys() {
     // Make requests up to the limit with first key
     let client = reqwest::Client::new();
     for i in 0..5 {
-        log_test(&format!("[TEST] Making request {} with api_key1", i));
+        log_test(&format!("[TEST] Making request {i} with api_key1"));
         let response = client
             .get("http://localhost:18085/v1/models")
             .header("Authorization", bearer_header(&api_key1.plain))
@@ -626,7 +626,7 @@ async fn test_botnet_integration_ip_block_and_intrusion() {
     // Make multiple requests with invalid API key to trigger IP blocking
     for i in 0..6 {
         let response = client
-            .get(format!("http://localhost:18096/v1/models"))
+            .get("http://localhost:18096/v1/models")
             .header("Authorization", "Bearer invalid-key")
             .header("X-Forwarded-For", test_ip)
             .send()
@@ -938,8 +938,7 @@ async fn test_resource_protection_integration() {
         assert_ne!(
             response.status(),
             reqwest::StatusCode::SERVICE_UNAVAILABLE,
-            "Request {} should not be throttled under normal conditions",
-            i
+            "Request {i} should not be throttled under normal conditions"
         );
     }
 
@@ -1008,8 +1007,7 @@ async fn test_resource_protection_with_other_middleware() {
         assert_ne!(
             response.status(),
             reqwest::StatusCode::SERVICE_UNAVAILABLE,
-            "Request {} should not be throttled by resource protection",
-            i
+            "Request {i} should not be throttled by resource protection"
         );
     }
 
@@ -1160,8 +1158,7 @@ async fn test_ip_rate_limit_and_api_key_rate_limit_combined() {
         assert_ne!(
             response.status(),
             reqwest::StatusCode::TOO_MANY_REQUESTS,
-            "Request {} should not be rate limited (within API key limit)",
-            i
+            "Request {i} should not be rate limited (within API key limit)"
         );
     }
 
@@ -1245,8 +1242,7 @@ async fn test_ip_rate_limit_persistence() {
         assert_ne!(
             response.status(),
             reqwest::StatusCode::TOO_MANY_REQUESTS,
-            "Request {} should not be rate limited (within limit)",
-            i
+            "Request {i} should not be rate limited (within limit)"
         );
     }
 
@@ -1653,7 +1649,7 @@ async fn test_security_features_integration() {
     // Use SQL injection in a valid endpoint to trigger intrusion detection
     for _ in 0..6 {
         let response = client
-            .get(format!("http://localhost:18107/v1/models?id=1' OR '1'='1"))
+            .get("http://localhost:18107/v1/models?id=1' OR '1'='1")
             .header("Authorization", bearer_header(&api_key.plain))
             .header("X-Forwarded-For", malicious_ip)
             .send()
@@ -1854,11 +1850,9 @@ async fn test_concurrent_requests() {
     // Wait for all requests to complete
     let mut success_count = 0;
     for handle in handles {
-        if let Ok(response) = handle.await {
-            if let Ok(resp) = response {
-                if resp.status() == reqwest::StatusCode::OK {
-                    success_count += 1;
-                }
+        if let Ok(Ok(resp)) = handle.await {
+            if resp.status() == reqwest::StatusCode::OK {
+                success_count += 1;
             }
         }
     }
@@ -1951,7 +1945,7 @@ async fn test_missing_security_policy_denies_requests() {
     use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
     use std::str::FromStr;
     let db_path_str = security_db.to_str().unwrap();
-    let options = SqliteConnectOptions::from_str(&format!("sqlite://{}", db_path_str))
+    let options = SqliteConnectOptions::from_str(&format!("sqlite://{db_path_str}"))
         .unwrap()
         .create_if_missing(false);
     let direct_pool = SqlitePoolOptions::new()

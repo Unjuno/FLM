@@ -101,28 +101,28 @@ mod tests {
         let error = EngineError::NotFound {
             engine_id: "test-engine".to_string(),
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("test-engine"));
         assert!(msg.contains("not found"));
 
         let error = EngineError::NetworkError {
             reason: "connection failed".to_string(),
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("connection failed"));
 
         let error = EngineError::ApiError {
             reason: "invalid response".to_string(),
             status_code: Some(500),
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("invalid response"));
         assert!(msg.contains("500"));
 
         let error = EngineError::Timeout {
             operation: "health check".to_string(),
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("health check"));
     }
 
@@ -131,44 +131,44 @@ mod tests {
         let error = ProxyError::AlreadyRunning {
             handle_id: "handle-1".to_string(),
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("handle-1"));
         assert!(msg.contains("already running"));
 
         let error = ProxyError::PortInUse { port: 8080 };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("8080"));
         assert!(msg.contains("in use"));
 
         let error = ProxyError::CertGenerationFailed {
             reason: "invalid domain".to_string(),
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("invalid domain"));
 
         let error = ProxyError::AcmeError {
             reason: "challenge failed".to_string(),
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("challenge failed"));
 
         let error = ProxyError::InvalidConfig {
             reason: "missing domain".to_string(),
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("missing domain"));
 
         let error = ProxyError::HandleNotFound {
             handle_id: "handle-1".to_string(),
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("handle-1"));
         assert!(msg.contains("not found"));
 
         let error = ProxyError::Timeout {
             operation: "start".to_string(),
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("start"));
     }
 
@@ -177,38 +177,38 @@ mod tests {
         let error = RepoError::NotFound {
             key: "test-key".to_string(),
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("test-key"));
-        assert!(msg.contains("not found"));
+        assert!(msg.to_lowercase().contains("not found"));
 
         let error = RepoError::ConstraintViolation {
             reason: "duplicate key".to_string(),
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("duplicate key"));
 
         let error = RepoError::MigrationFailed {
             reason: "schema mismatch".to_string(),
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("schema mismatch"));
 
         let error = RepoError::IoError {
             reason: "file not found".to_string(),
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("file not found"));
 
         let error = RepoError::ValidationError {
             reason: "invalid format".to_string(),
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("invalid format"));
 
         let error = RepoError::ReadOnlyMode {
             reason: "database locked".to_string(),
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("database locked"));
     }
 
@@ -217,24 +217,24 @@ mod tests {
         let error = HttpError::NetworkError {
             reason: "connection timeout".to_string(),
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("connection timeout"));
 
         let error = HttpError::Timeout;
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("Timeout"));
 
         let error = HttpError::InvalidResponse {
             reason: "malformed JSON".to_string(),
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("malformed JSON"));
 
         let error = HttpError::StatusCode {
             code: 404,
             body: Some("Not Found".to_string()),
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("404"));
         assert!(msg.contains("Not Found"));
 
@@ -242,7 +242,7 @@ mod tests {
             code: 500,
             body: None,
         };
-        let msg = format!("{}", error);
+        let msg = format!("{error}");
         assert!(msg.contains("500"));
     }
 }

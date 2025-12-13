@@ -92,8 +92,7 @@ async fn test_rate_limit_performance() {
     // Increased timeout to account for throttling delays (may take up to 90 seconds with delays)
     assert!(
         elapsed < Duration::from_secs(90),
-        "100 requests took too long: {:?}",
-        elapsed
+        "100 requests took too long: {elapsed:?}"
     );
 
     // Most requests should succeed (rate limit is 10000/min, we only made 100)
@@ -102,10 +101,7 @@ async fn test_rate_limit_performance() {
     // The test's primary purpose is to measure performance, not to verify rate limit logic
     assert!(
         success_count > 0 || throttled_count > 0 || rate_limited_count > 0,
-        "No requests succeeded, were throttled, or were rate limited: success={}, rate_limited={}, throttled={}",
-        success_count,
-        rate_limited_count,
-        throttled_count
+        "No requests succeeded, were throttled, or were rate limited: success={success_count}, rate_limited={rate_limited_count}, throttled={throttled_count}"
     );
 
     controller.stop(handle).await.unwrap();
@@ -191,8 +187,7 @@ async fn test_high_load_request_handling() {
     // Increased timeout to account for throttling delays
     assert!(
         elapsed < Duration::from_secs(30),
-        "100 concurrent requests took too long: {:?}",
-        elapsed
+        "100 concurrent requests took too long: {elapsed:?}"
     );
 
     // Most requests should succeed (allow for resource protection throttling in test env)
@@ -200,10 +195,7 @@ async fn test_high_load_request_handling() {
     // causing resource protection to throttle some requests.
     assert!(
         success_count > 50,
-        "Too many requests failed: success={}, throttled={}, errors={} (resource protection may throttle some in test env)",
-        success_count,
-        throttled_count,
-        error_count
+        "Too many requests failed: success={success_count}, throttled={throttled_count}, errors={error_count} (resource protection may throttle some in test env)"
     );
 
     controller.stop(handle).await.unwrap();
@@ -262,9 +254,7 @@ async fn test_memory_leak_detection() {
                     || status == reqwest::StatusCode::SERVICE_UNAVAILABLE
                     || status == reqwest::StatusCode::TOO_MANY_REQUESTS
                     || status == reqwest::StatusCode::FORBIDDEN,
-                "Request {} should be OK, SERVICE_UNAVAILABLE, TOO_MANY_REQUESTS, or FORBIDDEN (got: {})",
-                i,
-                status
+                "Request {i} should be OK, SERVICE_UNAVAILABLE, TOO_MANY_REQUESTS, or FORBIDDEN (got: {status})"
             );
         }
     }
@@ -282,8 +272,7 @@ async fn test_memory_leak_detection() {
             || status == reqwest::StatusCode::SERVICE_UNAVAILABLE
             || status == reqwest::StatusCode::TOO_MANY_REQUESTS
             || status == reqwest::StatusCode::FORBIDDEN,
-        "Health check should be responsive (got: {})",
-        status
+        "Health check should be responsive (got: {status})"
     );
 
     controller.stop(handle).await.unwrap();
@@ -360,17 +349,14 @@ async fn test_resource_protection_performance_under_load() {
     // Note: In test environments, all requests may be throttled
     assert!(
         success_count > 0 || throttled_count > 0,
-        "No requests succeeded or were throttled (success: {}, throttled: {})",
-        success_count,
-        throttled_count
+        "No requests succeeded or were throttled (success: {success_count}, throttled: {throttled_count})"
     );
 
     let elapsed = start.elapsed();
     // Increased timeout from 8 to 30 seconds to account for throttling delays
     assert!(
         elapsed < Duration::from_secs(30),
-        "Resource protection overhead too high: {:?}",
-        elapsed
+        "Resource protection overhead too high: {elapsed:?}"
     );
 
     controller.stop(handle).await.unwrap();
@@ -453,17 +439,14 @@ async fn test_ip_rate_limit_scaling_with_many_ips() {
     // Note: In test environments, IP restrictions may block all requests
     assert!(
         success_count > 0 || throttled_count > 0,
-        "No requests succeeded or were throttled (success: {}, throttled: {})",
-        success_count,
-        throttled_count
+        "No requests succeeded or were throttled (success: {success_count}, throttled: {throttled_count})"
     );
 
     let elapsed = start.elapsed();
     // Increased timeout from 10 to 30 seconds to account for throttling delays
     assert!(
         elapsed < Duration::from_secs(30),
-        "IP-rate-limit tracking should scale to many IPs efficiently: {:?}",
-        elapsed
+        "IP-rate-limit tracking should scale to many IPs efficiently: {elapsed:?}"
     );
 
     controller.stop(handle).await.unwrap();

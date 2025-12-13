@@ -241,7 +241,7 @@ impl ProxyController for AxumProxyController {
         let security_db_path = config
             .security_db_path
             .as_ref()
-            .map(|p| std::path::PathBuf::from(p));
+            .map(std::path::PathBuf::from);
 
         // Store the handle with AppState for hot reloading
         let mut handles = self.handles.write().await;
@@ -264,7 +264,7 @@ impl ProxyController for AxumProxyController {
 
         if let Some(server_handle) = handles.remove(&handle.port) {
             // Send shutdown signal
-            if let Err(_) = server_handle.shutdown_tx.send(()) {
+            if server_handle.shutdown_tx.send(()).is_err() {
                 warn!("Failed to send shutdown signal: receiver may have been dropped");
             }
             // Wait for server to stop (with timeout)
@@ -272,7 +272,7 @@ impl ProxyController for AxumProxyController {
             tokio::select! {
                 result = join_handle => {
                     result.map_err(|e| ProxyError::InvalidConfig {
-                        reason: format!("Server task panicked: {}", e),
+                        reason: format!("Server task panicked: {e}"),
                     })??;
                 }
                 _ = tokio::time::sleep(tokio::time::Duration::from_secs(5)) => {
@@ -2492,7 +2492,7 @@ async fn start_packaged_ca_server(
         let result = match https_server_handle.await {
             Ok(inner) => inner,
             Err(e) => Err(ProxyError::InvalidConfig {
-                reason: format!("HTTPS server task panicked: {}", e),
+                reason: format!("HTTPS server task panicked: {e}"),
             }),
         };
         if let Err(e) = https_status_tx.send(("https", result)) {
@@ -2547,12 +2547,12 @@ async fn start_packaged_ca_server(
                     shutdown_sent = true;
                     final_result = Ok(());
                     if let Some(tx) = http_shutdown_tx.take() {
-                        if let Err(_) = tx.send(()) {
+                        if tx.send(()).is_err() {
                             warn!("Failed to send shutdown signal: receiver may have been dropped");
                         }
                     }
                     if let Some(tx) = https_shutdown_tx.take() {
-                        if let Err(_) = tx.send(()) {
+                        if tx.send(()).is_err() {
                             warn!("Failed to send shutdown signal: receiver may have been dropped");
                         }
                     }
@@ -2791,7 +2791,7 @@ async fn start_https_acme_server(
         let result = match https_server_handle.await {
             Ok(inner) => inner,
             Err(e) => Err(ProxyError::InvalidConfig {
-                reason: format!("HTTPS server task panicked: {}", e),
+                reason: format!("HTTPS server task panicked: {e}"),
             }),
         };
         if let Err(e) = https_status_tx.send(("https", result)) {
@@ -2843,17 +2843,17 @@ async fn start_https_acme_server(
                             };
                             shutdown_sent = true;
                             if let Some(tx) = http_shutdown_tx.take() {
-                                if let Err(_) = tx.send(()) {
+                                if tx.send(()).is_err() {
                                     warn!("Failed to send shutdown signal: receiver may have been dropped");
                                 }
                             }
                             if let Some(tx) = https_shutdown_tx.take() {
-                                if let Err(_) = tx.send(()) {
+                                if tx.send(()).is_err() {
                                     warn!("Failed to send shutdown signal: receiver may have been dropped");
                                 }
                             }
                             if let Some(tx) = acme_shutdown_tx.take() {
-                                if let Err(_) = tx.send(()) {
+                                if tx.send(()).is_err() {
                                     warn!("Failed to send shutdown signal: receiver may have been dropped");
                                 }
                             }
@@ -2870,17 +2870,17 @@ async fn start_https_acme_server(
                     shutdown_sent = true;
                     final_result = Ok(());
                     if let Some(tx) = http_shutdown_tx.take() {
-                        if let Err(_) = tx.send(()) {
+                        if tx.send(()).is_err() {
                             warn!("Failed to send shutdown signal: receiver may have been dropped");
                         }
                     }
                     if let Some(tx) = https_shutdown_tx.take() {
-                        if let Err(_) = tx.send(()) {
+                        if tx.send(()).is_err() {
                             warn!("Failed to send shutdown signal: receiver may have been dropped");
                         }
                     }
                     if let Some(tx) = acme_shutdown_tx.take() {
-                        if let Err(_) = tx.send(()) {
+                        if tx.send(()).is_err() {
                             warn!("Failed to send shutdown signal: receiver may have been dropped");
                         }
                     }
@@ -3070,7 +3070,7 @@ async fn start_dns01_acme_server(
         let result = match https_server_handle.await {
             Ok(inner) => inner,
             Err(e) => Err(ProxyError::InvalidConfig {
-                reason: format!("HTTPS server task panicked: {}", e),
+                reason: format!("HTTPS server task panicked: {e}"),
             }),
         };
         if let Err(e) = https_status_tx.send(("https", result)) {
@@ -3137,17 +3137,17 @@ async fn start_dns01_acme_server(
                             };
                             shutdown_sent = true;
                             if let Some(tx) = http_shutdown_tx.take() {
-                                if let Err(_) = tx.send(()) {
+                                if tx.send(()).is_err() {
                                     warn!("Failed to send shutdown signal: receiver may have been dropped");
                                 }
                             }
                             if let Some(tx) = https_shutdown_tx.take() {
-                                if let Err(_) = tx.send(()) {
+                                if tx.send(()).is_err() {
                                     warn!("Failed to send shutdown signal: receiver may have been dropped");
                                 }
                             }
                             if let Some(tx) = acme_shutdown_tx.take() {
-                                if let Err(_) = tx.send(()) {
+                                if tx.send(()).is_err() {
                                     warn!("Failed to send shutdown signal: receiver may have been dropped");
                                 }
                             }
@@ -3164,17 +3164,17 @@ async fn start_dns01_acme_server(
                     shutdown_sent = true;
                     final_result = Ok(());
                     if let Some(tx) = http_shutdown_tx.take() {
-                        if let Err(_) = tx.send(()) {
+                        if tx.send(()).is_err() {
                             warn!("Failed to send shutdown signal: receiver may have been dropped");
                         }
                     }
                     if let Some(tx) = https_shutdown_tx.take() {
-                        if let Err(_) = tx.send(()) {
+                        if tx.send(()).is_err() {
                             warn!("Failed to send shutdown signal: receiver may have been dropped");
                         }
                     }
                     if let Some(tx) = acme_shutdown_tx.take() {
-                        if let Err(_) = tx.send(()) {
+                        if tx.send(()).is_err() {
                             warn!("Failed to send shutdown signal: receiver may have been dropped");
                         }
                     }
@@ -3525,7 +3525,7 @@ async fn start_dev_self_signed_server(
         let result = match https_server_handle.await {
             Ok(inner) => inner,
             Err(e) => Err(ProxyError::InvalidConfig {
-                reason: format!("HTTPS server task panicked: {}", e),
+                reason: format!("HTTPS server task panicked: {e}"),
             }),
         };
         if let Err(e) = https_status_tx.send(("https", result)) {
@@ -3558,12 +3558,12 @@ async fn start_dev_self_signed_server(
                             };
                             shutdown_sent = true;
                             if let Some(tx) = http_shutdown_tx.take() {
-                                if let Err(_) = tx.send(()) {
+                                if tx.send(()).is_err() {
                                     warn!("Failed to send shutdown signal: receiver may have been dropped");
                                 }
                             }
                             if let Some(tx) = https_shutdown_tx.take() {
-                                if let Err(_) = tx.send(()) {
+                                if tx.send(()).is_err() {
                                     warn!("Failed to send shutdown signal: receiver may have been dropped");
                                 }
                             }
@@ -3580,12 +3580,12 @@ async fn start_dev_self_signed_server(
                     shutdown_sent = true;
                     final_result = Ok(());
                     if let Some(tx) = http_shutdown_tx.take() {
-                        if let Err(_) = tx.send(()) {
+                        if tx.send(()).is_err() {
                             warn!("Failed to send shutdown signal: receiver may have been dropped");
                         }
                     }
                     if let Some(tx) = https_shutdown_tx.take() {
-                        if let Err(_) = tx.send(()) {
+                        if tx.send(()).is_err() {
                             warn!("Failed to send shutdown signal: receiver may have been dropped");
                         }
                     }
@@ -3721,7 +3721,7 @@ where
                     },
                     Some(Err(err)) => {
                         return Err(ProxyError::AcmeError {
-                            reason: format!("ACME provisioning failed: {:?}", err),
+                            reason: format!("ACME provisioning failed: {err:?}"),
                         });
                     }
                     None => {
@@ -3910,7 +3910,7 @@ fn encode_pem_block(block: &Pem) -> String {
                 );
                 // フォールバック: バイト列を16進数でエンコード
                 for byte in chunk {
-                    output.push_str(&format!("{:02x}", byte));
+                    output.push_str(&format!("{byte:02x}"));
                 }
             }
         }

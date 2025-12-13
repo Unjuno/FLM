@@ -65,7 +65,7 @@ async fn test_sql_injection_protection() {
     for payload in sql_injection_payloads {
         // Test in query parameters
         let response = client
-            .get(format!("http://localhost:18120/v1/models?id={}", payload))
+            .get(format!("http://localhost:18120/v1/models?id={payload}"))
             .header("Authorization", bearer_header(&api_key.plain))
             .send()
             .await
@@ -74,13 +74,12 @@ async fn test_sql_injection_protection() {
         // Should be rejected or sanitized (not cause SQL errors)
         assert!(
             response.status() != reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-            "SQL injection in query parameter should not cause server error: {}",
-            payload
+            "SQL injection in query parameter should not cause server error: {payload}"
         );
 
         // Test in path
         let response = client
-            .get(format!("http://localhost:18120/v1/models/{}", payload))
+            .get(format!("http://localhost:18120/v1/models/{payload}"))
             .header("Authorization", bearer_header(&api_key.plain))
             .send()
             .await
@@ -88,8 +87,7 @@ async fn test_sql_injection_protection() {
 
         assert!(
             response.status() != reqwest::StatusCode::INTERNAL_SERVER_ERROR,
-            "SQL injection in path should not cause server error: {}",
-            payload
+            "SQL injection in path should not cause server error: {payload}"
         );
     }
 
@@ -151,8 +149,7 @@ async fn test_xss_protection() {
         let body = response.text().await.unwrap();
         assert!(
             !body.contains("<script>") || body.contains("&lt;script&gt;"),
-            "XSS payload should be escaped in response: {}",
-            payload
+            "XSS payload should be escaped in response: {payload}"
         );
     }
 
@@ -306,8 +303,7 @@ async fn test_authentication_bypass_protection() {
         assert_eq!(
             response.status(),
             reqwest::StatusCode::UNAUTHORIZED,
-            "Authentication bypass attempt should be rejected: {}",
-            description
+            "Authentication bypass attempt should be rejected: {description}"
         );
     }
 
@@ -361,7 +357,7 @@ async fn test_path_traversal_protection() {
 
     for payload in path_traversal_payloads {
         let response = client
-            .get(format!("http://localhost:18124/{}", payload))
+            .get(format!("http://localhost:18124/{payload}"))
             .header("Authorization", bearer_header(&api_key.plain))
             .send()
             .await
@@ -371,8 +367,7 @@ async fn test_path_traversal_protection() {
         assert!(
             response.status() == reqwest::StatusCode::NOT_FOUND
                 || response.status() == reqwest::StatusCode::FORBIDDEN,
-            "Path traversal attempt should be rejected: {}",
-            payload
+            "Path traversal attempt should be rejected: {payload}"
         );
     }
 

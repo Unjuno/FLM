@@ -159,6 +159,10 @@ async fn test_security_features_e2e() {
     // Note: Rate limit uses both minute_count (RPM) and token bucket (burst)
     // Both limits must be respected: (minute_count + 1) > rpm OR tokens_available < 1.0
     // Test 1 already sent 1 request, so we send 4 more to reach 5 total
+    // why: Use minimal delay to prevent token bucket refill between requests
+    // alt: Longer delays, but that allows token bucket to refill and test becomes unreliable
+    // evidence: Test fails intermittently when delays allow token refill
+    // assumption: With rpm=5 and burst=5, 5 requests should consume all tokens, 6th should be denied
     for i in 0..4 {
         let response = client
             .get("http://localhost:18101/v1/models")
@@ -166,36 +170,45 @@ async fn test_security_features_e2e() {
             .send()
             .await
             .unwrap();
+        let status = response.status();
         assert_ne!(
-            response.status(),
+            status,
             reqwest::StatusCode::TOO_MANY_REQUESTS,
-            "Request {} should not be rate limited (within limit, total requests: {})",
+            "Request {} should not be rate limited (within limit, total requests: {}, status: {})",
             i + 2,
-            i + 2
+            i + 2,
+            status
         );
-        // Small delay to ensure rate limit state is updated
-        // Rate limit uses token bucket with 1-minute window, so we need to ensure
-        // state is properly synchronized between requests
-        sleep(Duration::from_millis(100)).await;
+        // Minimal delay to ensure rate limit state is updated without allowing significant token refill
+        // Token bucket refills at rpm/60 tokens per second (5/60 = 0.083 tokens/sec)
+        // With 10ms delay, only ~0.0008 tokens would refill, which is negligible
+        sleep(Duration::from_millis(10)).await;
     }
 
-    // Additional delay to ensure rate limit state is fully persisted and synchronized
+    // Minimal delay to ensure rate limit state is fully persisted and synchronized
     // The rate limit check happens synchronously in memory, but we want to ensure
     // the state is consistent before the next request
-    sleep(Duration::from_millis(200)).await;
+    // why: Use minimal delay to prevent token bucket refill
+    // alt: Longer delays, but that allows token bucket to refill and test becomes unreliable
+    sleep(Duration::from_millis(10)).await;
 
     // 6th request should be rate limited (exceeds rpm=5)
     // With rpm=5 and burst=5, after 5 requests (Test 1 + 4 in loop), the 6th request should exceed the limit
+    // why: minute_count will be 5 after 5 requests, so (5+1) > 5 is true, should deny
+    // alt: Check tokens_available, but minute_count check should be sufficient
+    // evidence: Test fails when token bucket refills between requests
+    // assumption: After 5 requests, minute_count=5, tokens_available should be 0.0 or very close to 0.0
     let response = client
         .get("http://localhost:18101/v1/models")
         .header("Authorization", bearer_header(&api_key.plain))
         .send()
         .await
         .unwrap();
+    let status = response.status();
     assert_eq!(
-        response.status(),
+        status,
         reqwest::StatusCode::TOO_MANY_REQUESTS,
-        "6th request should be rate limited (rpm=5, burst=5 allows only 5 requests)"
+        "6th request should be rate limited (rpm=5, burst=5 allows only 5 requests, but got status: {status})"
     );
 
     controller.stop(handle).await.unwrap();

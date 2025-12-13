@@ -122,12 +122,14 @@ mod tests {
 
     #[test]
     fn test_engine_capabilities_serialization() {
-        let mut caps = EngineCapabilities::default();
-        caps.chat = true;
-        caps.chat_stream = true;
-        caps.embeddings = true;
-        caps.max_image_bytes = Some(10_000_000);
-        caps.max_audio_bytes = Some(5_000_000);
+        let caps = EngineCapabilities {
+            chat: true,
+            chat_stream: true,
+            embeddings: true,
+            max_image_bytes: Some(10_000_000),
+            max_audio_bytes: Some(5_000_000),
+            ..Default::default()
+        };
 
         let json = serde_json::to_string(&caps).unwrap();
         let deserialized: EngineCapabilities = serde_json::from_str(&json).unwrap();

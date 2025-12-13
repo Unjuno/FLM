@@ -26,7 +26,7 @@ pub struct MockSocks5Server {
 impl MockSocks5Server {
     /// Start a mock SOCKS5 server on the specified port
     pub async fn start(port: u16) -> Result<Self, std::io::Error> {
-        let listener = TcpListener::bind(format!("127.0.0.1:{}", port)).await?;
+        let listener = TcpListener::bind(format!("127.0.0.1:{port}")).await?;
         let actual_port = listener.local_addr()?.port();
 
         let (shutdown_tx, shutdown_rx) = oneshot::channel();
@@ -185,7 +185,7 @@ pub async fn verify_socks5_endpoint(endpoint: &str) -> Result<(), String> {
 
     match timeout(Duration::from_secs(3), TcpStream::connect(endpoint)).await {
         Ok(Ok(_stream)) => Ok(()),
-        Ok(Err(e)) => Err(format!("Connection failed: {}", e)),
+        Ok(Err(e)) => Err(format!("Connection failed: {e}")),
         Err(_) => Err("Connection timeout".to_string()),
     }
 }

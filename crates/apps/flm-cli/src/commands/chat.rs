@@ -40,10 +40,9 @@ fn parse_model_id(model_id: &str) -> Result<(String, String), Box<dyn std::error
     let without_prefix = model_id.strip_prefix("flm://").ok_or_else(|| {
         format!(
             "Error: Internal validation failure while parsing model ID.\n\
-                Model ID: {}\n\
+                Model ID: {model_id}\n\
                 This is an unexpected error. Please report this issue if it persists.\n\
-                Expected format: flm://engine_id/model_name",
-            model_id
+                Expected format: flm://engine_id/model_name"
         )
     })?;
     let parts: Vec<&str> = without_prefix.splitn(2, '/').collect();

@@ -6,6 +6,7 @@ const DNS01_PREVIEW_ENABLED: bool = cfg!(feature = "dns01-preview");
 const DNS_FLAGS_HIDDEN: bool = !DNS01_PREVIEW_ENABLED;
 
 #[derive(Subcommand, Clone)]
+#[allow(clippy::large_enum_variant)] // why: Start variant has many fields for proxy configuration, which is intentional
 pub enum ProxySubcommand {
     /// Start a proxy server
     Start {
