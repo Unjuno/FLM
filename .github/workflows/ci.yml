@@ -47,9 +47,7 @@ jobs:
         continue-on-error: true
 
       - name: Run tests with coverage
-        run: |
-          # node_modulesを明示的に除外してテストを実行
-          npm run test:coverage -- --exclude '**/node_modules/**' --exclude '**/dist/**' --exclude '**/archive/**'
+        run: npm run test:coverage
         if: ${{ hashFiles('package.json') != '' }}
         continue-on-error: true
 
