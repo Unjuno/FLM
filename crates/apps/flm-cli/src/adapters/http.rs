@@ -32,15 +32,16 @@ impl Default for ReqwestHttpClient {
         // Default implementation should not panic, so we create a client with minimal configuration
         // If this fails, we use a fallback client creation
         Self::new().unwrap_or_else(|e| {
-            eprintln!("Warning: Failed to create default HTTP client: {}, using fallback", e);
+            eprintln!(
+                "Warning: Failed to create default HTTP client: {}, using fallback",
+                e
+            );
             // Fallback: create client without timeout (less ideal but won't panic)
             Self {
-                client: reqwest::Client::builder()
-                    .build()
-                    .unwrap_or_else(|_| {
-                        // Last resort: use a basic client
-                        reqwest::Client::new()
-                    }),
+                client: reqwest::Client::builder().build().unwrap_or_else(|_| {
+                    // Last resort: use a basic client
+                    reqwest::Client::new()
+                }),
             }
         })
     }

@@ -591,7 +591,10 @@ pub async fn intrusion_detection_middleware(
                 )
                 .await
             {
-                warn!("Failed to save intrusion attempt for {}: {}", client_ip_for_db, e);
+                warn!(
+                    "Failed to save intrusion attempt for {}: {}",
+                    client_ip_for_db, e
+                );
             }
 
             // Check if should block
@@ -611,7 +614,10 @@ pub async fn intrusion_detection_middleware(
 
                 for _ in 0..failures_to_record {
                     if !ip_blocklist.record_failure(client_ip_for_db).await {
-                        warn!("Failed to record IP blocklist failure for {}", client_ip_for_db);
+                        warn!(
+                            "Failed to record IP blocklist failure for {}",
+                            client_ip_for_db
+                        );
                     }
                 }
 
@@ -765,7 +771,10 @@ pub async fn anomaly_detection_middleware(
 
                 for _ in 0..failures_to_record {
                     if !ip_blocklist.record_failure(client_ip_for_db).await {
-                        warn!("Failed to record IP blocklist failure for {}", client_ip_for_db);
+                        warn!(
+                            "Failed to record IP blocklist failure for {}",
+                            client_ip_for_db
+                        );
                     }
                 }
 
@@ -1411,11 +1420,13 @@ async fn check_rate_limit_with_info(
     // evidence: test_rate_limit_multiple_keys fails - 6th request should be denied when rpm=5
     // assumption: After 5 requests, minute_count=5, so (5+1) > 5 is true, should deny 6th request
     // Note: Both limits must be respected - if EITHER limit would be exceeded, deny the request
-    let would_exceed_minute_limit = entry.minute_count.checked_add(1)
+    let would_exceed_minute_limit = entry
+        .minute_count
+        .checked_add(1)
         .map(|next_count| next_count > rpm)
         .unwrap_or(true); // If overflow, treat as exceeded
-    // For burst limit, we need at least 1.0 token to allow the request
-    // If tokens_available is less than 1.0, we cannot allow the request
+                          // For burst limit, we need at least 1.0 token to allow the request
+                          // If tokens_available is less than 1.0, we cannot allow the request
     let burst_limit_reached = entry.tokens_available < 1.0;
     // Deny if EITHER limit would be exceeded
     let allowed = !would_exceed_minute_limit && !burst_limit_reached;
@@ -1442,7 +1453,9 @@ async fn check_rate_limit_with_info(
     // Calculate remaining BEFORE incrementing
     let rpm_remaining = if allowed {
         // After this request, minute_count will be entry.minute_count + 1
-        entry.minute_count.checked_add(1)
+        entry
+            .minute_count
+            .checked_add(1)
             .map(|next_count| rpm.saturating_sub(next_count))
             .unwrap_or(0) // If overflow, return 0 remaining
     } else {
@@ -1489,7 +1502,7 @@ async fn check_rate_limit_with_info(
     let minute_count_snapshot = entry.minute_count;
     let reset_at = chrono::Utc::now()
         .checked_add_signed(chrono::Duration::seconds(
-            reset_duration.as_secs().min(i64::MAX as u64) as i64
+            reset_duration.as_secs().min(i64::MAX as u64) as i64,
         ))
         .unwrap_or_else(chrono::Utc::now)
         .to_rfc3339();
@@ -1572,14 +1585,22 @@ pub(crate) async fn check_ip_rate_limit_with_info(
 
     // Load from database BEFORE acquiring lock (to minimize lock hold time)
     let ip_key = format!("ip:{ip}");
-    let db_snapshot = state.security_repo.fetch_rate_limit_state(&ip_key).await.ok()
+    let db_snapshot = state
+        .security_repo
+        .fetch_rate_limit_state(&ip_key)
+        .await
+        .ok()
         .and_then(|opt| opt)
         .and_then(|(db_count, db_reset_at)| {
-            chrono::DateTime::parse_from_rfc3339(&db_reset_at).ok()
+            chrono::DateTime::parse_from_rfc3339(&db_reset_at)
+                .ok()
                 .map(|reset_chrono| {
                     let reset_utc = reset_chrono.with_timezone(&chrono::Utc);
                     let now_utc = chrono::Utc::now();
-                    reset_utc.signed_duration_since(now_utc).to_std().ok()
+                    reset_utc
+                        .signed_duration_since(now_utc)
+                        .to_std()
+                        .ok()
                         .filter(|d| *d > Duration::ZERO)
                         .map(|reset_duration| (db_count.min(burst), now + reset_duration))
                 })

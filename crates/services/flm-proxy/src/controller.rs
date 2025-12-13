@@ -858,7 +858,10 @@ async fn handle_honeypot(
             )
             .await
         {
-            warn!("Failed to save intrusion attempt for {}: {}", client_ip_for_db, e);
+            warn!(
+                "Failed to save intrusion attempt for {}: {}",
+                client_ip_for_db, e
+            );
         }
 
         // Log audit event
@@ -903,7 +906,10 @@ async fn handle_honeypot(
 
             for _ in 0..failures_to_record {
                 if !ip_blocklist.record_failure(client_ip_for_db).await {
-                    warn!("Failed to record IP blocklist failure for {}", client_ip_for_db);
+                    warn!(
+                        "Failed to record IP blocklist failure for {}",
+                        client_ip_for_db
+                    );
                 }
             }
         }
@@ -2468,7 +2474,10 @@ async fn start_packaged_ca_server(
                 reason: format!("HTTP redirect server error: {e}"),
             });
         if let Err(e) = http_status_tx.send(("http", result)) {
-            warn!("Failed to send HTTP server status: receiver may have been dropped: {}", e);
+            warn!(
+                "Failed to send HTTP server status: receiver may have been dropped: {}",
+                e
+            );
         }
     });
 
@@ -2487,7 +2496,10 @@ async fn start_packaged_ca_server(
             }),
         };
         if let Err(e) = https_status_tx.send(("https", result)) {
-            warn!("Failed to send HTTPS server status: receiver may have been dropped: {}", e);
+            warn!(
+                "Failed to send HTTPS server status: receiver may have been dropped: {}",
+                e
+            );
         }
     });
 
@@ -2761,7 +2773,10 @@ async fn start_https_acme_server(
                 reason: format!("HTTP challenge server error: {e}"),
             });
         if let Err(e) = http_status_tx.send(("http", result)) {
-            warn!("Failed to send HTTP server status: receiver may have been dropped: {}", e);
+            warn!(
+                "Failed to send HTTP server status: receiver may have been dropped: {}",
+                e
+            );
         }
     });
 
@@ -2780,7 +2795,10 @@ async fn start_https_acme_server(
             }),
         };
         if let Err(e) = https_status_tx.send(("https", result)) {
-            warn!("Failed to send HTTPS server status: receiver may have been dropped: {}", e);
+            warn!(
+                "Failed to send HTTPS server status: receiver may have been dropped: {}",
+                e
+            );
         }
     });
 
@@ -2796,7 +2814,10 @@ async fn start_https_acme_server(
         )
         .await;
         if let Err(e) = acme_status_tx.send(("acme", result)) {
-            warn!("Failed to send ACME server status: receiver may have been dropped: {}", e);
+            warn!(
+                "Failed to send ACME server status: receiver may have been dropped: {}",
+                e
+            );
         }
     });
 
@@ -3031,7 +3052,10 @@ async fn start_dns01_acme_server(
                 reason: format!("HTTP challenge server error: {e}"),
             });
         if let Err(e) = http_status_tx.send(("http", result)) {
-            warn!("Failed to send HTTP server status: receiver may have been dropped: {}", e);
+            warn!(
+                "Failed to send HTTP server status: receiver may have been dropped: {}",
+                e
+            );
         }
     });
 
@@ -3050,7 +3074,10 @@ async fn start_dns01_acme_server(
             }),
         };
         if let Err(e) = https_status_tx.send(("https", result)) {
-            warn!("Failed to send HTTPS server status: receiver may have been dropped: {}", e);
+            warn!(
+                "Failed to send HTTPS server status: receiver may have been dropped: {}",
+                e
+            );
         }
     });
 
@@ -3081,7 +3108,10 @@ async fn start_dns01_acme_server(
         )
         .await;
         if let Err(e) = acme_status_tx.send(("acme", result)) {
-            warn!("Failed to send ACME server status: receiver may have been dropped: {}", e);
+            warn!(
+                "Failed to send ACME server status: receiver may have been dropped: {}",
+                e
+            );
         }
     });
 
@@ -3477,7 +3507,10 @@ async fn start_dev_self_signed_server(
                 reason: format!("HTTP redirect server error: {e}"),
             });
         if let Err(e) = http_status_tx.send(("http", result)) {
-            warn!("Failed to send HTTP server status: receiver may have been dropped: {}", e);
+            warn!(
+                "Failed to send HTTP server status: receiver may have been dropped: {}",
+                e
+            );
         }
     });
 
@@ -3496,7 +3529,10 @@ async fn start_dev_self_signed_server(
             }),
         };
         if let Err(e) = https_status_tx.send(("https", result)) {
-            warn!("Failed to send HTTPS server status: receiver may have been dropped: {}", e);
+            warn!(
+                "Failed to send HTTPS server status: receiver may have been dropped: {}",
+                e
+            );
         }
     });
 

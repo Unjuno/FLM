@@ -2540,7 +2540,7 @@ async fn test_model_capabilities_detection_in_list_models() {
     assert_eq!(response.status(), reqwest::StatusCode::OK);
     let body: serde_json::Value = response.json().await.unwrap();
     assert!(body.get("data").is_some());
-    
+
     // Note: Actual model capabilities depend on registered engines
     // This test verifies that the endpoint works correctly
     // Model capabilities are detected by engines in their list_models() implementation

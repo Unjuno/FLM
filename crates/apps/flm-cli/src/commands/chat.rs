@@ -37,17 +37,15 @@ fn parse_model_id(model_id: &str) -> Result<(String, String), Box<dyn std::error
     // why: starts_withでチェック済みなので、strip_prefixは常にSomeを返す
     // alt: unwrap()を使用（理論上は安全だが、expect()の方が明確）
     // evidence: starts_with("flm://")がtrueの場合、strip_prefix("flm://")は常にSomeを返す
-    let without_prefix = model_id
-        .strip_prefix("flm://")
-        .ok_or_else(|| {
-            format!(
-                "Error: Internal validation failure while parsing model ID.\n\
+    let without_prefix = model_id.strip_prefix("flm://").ok_or_else(|| {
+        format!(
+            "Error: Internal validation failure while parsing model ID.\n\
                 Model ID: {}\n\
                 This is an unexpected error. Please report this issue if it persists.\n\
                 Expected format: flm://engine_id/model_name",
-                model_id
-            )
-        })?;
+            model_id
+        )
+    })?;
     let parts: Vec<&str> = without_prefix.splitn(2, '/').collect();
 
     if parts.len() != 2 {
@@ -303,17 +301,11 @@ pub async fn execute(
             .unwrap_or(engine_capabilities.audio_inputs);
 
         if has_images && !vision_supported {
-            return Err(format!(
-                "Model '{model_id}' does not support vision inputs"
-            )
-            .into());
+            return Err(format!("Model '{model_id}' does not support vision inputs").into());
         }
 
         if has_audio && !audio_inputs_supported {
-            return Err(format!(
-                "Model '{model_id}' does not support audio inputs"
-            )
-            .into());
+            return Err(format!("Model '{model_id}' does not support audio inputs").into());
         }
     }
 

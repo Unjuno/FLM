@@ -50,44 +50,45 @@ impl LlmEngine for MockEngine {
 
     async fn list_models(&self) -> Result<Vec<flm_core::domain::engine::ModelInfo>, EngineError> {
         use flm_core::domain::models::ModelCapabilities;
-        
+
         // Detect capabilities from model name
-        let capabilities = if self.model_name.contains("o1") || self.model_name.contains("reasoning") {
-            Some(ModelCapabilities {
-                reasoning: true,
-                tools: false,
-                vision: false,
-                audio_inputs: false,
-                audio_outputs: false,
-            })
-        } else if self.model_name.contains("llava") || self.model_name.contains("vision") {
-            Some(ModelCapabilities {
-                reasoning: false,
-                tools: false,
-                vision: true,
-                audio_inputs: false,
-                audio_outputs: false,
-            })
-        } else if self.model_name.contains("whisper") || self.model_name.contains("audio") {
-            Some(ModelCapabilities {
-                reasoning: false,
-                tools: false,
-                vision: false,
-                audio_inputs: true,
-                audio_outputs: true,
-            })
-        } else if self.model_name.contains("gpt-4") || self.model_name.contains("tool") {
-            Some(ModelCapabilities {
-                reasoning: false,
-                tools: true,
-                vision: true,
-                audio_inputs: false,
-                audio_outputs: false,
-            })
-        } else {
-            None
-        };
-        
+        let capabilities =
+            if self.model_name.contains("o1") || self.model_name.contains("reasoning") {
+                Some(ModelCapabilities {
+                    reasoning: true,
+                    tools: false,
+                    vision: false,
+                    audio_inputs: false,
+                    audio_outputs: false,
+                })
+            } else if self.model_name.contains("llava") || self.model_name.contains("vision") {
+                Some(ModelCapabilities {
+                    reasoning: false,
+                    tools: false,
+                    vision: true,
+                    audio_inputs: false,
+                    audio_outputs: false,
+                })
+            } else if self.model_name.contains("whisper") || self.model_name.contains("audio") {
+                Some(ModelCapabilities {
+                    reasoning: false,
+                    tools: false,
+                    vision: false,
+                    audio_inputs: true,
+                    audio_outputs: true,
+                })
+            } else if self.model_name.contains("gpt-4") || self.model_name.contains("tool") {
+                Some(ModelCapabilities {
+                    reasoning: false,
+                    tools: true,
+                    vision: true,
+                    audio_inputs: false,
+                    audio_outputs: false,
+                })
+            } else {
+                None
+            };
+
         Ok(vec![flm_core::domain::engine::ModelInfo {
             engine_id: self.id.clone(),
             model_id: format!("flm://{}/{}", self.id, self.model_name),

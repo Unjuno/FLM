@@ -146,12 +146,12 @@ impl LlmEngine for VllmEngine {
                 });
 
                 ModelInfo {
-                engine_id: self.engine_id.clone(),
-                model_id: format!("flm://{}/{}", self.engine_id, model.id),
-                display_name: model.id.clone(),
-                context_length: None, // vLLM API doesn't always provide this
-                supports_streaming: true,
-                supports_embeddings: true,
+                    engine_id: self.engine_id.clone(),
+                    model_id: format!("flm://{}/{}", self.engine_id, model.id),
+                    display_name: model.id.clone(),
+                    context_length: None, // vLLM API doesn't always provide this
+                    supports_streaming: true,
+                    supports_embeddings: true,
                     capabilities,
                 }
             })
@@ -605,7 +605,7 @@ mod tests {
         assert!(detect_reasoning_support("qwen2.5-reasoning"));
         assert!(detect_reasoning_support("model-cot"));
         assert!(detect_reasoning_support("model-reasoning"));
-        
+
         // Negative cases
         assert!(!detect_reasoning_support("llama2"));
         assert!(!detect_reasoning_support("gpt-3.5"));
@@ -623,7 +623,7 @@ mod tests {
         assert!(detect_tool_use_support("model-tool"));
         assert!(detect_tool_use_support("model-function"));
         assert!(detect_tool_use_support("model-agent"));
-        
+
         // Negative cases
         assert!(!detect_tool_use_support("llama2"));
         assert!(!detect_tool_use_support("mistral-tiny"));
@@ -640,7 +640,7 @@ mod tests {
         assert!(detect_vision_support("vision-model"));
         assert!(detect_vision_support("llama-vision"));
         assert!(detect_vision_support("multimodal-model"));
-        
+
         // Negative cases
         assert!(!detect_vision_support("llama2"));
         assert!(!detect_vision_support("gpt-3.5"));
@@ -657,7 +657,7 @@ mod tests {
         assert!(detect_audio_support("tts-model"));
         assert!(detect_audio_support("asr-model"));
         assert!(detect_audio_support("transcription-model"));
-        
+
         // Negative cases
         assert!(!detect_audio_support("llama2"));
         assert!(!detect_audio_support("gpt-3.5"));
@@ -671,16 +671,16 @@ mod tests {
         assert!(!detect_reasoning_support("   "));
         assert!(!detect_reasoning_support("model"));
         assert!(!detect_reasoning_support("123"));
-        
+
         // Partial matches should not trigger
         assert!(!detect_reasoning_support("model-o"));
         assert!(!detect_reasoning_support("o-model"));
-        
+
         // Case variations
         assert!(detect_reasoning_support("O1"));
         assert!(detect_reasoning_support("O1-PREVIEW"));
         assert!(detect_reasoning_support("DEEPSEEK-R1"));
-        
+
         // Special characters
         assert!(detect_reasoning_support("o1:latest"));
         assert!(detect_reasoning_support("o1-v2.0"));
@@ -693,7 +693,7 @@ mod tests {
         let multimodal_model = "gpt-4-vision-tool";
         assert!(detect_tool_use_support(multimodal_model));
         assert!(detect_vision_support(multimodal_model));
-        
+
         // Test that detection is independent
         let reasoning_only = "o1";
         assert!(detect_reasoning_support(reasoning_only));

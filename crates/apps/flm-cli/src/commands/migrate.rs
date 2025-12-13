@@ -568,7 +568,11 @@ async fn execute_apply(
         Err(e) => {
             // Log file may not exist yet, which is fine
             if e.kind() != std::io::ErrorKind::NotFound {
-                eprintln!("Warning: Failed to read existing log file {}: {}", log_file.display(), e);
+                eprintln!(
+                    "Warning: Failed to read existing log file {}: {}",
+                    log_file.display(),
+                    e
+                );
             }
             String::new()
         }
@@ -926,7 +930,10 @@ async fn apply_settings(
         // Handle config.json format (object instead of array)
         for (key, value) in settings_obj {
             let value_str = if value.is_string() {
-                value.as_str().expect("value should be string since is_string() returned true").to_string()
+                value
+                    .as_str()
+                    .expect("value should be string since is_string() returned true")
+                    .to_string()
             } else {
                 serde_json::to_string(value)?
             };
