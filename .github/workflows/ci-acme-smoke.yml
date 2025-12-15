@@ -26,4 +26,6 @@ jobs:
           # TODO: Implement ACME smoke test
           # See docs/TEST_STRATEGY.md section 2.3
           echo "ACME smoke test not yet implemented for challenge: ${{ matrix.challenge }}"
+          echo "Skipping test until implementation is complete"
+          exit 0
 
