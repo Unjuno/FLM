@@ -110,10 +110,10 @@ mod tests {
     #[cfg(unix)]
     #[test]
     fn set_secure_permissions_unix_sets_mode() {
-        let file = NamedTempFile::new().expect("temp file");
-        set_secure_permissions(file.path()).expect("set permissions");
+        let file = NamedTempFile::new().unwrap_or_else(|e| panic!("Failed to create temp file: {}", e));
+        set_secure_permissions(file.path()).unwrap_or_else(|e| panic!("Failed to set permissions: {}", e));
 
-        let metadata = std::fs::metadata(file.path()).expect("metadata");
+        let metadata = std::fs::metadata(file.path()).unwrap_or_else(|e| panic!("Failed to get metadata: {}", e));
         let mode = metadata.permissions().mode() & 0o777;
         assert_eq!(mode, 0o600);
     }
@@ -121,8 +121,8 @@ mod tests {
     #[cfg(not(unix))]
     #[test]
     fn set_secure_permissions_noop_non_unix() {
-        let file = NamedTempFile::new().expect("temp file");
+        let file = NamedTempFile::new().unwrap_or_else(|e| panic!("Failed to create temp file: {}", e));
         // Should not error even though it is a no-op
-        set_secure_permissions(file.path()).expect("set permissions noop");
+        set_secure_permissions(file.path()).unwrap_or_else(|e| panic!("Failed to set permissions (noop): {}", e));
     }
 }

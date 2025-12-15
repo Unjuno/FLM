@@ -929,11 +929,8 @@ async fn apply_settings(
     } else if let Some(settings_obj) = data.get("settings").and_then(|s| s.as_object()) {
         // Handle config.json format (object instead of array)
         for (key, value) in settings_obj {
-            let value_str = if value.is_string() {
-                value
-                    .as_str()
-                    .expect("value should be string since is_string() returned true")
-                    .to_string()
+            let value_str = if let Some(s) = value.as_str() {
+                s.to_string()
             } else {
                 serde_json::to_string(value)?
             };

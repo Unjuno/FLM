@@ -350,11 +350,14 @@ pub async fn policy_middleware(
             .unwrap_or(0);
         let reset_at = chrono::Utc::now()
             .checked_add_signed(chrono::Duration::seconds(
-                reset_time
-                    .duration_since(std::time::SystemTime::now())
-                    .unwrap_or_default()
-                    .as_secs()
-                    .min(i64::MAX as u64) as i64,
+                i64::try_from(
+                    reset_time
+                        .duration_since(std::time::SystemTime::now())
+                        .unwrap_or_default()
+                        .as_secs()
+                        .min(i64::MAX as u64),
+                )
+                .unwrap_or(i64::MAX),
             ))
             .unwrap_or_else(chrono::Utc::now)
             .to_rfc3339();
@@ -1445,8 +1448,12 @@ async fn check_rate_limit_with_info(
     );
     let log_path = std::env::temp_dir().join("rate_limit_debug.log");
     if let Ok(mut file) = OpenOptions::new().create(true).append(true).open(&log_path) {
-        let _ = file.write_all(log_msg.as_bytes());
-        let _ = file.flush();
+        if let Err(e) = file.write_all(log_msg.as_bytes()) {
+            debug!("Failed to write rate limit debug log: {}", e);
+        }
+        if let Err(e) = file.flush() {
+            debug!("Failed to flush rate limit debug log: {}", e);
+        }
     }
 
     // Calculate remaining BEFORE incrementing
@@ -1466,10 +1473,10 @@ async fn check_rate_limit_with_info(
         // why: Check for NaN/Infinity before conversion
         // alt: Direct conversion, but may produce invalid values
         // evidence: BUG-056 - NaN/Infinity check is missing
-        if remaining.is_finite() {
+        if remaining.is_finite() && remaining >= 0.0 && remaining <= u64::MAX as f64 {
             u32::try_from(remaining.floor() as u64).unwrap_or(0)
         } else {
-            warn!("tokens_available is NaN/Infinity, using 0 for burst_remaining");
+            warn!("Invalid remaining tokens value: {} (NaN/Infinity or out of range), using 0 for burst_remaining", remaining);
             0
         }
     } else {
@@ -1501,7 +1508,10 @@ async fn check_rate_limit_with_info(
     let minute_count_snapshot = entry.minute_count;
     let reset_at = chrono::Utc::now()
         .checked_add_signed(chrono::Duration::seconds(
-            reset_duration.as_secs().min(i64::MAX as u64) as i64,
+            i64::try_from(reset_duration.as_secs().min(i64::MAX as u64)).unwrap_or_else(|_| {
+                warn!("Timestamp calculation overflow detected for API key {}, clamping to i64::MAX", utils::mask_identifier(api_key_id));
+                i64::MAX
+            }),
         ))
         .unwrap_or_else(chrono::Utc::now)
         .to_rfc3339();
@@ -1515,9 +1525,18 @@ async fn check_rate_limit_with_info(
         }
     });
     // Monitor the task for panics (fire and forget)
-    tokio::spawn(async move {
+    // Note: This monitor task itself is not monitored, but panics in monitor tasks are rare
+    // and the worst case is that the original task's panic goes undetected, which is acceptable
+    // for background tasks like rate limit persistence
+    let monitor_handle = tokio::spawn(async move {
         if let Err(e) = persist_handle.await {
             error!("Rate limit persist task panicked: {:?}", e);
+        }
+    });
+    // Log if monitor task itself panics (very rare, but helps with debugging)
+    tokio::spawn(async move {
+        if let Err(e) = monitor_handle.await {
+            error!("Rate limit persist monitor task panicked: {:?}", e);
         }
     });
 
@@ -1551,8 +1570,24 @@ async fn adjust_ip_rate_limit_dynamically(
         // why: Use floating point for accurate percentage calculation
         // alt: Integer division, but loses precision for odd values
         // evidence: BUG-039 - integer division causes precision loss
-        let rpm_50 = (base_rpm as f64 * 0.5).round() as u32;
-        let burst_50 = (base_burst as f64 * 0.5).round() as u32;
+        let rpm_50 = {
+            let result = (base_rpm as f64 * 0.5).round();
+            if result >= 0.0 && result <= u32::MAX as f64 {
+                result as u32
+            } else {
+                warn!("Rate limit calculation overflow: base_rpm={}, result={}, clamping", base_rpm, result);
+                u32::MAX.min(base_rpm / 2)
+            }
+        };
+        let burst_50 = {
+            let result = (base_burst as f64 * 0.5).round();
+            if result >= 0.0 && result <= u32::MAX as f64 {
+                result as u32
+            } else {
+                warn!("Rate limit calculation overflow: base_burst={}, result={}, clamping", base_burst, result);
+                u32::MAX.min(base_burst / 2)
+            }
+        };
         return (rpm_50, burst_50);
     }
 
@@ -1561,8 +1596,24 @@ async fn adjust_ip_rate_limit_dynamically(
         // why: Use floating point for accurate percentage calculation
         // alt: Integer division, but loses precision
         // evidence: BUG-039 - integer division causes precision loss
-        let rpm_75 = (base_rpm as f64 * 0.75).round() as u32;
-        let burst_75 = (base_burst as f64 * 0.75).round() as u32;
+        let rpm_75 = {
+            let result = (base_rpm as f64 * 0.75).round();
+            if result >= 0.0 && result <= u32::MAX as f64 {
+                result as u32
+            } else {
+                warn!("Rate limit calculation overflow: base_rpm={}, result={}, clamping", base_rpm, result);
+                u32::MAX.min((base_rpm as f64 * 0.75) as u32)
+            }
+        };
+        let burst_75 = {
+            let result = (base_burst as f64 * 0.75).round();
+            if result >= 0.0 && result <= u32::MAX as f64 {
+                result as u32
+            } else {
+                warn!("Rate limit calculation overflow: base_burst={}, result={}, clamping", base_burst, result);
+                u32::MAX.min((base_burst as f64 * 0.75) as u32)
+            }
+        };
         return (rpm_75, burst_75);
     }
 
@@ -1623,7 +1674,10 @@ pub(crate) async fn check_ip_rate_limit_with_info(
     };
 
     // Check if limit would be exceeded after incrementing
-    let new_count = count.checked_add(1).unwrap_or(u32::MAX); // Clamp on overflow
+    let new_count = count.checked_add(1).unwrap_or_else(|| {
+        warn!("Rate limit count overflow detected for IP {}, clamping to u32::MAX", ip);
+        u32::MAX
+    });
     let allowed = new_count <= burst;
 
     // Calculate remaining requests (after this request is counted, if allowed)

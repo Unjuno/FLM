@@ -294,7 +294,8 @@ mod tests {
         std::env::set_var("FLM_DATA_DIR", dir.path());
         let path = crate::utils::get_daemon_state_path();
         if let Some(parent) = path.parent() {
-            std::fs::create_dir_all(parent).unwrap();
+            std::fs::create_dir_all(parent)
+                .unwrap_or_else(|e| panic!("Failed to create daemon state directory: {}", e));
         }
         let record = json!({
             "port": port,
@@ -302,7 +303,10 @@ mod tests {
             "pid": std::process::id(),
             "updated_at": chrono::Utc::now().to_rfc3339(),
         });
-        std::fs::write(&path, serde_json::to_vec(&record).unwrap()).unwrap();
+        let json_bytes = serde_json::to_vec(&record)
+            .unwrap_or_else(|e| panic!("Failed to serialize daemon state: {}", e));
+        std::fs::write(&path, json_bytes)
+            .unwrap_or_else(|e| panic!("Failed to write daemon state file: {}", e));
         path
     }
 

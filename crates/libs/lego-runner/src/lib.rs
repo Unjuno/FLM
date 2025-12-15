@@ -311,11 +311,12 @@ fn maybe_challenge(line: &str, pending_fqdn: &mut Option<String>) -> Option<DnsR
 
     if line.to_ascii_lowercase().contains("dns txt record") {
         if let Some(caps) = RECORD_LINE_RE.captures(line) {
-            let fqdn = caps
-                .get(1)
-                .map(|m| m.as_str().trim_end_matches('.'))
-                .unwrap();
-            *pending_fqdn = Some(fqdn.to_string());
+            if let Some(fqdn_match) = caps.get(1) {
+                let fqdn = fqdn_match.as_str().trim_end_matches('.');
+                *pending_fqdn = Some(fqdn.to_string());
+            } else {
+                debug!("DNS TXT record line matched but capture group 1 is missing: {}", line);
+            }
         }
     }
     None

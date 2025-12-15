@@ -501,9 +501,16 @@ async fn prepare_proxy_router(
             }
         });
         // Monitor the task for panics
-        tokio::spawn(async move {
+        // Note: This monitor task itself is not monitored, but panics in monitor tasks are rare
+        let monitor_load_handle = tokio::spawn(async move {
             if let Err(e) = load_handle.await {
                 error!("IP blocklist load task panicked: {:?}", e);
+            }
+        });
+        // Log if monitor task itself panics (very rare, but helps with debugging)
+        tokio::spawn(async move {
+            if let Err(e) = monitor_load_handle.await {
+                error!("IP blocklist load monitor task panicked: {:?}", e);
             }
         });
     }
@@ -511,17 +518,29 @@ async fn prepare_proxy_router(
     // Start background task for periodic database sync (every 5 minutes)
     let sync_handle = tokio::spawn(async move {
         let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(300)); // 5 minutes
+        let mut consecutive_errors = 0u32;
         loop {
             interval.tick().await;
 
             if ip_blocklist_for_sync.needs_sync().await {
-                if let Err(e) = ip_blocklist_for_sync
+                match ip_blocklist_for_sync
                     .sync_to_db(&security_repo_for_sync)
                     .await
                 {
-                    error!(error = %e, "Failed to sync IP blocklist to database");
-                } else {
-                    ip_blocklist_for_sync.mark_synced().await;
+                    Ok(_) => {
+                        consecutive_errors = 0;
+                        ip_blocklist_for_sync.mark_synced().await;
+                    }
+                    Err(e) => {
+                        consecutive_errors += 1;
+                        if consecutive_errors >= 5 {
+                            error!(error = %e, consecutive_errors, "Failed to sync IP blocklist to database (multiple consecutive failures)");
+                            // バックオフ: 次のリトライまで待機時間を延長
+                            tokio::time::sleep(tokio::time::Duration::from_secs(60)).await;
+                        } else {
+                            error!(error = %e, "Failed to sync IP blocklist to database");
+                        }
+                    }
                 }
             }
 
@@ -532,9 +551,16 @@ async fn prepare_proxy_router(
         }
     });
     // Monitor the sync task for panics
-    tokio::spawn(async move {
+    // Note: This monitor task itself is not monitored, but panics in monitor tasks are rare
+    let monitor_sync_handle = tokio::spawn(async move {
         if let Err(e) = sync_handle.await {
             error!("IP blocklist sync task panicked: {:?}", e);
+        }
+    });
+    // Log if monitor task itself panics (very rare, but helps with debugging)
+    tokio::spawn(async move {
+        if let Err(e) = monitor_sync_handle.await {
+            error!("IP blocklist sync monitor task panicked: {:?}", e);
         }
     });
 

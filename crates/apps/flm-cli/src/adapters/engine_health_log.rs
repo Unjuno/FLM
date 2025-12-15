@@ -74,7 +74,14 @@ impl EngineHealthLogRepository for SqliteEngineHealthLogRepository {
         .bind(engine_id)
         .bind(model_id)
         .bind(status_str)
-        .bind(latency_ms.map(|l| l as i64))
+        .bind(latency_ms.map(|l| {
+            if l <= i64::MAX as u64 {
+                l as i64
+            } else {
+                warn!("Latency value {} exceeds i64::MAX, clamping to i64::MAX", l);
+                i64::MAX
+            }
+        }))
         .bind(error_rate)
         .bind(Utc::now())
         .execute(&self.pool)
