@@ -1,5 +1,5 @@
 # Versioning Policy
-> Status: Canonical | Audience: Release/Platform engineers | Updated: 2025-11-20
+> Status: Canonical | Audience: Release/Platform engineers | Updated: 2025-02-01
 
 ## 1. Scope
 この文書は以下に適用される:
@@ -19,10 +19,14 @@
 
 ## 3. Release Flow
 1. 変更提案を `docs/templates/ADR_TEMPLATE.md` に従って提出。
-2. ADR 承認後、以下を実行:
+2. ADR 承認後、以下を実行（Breaking Change Checklistの項目を含む）:
+   - 新旧 DTO の差分を `git diff` で確認し、リーダブルな表を `docs/specs/CORE_API.md` の末尾に添付（Breaking Changeの場合）。
+   - `docs/guides/MIGRATION_GUIDE.md` に CLI/DB/Proxy の移行パスを追記（Breaking Changeの場合）。
+   - `docs/tests/ui-scenarios.md` と `docs/guides/TEST_STRATEGY.md` の該当テストを更新（Breaking Changeの場合）。
    - `docs/specs/CORE_API.md` など該当ファイルを更新し、冒頭の `Updated:` と `## Changelog` セクションを追記。
    - Rust crate の `Cargo.toml` で `version` を更新。
    - `docs/guides/VERSIONING_POLICY.md` の「バージョンマッピング表」を更新。
+   - 変更を取り込む CLI/Proxy の PR では `cargo semver-checks` または `cargo public-api` で ABI 互換性を検証（Breaking Changeの場合）。
 3. `git tag -s core-api-vX.Y.Z` を作成し、署名済みタグを push。
 4. CLI/Proxy/UI のリリースノートに「Core API Version」を記載。
 
@@ -34,13 +38,13 @@
 ## 5. バージョンマッピング表
 | Core API | CLI | Proxy | Docs タグ | 備考 |
 |----------|-----|-------|-----------|------|
-| `1.0.0` (Phase 0) | `0.1.0` | `0.1.0` | `core-api-v1.0.0` | 初回フリーズ。CLI/Proxy は 0.x 系のまま互換性警告を表示。 |
+| `1.0.0` (Phase 0) | `0.1.0` | `0.1.0` | `core-api-v1.0.0` | 初回フリーズ（凍結）。v1.0.0で凍結とは、ADR（Architecture Decision Record）経由でのみ変更を許可することを意味する。通常の変更は禁止され、破壊的変更や重要な機能追加はADRを提出して承認を得た後にのみ実装可能。CLI/Proxy は 0.x 系のまま互換性警告を表示。**注意**: `core-api-v1.0.0`タグは現在未作成。Phase 0完了時にGPG署名で作成予定。 |
 | `1.1.0` | `0.2.0` → `1.1.0` release window | `0.2.0` → `1.1.0` release window | `core-api-v1.1.0` | Core API の `MINOR` 追加を取り込む branch では 0.x で先行提供し、安定後に CLI/Proxy の `MAJOR` を Core API と合わせる。 |
 
 ## 6. Breaking Change Checklist
 1. 新旧 DTO の差分を `git diff` で確認し、リーダブルな表を `docs/specs/CORE_API.md` の末尾に添付。
 2. `docs/guides/MIGRATION_GUIDE.md` に CLI/DB/Proxy の移行パスを追記。
-3. `tests/ui-scenarios.md` と `docs/guides/TEST_STRATEGY.md` の該当テストを更新。
+3. `docs/tests/ui-scenarios.md` と `docs/guides/TEST_STRATEGY.md` の該当テストを更新。
 4. 変更を取り込む CLI/Proxy の PR では `cargo semver-checks` または `cargo public-api` で ABI 互換性を検証。
 
 ## 7. Changelog Template

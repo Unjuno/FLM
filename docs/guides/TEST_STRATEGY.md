@@ -1,5 +1,5 @@
 # Test Strategy
-> Status: Draft | Audience: QA / Release engineers | Updated: 2025-11-20
+> Status: Draft | Audience: QA / Release engineers | Updated: 2025-02-01
 
 ## 1. Testing Pyramid
 | 層 | 対象 | 目的 | ツール |
@@ -7,7 +7,7 @@
 | ユニット | `flm-core` services/ports, CLI サブコマンド | ロジック検証、DTO 互換性 | `cargo test`, `insta` |
 | 統合 | CLI↔Core, Proxy↔Core, DB マイグレーション | I/O 境界の整合性 | `cargo nextest`, sqlite in-memory |
 | E2E | CLI/Proxy/Setup Wizard + 実エンジン | フェーズ毎の受入 | GitHub Actions, self-hosted runners |
-| 手動 | UI 最小操作, Firewall wizard | ユーザーフロー/権限チェック | `tests/ui-scenarios.md` |
+| 手動 | UI 最小操作, Firewall wizard | ユーザーフロー/権限チェック | `docs/tests/ui-scenarios.md` |
 
 ## 2. CI Workflows
 ### 2.1 `ci-cli`
@@ -60,7 +60,7 @@
 - Proxy handlers: request/response golden tests
 
 ## 4. Manual Verification
-- `tests/ui-scenarios.md` を Phase ごとに更新
+- `docs/tests/ui-scenarios.md` を Phase ごとに更新
 - Phase 1B ハイライト:
   - Setup Wizard で ACME (http-01/dns-01) を実行し、証明書発行ログを確認
   - Firewall script preview/apply/rollback
@@ -82,6 +82,6 @@
 
 ## 7. Update Process
 1. 仕様変更時は対象セクションを更新し、`Updated:` を書き換え
-2. 新しいテストシナリオは `tests/ui-scenarios.md` にリンク
-3. Phase 完了後は結果を `docs/status/EVALUATION_REPORT.md` に追記
+2. 新しいテストシナリオは `docs/tests/ui-scenarios.md` にリンク
+3. Phase 完了後は結果を適切なレポートに追記
 

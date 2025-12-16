@@ -1,5 +1,7 @@
 # FLM Proxy Specification
-> Status: Canonical | Audience: Proxy/Network engineers | Updated: 2025-11-20
+> Status: Canonical | Audience: Proxy/Network engineers | Updated: 2025-02-01
+>
+> **注意**: エラーハンドリングポリシーについては、`docs/specs/CLI_SPEC.md` セクション4「エラー仕様」と `docs/specs/UI_MINIMAL.md` セクション5「UX / エラーハンドリングポリシー」を参照してください。
 
 > 章別リビジョン:
 >
@@ -9,7 +11,7 @@
 > | 6. TLS/HTTPS モード | Draft addendum (packaged-ca) | 2025-11-25 |
 > | 9. セキュリティポリシー連携 | v1.0.0 | 2025-11-20 |
 
-**注意**: 本プロキシ仕様は**個人利用・シングルユーザー環境向け**のアプリケーション向けです。マルチユーザー対応やロールベースアクセス制御（RBAC）機能は提供されていません。
+**注意**: 本プロキシ仕様は**個人利用・シングルユーザー環境向け**のアプリケーション向けです。マルチユーザー対応やロールベースアクセス制御（RBAC）機能は提供されていません。詳細な定義は`docs/guides/GLOSSARY.md`を参照。
 
 ## 1. 役割
 
@@ -46,21 +48,22 @@ flowchart LR
 
 | Path                     | ハンドラ概要                                                     |
 |-------------------------|------------------------------------------------------------------|
-| `POST /v1/chat/completions` | OpenAI 互換チャット。リクエストを `ChatRequest` にマッピングして `EngineService::chat/chat_stream` を呼ぶ。未対応パラメータ（例: `logit_bias`）は warning ログのみ。Phase1/2 は `model` に `flm://engine/model` 形式を必須とし、異なる形式や欠落時は 400 `invalid_model` |
-| `POST /v1/responses`    | OpenAI Responses API を `ChatRequest` + `MultimodalPayload` にマッピングし、vision/audio が有効なエンジンへ委譲。 |
+| `POST /v1/chat/completions` | OpenAI 互換チャット。リクエストを `ChatRequest` にマッピングして `EngineService::chat/chat_stream` を呼ぶ。未対応パラメータ（例: `logit_bias`）は warning ログのみ。Phase 1/2 は `model` に `flm://{engine_id}/{model}` 形式を必須とし、異なる形式や欠落時は 400 `invalid_model` |
+| `POST /v1/responses`    | OpenAI Responses API を `ChatRequest` + `MultimodalAttachment` にマッピングし、vision/audio が有効なエンジンへ委譲。 |
 | `POST /v1/images/generations` | Vision モデルへ画像付きプロンプトを送信。`EngineCapabilities::vision_inputs` が `true` のときのみ有効。 |
 | `POST /v1/audio/transcriptions` | Audio モデルへ音声ファイルを送信し、テキスト化 (`Whisper` 等)。`EngineCapabilities::audio_inputs` 必須。 |
 | `GET /v1/models`        | `EngineService::list_models` → モデルIDを `flm://{engine_id}/{model}` 形式に正規化し OpenAI 互換 JSON へ整形 |
 | `POST /v1/embeddings`   | `EngineService::embeddings` を呼び、OpenAI 互換で返却           |
+| `GET /metrics`           | Prometheus互換のメトリクスを提供。プロキシのパフォーマンス、セキュリティイベント、認証状況などを監視可能。詳細は `docs/guides/MONITORING.md` を参照。 |
 | `POST /engine/:id/*`    | エンジン固有エンドポイントへのパススルー（ヘッダ制限付き）      |
 
 ### `/v1/chat/completions`
 
-* リクエスト変換: OpenAI JSON → `ChatRequest` + `MultimodalPayload`
-* Phase1/2 は `model` に `flm://{engine_id}/{model}` 形式を必須とする。欠落または異なる形式の場合は 400 `invalid_model`
+* リクエスト変換: OpenAI JSON → `ChatRequest` + `MultimodalAttachment`
+* Phase 1/2 は `model` に `flm://{engine_id}/{model}` 形式を必須とする。欠落または異なる形式の場合は 400 `invalid_model`
 * モデル名が `flm://` 形式の場合のみ internal `ChatRequest.model_id` / `engine_id` に分解
 * ストリーミング: `stream: true` の場合は `EngineService::chat_stream` を呼び、SSEとして返却
-* `messages[].content` は OpenAI v2 形式を採用し、`string` / `[{type:"text","text":"..."}, {"type":"input_image","image_url":{...}}, {"type":"input_audio","audio_url":{...}}]` の両方を許可。画像/音声は Proxy が `MultimodalPayload` に抽出し、残りはテキストに連結する。
+* `messages[].content` は OpenAI v2 形式を採用し、`string` / `[{type:"text","text":"..."}, {"type":"input_image","image_url":{...}}, {"type":"input_audio","audio_url":{...}}]` の両方を許可。Proxy は配列形式を受け取った場合、`type: "input_image"` と `type: "input_audio"` の要素を `MultimodalAttachment` に抽出して `ChatMessage.attachments` に格納し、`type: "text"` の要素は連結して `ChatMessage.content`（`String`型）に格納する。これにより、Core API の `ChatMessage` 構造（`content: String, attachments: Vec<MultimodalAttachment>`）に変換される。
 * fallback ルール:
   - 温度指定 (`temperature`) が対象エンジンで未サポート → 設定を無視し warning を `stderr` ログ
   - `n > 1` は vLLM のみサポート。その他では `n=1` に強制
@@ -84,14 +87,14 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 ### `/v1/responses`
 
 - OpenAI Responses API と完全互換の JSON 契約を採用する（`input`, `response_format`, `modalities`, `metadata` など）。
-- `input` 配列は `[{ "role": "user", "content": [...]}, ...]` と `chat.completions` と同じ構造を共有し、Proxy 側では同一の `MultimodalPayload` 正規化ロジックを利用する。
+- `input` 配列は `[{ "role": "user", "content": [...]}, ...]` と `chat.completions` と同じ構造を共有し、Proxy 側では同一の `MultimodalAttachment` 正規化ロジックを利用する。
 - `modalities` は `["text"]` または `["text","audio"]` のみ許可。`audio` が含まれる場合は `EngineCapabilities.audio_outputs = true` を満たすエンジンに限定し、未対応なら 422 `unsupported_modalities`。
 - レスポンスは `{"object":"response","id":"resp-...","output":[{"type":"message","message":{...}}, {"type":"output_audio","audio":{"id":"aud-...","format":"wav","data":"base64..."}}]}` の OpenAI 形式。
 
 ### `/v1/images/generations`
 
-- 入力: `{"model":"flm://engine/model","prompt":"caption","image":[{"type":"input_image","image_url":{"url":"data:image/png;base64,...","detail":"high"}}],"n":1,"size":"1024x1024"}`。
-- `image` 配列内の要素は `/v1/chat/completions` と同じルール（Base64 データURI または HTTPS URL、最大 8MB）。HTTP/HTTPS URL の場合は Proxy がフェッチし、`MultimodalPayload::VisionInput` に格納する。
+- 入力: `{"model":"flm://{engine_id}/{model}","prompt":"caption","image":[{"type":"input_image","image_url":{"url":"data:image/png;base64,...","detail":"high"}}],"n":1,"size":"1024x1024"}`（例: `flm://ollama/llama2`）。
+- `image` 配列内の要素は `/v1/chat/completions` と同じルール（Base64 データURI または HTTPS URL、最大 8MB）。HTTP/HTTPS URL の場合は Proxy がフェッチし、`MultimodalAttachment` (kind: `InputImage`) に格納する。
 - Vision未対応 (`EngineCapabilities.vision_inputs=false`) の場合は 422 `unsupported_modalities`。
 - 出力: `{"created":<unix>,"data":[{"b64_json":"...","revised_prompt":null}]}`。LM Studio/Ollama がテキスト応答のみ返す場合は `b64_json` に空を入れず、HTTP 501 `not_implemented` を返す。
 
@@ -103,7 +106,7 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 
 ### `/v1/audio/speech` (予約)
 
-- Phase2 ではルータに登録するが Feature flag で無効化。`EngineCapabilities.audio_outputs=true` のエンジンが登録されるまで 404 `route_disabled` を返す。
+- Phase 2 ではルータに登録するが Feature flag で無効化。`EngineCapabilities.audio_outputs=true` のエンジンが登録されるまで 404 `route_disabled` を返す。
 - 仕様は OpenAI の Text-to-Speech に追従し、`input`（テキスト）、`voice`, `format` を受け取る。音声生成が必要になった時点で本節を Canonical 化する。
 
 ### 3.1 ペイロード上限
@@ -142,7 +145,7 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 ## 6. TLS / HTTPS モード
 
 ### 6.1 モード選択フローチャート
-> `packaged-ca` は Phase 3 Draft（未実装）。要件は `docs/planning/PHASE3_PACKAGING_PLAN.md` を参照。
+> `packaged-ca` は Phase 3 で実装完了。詳細は `docs/planning/PHASE3_PACKAGING_PLAN.md` を参照。
 
 ```
 インターネット公開？
@@ -166,9 +169,9 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 | `local-http`    | HTTPのみ。ローカルネットワーク限定（ファイアウォール必須） | CLIデフォルト、ローカル検証 |
 | `dev-selfsigned`| 自己署名証明書で HTTPS 提供。LAN / 開発用途専用。Wizard はルート証明書の生成・配布・削除手順を提示する（手動インストールが必要） | LAN/開発用途 |
 | `https-acme`    | ACME (Let's Encrypt など) で証明書を取得し HTTPS 提供 | インターネット公開（CLI版の既定） |
-| `packaged-ca`   | パッケージに同梱されたルートCA証明書を使用。インストール時にOS信頼ストアへ自動登録されるため、ブラウザ警告なしでHTTPS利用可能。**Status: Draft（Phase 3未実装）** | パッケージ版（Phase 3）の既定 |
+| `packaged-ca`   | パッケージに同梱されたルートCA証明書を使用。インストール時にOS信頼ストアへ自動登録されるため、ブラウザ警告なしでHTTPS利用可能。**Status: Implemented（Phase 3完了）**。`--features packaged-ca`でビルドする必要があります。 | パッケージ版（Phase 3）の既定 |
 
-**ポート設定**: `--port` で指定した値は HTTP 用ポートとして扱い、HTTPS は `port + 1` をデフォルトとする（例: 8080/8081）。
+**ポート設定**: `--port` で指定した値は HTTP 用ポートとして扱い、HTTPS は `port + 1` をデフォルトとする（例: 8080/8081）。詳細は `docs/specs/CORE_API.md` の `ProxyHandle` 定義を参照。
 
 **証明書管理**:
 - `dev-selfsigned`: Wizard/CLI が生成したルート証明書をクライアント OS／ブラウザに手動でインポート。ローテーション期限・撤去手順は `docs/guides/SECURITY_FIREWALL_GUIDE.md` に従う。
@@ -178,28 +181,27 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 - 設定は `ProxyConfig` に集約 (`core` 側で管理)
   - `listen_addr`: バインドするIPアドレス（デフォルト: "127.0.0.1"）。外部アクセスが必要な場合のみ "0.0.0.0" を使用
   - `trusted_proxy_ips`: X-Forwarded-For ヘッダーの検証に使用する信頼できるプロキシのIPアドレスリスト。空の場合は直接接続とみなす
-  - `acme_dns_lego_path`: **Phase 2 deferred**。DNS-01 自動化（`docs/planning/PLAN.md` の DNS Automation epic を参照）が復活するまで未使用。
+  - `acme_dns_lego_path`: **Phase 2 deferred**。DNS-01 自動化は将来の実装予定（Phase 3以降）。現在は未使用。
   - `acme_dns_propagation_secs`: **Phase 2 deferred**。TXT 伝播待機時間フィールド。現在は CLI/Proxy で解釈されない。
 * ACME 証明書は `security.db` にパスと更新日時を保存
 * `packaged-ca` モードのルートCA証明書はビルド時に生成し、インストーラに同梱。サーバー証明書は起動時に自動生成（ルートCAで署名）
 
 ### 6.3 ACME チャレンジ詳細
 
-`ProxyConfig` の `acme_challenge` / `acme_dns_profile_id` フィールドは `docs/specs/CORE_API.md` で定義された通りに解釈する。Phase 2 現時点では DNS-01 自動化が延期されているため、実装は `Http01` のみを受け付け、`Dns01` を指定した場合は即座に `ProxyError::InvalidConfig` を返す（DNS epic 再開時に再評価）。
+`ProxyConfig` の `acme_challenge` / `acme_dns_profile_id` フィールドは `docs/specs/CORE_API.md` で定義された通りに解釈する。Phase 2 現時点では DNS-01 自動化が延期されているため、実装は `Http01` のみを受け付け、`Dns01` を指定した場合は即座に `ProxyError::InvalidConfig` を返す（将来の実装予定（Phase 3以降））。
 
 | モード | 必須フィールド | 追加要件 |
 |--------|---------------|----------|
 | `Http01` (既定) | `acme_domain`, `acme_email` | `port` を HTTP、`port+1` を HTTPS に使用し、HTTP 側に `/.well-known/acme-challenge/*` エンドポイントを一時的に追加する。 |
-| `Dns01` (Deferred) | _N/A_ | DNS-01 自動化は Phase 2 時点では無効化されている。CLI/Proxy は `dns-01` を拒否し、`docs/planning/PLAN.md` の DNS Automation epic が完了するまで再利用不可。 |
+| `Dns01` (Deferred) | _N/A_ | DNS-01 自動化は Phase 2 時点では無効化されている。CLI/Proxy は `dns-01` を拒否し、将来の実装予定（Phase 3以降）。 |
 
 - 実装メモ: HTTP-01 チャレンジは `rustls-acme` ベースの `start_https_acme_server` で提供し、`FLM_ACME_USE_PROD=true` または `FLM_ACME_DIRECTORY=<URL>` を設定することで staging ↔ production のディレクトリを切り替えられる。
-- DNS-01 連携（lego/manual DNS provider 等）は撤回済み。将来再導入する場合は `docs/planning/PLAN.md` の epic を参照し、新たな ACME クライアント選定/実装方針を適用する。
+- DNS-01 連携（lego/manual DNS provider 等）は撤回済み。将来再導入する場合は新たな ACME クライアント選定/実装方針を適用する（Phase 3以降）。
 - ACME 取得/更新のデフォルトタイムアウトは 90 秒。2 回連続で失敗した場合は `ProxyError::AcmeError` を CLI へ返す。
 - **ACME失敗時のフォールバック**: タイムアウトまたはエラーが発生した場合、CLI/UI は以下の順序でフォールバックを必ず実施する:
   1. 既存の証明書が有効期限内なら再利用（`security.db` の `certificates` テーブルを確認し、自動で `https-acme` を継続）
   2. 再利用不可の場合は `dev-selfsigned` モードへの自動切り替えを試行し、必要に応じてユーザーへルート証明書手動インストール手順を提示する
-  3. それでも失敗した場合は `ProxyError::AcmeError` を返却し、GUI/CLI で手動対応を案内する
-  3. ユーザーが拒否した場合は `local-http` モードで起動し、HTTPS なしで運用可能にする
+  3. それでも失敗した場合は `ProxyError::AcmeError` を返却し、GUI/CLI で手動対応を案内する。ユーザーが拒否した場合は `local-http` モードで起動し、HTTPS なしで運用可能にする
 - CLI オプション `--challenge http-01|dns-01` と `--dns-profile <id>` は `ProxyConfig` に直結する。UI Setup Wizard でも同じフィールドを表示する。
 - HTTP-01 の場合、80/tcp が使用できない環境では CLI が自動的にポートフォワード（`netsh interface portproxy` / `iptables`）を設定し、終了時に戻す。DNS-01 はフォワード不要。
 - どちらのチャレンジでも証明書/秘密鍵は `security.db` にメタデータを保存し、実体ファイルは OS ごとの安全なパス（`%ProgramData%\flm\certs` 等）に配置する。
@@ -243,18 +245,51 @@ async fn chat_stream_handler(...) -> impl IntoResponse {
 ## 7. エラー・ログポリシー
 
 * すべてのリクエストに `request_id` を付与
+  * 生成方法: `{timestamp_millis}-{random_u64}` 形式（例: `1704067200000-12345678901234567890`）
+  * `timestamp_millis`: UTC時刻のミリ秒単位のUnixタイムスタンプ
+  * `random_u64`: 64ビットの乱数
+  * 形式: 文字列（数字とハイフンのみ）
 * ログ項目: timestamp, request_id, client_ip, api_key_id, endpoint, engine_id, latency_ms, status, error_type
-* SSE ストリーム中のエラーは `data: {"error": ...}` として送出し、最後に `done` イベントで終了
-* 追加エラーコード:
-  - `unsupported_modalities`: リクエストが要求するモーダルをエンジンが公開していない場合。HTTP 422。
-  - `route_disabled`: `/v1/audio/speech` など Feature flag で無効化中。HTTP 404。
-  - `payload_too_large`: Vision / Audio の入力が上限を超えた場合。HTTP 413。
+* SSE ストリーム中のエラーは `data: {"error": {"code": "...", "message": "...", "type": "...", "request_id": "..."}}` として送出し、最後に `data: [DONE]` イベントで終了。エラーオブジェクトの構造は通常のエラーレスポンスと同じ（`code`、`message`、`type`、`request_id`フィールドを含む）。
+
+### 7.1 HTTPステータスコードとエラーコードの対応
+
+| HTTPステータスコード | エラーコード | 説明 | 使用例 |
+|---------------------|------------|------|--------|
+| 400 | `invalid_model` | モデルIDの形式が不正または欠落 | `model` に `flm://{engine_id}/{model}` 形式以外が指定された場合 |
+| 400 | `unsupported_parameter` | 未サポートのパラメータが指定された場合 | `response_format` など未知のパラメータが指定された場合 |
+| 404 | `route_disabled` | エンドポイントがFeature flagで無効化されている | `/v1/audio/speech` が無効化されている場合 |
+| 404 | `not_found` | リソースが見つからない | エンジンやモデルが存在しない場合 |
+| 413 | `payload_too_large` | ペイロードサイズが上限を超えた場合 | Vision/Audio入力が上限（8MB/25MB）を超えた場合 |
+| 422 | `unsupported_modalities` | エンジンが要求されたモーダルをサポートしていない | Vision/Audio未対応エンジンに画像/音声が含まれる場合 |
+| 500 | `internal_error` | サーバー内部エラー | 予期しないエラーが発生した場合 |
+| 501 | `not_implemented` | 機能が未実装 | LM Studio/Ollamaが画像生成をサポートしていない場合 |
+
+### 7.2 エラーレスポンス形式
+
+エラーレスポンスは以下の形式で返却されます：
+
+```json
+{
+  "error": {
+    "code": "invalid_model",
+    "message": "Invalid model format. Expected flm://{engine_id}/{model}",
+    "request_id": "req-1234567890"
+  }
+}
+```
+
+* `code`: エラーコード（上記対応表を参照）
+* `message`: 人間が読めるエラーメッセージ
+* `request_id`: リクエストID（ログ追跡用）
+
+SSEストリーム中のエラーは `data: {"error": {"code": "...", "message": "...", "type": "...", "request_id": "..."}}` として送出され、最後に `data: [DONE]` イベントで終了します。エラーオブジェクトの構造は通常のエラーレスポンスと同じ（`code`、`message`、`type`、`request_id`フィールドを含む）。
 
 ## 8. Fallback ルール（暫定）
 
 | パラメータ | サポートエンジン | 非対応時の挙動 |
 |------------|------------------|----------------|
-| `temperature` | 全エンジン | 受け入れるが範囲外の場合 clamp。未実装エンジンはログ警告＋デフォルト値 |
+| `temperature` | 全エンジン | 有効範囲: 0.0-2.0。範囲外の場合は最小値（0.0）または最大値（2.0）にclamp。未実装エンジンはログ警告＋デフォルト値 |
 | `n` | vLLM のみ | その他は `n=1` 強制、warning |
 | `logit_bias`, `presence_penalty`, `frequency_penalty` | 未サポートエンジン多数 | warning を出しつつ無視 |
 | `stop` | Ollama/vLLM | llama.cpp 等未対応は無視 |
@@ -269,6 +304,12 @@ Proxy / UI / CLI は `SecurityPolicy.policy_json` に以下のキーが存在す
 
 - デフォルト運用では `flm-proxy --daemon` が起動し、127.0.0.1 のランダム空きポートで管理 API (`/admin/*`) を公開する。
 - すべての管理リクエストは `Authorization: Bearer <token>` を必須とし、token は CLI が起動時に生成・渡下する。現在は平文 HTTP だが loopback 接続のみに限定される。将来的に TLS / Unix domain socket / Windows named pipe を追加する。
+- **Bearerトークンの仕様**:
+  - 生成方法: CLI起動時にランダムな32バイトのhex文字列を生成（例: `openssl rand -hex 32`相当）
+  - 有効期限: CLIプロセスが終了するまで有効（プロセス終了時に無効化）
+  - ローテーション: CLI再起動時に新しいトークンを生成し、古いトークンは無効化される
+  - 保存場所: メモリ内のみ（環境変数やファイルには保存しない）
+  - 同一マシン上の他のプロセスからのアクセス防止: loopback接続のみに限定し、Bearerトークンによる認証を必須とする。認証失敗が一定回数（デフォルト: 5回）を超えた場合は、該当IPアドレスを一時的にブロックし、audit logに記録する。
 - 提供エンドポイント:
   - `GET /admin/health` → `{ "status": "ok" }`
   - `POST /admin/start` → `ProxyConfig` を受け取り新しいインスタンスを起動、`ProxyHandle` を返す
@@ -278,14 +319,15 @@ Proxy / UI / CLI は `SecurityPolicy.policy_json` に以下のキーが存在す
 - ループバック HTTP 上であっても、CLI 以外からのアクセスを防ぐため token を必須とし、一定回数の認証失敗は audit log に記録する。
 
 
-**JSONスキーマの定義**: `docs/specs/CORE_API.md` の「SecurityPolicy エッジケース」セクションを参照（唯一の定義源）。
+**JSONスキーマの定義**: `docs/specs/CORE_API.md` の「SecurityPolicy エッジケース」セクションを参照。実際のJSON Schemaファイルは `docs/specs/schemas/security_policy.schema.json` に保存されており、`scripts/validate_schemas.sh` で AJV ベースの検証を実行できます。JSON Schemaファイル（`docs/specs/schemas/security_policy.schema.json`）はこの定義に基づく実装であり、検証用に使用される。
 
 **バリデーションルール**（`CORE_API.md` より）:
 - `ip_whitelist`: CIDR/IPv4/IPv6 文字列の配列。空配列 `[]` または省略時は IP 制限無効（すべて許可）。`null` は無効として扱う。
 - `cors.allowed_origins`: 許可Origin配列。空配列 `[]` は `*`（すべて許可）として扱う。省略時は `*`。
-- `rate_limit`: `rpm`（per API key）と任意の `burst`。省略時はレート制限無効。`rpm` が 0 の場合は無効として扱う。`burst` が省略時は `rpm` と同じ値を使用。
+- `rate_limit`: `rpm`（per API key）と任意の `burst`。省略時はレート制限無効。`rpm` が 0 の場合は無効として扱う。`burst` が省略時は `rpm` と同じ値を使用。`burst` が `rpm` より大きい場合は `rpm` にclampされる（IPレート制限の場合）。APIキー単位のレート制限では `burst` が `rpm` より大きい場合でも許可されるが、実際の制限は `rpm` と `burst` の両方を満たす必要がある。
+- `ip_rate_limit`: IP単位のレート制限（グローバルレート制限）。`rpm`と`burst`を指定可能。デフォルトは1000 rpm。APIキー単位のレート制限とIP単位のレート制限の両方が適用され、どちらか一方でも制限を超えた場合はリクエストが拒否される。
 
-**運用**: Phase1/2ではグローバルポリシーID `"default"` のみを参照し、Proxy は常にこのポリシーをロードして適用する。
+**運用**: Phase 1/2ではグローバルポリシーID `"default"` のみを参照し、Proxy は常にこのポリシーをロードして適用する。
 
 ## 10. 証明書管理（packaged-ca モード）
 
@@ -386,7 +428,7 @@ Proxy / UI / CLI は `SecurityPolicy.policy_json` に以下のキーが存在す
    - Streaming や SSE でも Tor 由来の追加遅延を想定し、`CONNECT` タイムアウトを 20 秒に拡大する。タイムアウト時は接続ごとに `tor_unreachable` イベントを audit log に記録し、fail_open=false の場合は Proxy 自体を停止する。
 3. **CustomSocks5**:
    - CLI/UI が提供する `socks5://host:port` を使用。Tor と同じコードパスを共有しつつ、`tor` 固有の bootstrapping は実施しない。SOCKS5 は `socks5h` 経由で DNS も代理解決する。
-   - 認証付き SOCKS5 は Phase4 の拡張範囲外（現状は匿名のみ）。
+   - 認証付き SOCKS5 は Phase 4 の拡張範囲外（現状は匿名のみ）。
 
 追加要件:
 

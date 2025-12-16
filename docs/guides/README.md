@@ -1,6 +1,6 @@
 # Guides
 
-> Status: Reference | Audience: All contributors | Updated: 2025-11-25
+> Status: Reference | Audience: All contributors | Updated: 2025-02-01
 
 このディレクトリには、実装・運用に関するガイドとマニュアルが含まれています。
 
@@ -87,7 +87,7 @@ FLMプロジェクトで使用される主要な用語の定義。アルファ�
 
 ### MIGRATION_GUIDE.md - 移行ガイド
 
-**Status**: Draft | **Audience**: CLI / Ops engineers | **Updated**: 2025-11-25
+**Status**: Draft | **Audience**: CLI / Ops engineers | **Updated**: 2025-02-01
 
 旧プロトタイプ（`archive/prototype/`）からの移行手順。
 

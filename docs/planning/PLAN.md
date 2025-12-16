@@ -11,7 +11,7 @@
 3. セキュリティ機能を Rust 側に統一し、HTTPS・認証・レート制限を同一言語で保証する
 4. ネットワーク公開に関する安全策（IP制限、APIキー運用、TLS戦略）を最小単位から明示する
 5. コア API / Proxy 変換ルール / エンジン検出 / DB マイグレーション / フェーズ合格基準を仕様書として固定し、実装前に参照できる状態を保つ
-6. **個人利用・シングルユーザー環境を前提**とし、マルチユーザー機能はスコープ外とする
+6. **個人利用・シングルユーザー環境を前提**とし、マルチユーザー機能はスコープ外とする（詳細な定義は`docs/guides/GLOSSARY.md`を参照）
 
 ## アーキテクチャ
 
@@ -61,7 +61,7 @@ flm/
 - **認証プロキシ**: Rust (Axum/Hyper) 製の HTTPS／認証レイヤー。Node実装はアーカイブ
 - **証明書管理**: 初期フェーズはローカルHTTP (`local-http`) をデフォルト。外部公開時は ACME / Let's Encrypt (`https-acme`) を推奨し、自己署名 (`dev-selfsigned`) を選択する場合はルート証明書配布・信頼設定・ローテーション手順を `docs/specs/PROXY_SPEC.md` / `docs/guides/SECURITY_FIREWALL_GUIDE.md` に従って実施。Phase 3 のパッケージング時には `packaged-ca` モードを実装し、インストール時にルートCA証明書をOS信頼ストアへ自動登録する方式を提供（大衆向け配布に最適）
 - **HTTPS方針**: ドメインを持たない利用者でも ACME を利用できるように CLI/Wizard から DNS-01 / HTTP-01 を補助し、自己署名はオフライン/LAN 限定モードとして明確に区別する。パッケージ版では `packaged-ca` モードを既定とし、証明書の自動インストールによりブラウザ警告なしでHTTPS利用を可能にする
-- **設定保存**: SQLite を用途別に分割 (`config.db`, `security.db`) し、`security.db` は OS キーチェーン（DPAPI / Keychain / libsecret）で暗号化鍵を保護、600相当の権限設定、バックアップ/復旧フロー、APIキーのローテーション自動化を `docs/specs/DB_SCHEMA.md` / `docs/guides/SECURITY_FIREWALL_GUIDE.md` に記載。`config.db` / `security.db` のマイグレーション失敗時は読み取り専用のセーフモードで起動できるようにする
+- **設定保存**: SQLite を用途別に分割 (`config.db`, `security.db`) し、`security.db` は OS キーチェーン（DPAPI / Keychain / libsecret）で暗号化鍵を保護、600相当の権限設定、バックアップ/復旧フロー、APIキーのローテーション自動化を `docs/specs/DB_SCHEMA.md` セクション5「データ保護」に記載（詳細は`docs/specs/DB_SCHEMA.md`を参照）。`config.db` / `security.db` のマイグレーション失敗時は読み取り専用のセーフモードで起動できるようにする
 - **セキュリティ**: IPホワイトリスト、APIキーのローテーション、レート制限、CORS、Forward先ホスト固定を最小構成要件に含め、SecurityPolicy は Phase1/2 ではグローバルID `"default"` のみ扱う
     - **security.db ガバナンス**: 
         - 暗号化鍵は OS キーチェーン (DPAPI/macOS Keychain/libsecret) から取得し、起動ごとに memory-only で展開。鍵ローテーション時は新ファイルへマイグレーション→差し替え→旧ファイル secure delete。 
@@ -98,7 +98,7 @@ flm/
 - Rustコアライブラリ（ドメインレイヤー）の骨格を作成し、CLI/UI/Proxyが利用するAPIを定義（詳細は `docs/specs/CORE_API.md`）
 - Domain/Ports と Application/Adapters の責務境界を `CORE_API.md` と `diagram.md` に反映
 - エンジン検出仕様 (`docs/specs/ENGINE_DETECT.md`)、DBスキーマ＋マイグレーション (`docs/specs/DB_SCHEMA.md`)、プロキシ仕様 (`docs/specs/PROXY_SPEC.md`)、移行ガイド (`docs/guides/MIGRATION_GUIDE.md`)、テスト戦略 (`docs/guides/TEST_STRATEGY.md`) を完成させ、**Core API / Proxy / DB Schema を `v1.0.0` としてタグ付け・署名し、以降の変更は ADR + バージョンアップでのみ許可**  
-  - フリーズ手順: (1) `docs/*` に最終版を反映 → (2) `core-api-v1.0.0` タグを GPG 署名で作成 → (3) 変更要望は `docs/templates/ADR_TEMPLATE.md` で提出 → (4) 承認後に `docs/guides/VERSIONING_POLICY.md` に従ってマイナー/パッチバージョンを更新
+  - フリーズ手順: (1) `docs/*` に最終版を反映 → (2) `core-api-v1.0.0` タグを GPG 署名で作成（**注意**: 現在は未作成。Phase 0完了時に作成予定） → (3) 変更要望は `docs/templates/ADR_TEMPLATE.md` で提出 → (4) 承認後に `docs/guides/VERSIONING_POLICY.md` に従ってマイナー/パッチバージョンを更新
 - UI モックの検討は Phase2 以降に回し、Phase0では Core API 固定を優先
 - 旧 `archive/prototype/` から `config.json` / SQLite 等のデータをエクスポートする移行計画（変換スクリプト、ロールバック手順、テストデータ）を策定
 
@@ -151,22 +151,28 @@ flm/
 - 移行ガイド: `docs/guides/MIGRATION_GUIDE.md`
 - バージョン管理ポリシー: `docs/guides/VERSIONING_POLICY.md`
 - テスト戦略: `docs/guides/TEST_STRATEGY.md`
-- 手動UIシナリオ: `tests/ui-scenarios.md`
+- 手動UIシナリオ: `docs/tests/ui-scenarios.md`
 - ADR テンプレート: `docs/templates/ADR_TEMPLATE.md`
 
 ## メトリクス
 - Rustコアの自動テストカバレッジ 80%以上
 - CLI 経由でのプロキシ起動→HTTP応答（初回/2回目）を CI で検証
 - セキュリティ設定（IP/CORS/APIキー）を含む統合テストを確立
-- UI は主要操作 3 ケースの手動テスト手順（`tests/ui-scenarios.md` 参照）を残し、IPC経路をユニットテスト
+- UI は主要操作 3 ケースの手動テスト手順（`docs/tests/ui-scenarios.md` 参照）を残し、IPC経路をユニットテスト
 - 受入メトリクスは GitHub Actions / self-hosted runners 上の OS 行列（Windows 11, macOS Sonoma, Ubuntu 22.04）で自動計測し、負荷テスト（100 req/min）は専用ベンチマークジョブ＋モックエンジンで継続的に検証する。CI マトリクス:
     - `ci-cli` ワークフロー: {OS × Engine} = (Win/macOS/Linux) × (Ollama/vLLM/LM Studio/llama.cpp mock)。`flm engines detect`, `flm models list`, `flm proxy start/stop`, `flm proxy status` を実行し、SSE/非SSE を確認（詳細は `docs/guides/TEST_STRATEGY.md`）。
     - `ci-proxy-load` ワークフロー: Linux self-hosted runnerで vLLM + mock engines を起動し、`wrk`/`k6` による 100 req/min (チャット + embeddings) を 10 分間流し、P95 レイテンシとエラー率を記録。結果は GitHub Actions artifacts + Grafana snapshot に保管。
     - `ci-acme-smoke` ワークフロー: nightly で staging ACME サーバと接続し、DNS-01/HTTP-01 モードをそれぞれ実行。82 分以内に証明書取得完了しない場合は失敗として issue を自動作成。
+
+## Phase完了基準（統一定義）
+
+> **注意**: Phaseの完了基準はこのセクションに統一して定義されています。他のドキュメントでPhase完了基準を参照する場合は、このセクションを参照してください。
+
 - Phaseごとの合格基準:
   - **Phase 1**: 
       - **1A (エンジン検出/モデル一覧)**: エンジン検出成功率100%（対象4エンジン×主要OS×3回）、状態判定（InstalledOnly/RunningHealthy等）が正確、APIキーがDBに平文で残らないことをテストで証明
       - **1B (プロキシ/セキュリティ)**: プロキシ再起動時間中央値<3s（初回除く）※`https-acme` は<90s、ストリーミング負荷テスト（100 req/min）を専用ベンチで成功、OpenAI互換→各エンジン変換で fallback ルールを実装、`flm proxy status` が起動前後のハンドル変化を正しく返すことを CI で確認
+      - **1C (Tor/上流プロキシ)**: `flm proxy start --egress-mode tor|socks5` が正常に動作し、Tor/SOCKS5経由での接続が成功すること。Tor断時のfail-closed動作が確認され、`flm proxy status`でegress情報が正しく表示されること。ACME + Torの場合はwarningを出し`local-http` fallbackが確認されること（オプション機能のため、Phase 1の必須完了基準ではない）
   - **Phase 2**: UI 主要操作3ケースを実機確認、IPCユニットテスト成功率100%、UIから全コアAPIが呼べることを自動テスト、Setup Wizard 4ステップが Windows/macOS/Linux で `SECURITY_FIREWALL_GUIDE.md` に沿って成功ログ（preview/apply + rollback含む）を出力し、権限不足時の手動適用フローが案内されること
   - **Phase 3**: インストーラ生成→E2Eスモークテスト成功、CLI/GUI両方で `/v1/models` と `/v1/chat/completions` が動作、`https-acme` モードの証明書発行/更新が自動化され、失敗時のフォールバック手順が確認済みであること。`packaged-ca` モードでは、インストール時にルートCA証明書が OS 信頼ストアへ自動登録され、ブラウザ警告なしで HTTPS が利用可能であることを Windows/macOS/Linux で検証済みであること。アンインストール時に証明書削除オプションが正常に動作すること。
 

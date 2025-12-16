@@ -14,7 +14,7 @@
 - CLI / UI / Proxy は同じコアAPIを呼び出す薄いアダプタ。CLI を子プロセスとして UI が呼び出す構造は禁止
 - Proxy も Rust (Axum/Hyper 等) で実装し、旧 Express 実装はアーカイブ
 - エンジン抽象 `LlmEngine` が Ollama / LM Studio / vLLM / llama.cpp をプラガブルに扱う
-- ネットワークモード: `local-http`（CLIデフォルト） / `https-acme`（インターネット公開時の既定） / `dev-selfsigned`（LAN/検証用途の例外的モード、手動インストール必要） / `packaged-ca`（Phase 3 で実装、パッケージ版の既定、証明書自動インストール）を提供
+- ネットワークモード: `local-http`（CLIデフォルト） / `https-acme`（インターネット公開時の既定） / `dev-selfsigned`（LAN/検証用途の例外的モード、手動インストール必要） / `packaged-ca`（Phase 3 で実装完了、パッケージ版の既定、証明書自動インストール）を提供
 - 仕様詳細は `docs/specs/CORE_API.md`, `docs/specs/PROXY_SPEC.md`, `docs/specs/ENGINE_DETECT.md`, `docs/specs/DB_SCHEMA.md` に分割して管理
 
 ---
@@ -44,7 +44,7 @@
 - Forward 先ホストは検出済みエンジンに限定し、任意URLへの転送を禁止
 - 認証: APIキー (Bearer) + IPホワイトリスト + CORS 制限 + レート制限（APIキー単位 & グローバル）を標準有効化
 - APIキーはハッシュ＋ソルトで保存し、ローテーションと失効操作を提供
-- ログ仕様: request_id, timestamp, client_id, engine, endpoint, latency(ms), status_code, error_type を JSON Lines で記録
+- ログ仕様: timestamp, request_id, client_ip, api_key_id, endpoint, engine_id, latency_ms, status, error_type を JSON Lines で記録
 - HTTPS/TLS: CLI デフォルトは `local-http`（ローカル利用向け）。インターネット公開時は `https-acme` を既定モードとし、`dev-selfsigned` は LAN / テスト / ドメイン非所持ユーザーに限定した暫定モードとして扱う（Wizard/CLI がルート証明書配布と撤去手順を案内）。Phase 3 のパッケージ版では `packaged-ca` を既定とし、インストール時に証明書が自動登録されるためブラウザ警告なしでHTTPS利用可能（大衆向け配布に最適）。
 - SecurityPolicy は Phase1/2 ではグローバルに1件（ID=`"default"`）のみを扱う
 - ルーティング、ストリーミング、ミドルウェア順序は `docs/specs/PROXY_SPEC.md` を参照
@@ -99,6 +99,7 @@
 - リアルタイム監視ダッシュボード
 - サードパーティ認証（OIDC 等）
 - 追加エンジン (SGLang, LocalAI など)
+- 特殊用途エンジン（画像生成、音声認識、音声合成など）: 詳細は `docs/guides/SPECIALIZED_ENGINES.md` を参照
 - 分散構成・オートスケール
 
 ---

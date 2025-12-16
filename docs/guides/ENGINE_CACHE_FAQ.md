@@ -1,6 +1,6 @@
 # Engine Detection Cache FAQ
 
-> Status: Reference | Audience: Support / Users | Updated: 2025-11-25
+> Status: Reference | Audience: Support / Users | Updated: 2025-02-01
 
 ## 1. 何がキャッシュされる？
 

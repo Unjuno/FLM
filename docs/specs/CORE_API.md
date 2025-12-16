@@ -1,27 +1,37 @@
 # FLM Core API Specification
-> Status: Canonical | Audience: Rust core engineers | Updated: 2025-01-27
+> Status: Canonical | Audience: Rust core engineers | Updated: 2025-02-01
+>
+> **注意**: エラーハンドリングポリシーについては、`docs/specs/CLI_SPEC.md` セクション4「エラー仕様」と `docs/specs/UI_MINIMAL.md` セクション5「UX / エラーハンドリングポリシー」を参照してください。
 
 > 章別リビジョン:
 >
 > | 節 | バージョン | 最終更新 |
 > | --- | --- | --- |
 > | 2. 公開データモデル | v1.0.0 | 2025-01-27 |
-> | SecurityPolicy スキーマ周辺 | v1.1.0 | 2025-11-25 |
+> | SecurityPolicy スキーマ周辺 | v1.1.0 | 2025-02-01 |
 > | ProxyConfig/サービスAPI | v1.0.0 | 2025-01-27 |
+>
+> **注意**: 本仕様は基本バージョンv1.0.0で凍結されていますが、セクション別にMINORバージョンアップ（v1.1.0等）が許可されています。変更はADR経由でのみ許可されます。詳細は`docs/guides/VERSIONING_POLICY.md`を参照。
 
-**注意**: 本API仕様は**個人利用・シングルユーザー環境向け**のアプリケーション向けです。マルチユーザー対応やロールベースアクセス制御（RBAC）機能は提供されていません。
+**注意**: 本API仕様は**個人利用・シングルユーザー環境向け**のアプリケーション向けです。マルチユーザー対応やロールベースアクセス制御（RBAC）機能は提供されていません。詳細な定義は`docs/guides/GLOSSARY.md`を参照。
 
 ## 1. Rust Workspace Modules
 
 ```
 crates/
-  flm-core/             # Domain services, data models, repositories
-  flm-cli/              # CLI adapter (uses Core services)
-  flm-proxy/            # Axum-based HTTP/S proxy (uses Core services)
-  flm-engine-ollama/    # Engine adapter implementing `LlmEngine`
-  flm-engine-vllm/
-  flm-engine-lmstudio/
-  flm-engine-llamacpp/
+  core/
+    flm-core/           # Domain services, data models, repositories
+  apps/
+    flm-cli/            # CLI adapter (uses Core services)
+  services/
+    flm-proxy/           # Axum-based HTTP/S proxy (uses Core services)
+  engines/
+    flm-engine-ollama/  # Engine adapter implementing `LlmEngine`
+    flm-engine-vllm/
+    flm-engine-lmstudio/
+    flm-engine-llamacpp/
+  libs/
+    lego-runner/        # ACME client library
 ```
 
 `flm-core` は Domain 層（純粋ロジック）とポート（抽象インターフェイス）のみを保持し、HTTP/DB/FS 等の I/O 実装は `flm-cli` / `flm-proxy` / `flm-engine-*` 側（Application/Adapter 層）で提供する。Core からは trait 経由で依存し、実体は DI で注入する。
@@ -60,6 +70,12 @@ pub struct EngineCapabilities {
     pub embeddings: bool,
     pub moderation: bool,
     pub tools: bool,
+    pub reasoning: bool,
+    pub vision_inputs: bool,
+    pub audio_inputs: bool,
+    pub audio_outputs: bool,
+    pub max_image_bytes: Option<u64>,
+    pub max_audio_bytes: Option<u64>,
 }
 
 #[derive(Clone, Debug)]
@@ -102,6 +118,7 @@ pub struct ModelInfo {
 pub struct ChatMessage {
     pub role: ChatRole,
     pub content: String,
+    pub attachments: Vec<MultimodalAttachment>,
 }
 
 #[derive(Clone, Debug)]
@@ -113,6 +130,23 @@ pub enum ChatRole {
 }
 
 #[derive(Clone, Debug)]
+pub enum MultimodalAttachmentKind {
+    InputImage,
+    InputAudio,
+}
+
+#[derive(Clone, Debug)]
+pub struct MultimodalAttachment {
+    pub kind: MultimodalAttachmentKind,
+    pub data: Vec<u8>,
+    pub mime_type: String,
+    pub filename: Option<String>,
+    pub size_bytes: Option<u64>,
+    pub detail: Option<String>,
+    pub duration_ms: Option<u32>,
+}
+
+#[derive(Clone, Debug)]
 pub struct ChatRequest {
     pub engine_id: EngineId,
     pub model_id: ModelId,
@@ -121,6 +155,10 @@ pub struct ChatRequest {
     pub temperature: Option<f32>,
     pub max_tokens: Option<u32>,
     pub stop: Vec<String>,
+    pub top_p: Option<f32>,
+    pub repeat_penalty: Option<f32>,
+    pub frequency_penalty: Option<f32>,
+    pub presence_penalty: Option<f32>,
 }
 
 #[derive(Clone, Debug)]
@@ -213,9 +251,18 @@ pub struct ProxyEgressConfig {
 #[derive(Clone, Debug)]
 pub enum AcmeChallengeKind {
     Http01,
-    /// Phase 2 Deferred: DNS-01 自動化 epic (`docs/planning/PLAN.md`) でのみ使用予定。
+    /// Phase 2 Deferred: DNS-01 自動化は将来の実装予定（Phase 3以降）。
     /// 現行リリースでは CLI/Proxy が拒否し、`ProxyError::InvalidConfig` を返す。
     Dns01,
+}
+
+#[derive(Clone, Debug)]
+pub struct MultimodalSettings {
+    pub enable_vision: bool,
+    pub enable_audio: bool,
+    pub max_image_size_mb: Option<u32>,
+    pub max_audio_size_mb: Option<u32>,
+    pub default_modalities: Option<String>,
 }
 
 #[derive(Clone, Debug)]
@@ -235,7 +282,7 @@ pub struct ProxyConfig {
     pub acme_email: Option<String>,
     pub acme_domain: Option<String>,
     pub acme_challenge: Option<AcmeChallengeKind>,
-    /// DNS-01 自動化で使用する資格情報プロフィールID（**現在は未使用**。DNS Automation epic 復帰時に再度有効化）
+    /// DNS-01 自動化で使用する資格情報プロフィールID（**現在は未使用**。将来の実装予定（Phase 3以降））
     pub acme_dns_profile_id: Option<String>,
     /// lego/manual DNS ワークフロー用のバイナリパス上書き（**現在は未使用**）
     #[serde(default)]
@@ -281,6 +328,11 @@ pub struct ProxyHandle {
 ///     （`local_ip` は OS のネットワークインターフェースから取得した実際のIPアドレス）
 /// - `acme_domain` が設定されている場合（https-acme / packaged-ca モード）:
 ///   - 外部アクセス用: `https://{acme_domain}:{https_port}`
+///
+/// **SecurityPolicyの`id`フィールドについて**:
+/// - Phase1/2では SecurityPolicy はグローバルに1件のみ運用し、`id = "default"` を固定とする
+/// - 将来の拡張（複数ポリシーのサポート）については、ADR（Architecture Decision Record）経由でのみ変更を許可する
+/// - データベーススキーマでは `id TEXT PRIMARY KEY CHECK(id = 'default')` として制約を設けている
 /// - `listen_addr` が特定のIPアドレスの場合:
 ///   - そのIPアドレスをそのまま使用
 ///
@@ -305,6 +357,7 @@ pub struct ProxyHandle {
 
 #[derive(Clone, Debug)]
 pub struct SecurityPolicy {
+    /// Phase 1/2では `"default"` に固定。DBスキーマでは `CHECK(id = 'default')` 制約により強制される。
     pub id: String,
     pub policy_json: String,
     pub updated_at: String,
@@ -320,14 +373,15 @@ pub struct SecurityPolicy {
 /// }
 /// ```
 ///
-/// - `ip_whitelist`: 省略時は無効扱い
-/// - `cors.allowed_origins`: 空の場合は `*`
-/// - `rate_limit`: 省略時はレート制限無効
+/// **必須フィールド**: なし（すべてのフィールドはオプション）
+/// - `ip_whitelist`: オプション。省略時は無効扱い
+/// - `cors.allowed_origins`: オプション。空の場合は `*`
+/// - `rate_limit`: オプション。省略時はレート制限無効
 /// UI/CLIはこのキーを基準に「設定済みか」を判定し、Proxyは同じキーを参照して制御する。
 /// JSON Schema は `docs/specs/schemas/security_policy.schema.json` に保存し、
 /// `scripts/validate_schemas.sh` で AJV ベースの検証を実行できる。
 ///
-/// Phase1/2では SecurityPolicy はグローバルに1件のみ運用し、`id = "default"` を固定とする。
+/// Phase 1/2では SecurityPolicy はグローバルに1件のみ運用し、`id = "default"` を固定とする。
 /// CLI/UI/Proxyは暗黙にこのIDを扱い、将来プロファイル分割が必要になった場合にのみ
 /// SecurityServiceへ複数IDサポートを拡張する。
 ///
@@ -346,7 +400,16 @@ pub struct SecurityPolicy {
 - `Error* → InstalledOnly`: Engine プロセスが停止した場合（検出はバイナリのみ）
 - `ErrorNetwork/ErrorApi → RunningHealthy`: 連続成功が閾値を満たした際に自動復帰
 
-これらの閾値は `EngineServiceConfig` で設定し、CLI から `flm config` 経由で調整可能にする。
+これらの閾値は `ConfigService` 経由で設定し、CLI から `flm config` 経由で調整可能にする。
+
+**デフォルト値**:
+- `HEALTH_LATENCY_THRESHOLD_MS`: 1500ms（レイテンシ閾値）
+- `MAX_NETWORK_FAILURES`: 3（連続失敗回数の閾値）
+
+**設定方法**:
+- CLI経由: `flm config set engine.health_latency_threshold_ms <値>`、`flm config set engine.max_network_failures <値>`
+- 設定キー: `engine.health_latency_threshold_ms`、`engine.max_network_failures`（`config.db`の`settings`テーブルに保存）
+- 実装: `ConfigService`（セクション8.2参照）を使用して設定値を取得・設定する
 
 ### 補助型定義
 
@@ -428,7 +491,7 @@ pub enum HttpError {
 - `trusted_proxy_ips`: X-Forwarded-For ヘッダーの検証に使用する信頼できるプロキシのIPアドレスリスト。空の場合は X-Forwarded-For と X-Real-IP ヘッダーを無視し、直接接続とみなす。信頼できるプロキシからのIPのみがクライアントIP抽出に使用される。
 - `acme_email`: `HttpsAcme` モード時のみ必須。RFC5322 準拠のメールアドレス形式。
 - `acme_domain`: `HttpsAcme` モード時のみ必須。FQDN 形式（例: `example.com`）。ワイルドカードは Phase 3 以降。
-- `acme_challenge`: 省略時は `Http01`。Phase 2 では `Http01` のみサポートし、`Dns01` を指定すると `ProxyError::InvalidConfig` を返す（epic 再開時に再評価）。
+- `acme_challenge`: 省略時は `Http01`。Phase 2 では `Http01` のみサポートし、`Dns01` を指定すると `ProxyError::InvalidConfig` を返す（将来の実装予定（Phase 3以降））。
 - `acme_dns_profile_id`: `Dns01` 用に予約済み。現在は CLI/Proxy がこのフィールドを設定しない。
 - `PackagedCa` モード時は `acme_email` / `acme_domain` は無視される（証明書はパッケージ同梱）。
 - `ProxyHandle.https_port`: `ProxyConfig.mode` が `LocalHttp` 以外の場合は常に `Some(port + 1)` を返し、`LocalHttp` では `None`。
@@ -451,7 +514,7 @@ pub enum HttpError {
 **バリデーションルール**:
 - `ip_whitelist`: CIDR/IPv4/IPv6 文字列の配列。空配列 `[]` または省略時は IP 制限無効（すべて許可）。`null` は無効として扱う。
 - `cors.allowed_origins`: 許可Origin配列。空配列 `[]` は `*`（すべて許可）として扱う。省略時は `*`。
-- `rate_limit`: `rpm`（per API key）と任意の `burst`。省略時はレート制限無効。`rpm` が 0 の場合は無効として扱う。`burst` が省略時は `rpm` と同じ値を使用。
+- `rate_limit`: `rpm`（per API key）と任意の `burst`。省略時はレート制限無効。`rpm` が 0 の場合は無効として扱う。`burst` が省略時は `rpm` と同じ値を使用。`burst` が `rpm` より大きい場合は `rpm` にclampされる（IPレート制限の場合）。APIキー単位のレート制限では `burst` が `rpm` より大きい場合でも許可されるが、実際の制限は `rpm` と `burst` の両方を満たす必要がある。
 
 **参照**: Proxy/UI/CLI はこのスキーマを基準に「設定済みか」を判定し、Proxy は同じキーを参照して制御する。詳細は `docs/specs/PROXY_SPEC.md` セクション9を参照。
 
@@ -784,7 +847,7 @@ for (key, value) in all_configs {
 * EngineService は `LlmEngine` 実装を登録した `EngineRegistry` を介して実装細部を隠蔽する
 * ProxyService は Axum サーバ起動を統括し、HTTPS/ACME/`packaged-ca` の証明書ハンドリングも内部に閉じる。`packaged-ca` モード（Phase 3）では、パッケージ同梱のルートCA証明書を OS 信頼ストアへ自動登録し、ブラウザ警告なしで HTTPS を提供する。
 * SecurityService / ConfigService は CLI / UI / Proxy の共通 API を提供する
-  * Phase1/2では `SecurityPolicy` の `id` を `"default"` に固定し、`get_policy`/`set_policy` は内部的にこのIDを扱う想定
+  * Phase 1/2では `SecurityPolicy` の `id` を `"default"` に固定し、`get_policy`/`set_policy` は内部的にこのIDを扱う想定
   * `rotate_api_key` は旧キーを即座に `revoked_at` 付きで無効化し、新しいキーID/平文を返す（グレース期間は設けない）
 * `*_Service::new()` では、Adapter 層から渡される DB 接続に対して `sqlx::migrate!()` を呼び出すのみで、接続管理や I/O は Adapter 側の責務とする
 
@@ -797,7 +860,15 @@ for (key, value) in all_configs {
 
 ### 非同期処理の仕様
 
-- **タイムアウト**: HTTP リクエストはデフォルト 30 秒、エンジン検出は 5 秒、ACME 証明書取得は 90 秒。タイムアウトは `EngineServiceConfig` / `ProxyConfig` で調整可能。
+- **タイムアウト**: タイムアウト値の一覧は以下の通り。タイムアウトは `EngineServiceConfig` / `ProxyConfig` で調整可能。
+
+| 操作 | タイムアウト値 | 説明 |
+|------|---------------|------|
+| HTTP リクエスト | 30秒（デフォルト） | エンジンへのHTTPリクエストのタイムアウト |
+| エンジン検出 | 5秒 | エンジンの検出処理のタイムアウト |
+| ACME 証明書取得 | 90秒 | ACMEチャレンジ→検証→証明書発行までのタイムアウト |
+| CONNECT タイムアウト（Tor/SOCKS5） | 20秒 | Tor/SOCKS5プロキシ経由の接続タイムアウト |
+| データベースポーリング間隔 | 30秒 | `security.db`の`security_policies`テーブルのポーリング間隔 |
 - **キャンセレーション**: `chat_stream` は `tokio::sync::broadcast` または `AbortHandle` でキャンセル可能。クライアントが切断した場合は即座にストリームを終了し、エンジン側へのリクエストも可能な限り中断する。
 - **リトライ**: ネットワークエラー（`EngineError::NetworkError`）は自動リトライしない。Adapter 層が必要に応じて指数バックオフでリトライを実装する。
 
@@ -865,5 +936,5 @@ for (key, value) in all_configs {
 
 | バージョン | 日付 | 変更概要 |
 |-----------|------|----------|
-| `1.1.0` | 2025-11-25 | SecurityPolicy スキーマ (IP/CORS/レート制限) と ProxyMode の Phase 2 仕様を反映。 |
+| `1.1.0` | 2025-02-01 | SecurityPolicy スキーマ (IP/CORS/レート制限) と ProxyMode の Phase 2 仕様を反映。 |
 | `1.0.0` | 2025-01-27 | 初版公開。Core サービス API / DTO を定義。 |

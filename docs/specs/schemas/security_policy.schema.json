@@ -6,6 +6,7 @@
   "description": "Phase 1/2 SecurityPolicy JSON contract used by CLI/UI/Proxy.",
   "type": "object",
   "additionalProperties": true,
+  "$comment": "ルートレベルでは将来の拡張のために追加プロパティを許可。個別オブジェクト（rate_limit等）では厳密な定義を強制。この設計により、ルートレベルでは将来の機能拡張に対応しつつ、セキュリティ上重要なオブジェクト（rate_limit等）では厳密なバリデーションを実施する。",
   "properties": {
     "ip_whitelist": {
       "type": "array",
@@ -32,6 +33,7 @@
     "rate_limit": {
       "type": "object",
       "additionalProperties": false,
+      "$comment": "rate_limitオブジェクトでは追加プロパティを禁止し、rpm/burstのみを許可（厳密なバリデーション）。",
       "properties": {
         "rpm": {
           "type": "integer",

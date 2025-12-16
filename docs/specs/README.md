@@ -1,6 +1,6 @@
 # Specifications
 
-> Status: Reference | Audience: All contributors | Updated: 2025-11-25
+> Status: Reference | Audience: All contributors | Updated: 2025-02-01
 
 このディレクトリには、FLMプロジェクトの各コンポーネントの詳細仕様書が含まれています。
 
@@ -25,7 +25,7 @@ docs/specs/
 
 ### CORE_API.md - コアAPI仕様
 
-**Status**: Canonical | **Audience**: Rust core engineers | **Updated**: 2025-11-25
+**Status**: Canonical | **Audience**: Rust core engineers | **Updated**: 2025-02-01
 
 Rustコアライブラリ（`flm-core`）のAPI仕様。Domain層、Application層、Ports（Traits）の定義。
 
@@ -34,7 +34,7 @@ Rustコアライブラリ（`flm-core`）のAPI仕様。Domain層、Application�
 - Ports（抽象インターフェイス）の定義
 - エラーハンドリング
 
-**重要**: この仕様はv1.0.0で凍結されています。変更はADR経由でのみ許可されます。
+**重要**: この仕様は基本バージョンv1.0.0で凍結されていますが、セクション別にMINORバージョンアップ（v1.1.0等）が許可されています。変更はADR経由でのみ許可されます。詳細は`docs/guides/VERSIONING_POLICY.md`を参照。
 
 **参照元**: `docs/planning/PLAN.md`, `docs/specs/CLI_SPEC.md`, `docs/specs/PROXY_SPEC.md`
 

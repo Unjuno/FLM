@@ -1,6 +1,6 @@
 # CLI Upcoming Commands Roadmap
 
-> Status: Draft | Audience: CLI / UI teams | Updated: 2025-11-25
+> Status: Draft | Audience: CLI / UI teams | Updated: 2025-02-01
 
 ## Prioritization
 
@@ -15,7 +15,7 @@
    - **実装日**: 2025-01-27
    - **実装内容**: CLIコマンド、リポジトリ、UI統合、テスト完了
 3. **`flm migrate legacy` (Section 3.13)**  
-   - Lower priority until packaging / migration tooling is ready, but specification is stable and can proceed once security reviews pass.
+   - ✅ 実装完了（`plan`, `convert`, `apply`サブコマンド実装済み）
 
 ## Implementation Notes
 
@@ -54,6 +54,11 @@
 - リポジトリ: `ApiPromptStore` 実装済み
 - UI統合: `ApiPrompts.tsx` ページ + IPC ブリッジ実装済み
 - テスト: 5つのテストケース（正常系 + エッジケース）すべて成功
+
+### ✅ `flm migrate legacy` - 完了
+- CLIコマンド: `plan`, `convert`, `apply` 実装済み
+- 実装: `crates/apps/flm-cli/src/commands/migrate.rs` に実装済み
+- 詳細: `docs/guides/MIGRATION_GUIDE.md` を参照
 
 ## Next Steps
 

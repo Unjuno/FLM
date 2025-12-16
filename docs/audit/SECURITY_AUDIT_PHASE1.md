@@ -2,6 +2,8 @@
 
 > Status: ⏳ Pending | Date: [監査日] | Phase: Phase 1 | Run ID: [run-id]
 
+**注意**: このレポートは「Phase 1（CLI Core）のセキュリティ監査」を対象としており、`COMPREHENSIVE_SECURITY_AUDIT.md`（包括的セキュリティ監査）とは異なる監査です。
+
 ## 1. 監査概要
 
 - **監査対象**: Phase 1（CLI Core）のセキュリティ実装

@@ -1,5 +1,5 @@
 # Migration Guide
-> Status: Draft | Audience: CLI / Ops engineers | Updated: 2025-11-20
+> Status: Canonical | Audience: CLI / Ops engineers | Updated: 2025-02-01
 
 Phase 0 完了前に旧 `archive/prototype/` 環境から新しい Rust 版へデータを移行する手順を定義する。
 
@@ -73,7 +73,7 @@ crates/
 ## 6. テスト
 - 単体: `flm-core::legacy::converter::*`
 - 統合: `cargo test -p flm-cli migrate::`（サンプルデータを `migrations/legacy/samples/` からロード）
-- 手動: `tests/ui-scenarios.md#setup-wizard` に沿って UI から移行を実行
+- 手動: `docs/tests/ui-scenarios.md#setup-wizard` に沿って UI から移行を実行
 
 ## 7. ドキュメント/ログ出力
 - 成功時: `logs/migrations/<ts>.log`

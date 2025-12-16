@@ -1,5 +1,5 @@
 # 特殊用途エンジン統合ガイド
-> Status: Draft | Audience: Engine adapter developers | Updated: 2025-11-27
+> Status: Draft | Audience: Engine adapter developers | Updated: 2025-02-01
 
 ## 1. 概要
 
@@ -203,8 +203,11 @@ pub trait LlmEngine: Send + Sync {
 
 ### 3.4 ドメインモデルの追加
 
+> **注意**: 以下のデータ型（`ImageGenerationRequest`、`AudioTranscriptionRequest`、`TextToSpeechRequest`など）は**将来の拡張として検討されている**ものであり、現時点では`docs/specs/CORE_API.md`には定義されていません。実装時には、`CORE_API.md`に正式な定義を追加する必要があります。
+
 ```rust
 // crates/core/flm-core/src/domain/image_generation.rs
+// 注意: これは将来の拡張として提案されているデータ型です。CORE_API.mdには未定義です。
 
 pub struct ImageGenerationRequest {
     pub engine_id: EngineId,

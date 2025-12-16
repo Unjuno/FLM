@@ -20,6 +20,8 @@ FLM（Federated LLM Manager）は、複数のLLMエンジン（Ollama、vLLM、L
 
 ## Phase別進捗状況
 
+> **注意**: Phaseの定義と完了基準は`docs/planning/PLAN.md`を参照してください。
+
 ### Phase 0: ベース整備 ✅ 完了
 
 **目標**: リポジトリ初期化、Rustワークスペース構成、仕様書確定

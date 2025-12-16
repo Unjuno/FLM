@@ -36,7 +36,7 @@
 
 ## 6. Validation
 - 必須テスト（`docs/guides/TEST_STRATEGY.md` 参照）の一覧
-- 手動シナリオ（`tests/ui-scenarios.md` 等）の更新要否
+- 手動シナリオ（`docs/tests/ui-scenarios.md` 等）の更新要否
 
 ## 7. Sign-off
 | 役割 | 氏名/ハンドル | 署名日時 |

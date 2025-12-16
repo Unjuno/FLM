@@ -1,5 +1,5 @@
 # Engine Detection Specification
-> Status: Canonical | Audience: Engine adapter developers | Updated: 2025-11-20
+> Status: Canonical | Audience: Engine adapter developers | Updated: 2025-02-01
 
 ## 1. 検出ステップの標準テンプレート
 
@@ -14,10 +14,10 @@
 | Status             | 条件                                                                 |
 |--------------------|----------------------------------------------------------------------|
 | InstalledOnly      | バイナリ検出済みだが API 応答なし / プロセス停止                     |
-| RunningHealthy     | API 応答 200、JSON 形式OK、レイテンシ < 1500ms                       |
-| RunningDegraded    | 応答はあるがレイテンシ >= 1500ms、もしくは警告レスポンス（429/503） |
-| ErrorNetwork       | 連続3回以上のタイムアウト/ネットワーク失敗                          |
-| ErrorApi           | HTTP 200 だが JSON 解析エラー、必須フィールド欠落など                |
+| RunningHealthy     | API 応答 200、JSON 形式OK、レイテンシ < `HEALTH_LATENCY_THRESHOLD_MS`（デフォルト 1500ms） |
+| RunningDegraded    | 応答はあるがレイテンシ >= `HEALTH_LATENCY_THRESHOLD_MS`、もしくは3回以内に警告レスポンス（429/503） |
+| ErrorNetwork       | 連続 `MAX_NETWORK_FAILURES`（デフォルト 3）回のタイムアウト/ネットワーク失敗 |
+| ErrorApi           | HTTP 200 だが JSON 解析エラー、必須フィールド欠落などが連続した場合 |
 
 状態遷移は `docs/specs/CORE_API.md` の EngineStatus 遷移規則に従う。
 
@@ -40,7 +40,7 @@
 | LM Studio   | ✅ / ✅        | ⛔         | ❌     | ❌         | ✅（Vision モデルのみ。画像は Base64 で `/v1/chat/completions` へ添付） | ❌（2025-11 時点で音声APIなし） | Vision 入力サイズは 4MB まで（LM Studio API 制約）。 |
 
 - `vision` は「画像入力を `ChatRequest.multimodal` 経由で渡せるか」を意味する。画像生成専用エンドポイントは別タスク。
-- `audio` は「音声入力（transcriptions）または音声付きレスポンスを `MultimodalPayload::Audio` で扱えるか」を意味する。
+- `audio` は「音声入力（transcriptions）または音声付きレスポンスを `MultimodalAttachment (kind: InputAudio)` で扱えるか」を意味する。
 - Capability 値は `EngineRegistry` 経由で CLI/UI に伝搬し、Proxy ルータが `/v1/images/generations` / `/v1/audio/*` を有効化する際の判定に使用する。
 
 - プロセス検出できても API ping が失敗した場合は `EngineStatus::InstalledOnly` or `ErrorNetwork`
@@ -49,7 +49,7 @@
 ## 3. 共有ロジック
 
 * 各エンジン検出結果は `EngineRegistry` にキャッシュ (`config.db` の `engines_cache` テーブル)
-* キャッシュの TTL は 30 秒（CLI 連続呼び出し時の負荷軽減）
+* キャッシュの TTL は 5 分（300秒、CLI 連続呼び出し時の負荷軽減）
 * CLI `flm engines detect` はキャッシュ/リアルタイムを `--fresh` オプションで切替
 
 ## 4. 拡張
@@ -72,4 +72,4 @@
 
 | バージョン | 日付 | 変更概要 |
 |-----------|------|----------|
-| `1.0.0` | 2025-11-20 | 初版公開。Ollama / vLLM / LM Studio / llama.cpp の検出フローを定義。 |
+| `v1.0.0` | 2025-11-20 | 初版公開。Ollama / vLLM / LM Studio / llama.cpp の検出フローを定義。 |

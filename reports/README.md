@@ -16,9 +16,18 @@
 | ---- | -------- | ---- |
 | 詳細レポート | `FULL_TEST_EXECUTION_REPORT.md` | 直近の統合テスト実行ログ（すべてのスイートを網羅） |
 | 要約 | `FULL_TEST_EXECUTION_SUMMARY.md` | 上記レポートのエグゼクティブサマリー |
-| 追加レポート | `ALL_TESTS_EXECUTION_REPORT.md`, `COMPLETE_TEST_EXECUTION_REPORT.md`, `COMPREHENSIVE_TEST_REPORT.md`, `FINAL_TEST_REPORT.md`, `TEST_REPORT.md` | フェーズやユースケース別の補足レポート |
-| ビルドログ | `BUILD_LOG_20251125.md` | `cargo check` 実行結果（EngineService Sync 問題の解消確認） |
-| テキストログ | `*-results*.txt`, `rust-tests-complete.txt`, `ts-test-results-complete.txt` | CLI / Rust / TS 各スイートの生ログ |
+| 追加レポート | `COMPREHENSIVE_TEST_REPORT.md`, `FINAL_TEST_REPORT.md`, `TEST_REPORT.md` | フェーズやユースケース別の補足レポート |
+| テンプレート | `*_TEMPLATE.md` | テスト結果レポートのテンプレートファイル |
+
+## アーカイブ
+
+古いレポートとログファイルは `archive/` ディレクトリに移動されています（2025-02-01整理）。
+
+**アーカイブされたファイル**:
+- 古いビルドログ（`BUILD_LOG_*.md`）
+- 古いテスト結果レポート（`*_TEST_RESULTS.md`）
+- テキスト形式のログファイル（`*.txt`, `*.log`）
+- 過去のCI関連レポート
 
 **クロスリンク**
 
@@ -30,7 +39,7 @@
 1. **配置**: 新しいレポートまたはログはこのディレクトリに保存し、ルート直下に置かない。
 2. **リンク更新**: `README.md`（ルート）、`docs/README.md`、`docs/status/active/NEXT_STEPS.md`、`docs/status/completed/tasks/FINAL_SUMMARY.md` など、該当ドキュメントから最新レポートへのリンクを張り替える。
 3. **ステータス更新**: 実行完了後に `docs/status/active` の関連レポートを `completed/` へ移動し、今回のファイル名を明記する。
-4. **アーカイブ**: 古いログを圧縮／移動する場合は `reports/archive/` を作成して収納し、本 README にアーカイブ日を記録する。
+4. **アーカイブ**: 古いログは `reports/archive/` に移動済み（2025-02-01整理）。新しい古いレポートも同様にアーカイブする。
 
 ## 注意事項
 - ログは機密情報を含む可能性があるため、共有時は必要部分のみ抽出する。

@@ -1,6 +1,6 @@
 # FLM Glossary
 
-> Status: Reference | Audience: All contributors | Updated: 2025-11-25
+> Status: Reference | Audience: All contributors | Updated: 2025-02-01
 
 このドキュメントは、FLMプロジェクトで使用される主要な用語の定義をまとめたものです。
 
@@ -10,7 +10,7 @@
 Let's Encryptなどの証明書発行機関（CA）から自動的にTLS証明書を取得するためのプロトコル。FLMでは`https-acme`モードで使用される。
 
 ### API Key
-FLM Proxyへのアクセスを認証するためのキー。Argon2でハッシュ化されて`security.db`に保存される。
+FLM Proxyへのアクセスを認証するためのキー。Argon2idでハッシュ化されて`security.db`に保存される。
 
 ### AppState
 Axumベースのプロキシサーバーで使用されるアプリケーション状態。`SecurityService`、`EngineService`、レート制限状態などを保持する。
@@ -37,7 +37,7 @@ Axumベースのプロキシサーバーで使用されるアプリケーショ�
 LLM API/Server（Ollama、vLLM、LM Studio、llama.cppなど）のこと。FLMは複数のエンジンを統合管理する。
 
 ### EngineCapabilities
-エンジンがサポートする機能（チャット、ストリーミング、埋め込み、モデレーション、ツールなど）を表す。
+エンジンがサポートする機能（チャット、ストリーミング、埋め込み、モデレーション、ツール、画像入力、音声入力・出力など）を表す。`vision_inputs`、`audio_inputs`、`audio_outputs`フィールドでマルチモーダル機能のサポートを表現する。詳細は`docs/specs/CORE_API.md`を参照。
 
 ### EngineId
 エンジンを一意に識別するID。例: `"ollama-default"`、`"vllm-1"`。
@@ -62,6 +62,9 @@ LLM API/Server（Ollama、vLLM、LM Studio、llama.cppなど）のこと。FLM�
 ### HealthStatus
 エンジンのヘルスチェック結果。`Healthy`、`Degraded`、`Unreachable`のいずれか。
 
+### 個人利用・シングルユーザー環境
+FLMの設計前提となる環境定義。同一マシン上で単一のユーザーアカウントがFLMを使用する環境を指す。マルチユーザー対応やロールベースアクセス制御（RBAC）機能は提供されていない。複数のユーザーアカウントが同一マシン上に存在する場合でも、FLMは単一ユーザー向けに設計されており、各ユーザーは独立したインストール・設定を持つ必要がある。詳細は`docs/planning/PLAN.md`の基本方針を参照。
+
 ## L
 
 ### LlmEngine
@@ -71,6 +74,11 @@ LLMエンジンが実装すべきトレイト。`health_check()`、`list_models(
 
 ### ModelId
 モデルを一意に識別するID。`flm://{engine_id}/{model_name}`形式。
+
+### MultimodalAttachment
+マルチモーダル（画像・音声）データを表す構造体。`ChatMessage`の`attachments`フィールドで使用される。`kind`（`InputImage`または`InputAudio`）、`data`（バイナリデータ）、`mime_type`、`filename`、`size_bytes`、`detail`、`duration_ms`を含む。詳細は`docs/specs/CORE_API.md`を参照。
+
+**注意**: 過去のドキュメントでは`MultimodalPayload`という用語が使用されていたが、現在は`MultimodalAttachment`に統一されている。`MultimodalPayload`への参照は`MultimodalAttachment`を指す。
 
 ## P
 

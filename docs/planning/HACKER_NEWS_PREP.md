@@ -1,5 +1,5 @@
 # Hacker News 投稿準備ガイド
-> Status: Reference | Audience: Project leads | Updated: 2025-11-20
+> Status: Reference | Audience: Project leads | Updated: 2025-02-01
 
 ## 1. 投稿タイミング
 
@@ -80,7 +80,7 @@ Security features:
 
 ### 3.1 必須資料
 
-1. **英語版README** (`README_EN.md`)
+1. **英語版README** (`README_EN.md` - 将来作成予定)
    - プロジェクト説明
    - 特徴
    - 技術スタック
@@ -157,7 +157,7 @@ A: Ollama、LM Studio、vLLM、llama.cppをサポートしています。
 A: はい、MIT Licenseで公開しています。
 
 ### Q: どのようにインストールしますか？
-A: 公式サイトからインストーラーをダウンロードし、実行するだけです。詳細は `README_EN.md` を参照してください。
+A: 公式サイトからインストーラーをダウンロードし、実行するだけです。詳細はルートの `README.md` を参照してください。
 
 ## 6. 参考資料
 

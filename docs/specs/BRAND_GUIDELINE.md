@@ -1,10 +1,10 @@
 # FLM Branding Guideline
-> Status: Canonical | Audience: UI/Design engineers | Updated: 2025-11-20
+> Status: Canonical | Audience: UI/Design engineers | Updated: 2025-02-01
 
 ## 1. ロゴ
 
 ### 1.1 ロゴファイル
-- **ソース**: `archive/prototype/public/logo.png` をそのまま使用
+- **ソース**: `archive/prototype/WEB/images/logo.png` をそのまま使用
 - **用途**: アプリケーションアイコン、ファビコン、スプラッシュスクリーン、公式サイト
 
 ### 1.2 ロゴの使い方

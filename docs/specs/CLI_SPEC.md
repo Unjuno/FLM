@@ -1,16 +1,19 @@
 # FLM CLI Specification
-> Status: Canonical | Audience: CLI developers & QA | Updated: 2025-11-20
+> Status: Canonical | Audience: CLI developers & QA | Updated: 2025-02-01
+>
+> **注意**: エラーハンドリングポリシーについては、セクション4「エラー仕様」と `docs/specs/UI_MINIMAL.md` セクション5「UX / エラーハンドリングポリシー」を参照してください。
 
 > 章別リビジョン:
 >
 > | 節 | バージョン | 最終更新 |
 > | --- | --- | --- |
 > | 3.1-3.10 コマンド仕様 | v1.0.0 | 2025-11-20 |
-> | 3.11-3.13 Phase3 Draft群 | Draft | 2025-11-25 |
+> | 3.11-3.12 Phase 3実装済み | v1.0.0 | 2025-01-27 |
+> | 3.13 Phase 3 Draft | Draft | 2025-11-25 |
 
 ## 1. 概要
 - 実行形式: `flm` (Rust 製単体バイナリ)
-- 対象ユーザー: 個人利用・シングルユーザー環境（マルチユーザー/RBAC非対応）
+- 対象ユーザー: 個人利用・シングルユーザー環境（マルチユーザー/RBAC非対応）。詳細な定義は`docs/guides/GLOSSARY.md`を参照。
 - 目的: 既存エンジン検出、モデル参照、Rust製セキュアプロキシ制御、設定/セキュリティ管理を CLI で提供
 - 対応エンジン: Ollama / LM Studio / vLLM / llama.cpp
 - 依存: SQLite (`config.db`, `security.db`)、Rust コアライブラリ、対象エンジン本体
@@ -56,15 +59,16 @@ Rust製セキュアプロキシを起動し、Forward先を検出済みエンジ
 モード:
 - `local-http` (デフォルト): ローカルネットワーク限定。TLS 無し
 - `dev-selfsigned`: 自己署名証明書で HTTPS を提供。LAN / 開発用途専用（Wizard/CLI がルート証明書の配布・削除手順を案内。手動インストールが必要）
-- `packaged-ca`: パッケージに同梱されたルートCA証明書を使用。インストール時にOS信頼ストアへ自動登録されるため、ブラウザ警告なしでHTTPS利用可能。大衆向け配布に最適。Phase 3 で実装予定
-- `https-acme`: ACME(Let's Encrypt等)で証明書を取得してHTTPS提供。インターネット公開時の既定モード。Phase 2 では HTTP-01 のみ提供し、DNS-01 自動化は `docs/planning/PLAN.md` の DNS Automation epic が復帰するまで無効化。
+- `packaged-ca`: パッケージに同梱されたルートCA証明書を使用。インストール時にOS信頼ストアへ自動登録されるため、ブラウザ警告なしでHTTPS利用可能。大衆向け配布に最適。**Status: Implemented（Phase 3完了）**。`--features packaged-ca`でビルドする必要があります。
+- `https-acme`: ACME(Let's Encrypt等)で証明書を取得してHTTPS提供。インターネット公開時の既定モード。Phase 2 では HTTP-01 のみ提供し、DNS-01 自動化は将来の実装予定（Phase 3以降）。
 
 その他仕様（詳細は `docs/specs/PROXY_SPEC.md`）:
 - Forward 先ホストは検出済みエンジンに固定し任意URLへの転送を禁止
 - 設定は `config.db` / `security.db` に保存され、再起動時に再利用
+- **ポート設定**: HTTP待受ポート・デフォルト 8080、HTTPSは+1（詳細は `docs/specs/CORE_API.md` の `ProxyHandle` 定義を参照）
 
 オプション:
-- `--port <number>` (HTTP待受ポート・デフォルト 8080、HTTPSは+1)
+- `--port <number>` (HTTP待受ポート・デフォルト 8080、HTTPSは+1。詳細は `docs/specs/CORE_API.md` の `ProxyHandle` 定義を参照)
 - `--bind <address>` (バインドするIPアドレス・デフォルト "127.0.0.1"。外部アクセスが必要な場合のみ "0.0.0.0" を使用)
 - `--acme-email`, `--acme-domain`（https-acmeモード必須）
 - `--challenge http-01`（固定値。`dns-01` は CLI レベルで拒否される）
@@ -77,7 +81,7 @@ Rust製セキュアプロキシを起動し、Forward先を検出済みエンジ
 - デーモンモード（既定）: CLI が `flm-proxy --daemon` を起動し、127.0.0.1 上のランダムポートで管理 API を公開する。`%APPDATA%/flm/run/proxy-daemon.json`（macOS: `~/Library/Application Support/flm/run/`, Linux: `~/.local/share/flm/run/`）に `{ "port": <u16>, "token": "<bearer>", "pid": <u32> }` を保存し、Stop/Status 時はこのファイルを参照する。
 - フォアグラウンドモード: `--no-daemon` 指定時のみ、旧来の「CLI プロセス内で Axum を起動する」手法を使用する。テスト用フラグであり、本番運用ではデーモンモードを必須とする。
 
-ACMEエンドポイントは既定でLet's Encrypt **staging** を使用し、`FLM_ACME_USE_PROD=true` または `FLM_ACME_DIRECTORY=<url>` で切り替え可能。Phase 2 では `http-01` のみ `rustls-acme` ベースで提供し、`dns-01` を指定した場合は CLI がエラーを返す。DNS-01 自動化を再度提供する際は `docs/planning/PLAN.md` の DNS Automation epic で定義した新しい ACME クライアント方針に従う。
+ACMEエンドポイントは既定でLet's Encrypt **staging** を使用し、`FLM_ACME_USE_PROD=true` または `FLM_ACME_DIRECTORY=<url>` で切り替え可能。Phase 2 では `http-01` のみ `rustls-acme` ベースで提供し、`dns-01` を指定した場合は CLI がエラーを返す。DNS-01 自動化は将来の実装予定（Phase 3以降）。
 
 成功時出力:
 ```json
@@ -102,7 +106,7 @@ ACMEエンドポイントは既定でLet's Encrypt **staging** を使用し、`F
 
 - **Tor/上流プロキシ指定**:
   - `--egress-mode tor` は Tor Browser / tor daemon が提供する `127.0.0.1:9050` SOCKS5 を使用し、起動前に CLI が 3 回までハンドシェイクを試行する。接続失敗時は exit code 1（`PROXY_INVALID_CONFIG`）を返し、Tor を起動するようユーザーへ案内する。
-  - `--egress-mode socks5` は任意の SOCKS5 プロキシ（例: 会社の出口ノード）を指定する。認証は Phase4 で検討。現行フェーズでは匿名 SOCKS5 のみ。
+  - `--egress-mode socks5` は任意の SOCKS5 プロキシ（例: 会社の出口ノード）を指定する。認証は Phase 4 で検討。現行フェーズでは匿名 SOCKS5 のみ。
   - `--egress-fail-open` を指定しない限り、Tor/上流プロキシに到達できない場合はプロキシを起動しない（`fail closed`）。`--egress-fail-open` を付けた場合は警告ログを出しつつ `Direct` にフォールバックする。
   - `flm proxy status` は `egress.mode` と実際の SOCKS5 endpoint（Tor の場合は `tor://127.0.0.1:9050` と表示）を含める。
 
@@ -147,6 +151,12 @@ flm proxy status --format text
 ### 3.6 `flm config`
 `set` / `get` / `list` を提供。対象は `config.db`。
 
+**設定キー命名規則**:
+- 形式: `<カテゴリ>.<設定名>`（ドット区切り）
+- カテゴリ: `engine`（エンジン関連）、`proxy`（プロキシ関連）、`security`（セキュリティ関連）など
+- 設定名: スネークケース（例: `health_latency_threshold_ms`、`max_network_failures`）
+- 例: `engine.health_latency_threshold_ms`、`proxy.port`、`engine.max_network_failures`
+
 例:
 ```bash
 flm config set proxy.port 8080
@@ -167,7 +177,7 @@ flm api-keys rotate ak_xxxxx
 
 ### 3.8 `flm security policy`
 IPホワイトリスト、CORS、レート制限設定の取得・更新。
-Phase1/2 ではグローバルポリシー ID `"default"` のみを扱い、CLI から ID を指定する必要はない。
+Phase 1/2 ではグローバルポリシー ID `"default"` のみを扱い、CLI から ID を指定する必要はない。
 
 例:
 ```bash
@@ -176,10 +186,10 @@ flm security policy set --json ./policy.json
 ```
 
 ### 3.9 `flm security backup`
-`security.db` の暗号化済みバックアップと復元を扱う。`security.db` を直接コピーせず、暗号化キーと一貫性を保つためこのコマンドを必須とする。
+`security.db` のバックアップと復元を扱う。**注意**: 現在は暗号化は未実装のため、バックアップも暗号化されていない。将来的に暗号化が実装された際は、暗号化済みバックアップを提供する予定。`security.db` を直接コピーせず、将来的には暗号化キーと一貫性を保つためこのコマンドを必須とする。
 
 サブコマンド:
-- `flm security backup create --output <dir>`: 暗号化済み `security.db.bak.<timestamp>` を指定フォルダに出力（デフォルトは OS 設定ディレクトリ配下の `.../flm/backups/`）。3世代を超える場合は最古を削除。
+- `flm security backup create --output <dir>`: `security.db.bak.<timestamp>` を指定フォルダに出力（デフォルトは OS 設定ディレクトリ配下の `.../flm/backups/`）。**注意**: 現在は暗号化は未実装のため、バックアップも暗号化されていない。将来的に暗号化が実装された際は、暗号化済みバックアップを提供する予定。3世代を超える場合は最古を削除。
 - `flm security backup restore --file <path>`: アプリ停止を確認したうえで `.bak` を本番 `security.db` に復元し、マイグレーションを再実行。成功後は CLI が読み取り専用モード解除を案内。
 
 すべての操作はジャーナルログに `request_id` を残し、ファイルパスは標準エラーに出力してユーザーが暗号化済みバックアップを管理できるようにする。
@@ -215,8 +225,8 @@ flm chat --model flm://ollama/gemma3-vision --image foo.png --image bar.jpg --st
 flm chat --model flm://vllm/gpt-4o-mini --responses --modalities text,audio --prompt "Summarize"
 ```
 
-### 3.11 `flm model-profiles` （Phase3予定）
-> Status: Draft（Phase 3対象）。実装計画は `docs/planning/PLAN.md` / `docs/planning/PHASE3_PACKAGING_PLAN.md` を参照。
+### 3.11 `flm model-profiles`
+> Status: Implemented（Phase 3完了）。実装日: 2025-01-27。実装内容は `docs/planning/CLI_UPCOMING_COMMANDS.md` を参照。
 モデルごとの詳細設定（`docs/specs/UI_EXTENSIONS.md` セクション1）を CLI から管理する。
 
 - `flm model-profiles list [--engine <id>] [--model <id>]`
@@ -225,8 +235,8 @@ flm chat --model flm://vllm/gpt-4o-mini --responses --modalities text,audio --pr
 
 `profile.json` は `{"temperature":0.7,"max_tokens":512,...}` の形式で保存し、`config.db` の `model_profiles` テーブルに書き込む。CLI は `version` フィールドを自動付与し、UI/Proxy から呼び出せるよう Core API へ連携する。
 
-### 3.12 `flm api prompts` （Phase3予定）
-> Status: Draft（Phase 3対象）。CLI/UI連携仕様は `docs/specs/UI_EXTENSIONS.md` の Draft セクションと同期させる。
+### 3.12 `flm api prompts`
+> Status: Implemented（Phase 3完了）。実装日: 2025-01-27。CLI/UI連携仕様は `docs/specs/UI_EXTENSIONS.md` を参照。
 エンドポイント別プロンプトテンプレートを管理するコマンド。UI Extensions の API-specific prompt 管理と同一仕様。
 
 - `flm api prompts list`
@@ -246,11 +256,15 @@ flm chat --model flm://vllm/gpt-4o-mini --responses --modalities text,audio --pr
 
 すべての実行は `logs/migrations/<timestamp>.log` に記録する。`plan` は差分のみ出力し、`apply` は成功/失敗を CLI とログの両方に書き込む。適用時にはアプリを停止した状態で行う旨をユーザーへ案内する。
 
+**今後の拡張**: `backup`、`verify`、`rollback` サブコマンドは仕様ドラフト段階です。導入時は本ガイド（`docs/guides/MIGRATION_GUIDE.md`）と CLI SPEC を同時更新します。
+
 ### 3.14 `flm check`
 データベースの整合性を検証し、APIキー件数/ラベル、SecurityPolicy の JSON、ProxyProfile のポート値などが期待通りであることを確認する。移行後や復旧後に実行してデータの整合性を保証する。
 
 - `flm check`: `config.db` と `security.db` の整合性をチェックし、問題があれば詳細を JSON で出力（exit code 1）。正常時は `{"version":"1.0","data":{"status":"ok","checks":[...]}}` を返す。
 - `flm check --verbose`: 各チェック項目の詳細を表示（テーブル存在確認、制約違反、参照整合性など）。
+
+**エラーレスポンス形式**: エラー時は `{"error":{...}}` 形式を返す（`version`フィールドは含めない）。エラーオブジェクトの詳細な構造（`code`、`message`、`request_id`など）については、`docs/specs/PROXY_SPEC.md` セクション7.2「エラーレスポンス形式」を参照してください。
 
 例:
 ```bash
@@ -259,7 +273,15 @@ flm check --verbose
 ```
 
 ## 4. エラー仕様
-- 共通形式: 成功時は `{"version":"1.0","data":{...}}` 形式だが、エラー時は `{"error":{...}}` 形式を返す（意図的な設計）。エラーレスポンスには `version` フィールドは含めない。
+
+**統一的なエラーハンドリングポリシー**: CLIとProxyは共通のエラーレスポンス形式を使用します。詳細は `docs/specs/PROXY_SPEC.md` セクション7.2を参照してください。
+
+- 共通形式: 成功時は `{"version":"1.0","data":{...}}` 形式だが、エラー時は `{"error":{...}}` 形式を返す（意図的な設計）。エラーレスポンスには `version` フィールドは含めない（成功時とエラー時で形式を区別するため）。
+- エラーオブジェクトの構造:
+  - `code`: エラーコード（文字列、必須）
+  - `message`: 人間が読めるエラーメッセージ（文字列、必須）
+  - `request_id`: リクエストID（文字列、オプション、ログ追跡用）
+
 ```json
 {"error":{"code":"ENGINE_NOT_FOUND","message":"Ollama is not installed"}}
 ```

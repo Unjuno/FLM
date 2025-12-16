@@ -1,6 +1,6 @@
 # ボットネット対策ガイド
 
-> Status: Canonical | Audience: All users | Updated: 2025-01-27
+> Status: Canonical | Audience: All users | Updated: 2025-02-01
 
 ## 1. 概要
 

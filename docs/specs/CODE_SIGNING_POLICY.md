@@ -118,7 +118,7 @@ To protect signing keys and certificates, configure access restrictions in GitHu
    - ✅ `signtool verify /pa installer.msi` (automated in build workflow, `Verify Windows signatures` step)
    - ✅ `signtool verify /pa installer.exe` (NSIS installer verification)
    - ✅ SHA256 hash published in `checksums.txt` in release notes
-   - ✅ Signature verification results recorded in build logs (`reports/BUILD_LOG_YYYYMMDD.md`)
+   - ✅ Signature verification results recorded in build logs (`reports/BUILD_LOG_YYYYMMDD.md`形式、例: `reports/BUILD_LOG_20251125.md`)
 
 ### macOS (DMG / .app)
 
@@ -128,7 +128,7 @@ To protect signing keys and certificates, configure access restrictions in GitHu
 4. ✅ Verification implemented in CI (2025-02-01):
    - ✅ `spctl --assess --type execute --verbose FLM.dmg` (automated in build workflow, `Verify macOS signatures` step)
    - ✅ `codesign --verify --verbose FLM.app` (App bundle verification)
-   - ✅ Signature verification results recorded in build logs (`reports/BUILD_LOG_YYYYMMDD.md`)
+   - ✅ Signature verification results recorded in build logs (`reports/BUILD_LOG_YYYYMMDD.md`形式、例: `reports/BUILD_LOG_20251125.md`)
 
 ### Linux (AppImage / deb)
 
@@ -139,7 +139,7 @@ To protect signing keys and certificates, configure access restrictions in GitHu
    - Signatures generated only when `LINUX_GPG_KEY`, `LINUX_GPG_KEY_PASS`, and `LINUX_GPG_KEY_ID` secrets are set.
 3. ✅ Verification implemented in CI (2025-02-01):
    - ✅ `gpg --verify` for all signature files (automated in build workflow, `Verify Linux GPG signatures` step)
-   - ✅ Signature verification results recorded in build logs (`reports/BUILD_LOG_YYYYMMDD.md`)
+   - ✅ Signature verification results recorded in build logs (`reports/BUILD_LOG_YYYYMMDD.md`形式、例: `reports/BUILD_LOG_20251125.md`)
 4. ✅ Publish public key fingerprint and import commands in release notes (automated in release workflow).
 
 ## Release Checklist Integration
@@ -149,7 +149,7 @@ To protect signing keys and certificates, configure access restrictions in GitHu
      - Windows: `Verify Windows signatures` step verifies MSI and NSIS installers
      - macOS: `Verify macOS signatures` step verifies DMG and App bundles
      - Linux: `Verify Linux GPG signatures` step verifies all GPG signatures
-   - Hash artifacts (SHA256) are recorded in `reports/BUILD_LOG_YYYYMMDD.md`.
+   - Hash artifacts (SHA256) are recorded in `reports/BUILD_LOG_YYYYMMDD.md`形式のファイル（例: `reports/BUILD_LOG_20251125.md`）。
    - ✅ Signature verification results are recorded in build logs (2025-02-01).
 2. For every release, attach:
    - Signed installers (MSI, DMG, AppImage/deb)

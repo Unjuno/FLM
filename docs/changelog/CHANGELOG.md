@@ -82,6 +82,8 @@ See `docs/guides/VERSIONING_POLICY.md` for versioning policy details.
 
 ## [1.0.0] - TBD
 
+**注意**: このバージョンのリリース日は、Phase 0完了時に`core-api-v1.0.0`タグが作成された時点で確定します。現在は未リリースのため、日付はTBD（To Be Determined）となっています。
+
 ### Planned
 - Core API v1.0.0 freeze and GPG-signed tag
 - See `docs/planning/PLAN.md` Phase 0 completion criteria

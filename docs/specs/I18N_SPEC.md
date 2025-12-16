@@ -1,6 +1,6 @@
 # FLM Internationalization (i18n) Specification
-> Status: Draft | Audience: UI engineers | Updated: 2025-11-20
-> Phase 2 実装中の暫定仕様です。確定内容は `docs/planning/PLAN.md` の UI フェーズと同期します。
+> Status: Implemented | Audience: UI engineers | Updated: 2025-02-01
+> Phase 2 で実装完了。実装状況は `README.md` セクション「国際化（I18N）」を参照してください。
 
 > 章別リビジョン:
 >
@@ -204,13 +204,15 @@ locales/
 
 ## 7. 実装すべき項目
 
-### Phase 2（UI実装時）
+### Phase 2（UI実装時）- ✅ 実装完了
 
-- [ ] 翻訳ファイル（`locales/ja.json`, `locales/en.json`）の作成
-- [ ] i18n コンテキストの実装（プロトタイプの `I18nContext.tsx` を参考）
-- [ ] 言語切り替えUIの実装（設定画面）
-- [ ] 設定保存機能（`config.db` の `preferred_language`）
-- [ ] 初回起動時の言語自動検出
+- [x] 翻訳ファイル（`locales/ja.json`, `locales/en.json`）の作成
+- [x] i18n コンテキストの実装（プロトタイプの `I18nContext.tsx` を参考）
+- [x] 言語切り替えUIの実装（設定画面）
+- [x] 設定保存機能（`config.db` の `preferred_language`）
+- [x] 初回起動時の言語自動検出
+
+**実装状況**: すべての項目が実装完了しています。詳細は `README.md` セクション「国際化（I18N）」を参照してください。
 
 ### Phase 1（CLI実装時）
 

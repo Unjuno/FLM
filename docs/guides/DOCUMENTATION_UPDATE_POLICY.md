@@ -1,6 +1,6 @@
 # Documentation Update Policy
 
-> Status: Canonical | Audience: All contributors | Updated: 2025-11-25
+> Status: Canonical | Audience: All contributors | Updated: 2025-02-01
 
 このドキュメントは、FLMプロジェクトのドキュメント更新ルールとガイドラインを定義します。
 

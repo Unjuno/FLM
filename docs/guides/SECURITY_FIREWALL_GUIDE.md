@@ -1,5 +1,5 @@
 # SECURITY_FIREWALL_GUIDE
-> Status: Canonical | Audience: UI backend / Ops | Updated: 2025-11-20
+> Status: Canonical | Audience: UI backend / Ops | Updated: 2025-02-01
 
 外部公開時に必要となる OS レベルのファイアウォール設定と、Setup Wizard Step 4 が自動生成・実行する処理を定義する。
 
@@ -326,5 +326,5 @@ ls -la /usr/local/share/ca-certificates/flm-ca.crt
 4. **報告**: セキュリティインシデントを報告（GitHub Issues またはセキュリティ連絡先）
 
 ---
-このガイドは Phase2 以降も随時更新する。
+このガイドは Phase 2 以降も随時更新する。
 

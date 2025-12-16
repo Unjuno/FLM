@@ -1,5 +1,5 @@
 # FLM UI Extensions (Post-Core Roadmap)
-> Status: Reference | Audience: Product & UI leads | Updated: 2025-11-20
+> Status: Reference | Audience: Product & UI leads | Updated: 2025-02-01
 
 Phase 1/2 でコア機能と最小UIを完成させた後に追加する機能を整理する。
 
@@ -72,7 +72,7 @@ Phase 1/2 でコア機能と最小UIを完成させた後に追加する機能�
   - 画像アップローダー（ドラッグ&ドロップ + クリップボード貼り付け対応）: 最大 5 枚、PNG/JPEG/WebP、合計 20 MB。プレビューごとに削除ボタンを用意。
   - `detail` 切り替え (`low` / `high`)。LM Studio 向けに 4MB 超過時は即時警告。
   - 送信先モデルフィルタ: `EngineCapabilities.vision_inputs=true` のモデルのみを `Select` に表示。
-- 送信時は画像を Base64 にエンコードし、`MultimodalPayload` JSON を CLI と同じフォーマットで `config.db` の `multimodal_settings` (新設) にキャッシュ。
+- 送信時は画像を Base64 にエンコードし、`MultimodalAttachment` JSON を CLI と同じフォーマットで `config.db` の `multimodal_settings` (新設) にキャッシュ。
 
 ### 6.2 Audio タブ
 

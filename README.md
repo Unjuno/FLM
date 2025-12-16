@@ -2,7 +2,7 @@
 
 > Status: Active Development | Audience: All contributors | Updated: 2025-02-01
 
-**注意**: 本アプリケーションは**個人利用・シングルユーザー環境向け**です。マルチユーザー対応やロールベースアクセス制御（RBAC）機能は提供されていません。
+**注意**: 本アプリケーションは**個人利用・シングルユーザー環境向け**です。マルチユーザー対応やロールベースアクセス制御（RBAC）機能は提供されていません。詳細な定義は`docs/guides/GLOSSARY.md`を参照。
 
 このリポジトリは、アーカイブ済みプロトタイプ (`archive/prototype/`) を置き換える次期実装です。旧アプリは `archive/prototype/` 以下に完全保管しており、参照専用です。新コアは以下の構成で進行中です。
 
@@ -24,6 +24,8 @@ flm/
 > **実装状況の表記**: ✅ は実装完了、⏳ は未実装または部分実装、⚠️ は注意事項を表します。
 
 ### ✅ 実装済み（Phase 1-2）
+
+> **注意**: Phaseの定義と完了基準は`docs/planning/PLAN.md`を参照してください。実装状況の詳細は`docs/status/active/PROGRESS_STEP_BY_STEP.md`を参照してください。
 
 #### CLIコマンド
 - ✅ `flm engines detect` - エンジン検出
@@ -144,7 +146,7 @@ flm/
     - ⏳ アラート通知機能（セキュリティイベントの通知設定）- Phase 3以降
   - ✅ **ホーム画面**（アプリケーション概要、クイックアクション、システムステータス表示）
   - ✅ **設定ページ**（言語切り替えUI）
-  - ⏳ Setup Wizard Firewall自動適用 IPC - Phase 3以降
+  - ✅ Setup Wizard Firewall自動適用 IPC - 実装完了（`src-tauri/src/commands/firewall.rs`、プレビューと自動適用機能を提供）
   - ⏳ モデル詳細設定パネル（UI Extensions）- Phase 3以降
   - ⏳ モデル比較/ヘルス履歴（UI Extensions）- Phase 3以降
   - ⏳ ダークモード（Phase 3以降）
@@ -159,8 +161,6 @@ flm/
   - ✅ 言語切り替えUIの実装（設定ページ）
   - ✅ 初回起動時の言語自動検出（OSの言語設定から検出）
   - ✅ 全ページのI18N対応（Home、ChatTester、SecurityEvents、IpBlocklistManagement、Settings、Sidebar）
-  - ⏳ 言語切り替えUIの実装（設定画面）
-  - ⏳ 初回起動時の言語自動検出（OSの言語設定を自動検出）
 - ⚠️ **注意**: CLIは英語のみ（技術者向けのため）。UIのみ日本語・英語対応。
 - 詳細: [`docs/specs/I18N_SPEC.md`](docs/specs/I18N_SPEC.md)
 
@@ -171,7 +171,7 @@ flm/
   - ✅ `start_https_acme_server`（HTTPチャレンジ専用サーバー + HTTPS本線 + ACMEスーパーバイザー + HSTSリダイレクト）
   - ✅ CLI `flm proxy start` に `--challenge` / `--dns-profile` を追加（現状 `http-01` のみ動作、`dns-01` は今後サポート予定）
   - ✅ 証明書メタデータの永続化（`~/.flm/certs/acme-live/<domain>/fullchain.pem|privkey.pem` へ展開し、`security.db` の `certificates` テーブルに `mode=acme` で格納）
-  - ✅ DNS-01チャレンジ対応（DNSプロバイダ資格情報連携と`acme_dns_profile_id`の実働化）
+  - ⏳ DNS-01チャレンジ対応（`dns01-preview` featureで実装済みだが、デフォルトでは無効化。将来の実装予定（Phase 3以降））
   - ⏳ ACME失敗時のフォールバック（既存証明書再利用、`dev-selfsigned`/`local-http`自動提案）
   - 詳細: [`docs/specs/PROXY_SPEC.md`](docs/specs/PROXY_SPEC.md) セクション6.3-6.4, [`docs/specs/CORE_API.md`](docs/specs/CORE_API.md) セクション7
 
@@ -519,6 +519,8 @@ flm chat --model flm://ollama/llava --image ./image.png --prompt "Describe this 
 
 #### 11. レガシーデータの移行
 
+> **注意**: データ移行戦略の詳細は `docs/planning/PLAN.md` セクション「データ移行戦略」を参照してください。`flm migrate legacy` コマンドの詳細は `docs/specs/CLI_SPEC.md` セクション3.13を参照してください。
+
 旧プロトタイプ（`archive/prototype/`）からデータを新スキーマへ移行します：
 
 ```bash
@@ -596,7 +598,7 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 |---------|---------|------|---------|
 | エンジン | `flm engines detect` | 利用可能なLLMエンジンを検出 | ✅ 実装済み |
 | モデル | `flm models list` | 利用可能なモデルを一覧表示 | ✅ 実装済み |
-| プロキシ | `flm proxy start/stop/status` | プロキシサーバーの制御 | ✅ 実装済み<br/>モード: `local-http`, `dev-selfsigned`, `https-acme`（HTTP-01 / DNS-01 対応済み）, `packaged-ca`（`--features packaged-ca`で有効化が必要） |
+| プロキシ | `flm proxy start/stop/status` | プロキシサーバーの制御 | ✅ 実装済み<br/>モード: `local-http`, `dev-selfsigned`, `https-acme`（HTTP-01対応済み、DNS-01は`dns01-preview` featureで実装済みだがデフォルトでは無効化）, `packaged-ca`（`--features packaged-ca`で有効化が必要） |
 | APIキー | `flm api-keys create/list/revoke/rotate` | APIキーの管理 | ✅ 実装済み |
 | モデルプロファイル | `flm model-profiles list/save/delete` | モデル固有のパラメータ設定 | ✅ 実装済み |
 | APIプロンプト | `flm api prompts list/show/set/delete` | APIエンドポイント固有のプロンプト | ✅ 実装済み |
@@ -651,7 +653,7 @@ UIから操作した内容は、CLIコマンドと同じ `config.db` に保存�
 
 ---
 
-**最終更新**: 2025-12-13（Clippy警告の修正完了、コンパイルエラーの修正完了、Codecov設定の改善、カバレッジレポーターの追加、HTTPS ACMEモードのHTTP-01チャレンジ対応エンドポイント実装完了、README.md構成整理・実装状況表記の明確化、コマンドリファレンスセクション整理、HTTPS ACMEモードの基本構造を明確化、UI機能の実装状況を明確化、I18N基本構造実装完了、音声転写機能のエンジン統合実装完了）  
+**最終更新**: 2025-02-01（Clippy警告の修正完了、コンパイルエラーの修正完了、Codecov設定の改善、カバレッジレポーターの追加、HTTPS ACMEモードのHTTP-01チャレンジ対応エンドポイント実装完了、README.md構成整理・実装状況表記の明確化、コマンドリファレンスセクション整理、HTTPS ACMEモードの基本構造を明確化、UI機能の実装状況を明確化、I18N基本構造実装完了、音声転写機能のエンジン統合実装完了）  
 **質問や作業の割り当て**: Issue または Docs コメントで調整してください。
 
 ---

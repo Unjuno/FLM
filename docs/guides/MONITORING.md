@@ -1,4 +1,5 @@
 # FLM Proxy モニタリングガイド
+> Status: Reference | Audience: Ops engineers | Updated: 2025-02-01
 
 このドキュメントでは、FLM ProxyのメトリクスをPrometheusとGrafanaで監視する方法を説明します。
 

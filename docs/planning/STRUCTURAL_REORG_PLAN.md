@@ -1,7 +1,7 @@
 <!-- SPDX-License-Identifier: MIT OR Apache-2.0 -->
 # Structural Reorganization Plan
 
-> Status: Planning | Audience: All contributors | Updated: 2025-11-26
+> Status: Completed | Audience: All contributors | Updated: 2025-02-01
 
 ## Objective
 - Improve discoverability of workspace crates (`flm-core`, `flm-proxy`, `flm-cli`, engine adapters) by grouping them by responsibility.
@@ -26,14 +26,14 @@ crates/
     flm-engine-llamacpp
 docs/
   planning/STRUCTURAL_REORG_PLAN.md (this file)
-docs/status/completed/tasks/DONE.md / PERSONA_REGISTRY.md (governance)
+docs/status/completed/tasks/DONE.md / docs/templates/PERSONA_REGISTRY.md (governance)
 ```
 
 ## Acceptance Criteria
 1. `cargo fmt --all -- --check`, `cargo clippy --all-targets --all-features -- -D warnings`, `cargo check --workspace`, and `cargo test --workspace --no-fail-fast` all succeed after moves.
 2. All documentation and reports referencing crate paths are updated to the new grouped layout (no `crates/flm-*` paths remain outside `archive/`).
 3. Workspace manifests (`Cargo.toml` root and per-crate `Cargo.toml` files) reference the new paths, and dependencies still resolve.
-4. Governance files (`docs/status/completed/tasks/DONE.md`, `PERSONA_REGISTRY.md`) reflect assignment and completion of this refactor.
+4. Governance files (`docs/status/completed/tasks/DONE.md`, `docs/templates/PERSONA_REGISTRY.md`) reflect assignment and completion of this refactor.
 5. README and guides describe the grouped layout so newcomers can find crates without scanning flat directories.
 
 ## Compatibility / Tooling Requirements
@@ -52,7 +52,7 @@ docs/status/completed/tasks/DONE.md / PERSONA_REGISTRY.md (governance)
 | Engine adapters (`flm-engine-*`) | `flm-core` | Each adapter plugs into core engine traits. |
 
 ## Plan
-1. **Governance setup** – add `PERSONA_REGISTRY.md`, `docs/status/completed/tasks/DONE.md` entries so contributors can claim/close work.
+1. **Governance setup** – add `docs/templates/PERSONA_REGISTRY.md`, `docs/status/completed/tasks/DONE.md` entries so contributors can claim/close work.
 2. **Directory creation & moves** – introduce `core/`, `services/`, `apps/`, `engines/` subdirectories under `crates/`, then move each crate.
 3. **Manifest updates** – adjust root/workspace `Cargo.toml` members and path dependencies inside crates.
 4. **Documentation sweep** – update README, reports, and status docs referencing the old paths.
