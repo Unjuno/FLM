@@ -68,9 +68,7 @@ export async function fetchModelProfiles(
   } catch (error) {
     logger.error('Failed to fetch model profiles:', error);
     throw new Error(
-      error instanceof Error
-        ? error.message
-        : 'Failed to fetch model profiles'
+      error instanceof Error ? error.message : 'Failed to fetch model profiles'
     );
   }
 }
@@ -122,10 +120,7 @@ export async function deleteModelProfile(id: string): Promise<void> {
   } catch (error) {
     logger.error('Failed to delete model profile:', error);
     throw new Error(
-      error instanceof Error
-        ? error.message
-        : 'Failed to delete model profile'
+      error instanceof Error ? error.message : 'Failed to delete model profile'
     );
   }
 }
-

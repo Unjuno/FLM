@@ -32,7 +32,9 @@ describe('AnomalyEventsView Integration', () => {
       },
     ];
 
-    vi.mocked(securityService.fetchAnomalyDetections).mockResolvedValue(mockEvents);
+    vi.mocked(securityService.fetchAnomalyDetections).mockResolvedValue(
+      mockEvents
+    );
 
     // Mock URL.createObjectURL and URL.revokeObjectURL
     global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
@@ -116,7 +118,9 @@ describe('AnomalyEventsView Integration', () => {
       createdAt: '2025-01-28T12:00:00Z',
     }));
 
-    vi.mocked(securityService.fetchAnomalyDetections).mockResolvedValue(mockEvents);
+    vi.mocked(securityService.fetchAnomalyDetections).mockResolvedValue(
+      mockEvents
+    );
 
     render(<AnomalyEventsView />);
 
@@ -147,18 +151,23 @@ describe('AnomalyEventsView Integration', () => {
       originalError: mockError,
     };
 
-    vi.mocked(securityService.fetchAnomalyDetections).mockRejectedValue(mockError);
+    vi.mocked(securityService.fetchAnomalyDetections).mockRejectedValue(
+      mockError
+    );
     vi.mocked(tauriUtils.extractCliError).mockReturnValue(cliError);
 
     render(<AnomalyEventsView />);
 
     await waitFor(() => {
       // エラーメッセージが表示されているか確認（文字化けの可能性があるため、柔軟にチェック）
-      const errorElement = screen.queryByText(/異常検知|anomaly/i) ||
-                           screen.queryByText(/取得に失敗|error/i) ||
-                           screen.queryByRole('alert');
+      const errorElement =
+        screen.queryByText(/異常検知|anomaly/i) ||
+        screen.queryByText(/取得に失敗|error/i) ||
+        screen.queryByRole('alert');
       expect(errorElement).toBeTruthy();
-      expect(screen.getByText(/Detailed error information/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Detailed error information/i)
+      ).toBeInTheDocument();
     });
   });
 });

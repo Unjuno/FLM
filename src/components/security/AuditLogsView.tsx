@@ -1,7 +1,11 @@
 // Audit Logs View Component
 
 import React, { useCallback, useEffect, useState, useMemo } from 'react';
-import { fetchAuditLogs, AuditLog, AuditLogsFilter } from '../../services/security';
+import {
+  fetchAuditLogs,
+  AuditLog,
+  AuditLogsFilter,
+} from '../../services/security';
 import { formatDateTime } from '../../utils/formatters';
 import { createErrorHandler } from '../../utils/errorHandler';
 import { ErrorMessage } from '../common/ErrorMessage';
@@ -20,10 +24,11 @@ export const AuditLogsView: React.FC = () => {
   const [limit] = useState<number>(50);
 
   const handleLoadError = useMemo(
-    () => createErrorHandler({
-      defaultMessage: '監査ログの取得に失敗しました',
-      showStderr: true,
-    }),
+    () =>
+      createErrorHandler({
+        defaultMessage: '監査ログの取得に失敗しました',
+        showStderr: true,
+      }),
     []
   );
 
@@ -90,7 +95,16 @@ export const AuditLogsView: React.FC = () => {
   };
 
   const exportToCSV = () => {
-    const headers = ['ID', 'Request ID', 'Endpoint', 'Status', 'Severity', 'IP', 'Event Type', 'Created At'];
+    const headers = [
+      'ID',
+      'Request ID',
+      'Endpoint',
+      'Status',
+      'Severity',
+      'IP',
+      'Event Type',
+      'Created At',
+    ];
     const rows = auditLogs.map(log => [
       log.id.toString(),
       log.requestId,
@@ -104,7 +118,7 @@ export const AuditLogsView: React.FC = () => {
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(',')),
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -147,7 +161,7 @@ export const AuditLogsView: React.FC = () => {
             type="text"
             className="form-input"
             value={eventTypeFilter}
-            onChange={(e) => setEventTypeFilter(e.target.value)}
+            onChange={e => setEventTypeFilter(e.target.value)}
             placeholder="例: auth_failure, intrusion"
           />
         </div>
@@ -157,7 +171,7 @@ export const AuditLogsView: React.FC = () => {
             id="severity-filter"
             className="form-select"
             value={severityFilter}
-            onChange={(e) => setSeverityFilter(e.target.value)}
+            onChange={e => setSeverityFilter(e.target.value)}
           >
             <option value="">すべて</option>
             <option value="low">低</option>
@@ -173,7 +187,7 @@ export const AuditLogsView: React.FC = () => {
             type="text"
             className="form-input"
             value={ipFilter}
-            onChange={(e) => setIpFilter(e.target.value)}
+            onChange={e => setIpFilter(e.target.value)}
             placeholder="例: 192.168.1.1"
           />
         </div>
@@ -200,10 +214,7 @@ export const AuditLogsView: React.FC = () => {
       </div>
 
       {error && (
-        <ErrorMessage
-          message={error}
-          onDismiss={() => setError(null)}
-        />
+        <ErrorMessage message={error} onDismiss={() => setError(null)} />
       )}
 
       <div className="audit-logs-table">
@@ -221,7 +232,7 @@ export const AuditLogsView: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {auditLogs.map((log) => (
+            {auditLogs.map(log => (
               <tr key={log.id}>
                 <td>{log.id}</td>
                 <td>{log.requestId}</td>
@@ -242,7 +253,7 @@ export const AuditLogsView: React.FC = () => {
       <div className="pagination">
         <button
           className="button-secondary"
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          onClick={() => setPage(p => Math.max(1, p - 1))}
           disabled={page === 1}
         >
           前へ
@@ -250,7 +261,7 @@ export const AuditLogsView: React.FC = () => {
         <span>ページ {page}</span>
         <button
           className="button-secondary"
-          onClick={() => setPage((p) => p + 1)}
+          onClick={() => setPage(p => p + 1)}
           disabled={auditLogs.length < limit}
         >
           次へ
@@ -259,4 +270,3 @@ export const AuditLogsView: React.FC = () => {
     </div>
   );
 };
-

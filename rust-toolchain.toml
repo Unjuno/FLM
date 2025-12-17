@@ -4,17 +4,20 @@
 # Some crates (e.g., home/base64ct) require edition 2024, which is only available in nightly.
 #
 # To use this toolchain:
-#   rustup toolchain install nightly
-#   cargo +nightly build
+#   rustup toolchain install nightly-2025-01-01
+#   cargo +nightly-2025-01-01 build
 #
 # Or set nightly as default:
-#   rustup default nightly
+#   rustup default nightly-2025-01-01
 #
 [toolchain]
-channel = "nightly"
+channel = "nightly-2025-01-01"
 components = ["rustfmt", "clippy"]
 targets = []
 
 # Note: Once edition 2024 lands on stable, we can switch back to stable
 # and remove the home crate pin if applicable.
+#
+# The nightly version is fixed to ensure reproducible builds across different
+# environments. Update this date when upgrading to a newer nightly version.
 

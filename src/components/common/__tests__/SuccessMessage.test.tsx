@@ -22,9 +22,7 @@ describe('SuccessMessage', () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const onDismiss = vi.fn();
 
-    render(
-      <SuccessMessage message="Test success" onDismiss={onDismiss} />
-    );
+    render(<SuccessMessage message="Test success" onDismiss={onDismiss} />);
 
     const dismissButton = screen.getByLabelText('成功メッセージを閉じる');
     await user.click(dismissButton);
@@ -47,7 +45,7 @@ describe('SuccessMessage', () => {
 
     // タイマーを進める
     vi.advanceTimersByTime(3000);
-    
+
     // タイマーが実行されるのを待つ（fake timersの場合は即座に実行される）
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });
@@ -55,16 +53,14 @@ describe('SuccessMessage', () => {
   it('should auto dismiss with default timeout when autoDismiss is not provided', async () => {
     const onDismiss = vi.fn();
 
-    render(
-      <SuccessMessage message="Test success" onDismiss={onDismiss} />
-    );
+    render(<SuccessMessage message="Test success" onDismiss={onDismiss} />);
 
     // autoDismissのデフォルト値は3000ms
     expect(onDismiss).not.toHaveBeenCalled();
 
     // タイマーを進める
     vi.advanceTimersByTime(3000);
-    
+
     // タイマーが実行されるのを待つ（fake timersの場合は即座に実行される）
     expect(onDismiss).toHaveBeenCalledTimes(1);
   });

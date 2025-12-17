@@ -205,11 +205,14 @@ describe('AuditLogsView Integration', () => {
     await waitFor(() => {
       // エラーメッセージは日本語で表示される
       // エラーメッセージが表示されているか確認（文字化けの可能性があるため、柔軟にチェック）
-      const errorElement = screen.queryByText(/監査ログ|audit/i) ||
-                           screen.queryByText(/取得に失敗|error/i) ||
-                           screen.queryByRole('alert');
+      const errorElement =
+        screen.queryByText(/監査ログ|audit/i) ||
+        screen.queryByText(/取得に失敗|error/i) ||
+        screen.queryByRole('alert');
       expect(errorElement).toBeTruthy();
-      expect(screen.getByText(/Detailed error information/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Detailed error information/i)
+      ).toBeInTheDocument();
     });
   });
 });

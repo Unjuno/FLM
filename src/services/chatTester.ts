@@ -21,25 +21,26 @@ const FLM_PREFIX = 'flm-';
 function validateAndJoinUrl(base: string, path: string): string {
   try {
     const baseUrl = new URL(base);
-    
+
     // why: pathが絶対URLか相対パスかを判定し、適切に処理するため
     // alt: 常に相対パスを要求（柔軟性が失われる）
     // evidence: セキュリティと柔軟性のバランス
-    
+
     let pathUrl: URL;
     // why: 大文字小文字を区別せずに絶対URLを判定するため
     // alt: 小文字のみをチェック（大文字のURLが検出されない）
     // evidence: URLは大文字小文字を区別しないが、セキュリティのため明示的にチェック
     const pathLower = path.toLowerCase();
-    const isAbsoluteUrl = pathLower.startsWith('http://') || pathLower.startsWith('https://');
-    
+    const isAbsoluteUrl =
+      pathLower.startsWith('http://') || pathLower.startsWith('https://');
+
     // why: プロトコル相対URL（//evil.com）を防ぐため
     // alt: プロトコル相対URLを許可（セキュリティリスク）
     // evidence: プロトコル相対URLはbaseのプロトコルを使用するため、セキュリティ上の問題
     if (path.startsWith('//')) {
       throw new Error('Invalid URL: protocol-relative URLs are not allowed');
     }
-    
+
     if (isAbsoluteUrl) {
       // 絶対URLの場合
       pathUrl = new URL(path);
@@ -89,7 +90,11 @@ function determineProtocol(
   if (typeof mode === 'string') {
     const modeLower = mode.toLowerCase();
     // dev-self-signedとpackaged-caはhttpsを使用
-    if (modeLower.includes('https') || modeLower.includes('dev-self-signed') || modeLower.includes('packaged-ca')) {
+    if (
+      modeLower.includes('https') ||
+      modeLower.includes('dev-self-signed') ||
+      modeLower.includes('packaged-ca')
+    ) {
       return 'https';
     }
     return 'http';
@@ -99,7 +104,7 @@ function determineProtocol(
     // オブジェクト形式の場合、キー名で判定
     const modeKeys = Object.keys(mode);
     const httpsModes = new Set(['HttpsAcme', 'DevSelfSigned', 'PackagedCa']);
-    return modeKeys.some((key) => httpsModes.has(key)) ? 'https' : 'http';
+    return modeKeys.some(key => httpsModes.has(key)) ? 'https' : 'http';
   }
 
   return 'http';
@@ -134,9 +139,7 @@ function isChatCompletionResponse(
  * alt: バックエンドを統一する（非互換変更が必要）
  * evidence: 複数のフォールバックパスが存在
  */
-function normalizeProxyStatusResult(
-  result: unknown
-): {
+function normalizeProxyStatusResult(result: unknown): {
   running: boolean;
   port?: number;
   mode?: string | { [key: string]: unknown };
@@ -147,7 +150,11 @@ function normalizeProxyStatusResult(
   }
 
   // 形式1: { data: [{ running, port, mode, endpoints }] }
-  if ('data' in result && Array.isArray(result.data) && result.data.length > 0) {
+  if (
+    'data' in result &&
+    Array.isArray(result.data) &&
+    result.data.length > 0
+  ) {
     return result.data[0];
   }
 
@@ -256,7 +263,7 @@ function parseModelsFromResponse(data: unknown): ChatModel[] {
   }
 
   return responseData.data
-    .map((model) => convertToChatModel(model))
+    .map(model => convertToChatModel(model))
     .filter((model): model is ChatModel => model !== null);
 }
 
@@ -268,11 +275,12 @@ export async function fetchChatModels(
     const response = await fetch(
       validateAndJoinUrl(proxyEndpoint, API_ENDPOINTS.MODELS),
       {
-      method: 'GET',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-    });
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      }
+    );
 
     if (!response.ok) {
       throw new Error(`Failed to fetch models: HTTP ${response.status}`);
@@ -353,17 +361,18 @@ function attachRequestId(
   // why: request_idを追加した新しいオブジェクトを返す（不変性を保つ）
   // alt: 元のオブジェクトを変更（副作用が発生）
   // evidence: 関数型プログラミングのベストプラクティス
-  
+
   const requestId =
-    response.headers.get('x-request-id') || response.headers.get('X-Request-Id');
-  
+    response.headers.get('x-request-id') ||
+    response.headers.get('X-Request-Id');
+
   if (requestId) {
     return {
       ...data,
       request_id: requestId,
     };
   }
-  
+
   return data;
 }
 
@@ -397,7 +406,9 @@ export async function sendChatCompletion(
     return attachRequestId(data, response);
   } catch (err) {
     throw new Error(
-      err instanceof Error ? err.message : 'チャットリクエストの送信に失敗しました'
+      err instanceof Error
+        ? err.message
+        : 'チャットリクエストの送信に失敗しました'
     );
   }
 }
@@ -440,11 +451,9 @@ export async function getProxyEndpoint(): Promise<string | null> {
     // alt: エラーを再スロー（呼び出し側のエラーハンドリングが複雑化）
     // evidence: 既存の使用パターンに合わせる
     if (process.env.NODE_ENV === 'development') {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Unknown error';
+      const errorMessage = err instanceof Error ? err.message : 'Unknown error';
       logger.warn(`Failed to get proxy endpoint: ${errorMessage}`);
     }
     return null;
   }
 }
-

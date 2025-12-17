@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
-import {
-  clearTimeoutRef,
-  clearAllTimeouts,
-  setTimeoutRef,
-} from '../timeout';
+import { clearTimeoutRef, clearAllTimeouts, setTimeoutRef } from '../timeout';
 
 describe('timer utilities', () => {
   beforeEach(() => {
@@ -16,7 +12,9 @@ describe('timer utilities', () => {
 
   describe('setTimeoutRef', () => {
     it('should set a timeout and store it in ref', () => {
-      const ref = { current: {} as { [key: string]: NodeJS.Timeout | undefined } };
+      const ref = {
+        current: {} as { [key: string]: NodeJS.Timeout | undefined },
+      };
       const callback = vi.fn();
 
       setTimeoutRef(ref, 'test-key', callback, 1000);
@@ -30,7 +28,9 @@ describe('timer utilities', () => {
     });
 
     it('should clear existing timeout before setting new one', () => {
-      const ref = { current: {} as { [key: string]: NodeJS.Timeout | undefined } };
+      const ref = {
+        current: {} as { [key: string]: NodeJS.Timeout | undefined },
+      };
       const callback1 = vi.fn();
       const callback2 = vi.fn();
 
@@ -49,7 +49,9 @@ describe('timer utilities', () => {
     });
 
     it('should handle multiple timeouts with different keys', () => {
-      const ref = { current: {} as { [key: string]: NodeJS.Timeout | undefined } };
+      const ref = {
+        current: {} as { [key: string]: NodeJS.Timeout | undefined },
+      };
       const callback1 = vi.fn();
       const callback2 = vi.fn();
 
@@ -67,7 +69,9 @@ describe('timer utilities', () => {
 
   describe('clearTimeoutRef', () => {
     it('should clear a timeout from ref', () => {
-      const ref = { current: {} as { [key: string]: NodeJS.Timeout | undefined } };
+      const ref = {
+        current: {} as { [key: string]: NodeJS.Timeout | undefined },
+      };
       const callback = vi.fn();
 
       setTimeoutRef(ref, 'test-key', callback, 1000);
@@ -80,14 +84,18 @@ describe('timer utilities', () => {
     });
 
     it('should do nothing when key does not exist', () => {
-      const ref = { current: {} as { [key: string]: NodeJS.Timeout | undefined } };
+      const ref = {
+        current: {} as { [key: string]: NodeJS.Timeout | undefined },
+      };
 
       expect(() => clearTimeoutRef(ref, 'non-existent')).not.toThrow();
       expect(ref.current['non-existent']).toBeUndefined();
     });
 
     it('should only clear the specified timeout', () => {
-      const ref = { current: {} as { [key: string]: NodeJS.Timeout | undefined } };
+      const ref = {
+        current: {} as { [key: string]: NodeJS.Timeout | undefined },
+      };
       const callback1 = vi.fn();
       const callback2 = vi.fn();
 
@@ -104,7 +112,9 @@ describe('timer utilities', () => {
 
   describe('clearAllTimeouts', () => {
     it('should clear all timeouts from ref', () => {
-      const ref = { current: {} as { [key: string]: NodeJS.Timeout | undefined } };
+      const ref = {
+        current: {} as { [key: string]: NodeJS.Timeout | undefined },
+      };
       const callback1 = vi.fn();
       const callback2 = vi.fn();
       const callback3 = vi.fn();
@@ -124,7 +134,9 @@ describe('timer utilities', () => {
     });
 
     it('should do nothing when ref is empty', () => {
-      const ref = { current: {} as { [key: string]: NodeJS.Timeout | undefined } };
+      const ref = {
+        current: {} as { [key: string]: NodeJS.Timeout | undefined },
+      };
 
       expect(() => clearAllTimeouts(ref)).not.toThrow();
       expect(Object.keys(ref.current)).toHaveLength(0);

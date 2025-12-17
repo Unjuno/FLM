@@ -110,7 +110,7 @@ fn verify_checksum(
             expected = line.split_whitespace().next().map(|s| s.to_string());
             if expected.is_none() {
                 return Err(
-                    format!("Invalid checksum line format (empty checksum): {}", line).into(),
+                    format!("Invalid checksum line format (empty checksum): {line}").into(),
                 );
             }
             break;

@@ -42,8 +42,11 @@ export const ModelDetailSettings: React.FC<ModelDetailSettingsProps> = ({
   const { t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [capabilities, setCapabilities] = useState<EngineCapability | null>(null);
-  const [localParameters, setLocalParameters] = useState<Record<string, unknown>>(parameters);
+  const [capabilities, setCapabilities] = useState<EngineCapability | null>(
+    null
+  );
+  const [localParameters, setLocalParameters] =
+    useState<Record<string, unknown>>(parameters);
 
   useEffect(() => {
     setLocalParameters(parameters);
@@ -62,15 +65,21 @@ export const ModelDetailSettings: React.FC<ModelDetailSettingsProps> = ({
       // For now, we'll use a fallback approach since the API might not be fully implemented
       const enginesResponse = await safeInvoke<{
         version?: string;
-        data?: { engines?: Array<{ id: string; name: string; capabilities?: unknown }> };
+        data?: {
+          engines?: Array<{ id: string; name: string; capabilities?: unknown }>;
+        };
       }>('ipc_detect_engines', { fresh: false });
 
       let engineCapabilities: EngineCapability | null = null;
 
-      if (enginesResponse && 'data' in enginesResponse && enginesResponse.data) {
+      if (
+        enginesResponse &&
+        'data' in enginesResponse &&
+        enginesResponse.data
+      ) {
         const engines = enginesResponse.data.engines;
         if (Array.isArray(engines)) {
-          const engine = engines.find((e) => e.id === engineId);
+          const engine = engines.find(e => e.id === engineId);
           if (engine && 'capabilities' in engine) {
             // Parse capabilities if available
             engineCapabilities = {
@@ -90,7 +99,9 @@ export const ModelDetailSettings: React.FC<ModelDetailSettingsProps> = ({
       setCapabilities(engineCapabilities);
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : 'Failed to load engine capabilities';
+        err instanceof Error
+          ? err.message
+          : 'Failed to load engine capabilities';
       setError(errorMessage);
       if (onError) {
         onError(errorMessage);
@@ -132,7 +143,7 @@ export const ModelDetailSettings: React.FC<ModelDetailSettingsProps> = ({
               id={fieldId}
               type="checkbox"
               checked={displayValue === true}
-              onChange={(e) => handleParameterChange(key, e.target.checked)}
+              onChange={e => handleParameterChange(key, e.target.checked)}
               className="parameter-input parameter-checkbox"
             />
             {definition.description && (
@@ -152,7 +163,7 @@ export const ModelDetailSettings: React.FC<ModelDetailSettingsProps> = ({
               id={fieldId}
               type="number"
               value={displayValue as number}
-              onChange={(e) =>
+              onChange={e =>
                 handleParameterChange(key, parseFloat(e.target.value) || 0)
               }
               min={definition.min}
@@ -177,17 +188,19 @@ export const ModelDetailSettings: React.FC<ModelDetailSettingsProps> = ({
               <select
                 id={fieldId}
                 value={(displayValue as string) || ''}
-                onChange={(e) => handleParameterChange(key, e.target.value)}
+                onChange={e => handleParameterChange(key, e.target.value)}
                 className="parameter-input parameter-select"
               >
-                {definition.enum.map((option) => (
+                {definition.enum.map(option => (
                   <option key={String(option)} value={String(option)}>
                     {String(option)}
                   </option>
                 ))}
               </select>
               {definition.description && (
-                <small className="parameter-hint">{definition.description}</small>
+                <small className="parameter-hint">
+                  {definition.description}
+                </small>
               )}
             </div>
           );
@@ -202,7 +215,7 @@ export const ModelDetailSettings: React.FC<ModelDetailSettingsProps> = ({
               id={fieldId}
               type="text"
               value={(displayValue as string) || ''}
-              onChange={(e) => handleParameterChange(key, e.target.value)}
+              onChange={e => handleParameterChange(key, e.target.value)}
               className="parameter-input parameter-text"
             />
             {definition.description && (
@@ -222,7 +235,7 @@ export const ModelDetailSettings: React.FC<ModelDetailSettingsProps> = ({
             <textarea
               id={fieldId}
               value={JSON.stringify(displayValue, null, 2)}
-              onChange={(e) => {
+              onChange={e => {
                 try {
                   const parsed = JSON.parse(e.target.value);
                   handleParameterChange(key, parsed);
@@ -247,7 +260,11 @@ export const ModelDetailSettings: React.FC<ModelDetailSettingsProps> = ({
   if (loading) {
     return (
       <div className="model-detail-settings">
-        <LoadingSpinner message={t('modelProfiles.loadingCapabilities') || 'Loading capabilities...'} />
+        <LoadingSpinner
+          message={
+            t('modelProfiles.loadingCapabilities') || 'Loading capabilities...'
+          }
+        />
       </div>
     );
   }
@@ -275,10 +292,13 @@ export const ModelDetailSettings: React.FC<ModelDetailSettingsProps> = ({
 
   return (
     <div className="model-detail-settings">
-      {error && <ErrorMessage message={error} onDismiss={() => setError(null)} />}
+      {error && (
+        <ErrorMessage message={error} onDismiss={() => setError(null)} />
+      )}
       <div className="capabilities-header">
         <h3>
-          {t('modelProfiles.engineParameters') || 'Engine Parameters'} ({capabilities.name})
+          {t('modelProfiles.engineParameters') || 'Engine Parameters'} (
+          {capabilities.name})
         </h3>
         <p className="capabilities-description">
           {t('modelProfiles.parametersDescription') ||
@@ -288,7 +308,8 @@ export const ModelDetailSettings: React.FC<ModelDetailSettingsProps> = ({
       <div className="parameters-form">
         {parameterEntries.length === 0 ? (
           <p className="no-parameters">
-            {t('modelProfiles.noParameters') || 'No parameters defined for this engine.'}
+            {t('modelProfiles.noParameters') ||
+              'No parameters defined for this engine.'}
           </p>
         ) : (
           parameterEntries.map(([key, definition]) =>
@@ -301,7 +322,9 @@ export const ModelDetailSettings: React.FC<ModelDetailSettingsProps> = ({
 };
 
 // Helper function to parse capabilities from backend response
-function parseCapabilities(capabilities: unknown): Record<string, ParameterDefinition> | undefined {
+function parseCapabilities(
+  capabilities: unknown
+): Record<string, ParameterDefinition> | undefined {
   if (!capabilities || typeof capabilities !== 'object') {
     return undefined;
   }
@@ -438,4 +461,3 @@ function getDefaultCapabilities(engineId: string): EngineCapability {
     parameters: allParameters,
   };
 }
-

@@ -6,7 +6,7 @@ describe('ThemeContext', () => {
   beforeEach(() => {
     localStorage.clear();
     document.documentElement.classList.remove('light-theme', 'dark-theme');
-    
+
     // window.matchMediaをモック（デフォルトはlightモード）
     Object.defineProperty(window, 'matchMedia', {
       writable: true,
@@ -137,8 +137,12 @@ describe('ThemeContext', () => {
     button.click();
 
     await waitFor(() => {
-      expect(document.documentElement.classList.contains('dark-theme')).toBe(true);
-      expect(document.documentElement.classList.contains('light-theme')).toBe(false);
+      expect(document.documentElement.classList.contains('dark-theme')).toBe(
+        true
+      );
+      expect(document.documentElement.classList.contains('light-theme')).toBe(
+        false
+      );
     });
   });
 
@@ -158,8 +162,12 @@ describe('ThemeContext', () => {
     button.click();
 
     await waitFor(() => {
-      expect(document.documentElement.classList.contains('dark-theme')).toBe(true);
-      expect(document.documentElement.classList.contains('light-theme')).toBe(false);
+      expect(document.documentElement.classList.contains('dark-theme')).toBe(
+        true
+      );
+      expect(document.documentElement.classList.contains('light-theme')).toBe(
+        false
+      );
     });
     // Note: CSS variables may not be available in test environment, so we only check class names
   });
@@ -182,8 +190,12 @@ describe('ThemeContext', () => {
     button.click();
 
     await waitFor(() => {
-      expect(document.documentElement.classList.contains('light-theme')).toBe(true);
-      expect(document.documentElement.classList.contains('dark-theme')).toBe(false);
+      expect(document.documentElement.classList.contains('light-theme')).toBe(
+        true
+      );
+      expect(document.documentElement.classList.contains('dark-theme')).toBe(
+        false
+      );
     });
     // Note: CSS variables may not be available in test environment, so we only check class names
   });

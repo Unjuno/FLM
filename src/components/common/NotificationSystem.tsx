@@ -28,7 +28,7 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({
   const [notifications, setNotifications] = useState<Notification[]>([]);
 
   const removeNotification = useCallback((id: string) => {
-    setNotifications((prev) => prev.filter((n) => n.id !== id));
+    setNotifications(prev => prev.filter(n => n.id !== id));
   }, []);
 
   const addNotification = useCallback(
@@ -41,7 +41,7 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({
         duration: notification.duration ?? defaultDuration,
       };
 
-      setNotifications((prev) => {
+      setNotifications(prev => {
         const updated = [newNotification, ...prev];
         return updated.slice(0, maxNotifications);
       });
@@ -58,12 +58,17 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({
 
   // Expose addNotification via window for global access
   useEffect(() => {
-    (window as unknown as { flmNotifications?: { add: typeof addNotification } }).flmNotifications = {
+    (
+      window as unknown as {
+        flmNotifications?: { add: typeof addNotification };
+      }
+    ).flmNotifications = {
       add: addNotification,
     };
 
     return () => {
-      delete (window as unknown as { flmNotifications?: unknown }).flmNotifications;
+      delete (window as unknown as { flmNotifications?: unknown })
+        .flmNotifications;
     };
   }, [addNotification]);
 
@@ -72,8 +77,12 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({
   }
 
   return (
-    <div className="notification-system" role="region" aria-label="Notifications">
-      {notifications.map((notification) => (
+    <div
+      className="notification-system"
+      role="region"
+      aria-label="Notifications"
+    >
+      {notifications.map(notification => (
         <div
           key={notification.id}
           className={`notification notification-${notification.severity}`}
@@ -100,8 +109,11 @@ export const NotificationSystem: React.FC<NotificationSystemProps> = ({
 export const useNotifications = () => {
   const addNotification = useCallback(
     (notification: Omit<Notification, 'id' | 'timestamp'>) => {
-      const system = (window as unknown as { flmNotifications?: { add: typeof addNotification } })
-        .flmNotifications;
+      const system = (
+        window as unknown as {
+          flmNotifications?: { add: typeof addNotification };
+        }
+      ).flmNotifications;
       if (system) {
         system.add(notification);
       } else {
@@ -114,4 +126,3 @@ export const useNotifications = () => {
 
   return { addNotification };
 };
-

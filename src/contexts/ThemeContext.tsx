@@ -55,7 +55,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
           applyTheme(savedTheme);
         } else {
           // システム設定を確認
-          const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+          const prefersDark = window.matchMedia(
+            '(prefers-color-scheme: dark)'
+          ).matches;
           const defaultTheme = prefersDark ? 'dark' : 'light';
           setThemeState(defaultTheme);
           applyTheme(defaultTheme);
@@ -110,7 +112,9 @@ export const ThemeProvider: React.FC<ThemeProviderProps> = ({ children }) => {
     toggleTheme,
   };
 
-  return <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>;
+  return (
+    <ThemeContext.Provider value={value}>{children}</ThemeContext.Provider>
+  );
 };
 
 /**

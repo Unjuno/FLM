@@ -18,8 +18,10 @@ describe('SetupWizard', () => {
   it('renders firewall configuration form', () => {
     vi.mocked(safeInvoke).mockResolvedValue({ platform: 'windows' });
     render(<SetupWizard />);
-    
-    expect(screen.getByText('Setup Wizard - Firewall Configuration')).toBeInTheDocument();
+
+    expect(
+      screen.getByText('Setup Wizard - Firewall Configuration')
+    ).toBeInTheDocument();
     expect(screen.getByLabelText(/Operating System/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/Ports/i)).toBeInTheDocument();
     expect(screen.getByLabelText(/IP Whitelist/i)).toBeInTheDocument();
@@ -29,13 +31,14 @@ describe('SetupWizard', () => {
     vi.mocked(safeInvoke)
       .mockResolvedValueOnce({ platform: 'windows' })
       .mockResolvedValueOnce({
-        script: '# Windows Firewall Rules\nNew-NetFirewallRule -DisplayName "FLM Proxy 8080" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8080',
+        script:
+          '# Windows Firewall Rules\nNew-NetFirewallRule -DisplayName "FLM Proxy 8080" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 8080',
         display_name: 'Windows / PowerShell',
         shell: 'powershell',
       });
 
     render(<SetupWizard />);
-    
+
     await waitFor(() => {
       expect(screen.getByText('Generate Script Preview')).toBeInTheDocument();
     });
@@ -65,7 +68,7 @@ describe('SetupWizard', () => {
       });
 
     render(<SetupWizard />);
-    
+
     await waitFor(() => {
       expect(screen.getByText('Generate Script Preview')).toBeInTheDocument();
     });
@@ -100,7 +103,7 @@ describe('SetupWizard', () => {
       });
 
     render(<SetupWizard />);
-    
+
     await waitFor(() => {
       expect(screen.getByText('Generate Script Preview')).toBeInTheDocument();
     });
@@ -109,14 +112,18 @@ describe('SetupWizard', () => {
     previewButton.click();
 
     await waitFor(() => {
-      expect(screen.getByText('Apply Script (Requires Admin)')).toBeInTheDocument();
+      expect(
+        screen.getByText('Apply Script (Requires Admin)')
+      ).toBeInTheDocument();
     });
 
     const applyButton = screen.getByText('Apply Script (Requires Admin)');
     applyButton.click();
 
     await waitFor(() => {
-      expect(screen.getByText(/Firewall rules applied successfully/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Firewall rules applied successfully/i)
+      ).toBeInTheDocument();
     });
   });
 
@@ -135,7 +142,7 @@ describe('SetupWizard', () => {
       });
 
     render(<SetupWizard />);
-    
+
     await waitFor(() => {
       expect(screen.getByText('Generate Script Preview')).toBeInTheDocument();
     });
@@ -144,14 +151,18 @@ describe('SetupWizard', () => {
     previewButton.click();
 
     await waitFor(() => {
-      expect(screen.getByText('Apply Script (Requires Admin)')).toBeInTheDocument();
+      expect(
+        screen.getByText('Apply Script (Requires Admin)')
+      ).toBeInTheDocument();
     });
 
     const applyButton = screen.getByText('Apply Script (Requires Admin)');
     applyButton.click();
 
     await waitFor(() => {
-      expect(screen.getByText(/Firewall application failed/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Firewall application failed/i)
+      ).toBeInTheDocument();
     });
   });
 
@@ -175,7 +186,7 @@ describe('SetupWizard', () => {
       });
 
     render(<SetupWizard />);
-    
+
     await waitFor(() => {
       expect(screen.getByText('Generate Script Preview')).toBeInTheDocument();
     });
@@ -184,7 +195,9 @@ describe('SetupWizard', () => {
     previewButton.click();
 
     await waitFor(() => {
-      expect(screen.getByText('Apply Script (Requires Admin)')).toBeInTheDocument();
+      expect(
+        screen.getByText('Apply Script (Requires Admin)')
+      ).toBeInTheDocument();
     });
 
     const applyButton = screen.getByText('Apply Script (Requires Admin)');
@@ -198,7 +211,9 @@ describe('SetupWizard', () => {
     rollbackButton.click();
 
     await waitFor(() => {
-      expect(screen.getByText(/Firewall rules rolled back successfully/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Firewall rules rolled back successfully/i)
+      ).toBeInTheDocument();
     });
   });
 });

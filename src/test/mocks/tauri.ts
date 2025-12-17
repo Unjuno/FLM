@@ -9,7 +9,7 @@ export const mockInvoke = vi.fn<[string, InvokeArgs?], Promise<unknown>>();
 export async function setupTauriMocks() {
   const { invoke } = await import('@tauri-apps/api/core');
   vi.mocked(invoke).mockImplementation(mockInvoke);
-  
+
   // Set default behavior for common commands
   mockInvoke.mockImplementation(() => {
     // Default implementation returns undefined
@@ -25,7 +25,7 @@ export function resetTauriMocks() {
   mockInvoke.mockReset();
   // Set default resolved value to avoid undefined errors
   mockInvoke.mockResolvedValue(undefined);
-  
+
   // Ensure window.__TAURI__ is properly set
   if (typeof window !== 'undefined') {
     Object.defineProperty(window, '__TAURI__', {
@@ -53,7 +53,11 @@ export function createMockResponse<T>(data: T) {
 /**
  * Create a mock error response helper
  */
-export function createMockError(code: string, message: string, stderr?: string) {
+export function createMockError(
+  code: string,
+  message: string,
+  stderr?: string
+) {
   return {
     code,
     message,

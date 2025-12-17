@@ -52,7 +52,9 @@ describe('AnomalyEventsView', () => {
       },
     ];
 
-    vi.mocked(securityService.fetchAnomalyDetections).mockResolvedValue(mockDetections);
+    vi.mocked(securityService.fetchAnomalyDetections).mockResolvedValue(
+      mockDetections
+    );
 
     render(<AnomalyEventsView />);
 
@@ -72,7 +74,9 @@ describe('AnomalyEventsView', () => {
 
     await waitFor(() => {
       // Errorオブジェクトの場合はerr.messageが使用される
-      expect(screen.getByText(/Failed to fetch anomaly detections/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Failed to fetch anomaly detections/i)
+      ).toBeInTheDocument();
     });
   });
 

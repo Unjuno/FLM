@@ -23,10 +23,7 @@ describe('chatTester', () => {
   describe('fetchChatModels', () => {
     it('should fetch and parse models successfully', async () => {
       const mockModels = {
-        data: [
-          { id: 'flm-ollama-llama2' },
-          { id: 'gpt-4' },
-        ],
+        data: [{ id: 'flm-ollama-llama2' }, { id: 'gpt-4' }],
       };
 
       vi.mocked(fetch).mockResolvedValueOnce({
@@ -259,7 +256,11 @@ describe('chatTester', () => {
         sendChatCompletion('http://localhost:8080', null, request)
       ).rejects.toThrow('Chat completion failed: HTTP 400');
 
-      const error = await sendChatCompletion('http://localhost:8080', null, request).catch((e) => e);
+      const error = await sendChatCompletion(
+        'http://localhost:8080',
+        null,
+        request
+      ).catch(e => e);
       expect(error.message).not.toContain('詳細:');
 
       process.env.NODE_ENV = originalEnv;

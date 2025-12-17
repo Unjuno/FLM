@@ -1,7 +1,11 @@
 // Anomaly Events View Component
 
 import React, { useCallback, useEffect, useState, useMemo } from 'react';
-import { fetchAnomalyDetections, AnomalyDetection, AnomalyFilter } from '../../services/security';
+import {
+  fetchAnomalyDetections,
+  AnomalyDetection,
+  AnomalyFilter,
+} from '../../services/security';
 import { formatDateTime } from '../../utils/formatters';
 import { createErrorHandler } from '../../utils/errorHandler';
 import { ErrorMessage } from '../common/ErrorMessage';
@@ -19,10 +23,11 @@ export const AnomalyEventsView: React.FC = () => {
   const [limit] = useState<number>(50);
 
   const handleLoadError = useMemo(
-    () => createErrorHandler({
-      defaultMessage: '異常検知イベントの取得に失敗しました',
-      showStderr: true,
-    }),
+    () =>
+      createErrorHandler({
+        defaultMessage: '異常検知イベントの取得に失敗しました',
+        showStderr: true,
+      }),
     []
   );
 
@@ -83,7 +88,14 @@ export const AnomalyEventsView: React.FC = () => {
   };
 
   const exportToCSV = () => {
-    const headers = ['ID', 'IP', 'Anomaly Type', 'Score', 'Details', 'Created At'];
+    const headers = [
+      'ID',
+      'IP',
+      'Anomaly Type',
+      'Score',
+      'Details',
+      'Created At',
+    ];
     const rows = detections.map(detection => [
       detection.id,
       detection.ip,
@@ -95,7 +107,7 @@ export const AnomalyEventsView: React.FC = () => {
 
     const csvContent = [
       headers.join(','),
-      ...rows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ...rows.map(row => row.map(cell => `"${cell}"`).join(',')),
     ].join('\n');
 
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
@@ -138,7 +150,7 @@ export const AnomalyEventsView: React.FC = () => {
             type="text"
             className="form-input"
             value={ipFilter}
-            onChange={(e) => setIpFilter(e.target.value)}
+            onChange={e => setIpFilter(e.target.value)}
             placeholder="例: 192.168.1.1"
           />
         </div>
@@ -149,7 +161,7 @@ export const AnomalyEventsView: React.FC = () => {
             type="text"
             className="form-input"
             value={anomalyTypeFilter}
-            onChange={(e) => setAnomalyTypeFilter(e.target.value)}
+            onChange={e => setAnomalyTypeFilter(e.target.value)}
             placeholder="例: high_request_rate_1s"
           />
         </div>
@@ -176,10 +188,7 @@ export const AnomalyEventsView: React.FC = () => {
       </div>
 
       {error && (
-        <ErrorMessage
-          message={error}
-          onDismiss={() => setError(null)}
-        />
+        <ErrorMessage message={error} onDismiss={() => setError(null)} />
       )}
 
       <div className="anomaly-events-table">
@@ -195,7 +204,7 @@ export const AnomalyEventsView: React.FC = () => {
             </tr>
           </thead>
           <tbody>
-            {detections.map((detection) => (
+            {detections.map(detection => (
               <tr key={detection.id}>
                 <td>{detection.id}</td>
                 <td>{detection.ip}</td>
@@ -214,7 +223,7 @@ export const AnomalyEventsView: React.FC = () => {
       <div className="pagination">
         <button
           className="button-secondary"
-          onClick={() => setPage((p) => Math.max(1, p - 1))}
+          onClick={() => setPage(p => Math.max(1, p - 1))}
           disabled={page === 1}
         >
           前へ
@@ -222,7 +231,7 @@ export const AnomalyEventsView: React.FC = () => {
         <span>ページ {page}</span>
         <button
           className="button-secondary"
-          onClick={() => setPage((p) => p + 1)}
+          onClick={() => setPage(p => p + 1)}
           disabled={detections.length < limit}
         >
           次へ
@@ -231,4 +240,3 @@ export const AnomalyEventsView: React.FC = () => {
     </div>
   );
 };
-

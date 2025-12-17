@@ -34,7 +34,9 @@ describe('IntrusionEventsView Integration', () => {
       },
     ];
 
-    vi.mocked(securityService.fetchIntrusionAttempts).mockResolvedValue(mockAttempts);
+    vi.mocked(securityService.fetchIntrusionAttempts).mockResolvedValue(
+      mockAttempts
+    );
 
     // Mock URL.createObjectURL and URL.revokeObjectURL
     global.URL.createObjectURL = vi.fn(() => 'blob:mock-url');
@@ -120,7 +122,9 @@ describe('IntrusionEventsView Integration', () => {
       createdAt: '2025-01-28T12:00:00Z',
     }));
 
-    vi.mocked(securityService.fetchIntrusionAttempts).mockResolvedValue(mockAttempts);
+    vi.mocked(securityService.fetchIntrusionAttempts).mockResolvedValue(
+      mockAttempts
+    );
 
     render(<IntrusionEventsView />);
 
@@ -151,18 +155,23 @@ describe('IntrusionEventsView Integration', () => {
       originalError: mockError,
     };
 
-    vi.mocked(securityService.fetchIntrusionAttempts).mockRejectedValue(mockError);
+    vi.mocked(securityService.fetchIntrusionAttempts).mockRejectedValue(
+      mockError
+    );
     vi.mocked(tauriUtils.extractCliError).mockReturnValue(cliError);
 
     render(<IntrusionEventsView />);
 
     await waitFor(() => {
       // エラーメッセージが表示されているか確認（文字化けの可能性があるため、柔軟にチェック）
-      const errorElement = screen.queryByText(/侵入検知|intrusion/i) ||
-                           screen.queryByText(/取得に失敗|error/i) ||
-                           screen.queryByRole('alert');
+      const errorElement =
+        screen.queryByText(/侵入検知|intrusion/i) ||
+        screen.queryByText(/取得に失敗|error/i) ||
+        screen.queryByRole('alert');
       expect(errorElement).toBeTruthy();
-      expect(screen.getByText(/Detailed error information/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Detailed error information/i)
+      ).toBeInTheDocument();
     });
   });
 });

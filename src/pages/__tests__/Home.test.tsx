@@ -287,14 +287,18 @@ describe('Home', () => {
     await waitFor(() => {
       // エラーメッセージが表示されているか確認
       // 「プロキシが実行されていません」または「Proxy is not running」が表示される
-      const errorMessage = screen.queryByText(/プロキシが実行されていません/i) ||
-                          screen.queryByText(/Proxy is not running/i) ||
-                          screen.queryByRole('alert');
+      const errorMessage =
+        screen.queryByText(/プロキシが実行されていません/i) ||
+        screen.queryByText(/Proxy is not running/i) ||
+        screen.queryByRole('alert');
       expect(errorMessage).toBeTruthy();
     });
 
     // ipc_proxy_stop should not be called when port is missing
-    expect(tauriUtils.safeInvoke).not.toHaveBeenCalledWith('ipc_proxy_stop', expect.anything());
+    expect(tauriUtils.safeInvoke).not.toHaveBeenCalledWith(
+      'ipc_proxy_stop',
+      expect.anything()
+    );
   });
 
   it('should show success message when proxy stops successfully', async () => {
@@ -387,21 +391,25 @@ describe('Home', () => {
     // エラーメッセージが表示されるのを待つ
     // エラーハンドラーがエラーを無視する可能性があるため、エラーメッセージが表示されない場合もある
     // その場合、エラーが発生したことを確認するために、ipc_proxy_stopが呼び出されたことを確認する
-    await waitFor(() => {
-      // ipc_proxy_stopが呼び出されたことを確認
-      expect(tauriUtils.safeInvoke).toHaveBeenCalledWith('ipc_proxy_stop', {
-        port: 8080,
-      });
-    }, { timeout: 3000 });
-    
+    await waitFor(
+      () => {
+        // ipc_proxy_stopが呼び出されたことを確認
+        expect(tauriUtils.safeInvoke).toHaveBeenCalledWith('ipc_proxy_stop', {
+          port: 8080,
+        });
+      },
+      { timeout: 3000 }
+    );
+
     // エラーメッセージが表示されている場合、それを確認
     // エラーメッセージが表示されない場合（shouldShowがfalseの場合）でも、テストは成功とする
-    const errorElement = screen.queryByText(/Failed to stop proxy/i) ||
-                         screen.queryByText(/Error details/i) ||
-                         screen.queryByText(/詳細/i) ||
-                         screen.queryByRole('alert') ||
-                         screen.queryByText(/エラー/i);
-    
+    const errorElement =
+      screen.queryByText(/Failed to stop proxy/i) ||
+      screen.queryByText(/Error details/i) ||
+      screen.queryByText(/詳細/i) ||
+      screen.queryByRole('alert') ||
+      screen.queryByText(/エラー/i);
+
     // エラーメッセージが表示されている場合は確認するが、表示されていない場合でもテストは成功とする
     if (errorElement) {
       expect(errorElement).toBeInTheDocument();
@@ -450,7 +458,9 @@ describe('Home', () => {
     renderHome();
 
     await waitFor(() => {
-      expect(screen.getByText(/Failed to get proxy status/)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Failed to get proxy status/)
+      ).toBeInTheDocument();
     });
   });
 

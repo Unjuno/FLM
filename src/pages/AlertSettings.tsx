@@ -29,9 +29,15 @@ export const AlertSettings: React.FC = () => {
   const [rules, setRules] = useState<AlertRule[]>([]);
 
   const eventTypes = [
-    { value: 'intrusion', label: t('security.intrusion') || 'Intrusion Detection' },
+    {
+      value: 'intrusion',
+      label: t('security.intrusion') || 'Intrusion Detection',
+    },
     { value: 'anomaly', label: t('security.anomaly') || 'Anomaly Detection' },
-    { value: 'rate_limit', label: t('security.rateLimit') || 'Rate Limit Exceeded' },
+    {
+      value: 'rate_limit',
+      label: t('security.rateLimit') || 'Rate Limit Exceeded',
+    },
     { value: 'api_error', label: t('security.apiError') || 'API Error' },
   ];
 
@@ -106,9 +112,13 @@ export const AlertSettings: React.FC = () => {
     ];
   };
 
-  const handleRuleChange = (id: string, field: keyof AlertRule, value: unknown) => {
-    setRules((prev) =>
-      prev.map((rule) => (rule.id === id ? { ...rule, [field]: value } : rule))
+  const handleRuleChange = (
+    id: string,
+    field: keyof AlertRule,
+    value: unknown
+  ) => {
+    setRules(prev =>
+      prev.map(rule => (rule.id === id ? { ...rule, [field]: value } : rule))
     );
   };
 
@@ -121,11 +131,11 @@ export const AlertSettings: React.FC = () => {
       notifyUI: true,
       notifyLog: true,
     };
-    setRules((prev) => [...prev, newRule]);
+    setRules(prev => [...prev, newRule]);
   };
 
   const handleRemoveRule = (id: string) => {
-    setRules((prev) => prev.filter((rule) => rule.id !== id));
+    setRules(prev => prev.filter(rule => rule.id !== id));
   };
 
   const handleSave = async () => {
@@ -139,15 +149,20 @@ export const AlertSettings: React.FC = () => {
         value: JSON.stringify(rules),
       });
 
-      setSuccessMessage(t('alertSettings.saveSuccess') || 'Alert settings saved successfully');
+      setSuccessMessage(
+        t('alertSettings.saveSuccess') || 'Alert settings saved successfully'
+      );
       addNotification({
-        message: t('alertSettings.saveSuccess') || 'Alert settings saved successfully',
+        message:
+          t('alertSettings.saveSuccess') || 'Alert settings saved successfully',
         severity: 'success',
       });
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
       const errorMessage =
-        err instanceof Error ? err.message : t('alertSettings.saveError') || 'Failed to save alert settings';
+        err instanceof Error
+          ? err.message
+          : t('alertSettings.saveError') || 'Failed to save alert settings';
       setError(errorMessage);
       addNotification({
         message: errorMessage,
@@ -174,13 +189,21 @@ export const AlertSettings: React.FC = () => {
           <button className="button-secondary" onClick={handleAddRule}>
             {t('alertSettings.addRule') || 'Add Rule'}
           </button>
-          <button className="button-primary" onClick={handleSave} disabled={saving}>
-            {saving ? t('common.saving') || 'Saving...' : t('common.save') || 'Save'}
+          <button
+            className="button-primary"
+            onClick={handleSave}
+            disabled={saving}
+          >
+            {saving
+              ? t('common.saving') || 'Saving...'
+              : t('common.save') || 'Save'}
           </button>
         </div>
       </div>
 
-      {error && <ErrorMessage message={error} onDismiss={() => setError(null)} />}
+      {error && (
+        <ErrorMessage message={error} onDismiss={() => setError(null)} />
+      )}
 
       {successMessage && (
         <SuccessMessage
@@ -204,12 +227,15 @@ export const AlertSettings: React.FC = () => {
           </div>
         ) : (
           <div className="rules-list">
-            {rules.map((rule) => (
+            {rules.map(rule => (
               <div key={rule.id} className="rule-card">
                 <div className="rule-header">
                   <h3>
-                    {eventTypes.find((e) => e.value === rule.eventType)?.label || rule.eventType} -{' '}
-                    {severities.find((s) => s.value === rule.severity)?.label || rule.severity}
+                    {eventTypes.find(e => e.value === rule.eventType)?.label ||
+                      rule.eventType}{' '}
+                    -{' '}
+                    {severities.find(s => s.value === rule.severity)?.label ||
+                      rule.severity}
                   </h3>
                   <button
                     className="button-danger-small"
@@ -224,11 +250,11 @@ export const AlertSettings: React.FC = () => {
                       {t('alertSettings.eventType') || 'Event Type'}
                       <select
                         value={rule.eventType}
-                        onChange={(e) =>
+                        onChange={e =>
                           handleRuleChange(rule.id, 'eventType', e.target.value)
                         }
                       >
-                        {eventTypes.map((type) => (
+                        {eventTypes.map(type => (
                           <option key={type.value} value={type.value}>
                             {type.label}
                           </option>
@@ -241,11 +267,11 @@ export const AlertSettings: React.FC = () => {
                       {t('alertSettings.severity') || 'Severity'}
                       <select
                         value={rule.severity}
-                        onChange={(e) =>
+                        onChange={e =>
                           handleRuleChange(rule.id, 'severity', e.target.value)
                         }
                       >
-                        {severities.map((sev) => (
+                        {severities.map(sev => (
                           <option key={sev.value} value={sev.value}>
                             {sev.label}
                           </option>
@@ -260,7 +286,7 @@ export const AlertSettings: React.FC = () => {
                         <input
                           type="number"
                           value={rule.threshold || ''}
-                          onChange={(e) =>
+                          onChange={e =>
                             handleRuleChange(
                               rule.id,
                               'threshold',
@@ -278,7 +304,7 @@ export const AlertSettings: React.FC = () => {
                       <input
                         type="checkbox"
                         checked={rule.enabled}
-                        onChange={(e) =>
+                        onChange={e =>
                           handleRuleChange(rule.id, 'enabled', e.target.checked)
                         }
                       />
@@ -290,8 +316,12 @@ export const AlertSettings: React.FC = () => {
                       <input
                         type="checkbox"
                         checked={rule.notifyUI}
-                        onChange={(e) =>
-                          handleRuleChange(rule.id, 'notifyUI', e.target.checked)
+                        onChange={e =>
+                          handleRuleChange(
+                            rule.id,
+                            'notifyUI',
+                            e.target.checked
+                          )
                         }
                       />
                       {t('alertSettings.notifyUI') || 'Show UI Notification'}
@@ -302,8 +332,12 @@ export const AlertSettings: React.FC = () => {
                       <input
                         type="checkbox"
                         checked={rule.notifyLog}
-                        onChange={(e) =>
-                          handleRuleChange(rule.id, 'notifyLog', e.target.checked)
+                        onChange={e =>
+                          handleRuleChange(
+                            rule.id,
+                            'notifyLog',
+                            e.target.checked
+                          )
                         }
                       />
                       {t('alertSettings.notifyLog') || 'Log to Audit Log'}
@@ -318,4 +352,3 @@ export const AlertSettings: React.FC = () => {
     </div>
   );
 };
-

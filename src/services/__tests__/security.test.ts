@@ -309,9 +309,12 @@ describe('security service', () => {
 
       await unblockIp('192.168.1.1');
 
-      expect(safeInvoke).toHaveBeenCalledWith('ipc_security_ip_blocklist_unblock', {
-        ip: '192.168.1.1',
-      });
+      expect(safeInvoke).toHaveBeenCalledWith(
+        'ipc_security_ip_blocklist_unblock',
+        {
+          ip: '192.168.1.1',
+        }
+      );
     });
   });
 

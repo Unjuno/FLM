@@ -1,20 +1,38 @@
 // Home page
 
-import React, { useCallback, useEffect, useState, useRef, useMemo } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useState,
+  useRef,
+  useMemo,
+} from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useI18n } from '../contexts/I18nContext';
 import { safeInvoke } from '../utils/tauri';
 import { formatProxyMode, formatEngineStatus } from '../utils/formatters';
-import { clearTimeoutRef, setTimeoutRef, clearAllTimeouts } from '../utils/timeout';
+import {
+  clearTimeoutRef,
+  setTimeoutRef,
+  clearAllTimeouts,
+} from '../utils/timeout';
 import { logger } from '../utils/logger';
 import { createErrorHandler } from '../utils/errorHandler';
-import { TIMING, SILENT_ERROR_PATTERNS, DEFAULT_PROXY_CONFIG } from '@/config/constants';
+import {
+  TIMING,
+  SILENT_ERROR_PATTERNS,
+  DEFAULT_PROXY_CONFIG,
+} from '@/config/constants';
 import { ErrorMessage } from '../components/common/ErrorMessage';
 import { SuccessMessage } from '../components/common/SuccessMessage';
 import { LoadingSpinner } from '../components/common/LoadingSpinner';
 import './Home.css';
 
-type ProxyModeValue = 'local-http' | 'dev-selfsigned' | 'https-acme' | 'packaged-ca';
+type ProxyModeValue =
+  | 'local-http'
+  | 'dev-selfsigned'
+  | 'https-acme'
+  | 'packaged-ca';
 type ProxyModeObject =
   | { LocalHttp?: unknown }
   | { DevSelfSigned?: unknown }
@@ -42,7 +60,10 @@ interface EngineStatusObject {
   reason?: string;
 }
 
-type EngineStatus = EngineStatusValue | EngineStatusObject | { [key: string]: unknown };
+type EngineStatus =
+  | EngineStatusValue
+  | EngineStatusObject
+  | { [key: string]: unknown };
 
 interface EngineInfo {
   id: string;
@@ -53,7 +74,6 @@ interface EngineInfo {
 interface ProxyStatusResult {
   data?: Array<{ running: boolean; port?: number; mode?: ProxyMode }>;
 }
-
 
 const VALID_ENGINE_STATUSES = new Set<EngineStatusValue>([
   'installed-only',
@@ -68,12 +88,12 @@ function isProxyStatusResult(result: unknown): result is ProxyStatusResult {
   if (!result || typeof result !== 'object') {
     return false;
   }
-  
+
   const obj = result as Record<string, unknown>;
   if (!('data' in obj)) {
     return false;
   }
-  
+
   const data = obj.data;
   return Array.isArray(data) && data.length > 0;
 }
@@ -89,20 +109,19 @@ function isDirectProxyStatus(result: unknown): result is ProxyStatus {
 
 function validateEngineData(data: unknown): EngineInfo | null {
   if (!data || typeof data !== 'object') return null;
-  
+
   const obj = data as Record<string, unknown>;
-  
+
   // id の検証
   if (typeof obj.id !== 'string' || !obj.id.trim()) {
     return null;
   }
   const id = obj.id.trim();
-  
+
   // name の検証（オプショナル）
-  const name = typeof obj.name === 'string' && obj.name.trim()
-    ? obj.name.trim()
-    : id;
-  
+  const name =
+    typeof obj.name === 'string' && obj.name.trim() ? obj.name.trim() : id;
+
   // status の検証（より厳密に）
   let status: EngineStatus = 'unknown';
   if (obj.status !== undefined) {
@@ -114,7 +133,7 @@ function validateEngineData(data: unknown): EngineInfo | null {
       status = obj.status as EngineStatus;
     }
   }
-  
+
   return { id, name, status };
 }
 
@@ -127,7 +146,11 @@ export const Home: React.FC = () => {
   const [enginesLoading, setEnginesLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
-  const timeoutRef = useRef<{ status?: NodeJS.Timeout; message?: NodeJS.Timeout; detect?: NodeJS.Timeout }>({});
+  const timeoutRef = useRef<{
+    status?: NodeJS.Timeout;
+    message?: NodeJS.Timeout;
+    detect?: NodeJS.Timeout;
+  }>({});
 
   const handleProxyStatusResult = useCallback((result: unknown) => {
     // 型ガード関数を使用
@@ -143,31 +166,33 @@ export const Home: React.FC = () => {
         return;
       }
     }
-    
+
     // フォールバック処理
     if (isDirectProxyStatus(result)) {
       setProxyStatus(result);
       return;
     }
-    
+
     setProxyStatus({ running: false });
   }, []);
 
   const handleProxyStatusError = useMemo(
-    () => createErrorHandler({
-      defaultMessage: 'プロキシステータスの取得に失敗しました',
-      silentPatterns: SILENT_ERROR_PATTERNS,
-    }),
+    () =>
+      createErrorHandler({
+        defaultMessage: 'プロキシステータスの取得に失敗しました',
+        silentPatterns: SILENT_ERROR_PATTERNS,
+      }),
     []
   );
 
   const loadProxyStatus = useCallback(async (): Promise<ProxyStatus | null> => {
     try {
-      const result = await safeInvoke<{ version?: string; data?: Array<{ running: boolean; port?: number; mode?: ProxyMode }> }>(
-        'ipc_proxy_status'
-      );
+      const result = await safeInvoke<{
+        version?: string;
+        data?: Array<{ running: boolean; port?: number; mode?: ProxyMode }>;
+      }>('ipc_proxy_status');
       handleProxyStatusResult(result);
-      setError((prevError) => {
+      setError(prevError => {
         if (prevError?.includes('プロキシステータス')) {
           return null;
         }
@@ -207,12 +232,19 @@ export const Home: React.FC = () => {
     setEnginesLoading(true);
     setError(null);
     try {
-      const result = await safeInvoke<{ version?: string; data?: { engines?: Array<{ id: string; name: string; status: unknown }> } }>(
-        'ipc_detect_engines',
-        { fresh: false }
-      );
+      const result = await safeInvoke<{
+        version?: string;
+        data?: {
+          engines?: Array<{ id: string; name: string; status: unknown }>;
+        };
+      }>('ipc_detect_engines', { fresh: false });
       // JSON形式: { version: "1.0", data: { engines: [...] } }
-      if (result && 'data' in result && result.data && 'engines' in result.data) {
+      if (
+        result &&
+        'data' in result &&
+        result.data &&
+        'engines' in result.data
+      ) {
         const enginesData = result.data.engines;
         if (Array.isArray(enginesData)) {
           setEngines(
@@ -221,7 +253,11 @@ export const Home: React.FC = () => {
               .filter((e): e is EngineInfo => e !== null)
           );
         }
-      } else if (result && 'engines' in result && Array.isArray(result.engines)) {
+      } else if (
+        result &&
+        'engines' in result &&
+        Array.isArray(result.engines)
+      ) {
         // フォールバック: 直接enginesフィールドがある場合
         setEngines(
           result.engines
@@ -248,16 +284,18 @@ export const Home: React.FC = () => {
   }, []);
 
   const handleStartProxyError = useMemo(
-    () => createErrorHandler({
-      defaultMessage: t('errors.generic'),
-    }),
+    () =>
+      createErrorHandler({
+        defaultMessage: t('errors.generic'),
+      }),
     [t]
   );
 
   const handleStopProxyError = useMemo(
-    () => createErrorHandler({
-      defaultMessage: t('errors.generic'),
-    }),
+    () =>
+      createErrorHandler({
+        defaultMessage: t('errors.generic'),
+      }),
     [t]
   );
 
@@ -265,11 +303,11 @@ export const Home: React.FC = () => {
     setLoading(true);
     setError(null);
     setSuccessMessage(null);
-    
+
     // 既存のタイマーをクリア
     clearTimeoutRef(timeoutRef, 'status');
     clearTimeoutRef(timeoutRef, 'message');
-    
+
     try {
       await safeInvoke('ipc_proxy_start', {
         mode: DEFAULT_PROXY_CONFIG.MODE,
@@ -277,14 +315,24 @@ export const Home: React.FC = () => {
         no_daemon: true,
       });
       setSuccessMessage(t('messages.proxyStarted'));
-      
-      setTimeoutRef(timeoutRef, 'status', () => {
-        void loadProxyStatus();
-      }, TIMING.STATUS_REFRESH_DELAY_MS);
-      
-      setTimeoutRef(timeoutRef, 'message', () => {
-        setSuccessMessage(null);
-      }, TIMING.MESSAGE_AUTO_DISMISS_MS);
+
+      setTimeoutRef(
+        timeoutRef,
+        'status',
+        () => {
+          void loadProxyStatus();
+        },
+        TIMING.STATUS_REFRESH_DELAY_MS
+      );
+
+      setTimeoutRef(
+        timeoutRef,
+        'message',
+        () => {
+          setSuccessMessage(null);
+        },
+        TIMING.MESSAGE_AUTO_DISMISS_MS
+      );
     } catch (err) {
       const result = handleStartProxyError(err);
       if (result.shouldShow) {
@@ -300,11 +348,11 @@ export const Home: React.FC = () => {
     setLoading(true);
     setError(null);
     setSuccessMessage(null);
-    
+
     // 既存のタイマーをクリア
     clearTimeoutRef(timeoutRef, 'status');
     clearTimeoutRef(timeoutRef, 'message');
-    
+
     // why: プロキシ停止にはportまたはhandle_idが必要
     // alt: 常に最新のステータスを取得してから停止（追加のAPI呼び出しが必要）
     // evidence: 現在のproxyStatusからportを取得する方が効率的
@@ -313,20 +361,30 @@ export const Home: React.FC = () => {
       setLoading(false);
       return;
     }
-    
+
     try {
       await safeInvoke('ipc_proxy_stop', {
         port: proxyStatus.port,
       });
       setSuccessMessage(t('messages.proxyStopped'));
-      
-      setTimeoutRef(timeoutRef, 'message', () => {
-        setSuccessMessage(null);
-      }, TIMING.MESSAGE_AUTO_DISMISS_MS);
-      
-      setTimeoutRef(timeoutRef, 'status', () => {
-        void loadProxyStatus();
-      }, TIMING.STATUS_REFRESH_DELAY_MS);
+
+      setTimeoutRef(
+        timeoutRef,
+        'message',
+        () => {
+          setSuccessMessage(null);
+        },
+        TIMING.MESSAGE_AUTO_DISMISS_MS
+      );
+
+      setTimeoutRef(
+        timeoutRef,
+        'status',
+        () => {
+          void loadProxyStatus();
+        },
+        TIMING.STATUS_REFRESH_DELAY_MS
+      );
     } catch (err) {
       const result = handleStopProxyError(err);
       if (result.shouldShow) {
@@ -339,26 +397,32 @@ export const Home: React.FC = () => {
   }, [proxyStatus, loadProxyStatus, handleStopProxyError, t]);
 
   const handleDetectEnginesError = useMemo(
-    () => createErrorHandler({
-      defaultMessage: t('errors.generic'),
-    }),
+    () =>
+      createErrorHandler({
+        defaultMessage: t('errors.generic'),
+      }),
     [t]
   );
 
   const handleDetectEngines = useCallback(async () => {
     setError(null);
     setSuccessMessage(null);
-    
+
     // 既存のタイマーをクリア
     clearTimeoutRef(timeoutRef, 'detect');
     clearTimeoutRef(timeoutRef, 'message');
-    
+
     try {
       await loadEngines();
       setSuccessMessage(t('messages.enginesDetected'));
-      setTimeoutRef(timeoutRef, 'detect', () => {
-        setSuccessMessage(null);
-      }, TIMING.MESSAGE_AUTO_DISMISS_MS);
+      setTimeoutRef(
+        timeoutRef,
+        'detect',
+        () => {
+          setSuccessMessage(null);
+        },
+        TIMING.MESSAGE_AUTO_DISMISS_MS
+      );
     } catch (err) {
       const result = handleDetectEnginesError(err);
       if (result.shouldShow) {
@@ -411,12 +475,12 @@ export const Home: React.FC = () => {
         }
       }
     };
-    
+
     // 少し遅延させて実行（初回ロードが完了するのを待つ）
     const timeoutId = setTimeout(() => {
       void autoStartProxy();
     }, 1000);
-    
+
     return () => {
       clearTimeout(timeoutId);
     };
@@ -426,31 +490,39 @@ export const Home: React.FC = () => {
     if (enginesLoading) {
       return <LoadingSpinner size="small" message={t('common.loading')} />;
     }
-    
+
     if (engines.length === 0) {
       return (
         <div className="status-info">
-          <div className="status-badge status-stopped">{t('home.noEngines')}</div>
+          <div className="status-badge status-stopped">
+            {t('home.noEngines')}
+          </div>
         </div>
       );
     }
-    
+
     const displayedEngines = engines.slice(0, 3);
     const remainingCount = engines.length - 3;
-    
+
     return (
       <div className="status-info">
         <div className="status-badge status-running">
           {t('home.enginesFound', { count: engines.length })}
         </div>
         <div className="engine-list">
-          {displayedEngines.map((engine) => (
+          {displayedEngines.map(engine => (
             <div key={engine.id} className="engine-item">
-              {engine.name} ({formatEngineStatus(engine.status as string | { [key: string]: unknown })})
+              {engine.name} (
+              {formatEngineStatus(
+                engine.status as string | { [key: string]: unknown }
+              )}
+              )
             </div>
           ))}
           {remainingCount > 0 && (
-            <div className="engine-item">{t('common.others', { count: remainingCount })}</div>
+            <div className="engine-item">
+              {t('common.others', { count: remainingCount })}
+            </div>
           )}
         </div>
       </div>
@@ -465,10 +537,7 @@ export const Home: React.FC = () => {
       </div>
 
       {error && (
-        <ErrorMessage
-          message={error}
-          onDismiss={() => setError(null)}
-        />
+        <ErrorMessage message={error} onDismiss={() => setError(null)} />
       )}
 
       {successMessage && (
@@ -488,14 +557,22 @@ export const Home: React.FC = () => {
               <h3>{t('home.proxyStatus')}</h3>
               {proxyStatus ? (
                 <div className="status-info">
-                  <div className={`status-badge ${proxyStatus.running ? 'status-running' : 'status-stopped'}`}>
-                    {proxyStatus.running ? t('home.running') : t('home.stopped')}
+                  <div
+                    className={`status-badge ${proxyStatus.running ? 'status-running' : 'status-stopped'}`}
+                  >
+                    {proxyStatus.running
+                      ? t('home.running')
+                      : t('home.stopped')}
                   </div>
                   {proxyStatus.running && proxyStatus.port && (
                     <div className="status-detail">
-                      <span>{t('home.port')}: {proxyStatus.port}</span>
+                      <span>
+                        {t('home.port')}: {proxyStatus.port}
+                      </span>
                       {proxyStatus.mode && (
-                        <span>{t('home.mode')}: {formatProxyMode(proxyStatus.mode)}</span>
+                        <span>
+                          {t('home.mode')}: {formatProxyMode(proxyStatus.mode)}
+                        </span>
                       )}
                     </div>
                   )}

@@ -26,7 +26,12 @@ interface MockConfirmDialogProps {
   confirmText?: string;
 }
 vi.mock('../../components/common/ConfirmDialog', () => ({
-  ConfirmDialog: ({ message, onConfirm, onCancel, confirmText = '確認' }: MockConfirmDialogProps) => (
+  ConfirmDialog: ({
+    message,
+    onConfirm,
+    onCancel,
+    confirmText = '確認',
+  }: MockConfirmDialogProps) => (
     <div data-testid="confirm-dialog">
       <p>{message}</p>
       <button onClick={onConfirm}>{confirmText}</button>
@@ -61,7 +66,9 @@ describe('IpBlocklistManagement', () => {
 
     await waitFor(() => {
       // i18nを使用しているため、柔軟にチェック
-      expect(screen.getByText(/IPブロックリスト|blocklist/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/IPブロックリスト|blocklist/i)
+      ).toBeInTheDocument();
     });
   });
 
@@ -95,7 +102,9 @@ describe('IpBlocklistManagement', () => {
       },
     ];
 
-    vi.mocked(securityService.fetchBlockedIps).mockResolvedValue(mockBlockedIps);
+    vi.mocked(securityService.fetchBlockedIps).mockResolvedValue(
+      mockBlockedIps
+    );
 
     renderIpBlocklistManagement();
 
@@ -119,7 +128,9 @@ describe('IpBlocklistManagement', () => {
 
     await waitFor(() => {
       // Errorオブジェクトの場合はerr.messageが使用される
-      expect(screen.getByText(/Failed to fetch blocked IPs/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Failed to fetch blocked IPs/i)
+      ).toBeInTheDocument();
     });
   });
 
@@ -136,17 +147,22 @@ describe('IpBlocklistManagement', () => {
       },
     ];
 
-    vi.mocked(securityService.fetchBlockedIps).mockResolvedValue(mockBlockedIps);
+    vi.mocked(securityService.fetchBlockedIps).mockResolvedValue(
+      mockBlockedIps
+    );
     vi.mocked(securityService.unblockIp).mockResolvedValue();
 
     renderIpBlocklistManagement();
 
-    await waitFor(() => {
-      // IPアドレスはcode要素内に表示されるため、柔軟にチェック
-      // getByTextはcode要素内のテキストも検索できるが、より確実にするためgetAllByTextを使用
-      const ipElements = screen.getAllByText(/192.168.1.1/);
-      expect(ipElements.length).toBeGreaterThan(0);
-    }, { timeout: 3000 });
+    await waitFor(
+      () => {
+        // IPアドレスはcode要素内に表示されるため、柔軟にチェック
+        // getByTextはcode要素内のテキストも検索できるが、より確実にするためgetAllByTextを使用
+        const ipElements = screen.getAllByText(/192.168.1.1/);
+        expect(ipElements.length).toBeGreaterThan(0);
+      },
+      { timeout: 3000 }
+    );
 
     // i18nを使用しているため、柔軟にチェック
     const unblockButtons = screen.getAllByText(/ブロック解除|unblock/i);
@@ -189,23 +205,32 @@ describe('IpBlocklistManagement', () => {
     renderIpBlocklistManagement();
 
     // ローディングが完了するまで待つ
-    await waitFor(() => {
-      expect(screen.queryByText(/読み込み中/i)).not.toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.queryByText(/読み込み中/i)).not.toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     // IPアドレスが表示されるまで待つ（code要素内に表示される）
-    await waitFor(() => {
-      const ipElements = screen.queryAllByText(/192.168.1.1/);
-      expect(ipElements.length).toBeGreaterThan(0);
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        const ipElements = screen.queryAllByText(/192.168.1.1/);
+        expect(ipElements.length).toBeGreaterThan(0);
+      },
+      { timeout: 5000 }
+    );
 
     // i18nを使用しているため、柔軟にチェック
-    const unblockButtons = await waitFor(() => {
-      const buttons = screen.getAllByText(/ブロック解除|unblock/i);
-      expect(buttons.length).toBeGreaterThan(0);
-      return buttons;
-    }, { timeout: 5000 });
-    
+    const unblockButtons = await waitFor(
+      () => {
+        const buttons = screen.getAllByText(/ブロック解除|unblock/i);
+        expect(buttons.length).toBeGreaterThan(0);
+        return buttons;
+      },
+      { timeout: 5000 }
+    );
+
     await user.click(unblockButtons[0]);
 
     await waitFor(() => {
@@ -221,15 +246,21 @@ describe('IpBlocklistManagement', () => {
     });
 
     // loadBlockedIpsが再呼び出しされ、データが更新されるまで待つ
-    await waitFor(() => {
-      expect(securityService.fetchBlockedIps).toHaveBeenCalledTimes(2);
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(securityService.fetchBlockedIps).toHaveBeenCalledTimes(2);
+      },
+      { timeout: 5000 }
+    );
 
     // IPアドレスが消えることを確認
-    await waitFor(() => {
-      const ipElements = screen.queryAllByText(/192.168.1.1/);
-      expect(ipElements.length).toBe(0);
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        const ipElements = screen.queryAllByText(/192.168.1.1/);
+        expect(ipElements.length).toBe(0);
+      },
+      { timeout: 5000 }
+    );
   });
 
   it('should show confirm dialog when clear temporary blocks button is clicked', async () => {
@@ -245,34 +276,45 @@ describe('IpBlocklistManagement', () => {
         lastAttempt: '2025-01-28T13:00:00Z',
       },
     ];
-    vi.mocked(securityService.fetchBlockedIps).mockResolvedValue(mockBlockedIps);
+    vi.mocked(securityService.fetchBlockedIps).mockResolvedValue(
+      mockBlockedIps
+    );
     vi.mocked(securityService.clearTemporaryBlocks).mockResolvedValue();
 
     renderIpBlocklistManagement();
 
     // データがロードされ、IPアドレスが表示されるまで待つ
-    await waitFor(() => {
-      const ipElements = screen.getAllByText(/192.168.1.2/);
-      expect(ipElements.length).toBeGreaterThan(0);
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        const ipElements = screen.getAllByText(/192.168.1.2/);
+        expect(ipElements.length).toBeGreaterThan(0);
+      },
+      { timeout: 5000 }
+    );
 
     // i18nを使用しているため、柔軟にチェック
     // 一時ブロックがある場合のみボタンが表示される
-    const clearButton = await waitFor(() => {
-      const button = screen.queryByText(/一時ブロック.*解除|clear.*temporary/i);
-      if (!button) {
-        throw new Error('Clear button not found');
-      }
-      return button;
-    }, { timeout: 5000 });
-    
+    const clearButton = await waitFor(
+      () => {
+        const button = screen.queryByText(
+          /一時ブロック.*解除|clear.*temporary/i
+        );
+        if (!button) {
+          throw new Error('Clear button not found');
+        }
+        return button;
+      },
+      { timeout: 5000 }
+    );
+
     await user.click(clearButton);
 
     await waitFor(() => {
       expect(screen.getByTestId('confirm-dialog')).toBeInTheDocument();
       // 確認ダイアログのメッセージは「すべての一時ブロックを解除しますか？永続ブロックは残ります。」
       // i18nが正しく動作していない場合、英語で表示される可能性があるため、柔軟にチェック
-      const dialogMessage = screen.getByTestId('confirm-dialog').textContent || '';
+      const dialogMessage =
+        screen.getByTestId('confirm-dialog').textContent || '';
       expect(dialogMessage).toMatch(/一時ブロック.*解除|temporary.*block/i);
     });
   });
@@ -289,7 +331,7 @@ describe('IpBlocklistManagement', () => {
         lastAttempt: '2025-01-28T13:00:00Z',
       },
     ];
-    
+
     // 最初のロード時はデータを返し、clear後の再ロード時は空配列を返す
     let callCount = 0;
     vi.mocked(securityService.fetchBlockedIps).mockImplementation(async () => {
@@ -304,26 +346,37 @@ describe('IpBlocklistManagement', () => {
     renderIpBlocklistManagement();
 
     // ローディングが完了するまで待つ
-    await waitFor(() => {
-      expect(screen.queryByText(/読み込み中/i)).not.toBeInTheDocument();
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(screen.queryByText(/読み込み中/i)).not.toBeInTheDocument();
+      },
+      { timeout: 5000 }
+    );
 
     // データがロードされ、IPアドレスが表示されるまで待つ
-    await waitFor(() => {
-      const ipElements = screen.queryAllByText(/192.168.1.2/);
-      expect(ipElements.length).toBeGreaterThan(0);
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        const ipElements = screen.queryAllByText(/192.168.1.2/);
+        expect(ipElements.length).toBeGreaterThan(0);
+      },
+      { timeout: 5000 }
+    );
 
     // 一時ブロックがある場合のみボタンが表示される
     // データがロードされ、一時ブロックが計算されるまで待つ
-    const clearButton = await waitFor(() => {
-      const button = screen.queryByText(/一時ブロック.*解除|clear.*temporary/i);
-      if (!button) {
-        throw new Error('Clear button not found');
-      }
-      return button;
-    }, { timeout: 5000 });
-    
+    const clearButton = await waitFor(
+      () => {
+        const button = screen.queryByText(
+          /一時ブロック.*解除|clear.*temporary/i
+        );
+        if (!button) {
+          throw new Error('Clear button not found');
+        }
+        return button;
+      },
+      { timeout: 5000 }
+    );
+
     await user.click(clearButton);
 
     await waitFor(() => {
@@ -339,15 +392,21 @@ describe('IpBlocklistManagement', () => {
     });
 
     // loadBlockedIpsが再呼び出しされ、データが更新されるまで待つ
-    await waitFor(() => {
-      expect(securityService.fetchBlockedIps).toHaveBeenCalledTimes(2);
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        expect(securityService.fetchBlockedIps).toHaveBeenCalledTimes(2);
+      },
+      { timeout: 5000 }
+    );
 
     // IPアドレスが消えることを確認
-    await waitFor(() => {
-      const ipElements = screen.queryAllByText(/192.168.1.2/);
-      expect(ipElements.length).toBe(0);
-    }, { timeout: 5000 });
+    await waitFor(
+      () => {
+        const ipElements = screen.queryAllByText(/192.168.1.2/);
+        expect(ipElements.length).toBe(0);
+      },
+      { timeout: 5000 }
+    );
   });
 
   it('should separate permanent and temporary blocks', async () => {
@@ -370,7 +429,9 @@ describe('IpBlocklistManagement', () => {
       },
     ];
 
-    vi.mocked(securityService.fetchBlockedIps).mockResolvedValue(mockBlockedIps);
+    vi.mocked(securityService.fetchBlockedIps).mockResolvedValue(
+      mockBlockedIps
+    );
 
     renderIpBlocklistManagement();
 

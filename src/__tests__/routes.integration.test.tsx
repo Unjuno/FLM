@@ -13,7 +13,9 @@ vi.mock('../pages/ChatTester', () => ({
 }));
 
 vi.mock('../pages/SecurityEvents', () => ({
-  SecurityEvents: () => <div data-testid="security-events-page">Security Events Page</div>,
+  SecurityEvents: () => (
+    <div data-testid="security-events-page">Security Events Page</div>
+  ),
 }));
 
 vi.mock('../pages/IpBlocklistManagement', () => ({
@@ -24,7 +26,9 @@ vi.mock('../pages/IpBlocklistManagement', () => ({
 
 // Mock ErrorBoundary
 vi.mock('../components/common/ErrorBoundary', () => ({
-  ErrorBoundary: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
+  ErrorBoundary: ({ children }: { children: React.ReactNode }) => (
+    <div>{children}</div>
+  ),
 }));
 
 describe('Routes Integration', () => {

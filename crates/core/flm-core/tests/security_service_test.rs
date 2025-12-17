@@ -204,7 +204,7 @@ async fn test_set_policy_invalid_cidr() {
     let repo = MockSecurityRepository::new();
     let service = SecurityService::new(repo);
 
-    // Try to set a policy with invalid CIDR notation
+    // Try to set a policy with invalid CIDR notation (prefix length out of range)
     let policy_json = serde_json::json!({
         "ip_whitelist": ["192.168.1.0/999"]
     });
@@ -219,6 +219,149 @@ async fn test_set_policy_invalid_cidr() {
     assert!(result.is_err());
     match result.unwrap_err() {
         RepoError::ValidationError { .. } => {}
+        _ => panic!("Expected ValidationError"),
+    }
+}
+
+#[tokio::test]
+async fn test_set_policy_valid_cidr() {
+    let repo = MockSecurityRepository::new();
+    let service = SecurityService::new(repo);
+
+    // Valid CIDR notations
+    let policy_json = serde_json::json!({
+        "ip_whitelist": [
+            "192.168.1.0/24",
+            "10.0.0.0/8",
+            "172.16.0.0/12",
+            "2001:db8::/32",
+            "::1/128",
+            "192.168.1.1" // Plain IP address
+        ]
+    });
+
+    let policy = SecurityPolicy {
+        id: "default".to_string(),
+        policy_json: serde_json::to_string(&policy_json).unwrap(),
+        updated_at: chrono::Utc::now().to_rfc3339(),
+    };
+
+    let result = service.set_policy(policy).await;
+    assert!(result.is_ok(), "Valid CIDR notations should be accepted");
+}
+
+#[tokio::test]
+async fn test_set_policy_invalid_network_address() {
+    let repo = MockSecurityRepository::new();
+    let service = SecurityService::new(repo);
+
+    // Invalid: IP address has non-zero host bits for the given prefix length
+    let policy_json = serde_json::json!({
+        "ip_whitelist": ["192.168.1.1/24"] // Should be 192.168.1.0/24
+    });
+
+    let policy = SecurityPolicy {
+        id: "default".to_string(),
+        policy_json: serde_json::to_string(&policy_json).unwrap(),
+        updated_at: chrono::Utc::now().to_rfc3339(),
+    };
+
+    let result = service.set_policy(policy).await;
+    assert!(result.is_err(), "Invalid network address should be rejected");
+    match result.unwrap_err() {
+        RepoError::ValidationError { reason } => {
+            assert!(
+                reason.contains("host bits must be zero"),
+                "Error message should mention host bits"
+            );
+        }
+        _ => panic!("Expected ValidationError"),
+    }
+}
+
+#[tokio::test]
+async fn test_set_policy_invalid_ipv6_network_address() {
+    let repo = MockSecurityRepository::new();
+    let service = SecurityService::new(repo);
+
+    // Invalid: IPv6 address has non-zero host bits for the given prefix length
+    let policy_json = serde_json::json!({
+        "ip_whitelist": ["2001:db8::1/32"] // Should be 2001:db8::/32
+    });
+
+    let policy = SecurityPolicy {
+        id: "default".to_string(),
+        policy_json: serde_json::to_string(&policy_json).unwrap(),
+        updated_at: chrono::Utc::now().to_rfc3339(),
+    };
+
+    let result = service.set_policy(policy).await;
+    assert!(result.is_err(), "Invalid IPv6 network address should be rejected");
+    match result.unwrap_err() {
+        RepoError::ValidationError { reason } => {
+            assert!(
+                reason.contains("host bits must be zero"),
+                "Error message should mention host bits"
+            );
+        }
+        _ => panic!("Expected ValidationError"),
+    }
+}
+
+#[tokio::test]
+async fn test_set_policy_invalid_ipv4_prefix_length() {
+    let repo = MockSecurityRepository::new();
+    let service = SecurityService::new(repo);
+
+    // Invalid: IPv4 prefix length > 32
+    let policy_json = serde_json::json!({
+        "ip_whitelist": ["192.168.1.0/33"]
+    });
+
+    let policy = SecurityPolicy {
+        id: "default".to_string(),
+        policy_json: serde_json::to_string(&policy_json).unwrap(),
+        updated_at: chrono::Utc::now().to_rfc3339(),
+    };
+
+    let result = service.set_policy(policy).await;
+    assert!(result.is_err(), "Invalid IPv4 prefix length should be rejected");
+    match result.unwrap_err() {
+        RepoError::ValidationError { reason } => {
+            assert!(
+                reason.contains("must be 0-32"),
+                "Error message should mention valid range"
+            );
+        }
+        _ => panic!("Expected ValidationError"),
+    }
+}
+
+#[tokio::test]
+async fn test_set_policy_invalid_ipv6_prefix_length() {
+    let repo = MockSecurityRepository::new();
+    let service = SecurityService::new(repo);
+
+    // Invalid: IPv6 prefix length > 128
+    let policy_json = serde_json::json!({
+        "ip_whitelist": ["2001:db8::/129"]
+    });
+
+    let policy = SecurityPolicy {
+        id: "default".to_string(),
+        policy_json: serde_json::to_string(&policy_json).unwrap(),
+        updated_at: chrono::Utc::now().to_rfc3339(),
+    };
+
+    let result = service.set_policy(policy).await;
+    assert!(result.is_err(), "Invalid IPv6 prefix length should be rejected");
+    match result.unwrap_err() {
+        RepoError::ValidationError { reason } => {
+            assert!(
+                reason.contains("must be 0-128"),
+                "Error message should mention valid range"
+            );
+        }
         _ => panic!("Expected ValidationError"),
     }
 }

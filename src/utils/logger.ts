@@ -19,7 +19,8 @@ interface LoggerConfig {
 }
 
 const defaultConfig: LoggerConfig = {
-  level: process.env.NODE_ENV === 'development' ? LogLevel.DEBUG : LogLevel.INFO,
+  level:
+    process.env.NODE_ENV === 'development' ? LogLevel.DEBUG : LogLevel.INFO,
   enableConsole: true,
 };
 
@@ -61,7 +62,7 @@ export interface Logger {
  */
 export function createLogger(prefix?: string): Logger {
   const prefixStr = prefix ? `[${prefix}]` : '';
-  
+
   return {
     debug: (...args: unknown[]) => {
       if (shouldLog(LogLevel.DEBUG)) {

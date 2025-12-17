@@ -19,13 +19,15 @@ describe('Keyboard Navigation', () => {
           </I18nProvider>
         </BrowserRouter>
       );
-      
+
       // サイドバーの折りたたみボタンを取得（日本語ラベルまたはaria-labelで検索）
-      const toggleButton = screen.getByRole('button', { name: /サイドバーを(折りたたむ|展開)/ });
+      const toggleButton = screen.getByRole('button', {
+        name: /サイドバーを(折りたたむ|展開)/,
+      });
       toggleButton.focus();
-      
+
       await user.tab();
-      
+
       // Next focusable element should be focused
       const focusedElement = document.activeElement;
       expect(focusedElement).not.toBe(toggleButton);
@@ -40,13 +42,13 @@ describe('Keyboard Navigation', () => {
           </I18nProvider>
         </BrowserRouter>
       );
-      
+
       const navButtons = screen.getAllByRole('button');
       if (navButtons.length > 1) {
         navButtons[1].focus();
-        
+
         await user.tab({ shift: true });
-        
+
         // Previous focusable element should be focused
         const focusedElement = document.activeElement;
         expect(focusedElement).not.toBe(navButtons[1]);
@@ -56,7 +58,7 @@ describe('Keyboard Navigation', () => {
     it('should activate button with Enter key', async () => {
       const user = userEvent.setup();
       const onCollapseChange = vi.fn();
-      
+
       render(
         <BrowserRouter>
           <I18nProvider>
@@ -64,20 +66,22 @@ describe('Keyboard Navigation', () => {
           </I18nProvider>
         </BrowserRouter>
       );
-      
+
       // サイドバーの折りたたみボタンを取得（日本語ラベルまたはaria-labelで検索）
-      const toggleButton = screen.getByRole('button', { name: /サイドバーを(折りたたむ|展開)/ });
+      const toggleButton = screen.getByRole('button', {
+        name: /サイドバーを(折りたたむ|展開)/,
+      });
       toggleButton.focus();
-      
+
       await user.keyboard('{Enter}');
-      
+
       expect(onCollapseChange).toHaveBeenCalled();
     });
 
     it('should activate button with Space key', async () => {
       const user = userEvent.setup();
       const onCollapseChange = vi.fn();
-      
+
       render(
         <BrowserRouter>
           <I18nProvider>
@@ -85,13 +89,15 @@ describe('Keyboard Navigation', () => {
           </I18nProvider>
         </BrowserRouter>
       );
-      
+
       // サイドバーの折りたたみボタンを取得（日本語ラベルまたはaria-labelで検索）
-      const toggleButton = screen.getByRole('button', { name: /サイドバーを(折りたたむ|展開)/ });
+      const toggleButton = screen.getByRole('button', {
+        name: /サイドバーを(折りたたむ|展開)/,
+      });
       toggleButton.focus();
-      
+
       await user.keyboard(' ');
-      
+
       expect(onCollapseChange).toHaveBeenCalled();
     });
   });
@@ -101,7 +107,7 @@ describe('Keyboard Navigation', () => {
       const user = userEvent.setup();
       const onConfirm = vi.fn();
       const onCancel = vi.fn();
-      
+
       render(
         <ConfirmDialog
           message="Test message"
@@ -109,9 +115,9 @@ describe('Keyboard Navigation', () => {
           onCancel={onCancel}
         />
       );
-      
+
       await user.keyboard('{Escape}');
-      
+
       // ConfirmDialogはhandleKeyDownとuseEffectの両方でEscapeキーを処理するため、
       // 2回呼ばれる可能性がある。少なくとも1回は呼ばれることを確認する
       expect(onCancel).toHaveBeenCalled();
@@ -121,7 +127,7 @@ describe('Keyboard Navigation', () => {
     it('should confirm dialog with Enter key', async () => {
       const onConfirm = vi.fn();
       const onCancel = vi.fn();
-      
+
       render(
         <ConfirmDialog
           message="Test message"
@@ -129,11 +135,13 @@ describe('Keyboard Navigation', () => {
           onCancel={onCancel}
         />
       );
-      
+
       // Focus the dialog content div (which has the onKeyDown handler)
-      const dialogContent = document.querySelector('.confirm-dialog') as HTMLElement;
+      const dialogContent = document.querySelector(
+        '.confirm-dialog'
+      ) as HTMLElement;
       expect(dialogContent).toBeDefined();
-      
+
       if (dialogContent) {
         dialogContent.focus();
         // Enter key only works when target === currentTarget
@@ -142,17 +150,22 @@ describe('Keyboard Navigation', () => {
           bubbles: true,
           cancelable: true,
         });
-        Object.defineProperty(enterEvent, 'target', { value: dialogContent, enumerable: true });
-        Object.defineProperty(enterEvent, 'currentTarget', { value: dialogContent, enumerable: true });
-        
+        Object.defineProperty(enterEvent, 'target', {
+          value: dialogContent,
+          enumerable: true,
+        });
+        Object.defineProperty(enterEvent, 'currentTarget', {
+          value: dialogContent,
+          enumerable: true,
+        });
+
         dialogContent.dispatchEvent(enterEvent);
-        
+
         // Wait for the event to propagate
         await new Promise(resolve => setTimeout(resolve, 100));
-        
+
         expect(onConfirm).toHaveBeenCalledTimes(1);
       }
     });
   });
 });
-

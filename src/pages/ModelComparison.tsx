@@ -22,11 +22,14 @@ export const ModelComparison: React.FC = () => {
   const [engineFilter, setEngineFilter] = useState('');
   const [modelFilter, setModelFilter] = useState('');
 
-  const hoursMap = useMemo<Record<TimeRange, number>>(() => ({
-    '24h': 24,
-    '7d': 168,
-    '30d': 720,
-  }), []);
+  const hoursMap = useMemo<Record<TimeRange, number>>(
+    () => ({
+      '24h': 24,
+      '7d': 168,
+      '30d': 720,
+    }),
+    []
+  );
 
   const loadHealthHistory = useCallback(async () => {
     setLoading(true);
@@ -60,14 +63,14 @@ export const ModelComparison: React.FC = () => {
       return null;
     }
 
-    const healthy = logs.filter((log) => log.status === 'healthy').length;
-    const degraded = logs.filter((log) => log.status === 'degraded').length;
-    const unreachable = logs.filter((log) => log.status === 'unreachable').length;
+    const healthy = logs.filter(log => log.status === 'healthy').length;
+    const degraded = logs.filter(log => log.status === 'degraded').length;
+    const unreachable = logs.filter(log => log.status === 'unreachable').length;
     const total = logs.length;
     const successRate = total > 0 ? (healthy / total) * 100 : 0;
 
     const latencies = logs
-      .map((log) => log.latency_ms)
+      .map(log => log.latency_ms)
       .filter((latency): latency is number => latency !== null);
     const avgLatency =
       latencies.length > 0
@@ -115,7 +118,9 @@ export const ModelComparison: React.FC = () => {
 
   return (
     <div className="model-comparison-page">
-      <h1>{t('modelComparison.title') || 'Model Comparison & Health History'}</h1>
+      <h1>
+        {t('modelComparison.title') || 'Model Comparison & Health History'}
+      </h1>
       <p className="page-description">
         {t('modelComparison.description') ||
           'View engine health history and compare model performance over time.'}
@@ -134,7 +139,7 @@ export const ModelComparison: React.FC = () => {
             <select
               id="time-range"
               value={timeRange}
-              onChange={(e) => setTimeRange(e.target.value as TimeRange)}
+              onChange={e => setTimeRange(e.target.value as TimeRange)}
               disabled={loading}
             >
               <option value="24h">
@@ -156,8 +161,10 @@ export const ModelComparison: React.FC = () => {
               id="engine-filter"
               type="text"
               value={engineFilter}
-              onChange={(e) => setEngineFilter(e.target.value)}
-              placeholder={t('modelComparison.enginePlaceholder') || 'e.g., ollama'}
+              onChange={e => setEngineFilter(e.target.value)}
+              placeholder={
+                t('modelComparison.enginePlaceholder') || 'e.g., ollama'
+              }
               disabled={loading}
             />
           </div>
@@ -169,8 +176,10 @@ export const ModelComparison: React.FC = () => {
               id="model-filter"
               type="text"
               value={modelFilter}
-              onChange={(e) => setModelFilter(e.target.value)}
-              placeholder={t('modelComparison.modelPlaceholder') || 'e.g., llama3'}
+              onChange={e => setModelFilter(e.target.value)}
+              placeholder={
+                t('modelComparison.modelPlaceholder') || 'e.g., llama3'
+              }
               disabled={loading}
             />
           </div>
@@ -194,7 +203,9 @@ export const ModelComparison: React.FC = () => {
               </div>
               <div className="summary-card">
                 <h3>{t('modelComparison.successRate') || 'Success Rate'}</h3>
-                <p className="summary-value">{summary.successRate.toFixed(1)}%</p>
+                <p className="summary-value">
+                  {summary.successRate.toFixed(1)}%
+                </p>
               </div>
               <div className="summary-card">
                 <h3>{t('modelComparison.avgLatency') || 'Avg Latency'}</h3>
@@ -213,7 +224,9 @@ export const ModelComparison: React.FC = () => {
             </div>
 
             <div className="status-breakdown">
-              <h2>{t('modelComparison.statusBreakdown') || 'Status Breakdown'}</h2>
+              <h2>
+                {t('modelComparison.statusBreakdown') || 'Status Breakdown'}
+              </h2>
               <div className="status-cards">
                 <div className="status-card healthy">
                   <h4>{t('modelComparison.healthy') || 'Healthy'}</h4>
@@ -237,48 +250,60 @@ export const ModelComparison: React.FC = () => {
                   <thead>
                     <tr>
                       <th>{t('modelComparison.engine') || 'Engine'}</th>
-                      <th>{t('modelComparison.totalChecks') || 'Total Checks'}</th>
+                      <th>
+                        {t('modelComparison.totalChecks') || 'Total Checks'}
+                      </th>
                       <th>{t('modelComparison.healthy') || 'Healthy'}</th>
                       <th>{t('modelComparison.degraded') || 'Degraded'}</th>
-                      <th>{t('modelComparison.unreachable') || 'Unreachable'}</th>
-                      <th>{t('modelComparison.avgLatency') || 'Avg Latency'}</th>
+                      <th>
+                        {t('modelComparison.unreachable') || 'Unreachable'}
+                      </th>
+                      <th>
+                        {t('modelComparison.avgLatency') || 'Avg Latency'}
+                      </th>
                     </tr>
                   </thead>
                   <tbody>
-                    {Object.entries(logsByEngine).map(([engineId, engineLogs]) => {
-                      const engineHealthy = engineLogs.filter(
-                        (log) => log.status === 'healthy'
-                      ).length;
-                      const engineDegraded = engineLogs.filter(
-                        (log) => log.status === 'degraded'
-                      ).length;
-                      const engineUnreachable = engineLogs.filter(
-                        (log) => log.status === 'unreachable'
-                      ).length;
-                      const engineLatencies = engineLogs
-                        .map((log) => log.latency_ms)
-                        .filter((latency): latency is number => latency !== null);
-                      const engineAvgLatency =
-                        engineLatencies.length > 0
-                          ? engineLatencies.reduce((sum, lat) => sum + lat, 0) /
-                            engineLatencies.length
-                          : null;
+                    {Object.entries(logsByEngine).map(
+                      ([engineId, engineLogs]) => {
+                        const engineHealthy = engineLogs.filter(
+                          log => log.status === 'healthy'
+                        ).length;
+                        const engineDegraded = engineLogs.filter(
+                          log => log.status === 'degraded'
+                        ).length;
+                        const engineUnreachable = engineLogs.filter(
+                          log => log.status === 'unreachable'
+                        ).length;
+                        const engineLatencies = engineLogs
+                          .map(log => log.latency_ms)
+                          .filter(
+                            (latency): latency is number => latency !== null
+                          );
+                        const engineAvgLatency =
+                          engineLatencies.length > 0
+                            ? engineLatencies.reduce(
+                                (sum, lat) => sum + lat,
+                                0
+                              ) / engineLatencies.length
+                            : null;
 
-                      return (
-                        <tr key={engineId}>
-                          <td>{engineId}</td>
-                          <td>{engineLogs.length}</td>
-                          <td>{engineHealthy}</td>
-                          <td>{engineDegraded}</td>
-                          <td>{engineUnreachable}</td>
-                          <td>
-                            {engineAvgLatency
-                              ? `${engineAvgLatency.toFixed(0)}ms`
-                              : t('modelComparison.nA') || 'N/A'}
-                          </td>
-                        </tr>
-                      );
-                    })}
+                        return (
+                          <tr key={engineId}>
+                            <td>{engineId}</td>
+                            <td>{engineLogs.length}</td>
+                            <td>{engineHealthy}</td>
+                            <td>{engineDegraded}</td>
+                            <td>{engineUnreachable}</td>
+                            <td>
+                              {engineAvgLatency
+                                ? `${engineAvgLatency.toFixed(0)}ms`
+                                : t('modelComparison.nA') || 'N/A'}
+                            </td>
+                          </tr>
+                        );
+                      }
+                    )}
                   </tbody>
                 </table>
               </div>
@@ -292,48 +317,60 @@ export const ModelComparison: React.FC = () => {
                     <thead>
                       <tr>
                         <th>{t('modelComparison.model') || 'Model'}</th>
-                        <th>{t('modelComparison.totalChecks') || 'Total Checks'}</th>
+                        <th>
+                          {t('modelComparison.totalChecks') || 'Total Checks'}
+                        </th>
                         <th>{t('modelComparison.healthy') || 'Healthy'}</th>
                         <th>{t('modelComparison.degraded') || 'Degraded'}</th>
-                        <th>{t('modelComparison.unreachable') || 'Unreachable'}</th>
-                        <th>{t('modelComparison.avgLatency') || 'Avg Latency'}</th>
+                        <th>
+                          {t('modelComparison.unreachable') || 'Unreachable'}
+                        </th>
+                        <th>
+                          {t('modelComparison.avgLatency') || 'Avg Latency'}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>
-                      {Object.entries(logsByModel).map(([modelId, modelLogs]) => {
-                        const modelHealthy = modelLogs.filter(
-                          (log) => log.status === 'healthy'
-                        ).length;
-                        const modelDegraded = modelLogs.filter(
-                          (log) => log.status === 'degraded'
-                        ).length;
-                        const modelUnreachable = modelLogs.filter(
-                          (log) => log.status === 'unreachable'
-                        ).length;
-                        const modelLatencies = modelLogs
-                          .map((log) => log.latency_ms)
-                          .filter((latency): latency is number => latency !== null);
-                        const modelAvgLatency =
-                          modelLatencies.length > 0
-                            ? modelLatencies.reduce((sum, lat) => sum + lat, 0) /
-                              modelLatencies.length
-                            : null;
+                      {Object.entries(logsByModel).map(
+                        ([modelId, modelLogs]) => {
+                          const modelHealthy = modelLogs.filter(
+                            log => log.status === 'healthy'
+                          ).length;
+                          const modelDegraded = modelLogs.filter(
+                            log => log.status === 'degraded'
+                          ).length;
+                          const modelUnreachable = modelLogs.filter(
+                            log => log.status === 'unreachable'
+                          ).length;
+                          const modelLatencies = modelLogs
+                            .map(log => log.latency_ms)
+                            .filter(
+                              (latency): latency is number => latency !== null
+                            );
+                          const modelAvgLatency =
+                            modelLatencies.length > 0
+                              ? modelLatencies.reduce(
+                                  (sum, lat) => sum + lat,
+                                  0
+                                ) / modelLatencies.length
+                              : null;
 
-                        return (
-                          <tr key={modelId}>
-                            <td>{modelId}</td>
-                            <td>{modelLogs.length}</td>
-                            <td>{modelHealthy}</td>
-                            <td>{modelDegraded}</td>
-                            <td>{modelUnreachable}</td>
-                            <td>
-                              {modelAvgLatency
-                                ? `${modelAvgLatency.toFixed(0)}ms`
-                                : t('modelComparison.nA') || 'N/A'}
-                            </td>
-                          </tr>
-                        );
-                      })}
+                          return (
+                            <tr key={modelId}>
+                              <td>{modelId}</td>
+                              <td>{modelLogs.length}</td>
+                              <td>{modelHealthy}</td>
+                              <td>{modelDegraded}</td>
+                              <td>{modelUnreachable}</td>
+                              <td>
+                                {modelAvgLatency
+                                  ? `${modelAvgLatency.toFixed(0)}ms`
+                                  : t('modelComparison.nA') || 'N/A'}
+                              </td>
+                            </tr>
+                          );
+                        }
+                      )}
                     </tbody>
                   </table>
                 </div>
@@ -360,7 +397,7 @@ export const ModelComparison: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody>
-                    {logs.slice(0, 50).map((log) => (
+                    {logs.slice(0, 50).map(log => (
                       <tr key={log.id}>
                         <td>{formatDateTime(log.created_at)}</td>
                         <td>{log.engine_id}</td>
@@ -392,4 +429,3 @@ export const ModelComparison: React.FC = () => {
     </div>
   );
 };
-

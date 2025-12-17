@@ -34,7 +34,7 @@ export function createErrorHandler(config: ErrorHandlerConfig) {
     const cliError = extractCliError(err);
     const errorMessage = err instanceof Error ? err.message : defaultMessage;
 
-    const shouldSilence = silentPatterns.some((pattern) =>
+    const shouldSilence = silentPatterns.some(pattern =>
       errorMessage.toLowerCase().includes(pattern.toLowerCase())
     );
 

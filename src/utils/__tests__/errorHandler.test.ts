@@ -1,8 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  createErrorHandler,
-  COMMON_SILENT_PATTERNS,
-} from '../errorHandler';
+import { createErrorHandler, COMMON_SILENT_PATTERNS } from '../errorHandler';
 import { extractCliError } from '../tauri';
 
 // Mock extractCliError

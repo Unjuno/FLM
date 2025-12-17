@@ -98,7 +98,9 @@ describe('formatters', () => {
 
     it('should format object mode with DevSelfSigned', () => {
       expect(formatProxyMode({ DevSelfSigned: {} })).toBe('Dev Self-Signed');
-      expect(formatProxyMode({ 'dev-self-signed': {} })).toBe('Dev Self-Signed');
+      expect(formatProxyMode({ 'dev-self-signed': {} })).toBe(
+        'Dev Self-Signed'
+      );
     });
 
     it('should format object mode with HttpsAcme', () => {
@@ -144,23 +146,27 @@ describe('formatters', () => {
         status: 'error-network',
         reason: 'Connection timeout',
       };
-      expect(formatEngineStatus(status)).toBe('Network Error: Connection timeout');
+      expect(formatEngineStatus(status)).toBe(
+        'Network Error: Connection timeout'
+      );
     });
 
     it('should format untagged enum status with RunningHealthy', () => {
       expect(formatEngineStatus({ RunningHealthy: { latency_ms: 50 } })).toBe(
         'Running Healthy (50ms)'
       );
-      expect(formatEngineStatus({ 'running-healthy': { latency_ms: 50 } })).toBe(
-        'Running Healthy (50ms)'
-      );
+      expect(
+        formatEngineStatus({ 'running-healthy': { latency_ms: 50 } })
+      ).toBe('Running Healthy (50ms)');
     });
 
     it('should format untagged enum status with RunningDegraded', () => {
       const status = {
         RunningDegraded: { latency_ms: 200, reason: 'High latency' },
       };
-      expect(formatEngineStatus(status)).toBe('Running Degraded (200ms): High latency');
+      expect(formatEngineStatus(status)).toBe(
+        'Running Degraded (200ms): High latency'
+      );
     });
 
     it('should format untagged enum status with ErrorNetwork', () => {
@@ -170,14 +176,16 @@ describe('formatters', () => {
     });
 
     it('should format untagged enum status with ErrorApi', () => {
-      expect(formatEngineStatus({ ErrorApi: { reason: 'Invalid response' } })).toBe(
-        'API Error: Invalid response'
-      );
+      expect(
+        formatEngineStatus({ ErrorApi: { reason: 'Invalid response' } })
+      ).toBe('API Error: Invalid response');
     });
 
     it('should return Unknown for invalid status', () => {
       expect(formatEngineStatus(null as unknown as string)).toBe('Unknown');
-      expect(formatEngineStatus(undefined as unknown as string)).toBe('Unknown');
+      expect(formatEngineStatus(undefined as unknown as string)).toBe(
+        'Unknown'
+      );
     });
 
     it('should return JSON string for unknown object status', () => {

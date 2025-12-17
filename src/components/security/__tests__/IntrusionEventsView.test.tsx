@@ -54,7 +54,9 @@ describe('IntrusionEventsView', () => {
       },
     ];
 
-    vi.mocked(securityService.fetchIntrusionAttempts).mockResolvedValue(mockAttempts);
+    vi.mocked(securityService.fetchIntrusionAttempts).mockResolvedValue(
+      mockAttempts
+    );
 
     render(<IntrusionEventsView />);
 
@@ -74,7 +76,9 @@ describe('IntrusionEventsView', () => {
 
     await waitFor(() => {
       // Errorオブジェクトの場合はerr.messageが使用される
-      expect(screen.getByText(/Failed to fetch intrusion attempts/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Failed to fetch intrusion attempts/i)
+      ).toBeInTheDocument();
     });
   });
 

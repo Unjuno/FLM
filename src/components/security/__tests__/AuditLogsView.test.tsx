@@ -77,7 +77,9 @@ describe('AuditLogsView', () => {
 
     await waitFor(() => {
       // Errorオブジェクトの場合はerr.messageが使用される
-      expect(screen.getByText(/Failed to fetch audit logs/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/Failed to fetch audit logs/i)
+      ).toBeInTheDocument();
     });
   });
 

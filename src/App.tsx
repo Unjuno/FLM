@@ -33,7 +33,11 @@ function App() {
   ]);
 
   const handleError = (error: Error, errorInfo: React.ErrorInfo): void => {
-    logger.error('Application error caught by ErrorBoundary:', error, errorInfo);
+    logger.error(
+      'Application error caught by ErrorBoundary:',
+      error,
+      errorInfo
+    );
   };
 
   return (

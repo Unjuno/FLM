@@ -33,10 +33,7 @@ describe('ErrorMessage', () => {
 
   it('should display details when provided', () => {
     render(
-      <ErrorMessage
-        message="Test error"
-        details="Detailed error information"
-      />
+      <ErrorMessage message="Test error" details="Detailed error information" />
     );
 
     expect(screen.getByText('詳細情報')).toBeInTheDocument();
@@ -51,10 +48,7 @@ describe('ErrorMessage', () => {
 
   it('should render details in pre tag', () => {
     render(
-      <ErrorMessage
-        message="Test error"
-        details="Detailed error information"
-      />
+      <ErrorMessage message="Test error" details="Detailed error information" />
     );
 
     const detailsElement = screen.getByText('Detailed error information');

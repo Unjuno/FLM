@@ -76,7 +76,8 @@ export const Sidebar: React.FC<SidebarProps> = ({
   );
 
   // className を安全に結合
-  const sidebarClassName = `app-sidebar ${collapsed ? 'collapsed' : ''} ${className}`.trim();
+  const sidebarClassName =
+    `app-sidebar ${collapsed ? 'collapsed' : ''} ${className}`.trim();
 
   return (
     <aside className={sidebarClassName}>
@@ -86,9 +87,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
           <button
             className="sidebar-toggle"
             onClick={toggleCollapse}
-            aria-label={
-              collapsed ? t('sidebar.expand') : t('sidebar.collapse')
-            }
+            aria-label={collapsed ? t('sidebar.expand') : t('sidebar.collapse')}
             aria-expanded={!collapsed}
           >
             {collapsed ? '▶' : '◀'}

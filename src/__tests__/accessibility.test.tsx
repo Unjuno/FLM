@@ -18,9 +18,8 @@ describe('App Accessibility', () => {
         </I18nProvider>
       </BrowserRouter>
     );
-    
+
     const results = await axe(container);
     expect(results).toHaveNoViolations();
   });
 });
-

@@ -90,7 +90,9 @@ export const ModelProfiles: React.FC = () => {
     event.preventDefault();
 
     if (!engineId.trim() || !modelId.trim() || !label.trim()) {
-      setError(t('modelProfiles.requiredFields') || 'Required fields are missing');
+      setError(
+        t('modelProfiles.requiredFields') || 'Required fields are missing'
+      );
       return;
     }
 
@@ -116,8 +118,10 @@ export const ModelProfiles: React.FC = () => {
       });
       setSuccessMessage(
         editingId
-          ? t('modelProfiles.updateSuccess') || 'Model profile updated successfully'
-          : t('modelProfiles.createSuccess') || 'Model profile created successfully'
+          ? t('modelProfiles.updateSuccess') ||
+              'Model profile updated successfully'
+          : t('modelProfiles.createSuccess') ||
+              'Model profile created successfully'
       );
       setTimeout(() => setSuccessMessage(null), 3000);
       await loadProfiles();
@@ -165,11 +169,17 @@ export const ModelProfiles: React.FC = () => {
     }
   };
 
-  const filteredProfiles = profiles.filter((profile) => {
-    if (engineFilter && !profile.engineId.toLowerCase().includes(engineFilter.toLowerCase())) {
+  const filteredProfiles = profiles.filter(profile => {
+    if (
+      engineFilter &&
+      !profile.engineId.toLowerCase().includes(engineFilter.toLowerCase())
+    ) {
       return false;
     }
-    if (modelFilter && !profile.modelId.toLowerCase().includes(modelFilter.toLowerCase())) {
+    if (
+      modelFilter &&
+      !profile.modelId.toLowerCase().includes(modelFilter.toLowerCase())
+    ) {
       return false;
     }
     return true;
@@ -210,8 +220,10 @@ export const ModelProfiles: React.FC = () => {
               id="engine-filter"
               type="text"
               value={engineFilter}
-              onChange={(e) => setEngineFilter(e.target.value)}
-              placeholder={t('modelProfiles.enginePlaceholder') || 'e.g., ollama'}
+              onChange={e => setEngineFilter(e.target.value)}
+              placeholder={
+                t('modelProfiles.enginePlaceholder') || 'e.g., ollama'
+              }
             />
           </div>
           <div className="filter-group">
@@ -222,8 +234,10 @@ export const ModelProfiles: React.FC = () => {
               id="model-filter"
               type="text"
               value={modelFilter}
-              onChange={(e) => setModelFilter(e.target.value)}
-              placeholder={t('modelProfiles.modelPlaceholder') || 'e.g., llama3'}
+              onChange={e => setModelFilter(e.target.value)}
+              placeholder={
+                t('modelProfiles.modelPlaceholder') || 'e.g., llama3'
+              }
             />
           </div>
           <button
@@ -253,7 +267,7 @@ export const ModelProfiles: React.FC = () => {
                   id="engine-id"
                   type="text"
                   value={engineId}
-                  onChange={(e) => setEngineId(e.target.value)}
+                  onChange={e => setEngineId(e.target.value)}
                   placeholder="e.g., ollama"
                   required
                   disabled={loading}
@@ -267,7 +281,7 @@ export const ModelProfiles: React.FC = () => {
                   id="model-id"
                   type="text"
                   value={modelId}
-                  onChange={(e) => setModelId(e.target.value)}
+                  onChange={e => setModelId(e.target.value)}
                   placeholder="e.g., flm://ollama/llama3"
                   required
                   disabled={loading}
@@ -281,14 +295,23 @@ export const ModelProfiles: React.FC = () => {
                   id="label"
                   type="text"
                   value={label}
-                  onChange={(e) => setLabel(e.target.value)}
-                  placeholder={t('modelProfiles.labelPlaceholder') || 'Profile name'}
+                  onChange={e => setLabel(e.target.value)}
+                  placeholder={
+                    t('modelProfiles.labelPlaceholder') || 'Profile name'
+                  }
                   required
                   disabled={loading}
                 />
               </div>
               <div className="form-group">
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    marginBottom: '0.5rem',
+                  }}
+                >
                   <label htmlFor="parameters">
                     {t('modelProfiles.parameters') || 'Parameters (JSON)'} *
                   </label>
@@ -298,11 +321,15 @@ export const ModelProfiles: React.FC = () => {
                       className="btn-secondary"
                       onClick={() => setShowDetailSettings(!showDetailSettings)}
                       disabled={loading}
-                      style={{ fontSize: '0.875rem', padding: '0.25rem 0.75rem' }}
+                      style={{
+                        fontSize: '0.875rem',
+                        padding: '0.25rem 0.75rem',
+                      }}
                     >
                       {showDetailSettings
                         ? t('modelProfiles.hideAdvanced') || 'Hide Advanced'
-                        : t('modelProfiles.showAdvanced') || 'Show Advanced Settings'}
+                        : t('modelProfiles.showAdvanced') ||
+                          'Show Advanced Settings'}
                     </button>
                   )}
                 </div>
@@ -313,20 +340,23 @@ export const ModelProfiles: React.FC = () => {
                       modelId={modelId}
                       parameters={(() => {
                         try {
-                          return JSON.parse(parametersText) as Record<string, unknown>;
+                          return JSON.parse(parametersText) as Record<
+                            string,
+                            unknown
+                          >;
                         } catch {
                           return {};
                         }
                       })()}
                       onChange={handleParametersChange}
-                      onError={(err) => setError(err)}
+                      onError={err => setError(err)}
                     />
                   </div>
                 ) : null}
                 <textarea
                   id="parameters"
                   value={parametersText}
-                  onChange={(e) => setParametersText(e.target.value)}
+                  onChange={e => setParametersText(e.target.value)}
                   rows={showDetailSettings ? 6 : 10}
                   required
                   disabled={loading}
@@ -386,7 +416,7 @@ export const ModelProfiles: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {filteredProfiles.map((profile) => (
+                  {filteredProfiles.map(profile => (
                     <tr key={profile.id}>
                       <td>{profile.label}</td>
                       <td>{profile.engineId}</td>
@@ -423,4 +453,3 @@ export const ModelProfiles: React.FC = () => {
     </div>
   );
 };
-

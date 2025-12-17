@@ -40,7 +40,9 @@ describe('tauri utilities', () => {
 
       const result = await safeInvoke('test_command', { arg: 'value' });
 
-      expect(tauriInvoke).toHaveBeenCalledWith('test_command', { arg: 'value' });
+      expect(tauriInvoke).toHaveBeenCalledWith('test_command', {
+        arg: 'value',
+      });
       expect(result).toEqual({ success: true });
     });
 

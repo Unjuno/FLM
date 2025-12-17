@@ -17,7 +17,10 @@ interface ErrorBoundaryState {
   errorInfo: React.ErrorInfo | null;
 }
 
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+export class ErrorBoundary extends Component<
+  ErrorBoundaryProps,
+  ErrorBoundaryState
+> {
   constructor(props: ErrorBoundaryProps) {
     super(props);
     this.state = {
@@ -64,7 +67,8 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
         return this.props.fallback;
       }
 
-      const errorMessage = this.state.error?.message || '予期しないエラーが発生しました';
+      const errorMessage =
+        this.state.error?.message || '予期しないエラーが発生しました';
       const errorDetails = this.state.errorInfo?.componentStack
         ? `Component Stack:\n${this.state.errorInfo.componentStack}`
         : undefined;
@@ -77,10 +81,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
             onDismiss={this.handleReset}
           />
           <div className="error-boundary-actions">
-            <button
-              className="button-primary"
-              onClick={this.handleReset}
-            >
+            <button className="button-primary" onClick={this.handleReset}>
               再試行
             </button>
           </div>

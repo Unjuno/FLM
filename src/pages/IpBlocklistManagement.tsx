@@ -2,7 +2,12 @@
 
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useI18n } from '../contexts/I18nContext';
-import { fetchBlockedIps, unblockIp, clearTemporaryBlocks, BlockedIp } from '../services/security';
+import {
+  fetchBlockedIps,
+  unblockIp,
+  clearTemporaryBlocks,
+  BlockedIp,
+} from '../services/security';
 import { formatDateTime } from '../utils/formatters';
 import { createErrorHandler } from '../utils/errorHandler';
 import { TIMING } from '@/config/constants';
@@ -120,11 +125,11 @@ export const IpBlocklistManagement: React.FC = () => {
    * evidence: Reactパフォーマンスベストプラクティス
    */
   const permanentBlocks = useMemo(
-    () => blockedIps.filter((ip) => ip.permanentBlock),
+    () => blockedIps.filter(ip => ip.permanentBlock),
     [blockedIps]
   );
   const temporaryBlocks = useMemo(
-    () => blockedIps.filter((ip) => !ip.permanentBlock),
+    () => blockedIps.filter(ip => !ip.permanentBlock),
     [blockedIps]
   );
 
@@ -142,10 +147,7 @@ export const IpBlocklistManagement: React.FC = () => {
         <h1>{t('security.ipBlocklistManagement')}</h1>
         <div className="page-actions">
           {temporaryBlocks.length > 0 && (
-            <button
-              className="button-secondary"
-              onClick={handleClearTemporary}
-            >
+            <button className="button-secondary" onClick={handleClearTemporary}>
               {t('security.clearAllTemporary')}
             </button>
           )}
@@ -156,10 +158,7 @@ export const IpBlocklistManagement: React.FC = () => {
       </div>
 
       {error && (
-        <ErrorMessage
-          message={error}
-          onDismiss={() => setError(null)}
-        />
+        <ErrorMessage message={error} onDismiss={() => setError(null)} />
       )}
 
       {successMessage && (
@@ -185,11 +184,15 @@ export const IpBlocklistManagement: React.FC = () => {
           <span className="summary-value">{blockedIps.length}</span>
         </div>
         <div className="summary-item">
-          <span className="summary-label">{t('security.permanentBlocks')}:</span>
+          <span className="summary-label">
+            {t('security.permanentBlocks')}:
+          </span>
           <span className="summary-value">{permanentBlocks.length}</span>
         </div>
         <div className="summary-item">
-          <span className="summary-label">{t('security.temporaryBlocks')}:</span>
+          <span className="summary-label">
+            {t('security.temporaryBlocks')}:
+          </span>
           <span className="summary-value">{temporaryBlocks.length}</span>
         </div>
       </div>
@@ -213,7 +216,7 @@ export const IpBlocklistManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {blockedIps.map((ip) => (
+              {blockedIps.map(ip => (
                 <tr key={ip.ip}>
                   <td>
                     <code>{ip.ip}</code>
@@ -232,7 +235,9 @@ export const IpBlocklistManagement: React.FC = () => {
                         ip.permanentBlock ? 'permanent' : 'temporary'
                       }`}
                     >
-                      {ip.permanentBlock ? t('security.permanent') : t('security.temporary')}
+                      {ip.permanentBlock
+                        ? t('security.permanent')
+                        : t('security.temporary')}
                     </span>
                   </td>
                   <td>
@@ -258,4 +263,3 @@ export const IpBlocklistManagement: React.FC = () => {
     </div>
   );
 };
-

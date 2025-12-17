@@ -34,7 +34,8 @@ export const IpWhitelistManagement: React.FC = () => {
   const handleLoadError = useCallback(
     (err: unknown) => {
       const handler = createErrorHandler({
-        defaultMessage: t('security.fetchError') || 'Failed to fetch whitelisted IPs',
+        defaultMessage:
+          t('security.fetchError') || 'Failed to fetch whitelisted IPs',
       });
       return handler(err);
     },
@@ -44,7 +45,8 @@ export const IpWhitelistManagement: React.FC = () => {
   const handleAddError = useCallback(
     (err: unknown) => {
       const handler = createErrorHandler({
-        defaultMessage: t('security.addWhitelistError') || 'Failed to add IP to whitelist',
+        defaultMessage:
+          t('security.addWhitelistError') || 'Failed to add IP to whitelist',
       });
       return handler(err);
     },
@@ -54,7 +56,9 @@ export const IpWhitelistManagement: React.FC = () => {
   const handleRemoveError = useCallback(
     (err: unknown) => {
       const handler = createErrorHandler({
-        defaultMessage: t('security.removeWhitelistError') || 'Failed to remove IP from whitelist',
+        defaultMessage:
+          t('security.removeWhitelistError') ||
+          'Failed to remove IP from whitelist',
       });
       return handler(err);
     },
@@ -92,26 +96,29 @@ export const IpWhitelistManagement: React.FC = () => {
     return ipv4Regex.test(ip) || ipv6Regex.test(ip);
   }, []);
 
-  const validateIpOrCidr = useCallback((input: string): boolean => {
-    const trimmed = input.trim();
-    if (!trimmed) {
-      return false;
-    }
-
-    // Check if it's a CIDR notation (e.g., 192.168.1.0/24)
-    if (trimmed.includes('/')) {
-      const [ip, prefix] = trimmed.split('/');
-      const prefixNum = parseInt(prefix, 10);
-      if (isNaN(prefixNum) || prefixNum < 0 || prefixNum > 128) {
+  const validateIpOrCidr = useCallback(
+    (input: string): boolean => {
+      const trimmed = input.trim();
+      if (!trimmed) {
         return false;
       }
-      // Validate IP part
-      return validateIpAddress(ip);
-    }
 
-    // Validate as regular IP address
-    return validateIpAddress(trimmed);
-  }, [validateIpAddress]);
+      // Check if it's a CIDR notation (e.g., 192.168.1.0/24)
+      if (trimmed.includes('/')) {
+        const [ip, prefix] = trimmed.split('/');
+        const prefixNum = parseInt(prefix, 10);
+        if (isNaN(prefixNum) || prefixNum < 0 || prefixNum > 128) {
+          return false;
+        }
+        // Validate IP part
+        return validateIpAddress(ip);
+      }
+
+      // Validate as regular IP address
+      return validateIpAddress(trimmed);
+    },
+    [validateIpAddress]
+  );
 
   const handleAdd = useCallback(async () => {
     const trimmedIp = newIp.trim();
@@ -153,7 +160,9 @@ export const IpWhitelistManagement: React.FC = () => {
   const handleRemove = useCallback(
     (ip: string) => {
       setConfirmDialog({
-        message: t('security.removeWhitelistConfirm', { ip }) || `Remove ${ip} from whitelist?`,
+        message:
+          t('security.removeWhitelistConfirm', { ip }) ||
+          `Remove ${ip} from whitelist?`,
         onConfirm: async () => {
           setConfirmDialog(null);
           setError(null);
@@ -181,7 +190,10 @@ export const IpWhitelistManagement: React.FC = () => {
   if (loading && whitelistedIps.length === 0) {
     return (
       <div className="ip-whitelist-management">
-        <LoadingSpinner size="medium" message={t('common.loading') || '読み込み中...'} />
+        <LoadingSpinner
+          size="medium"
+          message={t('common.loading') || '読み込み中...'}
+        />
       </div>
     );
   }
@@ -189,7 +201,9 @@ export const IpWhitelistManagement: React.FC = () => {
   return (
     <div className="ip-whitelist-management">
       <div className="page-header">
-        <h1>{t('security.ipWhitelistManagement') || 'IP Whitelist Management'}</h1>
+        <h1>
+          {t('security.ipWhitelistManagement') || 'IP Whitelist Management'}
+        </h1>
         <div className="page-actions">
           <button className="button-primary" onClick={loadWhitelistedIps}>
             {t('security.refresh') || 'Refresh'}
@@ -197,7 +211,9 @@ export const IpWhitelistManagement: React.FC = () => {
         </div>
       </div>
 
-      {error && <ErrorMessage message={error} onDismiss={() => setError(null)} />}
+      {error && (
+        <ErrorMessage message={error} onDismiss={() => setError(null)} />
+      )}
 
       {successMessage && (
         <SuccessMessage
@@ -218,7 +234,9 @@ export const IpWhitelistManagement: React.FC = () => {
 
       <div className="whitelist-summary">
         <div className="summary-item">
-          <span className="summary-label">{t('security.totalWhitelisted') || 'Total Whitelisted'}:</span>
+          <span className="summary-label">
+            {t('security.totalWhitelisted') || 'Total Whitelisted'}:
+          </span>
           <span className="summary-value">{whitelistedIps.length}</span>
         </div>
       </div>
@@ -229,11 +247,14 @@ export const IpWhitelistManagement: React.FC = () => {
           <input
             type="text"
             value={newIp}
-            onChange={(e) => setNewIp(e.target.value)}
-            placeholder={t('security.ipOrCidrPlaceholder') || 'e.g., 192.168.1.0/24 or 10.0.0.1'}
+            onChange={e => setNewIp(e.target.value)}
+            placeholder={
+              t('security.ipOrCidrPlaceholder') ||
+              'e.g., 192.168.1.0/24 or 10.0.0.1'
+            }
             className="ip-input"
             disabled={adding}
-            onKeyPress={(e) => {
+            onKeyPress={e => {
               if (e.key === 'Enter') {
                 void handleAdd();
               }
@@ -270,7 +291,7 @@ export const IpWhitelistManagement: React.FC = () => {
               </tr>
             </thead>
             <tbody>
-              {whitelistedIps.map((ip) => (
+              {whitelistedIps.map(ip => (
                 <tr key={ip.ip}>
                   <td>
                     <code>{ip.ip}</code>
@@ -294,4 +315,3 @@ export const IpWhitelistManagement: React.FC = () => {
     </div>
   );
 };
-

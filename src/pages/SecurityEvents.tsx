@@ -48,4 +48,3 @@ export const SecurityEvents: React.FC = () => {
     </div>
   );
 };
-

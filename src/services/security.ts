@@ -602,4 +602,3 @@ export async function addWhitelistedIp(ip: string): Promise<void> {
 export async function removeWhitelistedIp(ip: string): Promise<void> {
   await safeInvoke('ipc_security_ip_whitelist_remove', { ip });
 }
-

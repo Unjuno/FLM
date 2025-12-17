@@ -10,11 +10,15 @@ vi.mock('../../components/security/AuditLogsView', () => ({
 }));
 
 vi.mock('../../components/security/IntrusionEventsView', () => ({
-  IntrusionEventsView: () => <div data-testid="intrusion-events-view">Intrusion Events View</div>,
+  IntrusionEventsView: () => (
+    <div data-testid="intrusion-events-view">Intrusion Events View</div>
+  ),
 }));
 
 vi.mock('../../components/security/AnomalyEventsView', () => ({
-  AnomalyEventsView: () => <div data-testid="anomaly-events-view">Anomaly Events View</div>,
+  AnomalyEventsView: () => (
+    <div data-testid="anomaly-events-view">Anomaly Events View</div>
+  ),
 }));
 
 describe('SecurityEvents', () => {
@@ -48,7 +52,9 @@ describe('SecurityEvents', () => {
     renderSecurityEvents();
 
     expect(screen.getByTestId('audit-logs-view')).toBeInTheDocument();
-    expect(screen.queryByTestId('intrusion-events-view')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('intrusion-events-view')
+    ).not.toBeInTheDocument();
     expect(screen.queryByTestId('anomaly-events-view')).not.toBeInTheDocument();
   });
 
@@ -73,7 +79,9 @@ describe('SecurityEvents', () => {
 
     expect(screen.getByTestId('anomaly-events-view')).toBeInTheDocument();
     expect(screen.queryByTestId('audit-logs-view')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('intrusion-events-view')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('intrusion-events-view')
+    ).not.toBeInTheDocument();
   });
 
   it('should switch back to audit logs view when tab is clicked', async () => {
@@ -87,7 +95,9 @@ describe('SecurityEvents', () => {
     // Switch back to audit
     await user.click(screen.getByText('監査ログ'));
     expect(screen.getByTestId('audit-logs-view')).toBeInTheDocument();
-    expect(screen.queryByTestId('intrusion-events-view')).not.toBeInTheDocument();
+    expect(
+      screen.queryByTestId('intrusion-events-view')
+    ).not.toBeInTheDocument();
   });
 
   it('should apply active class to active tab', async () => {

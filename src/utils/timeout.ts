@@ -7,10 +7,7 @@ type TimeoutRef = React.MutableRefObject<{
 /**
  * Clears a timeout from a ref object
  */
-export function clearTimeoutRef(
-  ref: TimeoutRef,
-  key: string
-): void {
+export function clearTimeoutRef(ref: TimeoutRef, key: string): void {
   const timeout = ref.current[key];
   if (timeout) {
     clearTimeout(timeout);
@@ -29,7 +26,7 @@ export function setTimeoutRef(
 ): void {
   // Clear existing timeout if any
   clearTimeoutRef(ref, key);
-  
+
   // Set new timeout
   ref.current[key] = setTimeout(callback, delay);
 }
@@ -38,7 +35,7 @@ export function setTimeoutRef(
  * Clears all timeouts from a ref object
  */
 export function clearAllTimeouts(ref: TimeoutRef): void {
-  Object.keys(ref.current).forEach((key) => {
+  Object.keys(ref.current).forEach(key => {
     clearTimeoutRef(ref, key);
   });
 }

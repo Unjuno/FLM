@@ -18,18 +18,27 @@ describe('LoadingSpinner', () => {
   it('should render with small size', () => {
     const { container } = render(<LoadingSpinner size="small" />);
 
-    expect(container.firstChild).toHaveClass('loading-spinner-container', 'small');
+    expect(container.firstChild).toHaveClass(
+      'loading-spinner-container',
+      'small'
+    );
   });
 
   it('should render with medium size by default', () => {
     const { container } = render(<LoadingSpinner />);
 
-    expect(container.firstChild).toHaveClass('loading-spinner-container', 'medium');
+    expect(container.firstChild).toHaveClass(
+      'loading-spinner-container',
+      'medium'
+    );
   });
 
   it('should render with large size', () => {
     const { container } = render(<LoadingSpinner size="large" />);
 
-    expect(container.firstChild).toHaveClass('loading-spinner-container', 'large');
+    expect(container.firstChild).toHaveClass(
+      'loading-spinner-container',
+      'large'
+    );
   });
 });

@@ -51,7 +51,8 @@ export const SetupWizard: React.FC = () => {
       try {
         const platform = await safeInvoke<string>('get_platform');
         // get_platform returns JSON string, parse it
-        const platformObj = typeof platform === 'string' ? JSON.parse(platform) : platform;
+        const platformObj =
+          typeof platform === 'string' ? JSON.parse(platform) : platform;
         const osName = platformObj?.os || platformObj || platform;
         setOs(String(osName).toLowerCase());
       } catch (err) {
@@ -90,8 +91,7 @@ export const SetupWizard: React.FC = () => {
       setPreviewShell(response.shell);
       setPreviewDisplayName(response.display_name);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : String(err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
       setError(`Failed to generate firewall script: ${errorMessage}`);
     } finally {
       setLoading(false);
@@ -128,8 +128,7 @@ export const SetupWizard: React.FC = () => {
         );
       }
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : String(err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
       setError(`Failed to apply firewall script: ${errorMessage}`);
     } finally {
       setLoading(false);
@@ -156,8 +155,7 @@ export const SetupWizard: React.FC = () => {
         );
       }
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : String(err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
       setError(`Failed to rollback firewall script: ${errorMessage}`);
     } finally {
       setLoading(false);
@@ -189,10 +187,7 @@ export const SetupWizard: React.FC = () => {
       <h1>Setup Wizard - Firewall Configuration</h1>
 
       {error && (
-        <ErrorMessage
-          message={error}
-          onDismiss={() => setError(null)}
-        />
+        <ErrorMessage message={error} onDismiss={() => setError(null)} />
       )}
 
       {successMessage && (
@@ -204,7 +199,7 @@ export const SetupWizard: React.FC = () => {
 
       <div className="firewall-config-section">
         <h2>Configuration</h2>
-        
+
         <div className="form-group">
           <label htmlFor="os-input">Operating System:</label>
           <input
@@ -223,11 +218,11 @@ export const SetupWizard: React.FC = () => {
             id="ports-input"
             type="text"
             value={ports.join(', ')}
-            onChange={(e) => {
+            onChange={e => {
               const portList = e.target.value
                 .split(',')
-                .map((p) => parseInt(p.trim(), 10))
-                .filter((p) => !isNaN(p));
+                .map(p => parseInt(p.trim(), 10))
+                .filter(p => !isNaN(p));
               setPorts(portList);
             }}
             className="form-input"
@@ -237,16 +232,18 @@ export const SetupWizard: React.FC = () => {
         </div>
 
         <div className="form-group">
-          <label htmlFor="ip-whitelist-input">IP Whitelist (comma-separated, optional):</label>
+          <label htmlFor="ip-whitelist-input">
+            IP Whitelist (comma-separated, optional):
+          </label>
           <input
             id="ip-whitelist-input"
             type="text"
             value={ipWhitelist.join(', ')}
-            onChange={(e) => {
+            onChange={e => {
               const ipList = e.target.value
                 .split(',')
-                .map((ip) => ip.trim())
-                .filter((ip) => ip.length > 0);
+                .map(ip => ip.trim())
+                .filter(ip => ip.length > 0);
               setIpWhitelist(ipList);
             }}
             className="form-input"
@@ -276,16 +273,10 @@ export const SetupWizard: React.FC = () => {
             <pre>{previewScript}</pre>
           </div>
           <div className="script-actions">
-            <button
-              onClick={handleCopyScript}
-              className="btn btn-secondary"
-            >
+            <button onClick={handleCopyScript} className="btn btn-secondary">
               Copy Script
             </button>
-            <button
-              onClick={handleSaveScript}
-              className="btn btn-secondary"
-            >
+            <button onClick={handleSaveScript} className="btn btn-secondary">
               Save Script
             </button>
             <button

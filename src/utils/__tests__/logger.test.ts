@@ -42,7 +42,9 @@ describe('logger', () => {
 
   describe('logger levels', () => {
     it('should log debug messages when level is DEBUG', () => {
-      const consoleSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'debug')
+        .mockImplementation(() => {});
       setLoggerConfig({ level: LogLevel.DEBUG });
 
       const log = createLogger();
@@ -53,7 +55,9 @@ describe('logger', () => {
     });
 
     it('should not log debug messages when level is INFO', () => {
-      const consoleSpy = vi.spyOn(console, 'debug').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'debug')
+        .mockImplementation(() => {});
       setLoggerConfig({ level: LogLevel.INFO });
 
       const log = createLogger();
@@ -86,7 +90,9 @@ describe('logger', () => {
     });
 
     it('should log error messages when level is ERROR', () => {
-      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
+      const consoleSpy = vi
+        .spyOn(console, 'error')
+        .mockImplementation(() => {});
       setLoggerConfig({ level: LogLevel.ERROR });
 
       const log = createLogger();
@@ -142,7 +148,10 @@ describe('logger', () => {
       process.env.NODE_ENV = 'development';
       // Reset config to get default
       setLoggerConfig({
-        level: process.env.NODE_ENV === 'development' ? LogLevel.DEBUG : LogLevel.INFO,
+        level:
+          process.env.NODE_ENV === 'development'
+            ? LogLevel.DEBUG
+            : LogLevel.INFO,
         enableConsole: true,
       });
 
@@ -154,7 +163,10 @@ describe('logger', () => {
       process.env.NODE_ENV = 'production';
       // Reset config to get default
       setLoggerConfig({
-        level: process.env.NODE_ENV === 'development' ? LogLevel.DEBUG : LogLevel.INFO,
+        level:
+          process.env.NODE_ENV === 'development'
+            ? LogLevel.DEBUG
+            : LogLevel.INFO,
         enableConsole: true,
       });
 

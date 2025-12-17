@@ -29,7 +29,9 @@ describe('IPC Commands Integration', () => {
 
       const result = await safeInvoke('ipc_detect_engines', { fresh: true });
 
-      expect(invoke).toHaveBeenCalledWith('ipc_detect_engines', { fresh: true });
+      expect(invoke).toHaveBeenCalledWith('ipc_detect_engines', {
+        fresh: true,
+      });
       expect(result).toEqual(mockResponse);
     });
 
@@ -43,7 +45,9 @@ describe('IPC Commands Integration', () => {
 
       const result = await safeInvoke('ipc_detect_engines', { fresh: false });
 
-      expect(invoke).toHaveBeenCalledWith('ipc_detect_engines', { fresh: false });
+      expect(invoke).toHaveBeenCalledWith('ipc_detect_engines', {
+        fresh: false,
+      });
       expect(result).toEqual(mockResponse);
     });
 
@@ -56,7 +60,9 @@ describe('IPC Commands Integration', () => {
 
       vi.mocked(invoke).mockRejectedValueOnce(cliError);
 
-      await expect(safeInvoke('ipc_detect_engines', { fresh: false })).rejects.toThrow();
+      await expect(
+        safeInvoke('ipc_detect_engines', { fresh: false })
+      ).rejects.toThrow();
 
       try {
         await safeInvoke('ipc_detect_engines', { fresh: false });
@@ -109,7 +115,9 @@ describe('IPC Commands Integration', () => {
 
       const result = await safeInvoke('ipc_list_models', { engine: 'ollama' });
 
-      expect(invoke).toHaveBeenCalledWith('ipc_list_models', { engine: 'ollama' });
+      expect(invoke).toHaveBeenCalledWith('ipc_list_models', {
+        engine: 'ollama',
+      });
       expect(result).toEqual(mockResponse);
     });
   });
@@ -475,7 +483,9 @@ describe('IPC Commands Integration', () => {
 
       const result = await safeInvoke('ipc_security_policy_set', { payload });
 
-      expect(invoke).toHaveBeenCalledWith('ipc_security_policy_set', { payload });
+      expect(invoke).toHaveBeenCalledWith('ipc_security_policy_set', {
+        payload,
+      });
       expect(result).toEqual(mockResponse);
     });
 
@@ -500,7 +510,9 @@ describe('IPC Commands Integration', () => {
 
       const result = await safeInvoke('ipc_security_audit_logs', { payload });
 
-      expect(invoke).toHaveBeenCalledWith('ipc_security_audit_logs', { payload });
+      expect(invoke).toHaveBeenCalledWith('ipc_security_audit_logs', {
+        payload,
+      });
       expect(result).toEqual(mockResponse);
     });
   });

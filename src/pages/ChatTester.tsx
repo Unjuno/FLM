@@ -10,7 +10,11 @@ import {
   ChatCompletionRequest,
   ChatCompletionResponse,
 } from '../services/chatTester';
-import { isValidTemperature, isValidMaxTokens, sanitizeNumber } from '../utils/validation';
+import {
+  isValidTemperature,
+  isValidMaxTokens,
+  sanitizeNumber,
+} from '../utils/validation';
 import { createErrorHandler } from '../utils/errorHandler';
 import { DEFAULT_CHAT_CONFIG } from '@/config/constants';
 import { ErrorMessage } from '../components/common/ErrorMessage';
@@ -27,8 +31,12 @@ export const ChatTester: React.FC = () => {
     Array<{ role: 'system' | 'user' | 'assistant'; content: string }>
   >([{ role: 'user', content: '' }]);
   const [streaming, setStreaming] = useState<boolean>(false);
-  const [temperature, setTemperature] = useState<number>(DEFAULT_CHAT_CONFIG.TEMPERATURE);
-  const [maxTokens, setMaxTokens] = useState<number>(DEFAULT_CHAT_CONFIG.MAX_TOKENS);
+  const [temperature, setTemperature] = useState<number>(
+    DEFAULT_CHAT_CONFIG.TEMPERATURE
+  );
+  const [maxTokens, setMaxTokens] = useState<number>(
+    DEFAULT_CHAT_CONFIG.MAX_TOKENS
+  );
 
   const [response, setResponse] = useState<ChatCompletionResponse | null>(null);
   const [loading, setLoading] = useState<boolean>(false);
@@ -161,7 +169,7 @@ export const ChatTester: React.FC = () => {
       return;
     }
 
-    const validMessages = messages.filter((m) => m.content.trim().length > 0);
+    const validMessages = messages.filter(m => m.content.trim().length > 0);
     if (validMessages.length === 0) {
       setError(t('chatTester.messageRequired'));
       return;
@@ -203,10 +211,7 @@ export const ChatTester: React.FC = () => {
       </div>
 
       {error && (
-        <ErrorMessage
-          message={error}
-          onDismiss={() => setError(null)}
-        />
+        <ErrorMessage message={error} onDismiss={() => setError(null)} />
       )}
 
       {!proxyEndpoint && !loading && (
@@ -235,14 +240,18 @@ export const ChatTester: React.FC = () => {
                 <select
                   id="model-select"
                   value={selectedModel}
-                  onChange={(e) => setSelectedModel(e.target.value)}
+                  onChange={e => setSelectedModel(e.target.value)}
                   className="model-select"
                   disabled={loading || models.length === 0}
                   aria-label={t('chatTester.model')}
-                  aria-describedby={models.length === 0 && !loading ? 'model-select-help' : undefined}
+                  aria-describedby={
+                    models.length === 0 && !loading
+                      ? 'model-select-help'
+                      : undefined
+                  }
                 >
                   <option value="">{t('chatTester.selectModel')}</option>
-                  {models.map((model) => (
+                  {models.map(model => (
                     <option key={model.id} value={model.id}>
                       {model.displayName}
                     </option>
@@ -254,7 +263,10 @@ export const ChatTester: React.FC = () => {
                   </span>
                 )}
                 {loading && models.length === 0 ? (
-                  <LoadingSpinner size="small" message={t('chatTester.fetchingModelList')} />
+                  <LoadingSpinner
+                    size="small"
+                    message={t('chatTester.fetchingModelList')}
+                  />
                 ) : (
                   <button
                     className="button-secondary button-small"
@@ -273,7 +285,7 @@ export const ChatTester: React.FC = () => {
                   id="api-key-input"
                   type="password"
                   value={apiKey}
-                  onChange={(e) => setApiKey(e.target.value)}
+                  onChange={e => setApiKey(e.target.value)}
                   placeholder={t('chatTester.apiKeyPlaceholder')}
                   className="input-text"
                   aria-label={t('chatTester.apiKey')}
@@ -286,7 +298,7 @@ export const ChatTester: React.FC = () => {
                   id="streaming-checkbox"
                   type="checkbox"
                   checked={streaming}
-                  onChange={(e) => setStreaming(e.target.checked)}
+                  onChange={e => setStreaming(e.target.checked)}
                 />
                 {t('chatTester.streaming')}
               </label>
@@ -298,7 +310,7 @@ export const ChatTester: React.FC = () => {
                   id="temperature-input"
                   type="number"
                   value={temperature}
-                  onChange={(e) => {
+                  onChange={e => {
                     const sanitized = sanitizeNumber(e.target.value, 0, 2);
                     if (sanitized !== null) {
                       setTemperature(sanitized);
@@ -323,7 +335,7 @@ export const ChatTester: React.FC = () => {
                   id="max-tokens-input"
                   type="number"
                   value={maxTokens}
-                  onChange={(e) => {
+                  onChange={e => {
                     const sanitized = sanitizeNumber(e.target.value, 1);
                     if (sanitized !== null && Number.isInteger(sanitized)) {
                       setMaxTokens(sanitized);
@@ -353,7 +365,7 @@ export const ChatTester: React.FC = () => {
                     <select
                       id={`role-select-${index}`}
                       value={message.role}
-                      onChange={(e) =>
+                      onChange={e =>
                         handleRoleChange(
                           index,
                           e.target.value as 'system' | 'user' | 'assistant'
@@ -375,13 +387,16 @@ export const ChatTester: React.FC = () => {
                       </button>
                     )}
                   </div>
-                  <label htmlFor={`message-textarea-${index}`} className="sr-only">
+                  <label
+                    htmlFor={`message-textarea-${index}`}
+                    className="sr-only"
+                  >
                     メッセージ{index + 1}の内容を入力
                   </label>
                   <textarea
                     id={`message-textarea-${index}`}
                     value={message.content}
-                    onChange={(e) => handleMessageChange(index, e.target.value)}
+                    onChange={e => handleMessageChange(index, e.target.value)}
                     placeholder={t('chatTester.message') + '...'}
                     className="message-textarea"
                     rows={4}
@@ -417,7 +432,8 @@ export const ChatTester: React.FC = () => {
               {response.request_id && (
                 <div className="response-meta">
                   <p>
-                    <strong>Request ID:</strong> <code>{response.request_id}</code>
+                    <strong>Request ID:</strong>{' '}
+                    <code>{response.request_id}</code>
                   </p>
                 </div>
               )}
@@ -435,7 +451,8 @@ export const ChatTester: React.FC = () => {
                       {response.choices[0].message.content}
                     </pre>
                     <p>
-                      <strong>Finish Reason:</strong> {response.choices[0].finish_reason}
+                      <strong>Finish Reason:</strong>{' '}
+                      {response.choices[0].finish_reason}
                     </p>
                   </div>
                 )}
@@ -444,7 +461,9 @@ export const ChatTester: React.FC = () => {
                     <h4>使用量:</h4>
                     <ul>
                       <li>Prompt Tokens: {response.usage.prompt_tokens}</li>
-                      <li>Completion Tokens: {response.usage.completion_tokens}</li>
+                      <li>
+                        Completion Tokens: {response.usage.completion_tokens}
+                      </li>
                       <li>Total Tokens: {response.usage.total_tokens}</li>
                     </ul>
                   </div>
@@ -463,4 +482,3 @@ export const ChatTester: React.FC = () => {
     </div>
   );
 };
-

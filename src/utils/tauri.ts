@@ -27,17 +27,27 @@ export async function safeInvoke<T = unknown>(
   args?: InvokeArgs
 ): Promise<T> {
   if (!isTauriAvailable()) {
-    throw new Error('Tauri is not available. Please ensure you are running this application in a Tauri environment.');
+    throw new Error(
+      'Tauri is not available. Please ensure you are running this application in a Tauri environment.'
+    );
   }
 
   try {
     // Only pass args if it's defined to avoid passing undefined as second argument
-    return args !== undefined ? await tauriInvoke<T>(cmd, args) : await tauriInvoke<T>(cmd);
+    return args !== undefined
+      ? await tauriInvoke<T>(cmd, args)
+      : await tauriInvoke<T>(cmd);
   } catch (error) {
     // Enhanced error handling for CLI errors
     if (error && typeof error === 'object' && 'code' in error) {
-      const cliError = error as { code: string; message: string; stderr?: string };
-      const enhancedError = new Error(`CLI Error [${cliError.code}]: ${cliError.message}`);
+      const cliError = error as {
+        code: string;
+        message: string;
+        stderr?: string;
+      };
+      const enhancedError = new Error(
+        `CLI Error [${cliError.code}]: ${cliError.message}`
+      );
       // Attach CLI error information to the error object
       Object.defineProperty(enhancedError, 'cliError', {
         value: {
@@ -51,15 +61,21 @@ export async function safeInvoke<T = unknown>(
       });
       throw enhancedError;
     }
-    
+
     // Handle network or connection errors
     if (error instanceof Error) {
       const lowerMessage = error.message.toLowerCase();
-      if (lowerMessage.includes('network') || lowerMessage.includes('connection') || lowerMessage.includes('fetch')) {
-        throw new Error(`Network error: ${error.message}. Please check your connection and try again.`);
+      if (
+        lowerMessage.includes('network') ||
+        lowerMessage.includes('connection') ||
+        lowerMessage.includes('fetch')
+      ) {
+        throw new Error(
+          `Network error: ${error.message}. Please check your connection and try again.`
+        );
       }
     }
-    
+
     throw error;
   }
 }
@@ -70,10 +86,14 @@ export async function safeInvoke<T = unknown>(
 export function extractCliError(error: unknown): CliError | null {
   if (error && typeof error === 'object' && 'cliError' in error) {
     const cliError = (error as { cliError?: CliError }).cliError;
-    if (cliError && typeof cliError === 'object' && 'code' in cliError && 'message' in cliError) {
+    if (
+      cliError &&
+      typeof cliError === 'object' &&
+      'code' in cliError &&
+      'message' in cliError
+    ) {
       return cliError;
     }
   }
   return null;
 }
-

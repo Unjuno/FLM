@@ -33,4 +33,3 @@ export const DEFAULT_CHAT_CONFIG = {
   TEMPERATURE: 0.7,
   MAX_TOKENS: 1000,
 } as const;
-

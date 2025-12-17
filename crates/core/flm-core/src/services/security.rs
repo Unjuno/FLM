@@ -670,6 +670,8 @@ fn validate_domain_name(domain: &str) -> Result<(), String> {
 /// Validate an IP address or CIDR notation
 ///
 /// Supports IPv4, IPv6, and CIDR notation (e.g., "192.168.1.0/24", "2001:db8::/32").
+/// For CIDR notation, validates that the IP address is a valid network address
+/// (host bits are zero).
 fn validate_ip_or_cidr(ip_or_cidr: &str) -> Result<(), String> {
     if ip_or_cidr.contains('/') {
         // CIDR notation
@@ -684,7 +686,7 @@ fn validate_ip_or_cidr(ip_or_cidr: &str) -> Result<(), String> {
         let prefix_str = parts[1];
 
         // Validate IP address
-        ip_str
+        let ip_addr = ip_str
             .parse::<IpAddr>()
             .map_err(|e| format!("Invalid IP address in CIDR '{ip_or_cidr}': {e}"))?;
 
@@ -693,20 +695,63 @@ fn validate_ip_or_cidr(ip_or_cidr: &str) -> Result<(), String> {
             .parse()
             .map_err(|e| format!("Invalid prefix length in CIDR '{ip_or_cidr}': {e}"))?;
 
-        // Validate prefix length range
-        if ip_str.contains(':') {
-            // IPv6: prefix must be 0-128
-            if prefix > 128 {
-                return Err(format!(
-                    "Invalid IPv6 prefix length: {prefix} (must be 0-128)"
-                ));
+        // Validate prefix length range and network address
+        match ip_addr {
+            IpAddr::V4(ipv4) => {
+                // IPv4: prefix must be 0-32
+                if prefix > 32 {
+                    return Err(format!(
+                        "Invalid IPv4 prefix length: {prefix} (must be 0-32)"
+                    ));
+                }
+
+                // Validate that the IP address is a valid network address
+                // (host bits must be zero)
+                if prefix < 32 {
+                    let mask_bits = 32 - prefix;
+                    let host_mask = (1u32 << mask_bits) - 1;
+                    let ip_u32 = u32::from_be_bytes(ipv4.octets());
+                    if (ip_u32 & host_mask) != 0 {
+                        return Err(format!(
+                            "Invalid IPv4 network address in CIDR '{ip_or_cidr}': host bits must be zero for prefix length {prefix}"
+                        ));
+                    }
+                }
             }
-        } else {
-            // IPv4: prefix must be 0-32
-            if prefix > 32 {
-                return Err(format!(
-                    "Invalid IPv4 prefix length: {prefix} (must be 0-32)"
-                ));
+            IpAddr::V6(ipv6) => {
+                // IPv6: prefix must be 0-128
+                if prefix > 128 {
+                    return Err(format!(
+                        "Invalid IPv6 prefix length: {prefix} (must be 0-128)"
+                    ));
+                }
+
+                // Validate that the IP address is a valid network address
+                // (host bits must be zero)
+                if prefix < 128 {
+                    let octets = ipv6.octets();
+                    let prefix_bytes = (prefix / 8) as usize;
+                    let prefix_bits = prefix % 8;
+
+                    // Check full bytes
+                    for i in (prefix_bytes + 1)..16 {
+                        if octets[i] != 0 {
+                            return Err(format!(
+                                "Invalid IPv6 network address in CIDR '{ip_or_cidr}': host bits must be zero for prefix length {prefix}"
+                            ));
+                        }
+                    }
+
+                    // Check partial byte
+                    if prefix_bits > 0 && prefix_bytes < 16 {
+                        let mask = !((1u8 << (8 - prefix_bits)) - 1);
+                        if (octets[prefix_bytes] & mask) != octets[prefix_bytes] {
+                            return Err(format!(
+                                "Invalid IPv6 network address in CIDR '{ip_or_cidr}': host bits must be zero for prefix length {prefix}"
+                            ));
+                        }
+                    }
+                }
             }
         }
     } else {

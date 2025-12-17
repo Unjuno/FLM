@@ -26,12 +26,12 @@ export const Settings: React.FC = () => {
     try {
       await setLocale(newLocale);
       setCurrentLocale(newLocale);
-      const localeName = newLocale === 'ja' ? t('settings.japanese') : t('settings.english');
+      const localeName =
+        newLocale === 'ja' ? t('settings.japanese') : t('settings.english');
       setSuccessMessage(t('messages.languageChanged', { locale: localeName }));
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : String(err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
       setError(t('errors.generic') + ': ' + errorMessage);
     } finally {
       setLoading(false);
@@ -48,8 +48,7 @@ export const Settings: React.FC = () => {
       setSuccessMessage(`Theme changed to ${newTheme}`);
       setTimeout(() => setSuccessMessage(null), 3000);
     } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : String(err);
+      const errorMessage = err instanceof Error ? err.message : String(err);
       setError('Failed to change theme: ' + errorMessage);
     } finally {
       setLoading(false);
@@ -61,10 +60,7 @@ export const Settings: React.FC = () => {
       <h1>{t('settings.title')}</h1>
 
       {error && (
-        <ErrorMessage
-          message={error}
-          onDismiss={() => setError(null)}
-        />
+        <ErrorMessage message={error} onDismiss={() => setError(null)} />
       )}
 
       {successMessage && (
@@ -83,9 +79,7 @@ export const Settings: React.FC = () => {
           <select
             id="language-select"
             value={currentLocale}
-            onChange={(e) =>
-              handleLanguageChange(e.target.value as 'ja' | 'en')
-            }
+            onChange={e => handleLanguageChange(e.target.value as 'ja' | 'en')}
             disabled={loading}
             aria-label={t('settings.displayLanguage')}
           >
@@ -96,7 +90,10 @@ export const Settings: React.FC = () => {
         </div>
         <p className="settings-hint">
           {t('settings.languageHint', {
-            current: currentLocale === 'ja' ? t('settings.japanese') : t('settings.english'),
+            current:
+              currentLocale === 'ja'
+                ? t('settings.japanese')
+                : t('settings.english'),
           })}
         </p>
       </div>
@@ -104,13 +101,11 @@ export const Settings: React.FC = () => {
       <div className="settings-section">
         <h2>Theme</h2>
         <div className="settings-field">
-          <label htmlFor="theme-select">
-            Appearance
-          </label>
+          <label htmlFor="theme-select">Appearance</label>
           <select
             id="theme-select"
             value={theme}
-            onChange={(e) =>
+            onChange={e =>
               handleThemeChange(e.target.value as 'light' | 'dark')
             }
             disabled={loading}

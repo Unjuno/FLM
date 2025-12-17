@@ -60,9 +60,7 @@ describe('ChatTester', () => {
     await waitFor(
       () => {
         // i18nを使用しているため、柔軟にチェック
-        expect(
-          screen.getByText(/プロキシ|proxy/i)
-        ).toBeInTheDocument();
+        expect(screen.getByText(/プロキシ|proxy/i)).toBeInTheDocument();
       },
       { timeout: 3000 }
     );

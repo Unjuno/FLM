@@ -32,7 +32,8 @@ export function isValidPort(port: number | string): boolean {
  * Validate IP address (IPv4)
  */
 export function isValidIpAddress(ip: string): boolean {
-  const ipRegex = /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
+  const ipRegex =
+    /^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)$/;
   return ipRegex.test(ip);
 }
 
@@ -62,7 +63,11 @@ export function sanitizeString(input: string): string {
 /**
  * Sanitize number input (parse and validate)
  */
-export function sanitizeNumber(input: string | number, min?: number, max?: number): number | null {
+export function sanitizeNumber(
+  input: string | number,
+  min?: number,
+  max?: number
+): number | null {
   const num = typeof input === 'string' ? parseFloat(input) : input;
   if (isNaN(num)) {
     return null;

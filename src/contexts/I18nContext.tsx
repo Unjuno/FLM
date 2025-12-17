@@ -101,23 +101,20 @@ export const I18nProvider: React.FC<I18nProviderProps> = ({ children }) => {
   );
 
   // 言語を変更し、設定に保存する
-  const setLocale = useCallback(
-    async (newLocale: Locale) => {
-      setLocaleState(newLocale);
+  const setLocale = useCallback(async (newLocale: Locale) => {
+    setLocaleState(newLocale);
 
-      try {
-        // config.dbにpreferred_languageを保存
-        await safeInvoke('ipc_config_set', {
-          key: 'preferred_language',
-          value: newLocale,
-        });
-      } catch (error) {
-        // エラー時はloggerに記録（設定の保存に失敗しても動作は継続）
-        // loggerは利用できない可能性があるため、エラーを無視する
-      }
-    },
-    []
-  );
+    try {
+      // config.dbにpreferred_languageを保存
+      await safeInvoke('ipc_config_set', {
+        key: 'preferred_language',
+        value: newLocale,
+      });
+    } catch (error) {
+      // エラー時はloggerに記録（設定の保存に失敗しても動作は継続）
+      // loggerは利用できない可能性があるため、エラーを無視する
+    }
+  }, []);
 
   // 翻訳関数
   const t = useCallback(
